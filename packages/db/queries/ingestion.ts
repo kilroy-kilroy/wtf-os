@@ -24,7 +24,7 @@ export async function createIngestionItem(
     .single();
 
   if (error) throw error;
-  return ingestionItem;
+  return ingestionItem as any;
 }
 
 export async function getIngestionItem(supabase: SupabaseClient, itemId: string) {
@@ -65,5 +65,5 @@ export async function updateIngestionItemStatus(
     .single();
 
   if (error) throw error;
-  return data;
+  return data as any;
 }

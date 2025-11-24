@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '../client';
+import type { Database } from '../types';
 
 export async function findOrCreateAgency(
   supabase: SupabaseClient,
@@ -35,7 +36,7 @@ export async function findOrCreateAgency(
     .insert({
       name,
       url,
-    })
+    } as Database['public']['Tables']['agencies']['Insert'])
     .select()
     .single();
 
@@ -55,7 +56,7 @@ export async function assignUserToAgency(
       user_id: userId,
       agency_id: agencyId,
       role,
-    })
+    } as any)
     .select()
     .single();
 

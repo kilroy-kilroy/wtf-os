@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '../client';
+import type { Database } from '../types';
 
 export async function createToolRun(
   supabase: SupabaseClient,
@@ -19,7 +20,7 @@ export async function createToolRun(
       ...data,
       status: 'started',
       started_at: new Date().toISOString(),
-    })
+    } as Database['public']['Tables']['tool_runs']['Insert'])
     .select()
     .single();
 

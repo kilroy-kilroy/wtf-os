@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '../client';
+import type { Database } from '../types';
 
 export async function createIngestionItem(
   supabase: SupabaseClient,
@@ -19,7 +20,7 @@ export async function createIngestionItem(
     .insert({
       ...data,
       status: 'pending',
-    })
+    } as Database['public']['Tables']['ingestion_items']['Insert'])
     .select()
     .single();
 

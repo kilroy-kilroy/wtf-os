@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '../client';
+import type { Database } from '../types';
 
 export async function findOrCreateUser(
   supabase: SupabaseClient,
@@ -25,7 +26,7 @@ export async function findOrCreateUser(
       first_name: firstName,
       last_name: lastName,
       subscription_tier: 'lead',
-    })
+    } as Database['public']['Tables']['users']['Insert'])
     .select()
     .single();
 

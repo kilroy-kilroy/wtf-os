@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '../client';
+import type { Database } from '../types';
 
 export async function createCallScore(
   supabase: SupabaseClient,
@@ -21,7 +22,7 @@ export async function createCallScore(
 ) {
   const { data: callScore, error } = await supabase
     .from('call_scores')
-    .insert(data)
+    .insert(data as Database['public']['Tables']['call_scores']['Insert'])
     .select()
     .single();
 
@@ -48,7 +49,7 @@ export async function createCallSnippets(
 ) {
   const { data, error } = await supabase
     .from('call_snippets')
-    .insert(snippets)
+    .insert(snippets as Database['public']['Tables']['call_snippets']['Insert'][])
     .select();
 
   if (error) throw error;
@@ -70,7 +71,7 @@ export async function createFollowUpTemplates(
 ) {
   const { data, error } = await supabase
     .from('follow_up_templates')
-    .insert(templates)
+    .insert(templates as Database['public']['Tables']['follow_up_templates']['Insert'][])
     .select();
 
   if (error) throw error;

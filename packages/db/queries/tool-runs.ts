@@ -45,7 +45,7 @@ export async function updateToolRun(
     pdf_path?: string;
   }
 ) {
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('tool_runs')
     .update(updates)
     .eq('id', toolRunId)

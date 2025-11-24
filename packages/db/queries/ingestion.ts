@@ -58,7 +58,7 @@ export async function updateIngestionItemStatus(
     updates.error_message = errorMessage;
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('ingestion_items')
     .update(updates)
     .eq('id', itemId)

@@ -55,7 +55,7 @@ export async function updateUser(
     preferences?: Record<string, any>;
   }
 ) {
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('users')
     .update({ ...updates, updated_at: new Date().toISOString() })
     .eq('id', userId)

@@ -24,7 +24,7 @@ export async function createToolRun(
     .single();
 
   if (error) throw error;
-  return toolRun;
+  return toolRun as any;
 }
 
 export async function updateToolRun(
@@ -52,7 +52,7 @@ export async function updateToolRun(
     .single();
 
   if (error) throw error;
-  return data;
+  return data as any;
 }
 
 export async function getToolRun(supabase: SupabaseClient, toolRunId: string) {
@@ -63,7 +63,7 @@ export async function getToolRun(supabase: SupabaseClient, toolRunId: string) {
     .single();
 
   if (error) throw error;
-  return data;
+  return data as any;
 }
 
 export async function getUserToolRuns(
@@ -79,7 +79,7 @@ export async function getUserToolRuns(
     .limit(limit);
 
   if (error) throw error;
-  return data;
+  return data as any;
 }
 
 export async function getAgencyToolRuns(
@@ -95,5 +95,5 @@ export async function getAgencyToolRuns(
     .limit(limit);
 
   if (error) throw error;
-  return data;
+  return data as any;
 }

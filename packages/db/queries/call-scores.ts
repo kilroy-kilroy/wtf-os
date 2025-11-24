@@ -26,7 +26,7 @@ export async function createCallScore(
     .single();
 
   if (error) throw error;
-  return callScore;
+  return callScore as any;
 }
 
 export async function createCallSnippets(
@@ -52,7 +52,7 @@ export async function createCallSnippets(
     .select();
 
   if (error) throw error;
-  return data;
+  return data as any;
 }
 
 export async function createFollowUpTemplates(
@@ -74,7 +74,7 @@ export async function createFollowUpTemplates(
     .select();
 
   if (error) throw error;
-  return data;
+  return data as any;
 }
 
 export async function getCallScoreWithDetails(
@@ -125,5 +125,5 @@ export async function getAgencyCallScores(
     .limit(limit);
 
   if (error) throw error;
-  return data;
+  return data as any;
 }

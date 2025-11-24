@@ -252,7 +252,7 @@ export default function CallLabPage() {
                   {result.strengths.map((strength, idx) => (
                     <div key={idx} className="border-l-4 border-green-500 pl-4">
                       <p className="text-sm italic text-muted-foreground mb-2">
-                        "{strength.quote}"
+                        &ldquo;{strength.quote}&rdquo;
                       </p>
                       <p className="text-sm font-medium">{strength.behavior}</p>
                       <p className="text-sm text-muted-foreground">{strength.note}</p>
@@ -272,7 +272,7 @@ export default function CallLabPage() {
                   {result.weaknesses.map((weakness, idx) => (
                     <div key={idx} className="border-l-4 border-orange-500 pl-4">
                       <p className="text-sm italic text-muted-foreground mb-2">
-                        "{weakness.quote}"
+                        &ldquo;{weakness.quote}&rdquo;
                       </p>
                       <p className="text-sm font-medium">{weakness.behavior}</p>
                       <p className="text-sm text-muted-foreground">{weakness.note}</p>

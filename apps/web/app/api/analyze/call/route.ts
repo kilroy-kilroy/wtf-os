@@ -275,7 +275,12 @@ export async function GET(request: NextRequest) {
       {
         success: true,
         result: {
-          ...callScore,
+          id: callScore.id,
+          overall_score: callScore.overall_score,
+          overall_grade: callScore.overall_grade,
+          diagnosis_summary: callScore.diagnosis_summary,
+          lite_scores: callScore.lite_scores,
+          version: callScore.version,
           snippets,
           follow_ups: followUps,
         },

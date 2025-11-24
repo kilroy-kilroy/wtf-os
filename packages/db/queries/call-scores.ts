@@ -107,7 +107,7 @@ export async function getCallScoreWithDetails(
   if (followUpsError) throw followUpsError;
 
   return {
-    ...callScore,
+    ...(callScore as any),
     snippets,
     follow_ups: followUps,
   };

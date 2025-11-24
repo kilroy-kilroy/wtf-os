@@ -20,9 +20,9 @@ export async function createCallScore(
     diagnosis_summary?: string;
   }
 ) {
-  const { data: callScore, error } = await supabase
+  const { data: callScore, error } = await (supabase as any)
     .from('call_scores')
-    .insert(data as Database['public']['Tables']['call_scores']['Insert'])
+    .insert(data)
     .select()
     .single();
 
@@ -47,9 +47,9 @@ export async function createCallSnippets(
     display_order?: number;
   }>
 ) {
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('call_snippets')
-    .insert(snippets as Database['public']['Tables']['call_snippets']['Insert'][])
+    .insert(snippets)
     .select();
 
   if (error) throw error;
@@ -69,9 +69,9 @@ export async function createFollowUpTemplates(
     display_order?: number;
   }>
 ) {
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('follow_up_templates')
-    .insert(templates as Database['public']['Tables']['follow_up_templates']['Insert'][])
+    .insert(templates)
     .select();
 
   if (error) throw error;

@@ -14,13 +14,13 @@ export async function createToolRun(
     ingestion_item_id?: string;
   }
 ) {
-  const { data: toolRun, error } = await supabase
+  const { data: toolRun, error } = await (supabase as any)
     .from('tool_runs')
     .insert({
       ...data,
       status: 'started',
       started_at: new Date().toISOString(),
-    } as Database['public']['Tables']['tool_runs']['Insert'])
+    })
     .select()
     .single();
 

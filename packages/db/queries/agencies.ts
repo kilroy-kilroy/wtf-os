@@ -31,12 +31,12 @@ export async function findOrCreateAgency(
   }
 
   // Create new agency
-  const { data: newAgency, error } = await supabase
+  const { data: newAgency, error } = await (supabase as any)
     .from('agencies')
     .insert({
       name,
       url,
-    } as Database['public']['Tables']['agencies']['Insert'])
+    })
     .select()
     .single();
 
@@ -50,13 +50,13 @@ export async function assignUserToAgency(
   agencyId: string,
   role: 'owner' | 'admin' | 'member' = 'member'
 ) {
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('user_agency_assignments')
     .insert({
       user_id: userId,
       agency_id: agencyId,
       role,
-    } as any)
+    })
     .select()
     .single();
 

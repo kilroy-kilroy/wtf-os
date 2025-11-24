@@ -19,14 +19,14 @@ export async function findOrCreateUser(
   }
 
   // Create new user
-  const { data: newUser, error } = await supabase
+  const { data: newUser, error } = await (supabase as any)
     .from('users')
     .insert({
       email,
       first_name: firstName,
       last_name: lastName,
       subscription_tier: 'lead',
-    } as Database['public']['Tables']['users']['Insert'])
+    })
     .select()
     .single();
 

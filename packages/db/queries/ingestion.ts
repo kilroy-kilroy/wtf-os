@@ -15,12 +15,12 @@ export async function createIngestionItem(
     participants?: Array<{ name: string; role?: string; email?: string }>;
   }
 ) {
-  const { data: ingestionItem, error } = await supabase
+  const { data: ingestionItem, error } = await (supabase as any)
     .from('ingestion_items')
     .insert({
       ...data,
       status: 'pending',
-    } as Database['public']['Tables']['ingestion_items']['Insert'])
+    })
     .select()
     .single();
 

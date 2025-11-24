@@ -14,7 +14,7 @@ export async function findOrCreateUser(
     .single();
 
   if (existingUser) {
-    return existingUser;
+    return existingUser as any;
   }
 
   // Create new user
@@ -30,7 +30,7 @@ export async function findOrCreateUser(
     .single();
 
   if (error) throw error;
-  return newUser;
+  return newUser as any;
 }
 
 export async function getUserById(supabase: SupabaseClient, userId: string) {
@@ -41,7 +41,7 @@ export async function getUserById(supabase: SupabaseClient, userId: string) {
     .single();
 
   if (error) throw error;
-  return data;
+  return data as any;
 }
 
 export async function updateUser(
@@ -62,5 +62,5 @@ export async function updateUser(
     .single();
 
   if (error) throw error;
-  return data;
+  return data as any;
 }

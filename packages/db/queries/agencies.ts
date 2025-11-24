@@ -14,7 +14,7 @@ export async function findOrCreateAgency(
       .single();
 
     if (existingAgency) {
-      return existingAgency;
+      return existingAgency as any;
     }
   }
 
@@ -26,7 +26,7 @@ export async function findOrCreateAgency(
     .single();
 
   if (existingAgency) {
-    return existingAgency;
+    return existingAgency as any;
   }
 
   // Create new agency
@@ -40,7 +40,7 @@ export async function findOrCreateAgency(
     .single();
 
   if (error) throw error;
-  return newAgency;
+  return newAgency as any;
 }
 
 export async function assignUserToAgency(
@@ -66,7 +66,7 @@ export async function assignUserToAgency(
     }
     throw error;
   }
-  return data;
+  return data as any;
 }
 
 export async function getUserAgencies(supabase: SupabaseClient, userId: string) {
@@ -76,5 +76,5 @@ export async function getUserAgencies(supabase: SupabaseClient, userId: string) 
     .eq('user_id', userId);
 
   if (error) throw error;
-  return data;
+  return data as any;
 }

@@ -35,7 +35,7 @@ export async function getIngestionItem(supabase: SupabaseClient, itemId: string)
     .single();
 
   if (error) throw error;
-  return data;
+  return data as any; // TODO: Properly type with Database['public']['Tables']['ingestion_items']['Row']
 }
 
 export async function updateIngestionItemStatus(

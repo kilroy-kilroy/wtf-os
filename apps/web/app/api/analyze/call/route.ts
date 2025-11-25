@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
       });
 
       usage = response.usage;
-      modelUsed = 'claude-3-5-sonnet-20241022';
+      modelUsed = 'claude-sonnet-4-5-20250929';
 
       // Parse JSON response
       analysisResult = parseModelJSON<CallLabLiteResponse>(response.content);

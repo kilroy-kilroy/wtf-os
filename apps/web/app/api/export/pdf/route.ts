@@ -22,11 +22,11 @@ export async function POST(request: NextRequest) {
     let pdfBuffer: Buffer;
     if (isMarkdown) {
       pdfBuffer = await renderToBuffer(
-        React.createElement(MarkdownReport, { markdown: result, metadata })
+        React.createElement(MarkdownReport, { markdown: result, metadata }) as any
       );
     } else {
       pdfBuffer = await renderToBuffer(
-        React.createElement(CallLabReport, { result, metadata })
+        React.createElement(CallLabReport, { result, metadata }) as any
       );
     }
 

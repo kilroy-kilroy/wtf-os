@@ -95,23 +95,43 @@ export async function POST(request: NextRequest) {
       // Parse JSON response
       analysisResult = parseModelJSON<CallLabLiteResponse>(response.content);
     } catch (error) {
-      console.error('Error running AI analysis:', error);
+      console.error('Error running Claude analysis, trying GPT-4o fallback:', error);
 
-      // Update status to failed
-      await updateIngestionItemStatus(
-        supabase,
-        ingestion_item_id,
-        'failed',
-        error instanceof Error ? error.message : 'Unknown error'
-      );
+      // Try GPT-4o as fallback
+      try {
+        const response = await retryWithBackoff(async () => {
+          return await runModel(
+            'call-lab-lite',
+            CALL_LAB_LITE_SYSTEM,
+            CALL_LAB_LITE_USER(promptParams),
+            { provider: 'openai', model: 'gpt-4o' }
+          );
+        });
 
-      return NextResponse.json(
-        {
-          error: 'Failed to analyze call',
-          details: error instanceof Error ? error.message : 'Unknown error',
-        },
-        { status: 500 }
-      );
+        usage = response.usage;
+        modelUsed = 'gpt-4o';
+
+        // Parse JSON response
+        analysisResult = parseModelJSON<CallLabLiteResponse>(response.content);
+      } catch (fallbackError) {
+        console.error('Error running GPT-4o fallback:', fallbackError);
+
+        // Update status to failed
+        await updateIngestionItemStatus(
+          supabase,
+          ingestion_item_id,
+          'failed',
+          fallbackError instanceof Error ? fallbackError.message : 'Unknown error'
+        );
+
+        return NextResponse.json(
+          {
+            error: 'Failed to analyze call with both Claude and GPT',
+            details: fallbackError instanceof Error ? fallbackError.message : 'Unknown error',
+          },
+          { status: 500 }
+        );
+      }
     }
 
     // Validate response

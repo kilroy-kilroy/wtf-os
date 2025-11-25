@@ -19,13 +19,13 @@ export interface ModelConfig {
 const MODEL_CONFIGS: Record<string, ModelConfig> = {
   'call-lab-lite': {
     provider: 'anthropic',
-    model: 'claude-3-5-sonnet-20240620',
+    model: 'claude-3-opus-20240229',
     maxTokens: 4096,
     temperature: 0.3,
   },
   'call-lab-full': {
     provider: 'anthropic',
-    model: 'claude-3-5-sonnet-20240620',
+    model: 'claude-3-opus-20240229',
     maxTokens: 8192,
     temperature: 0.3,
   },

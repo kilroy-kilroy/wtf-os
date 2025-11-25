@@ -18,6 +18,7 @@ export async function createCallScore(
     engagement_level?: string;
     likelihood_to_advance?: number;
     diagnosis_summary?: string;
+    markdown_response?: string;
   }
 ) {
   const { data: callScore, error } = await (supabase as any)

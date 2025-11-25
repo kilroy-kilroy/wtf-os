@@ -209,12 +209,21 @@ export async function POST(request: NextRequest) {
       }
     } else {
       // OLD: Use JSON-based prompts (backwards compatibility)
+      // Create params with required fields for old JSON prompts
+      const jsonPromptParams = {
+        transcript: ingestionItem.raw_content,
+        rep_name: rep_name, // Always a string from default value
+        prospect_company: metadata.prospect_company,
+        prospect_role: metadata.prospect_role,
+        call_stage: metadata.call_stage,
+      };
+
       try {
         const response = await retryWithBackoff(async () => {
           return await runModel(
             'call-lab-lite',
             CALL_LAB_LITE_SYSTEM,
-            CALL_LAB_LITE_USER(promptParams)
+            CALL_LAB_LITE_USER(jsonPromptParams)
           );
         });
 
@@ -232,7 +241,7 @@ export async function POST(request: NextRequest) {
             return await runModel(
               'call-lab-lite',
               CALL_LAB_LITE_SYSTEM,
-              CALL_LAB_LITE_USER(promptParams),
+              CALL_LAB_LITE_USER(jsonPromptParams),
               { provider: 'openai', model: 'gpt-4o' }
             );
           });

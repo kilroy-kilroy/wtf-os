@@ -34,6 +34,7 @@ export default function CallLabPage() {
   const [loadingStep, setLoadingStep] = useState<'uploading' | 'analyzing' | null>(null);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -90,6 +91,45 @@ export default function CallLabPage() {
     if (score >= 3) return 'text-blue-600';
     if (score >= 2) return 'text-yellow-600';
     return 'text-red-600';
+  };
+
+  const handleDownloadPdf = async () => {
+    if (!result) return;
+
+    setDownloadingPdf(true);
+    try {
+      const response = await fetch('/api/export/pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          result,
+          metadata: {
+            date: new Date().toLocaleDateString(),
+            repName: formData.first_name || 'Sales Rep',
+            prospectCompany: formData.prospect_company,
+          },
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate PDF');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `call-lab-report-${Date.now()}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err) {
+      console.error('Error downloading PDF:', err);
+      alert('Failed to download PDF. Please try again.');
+    } finally {
+      setDownloadingPdf(false);
+    }
   };
 
   return (
@@ -217,6 +257,33 @@ export default function CallLabPage() {
         ) : (
           /* Results Display */
           <div className="space-y-6">
+            {/* Action Buttons */}
+            <div className="flex gap-4 justify-end">
+              <Button
+                onClick={handleDownloadPdf}
+                disabled={downloadingPdf}
+                variant="outline"
+              >
+                {downloadingPdf ? (
+                  <span className="flex items-center gap-2">
+                    <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Generating PDF...
+                  </span>
+                ) : (
+                  <>
+                    <svg className="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    Download PDF
+                  </>
+                )}
+              </Button>
+              <Button onClick={() => setResult(null)}>Analyze Another Call</Button>
+            </div>
+
             {/* Overall Score */}
             <Card>
               <CardHeader>

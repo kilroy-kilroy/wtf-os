@@ -19,11 +19,16 @@ export async function POST(request: NextRequest) {
     const isMarkdown = typeof result === 'string';
 
     // Generate PDF with appropriate component
-    const pdfBuffer = await renderToBuffer(
-      isMarkdown
-        ? React.createElement(MarkdownReport, { markdown: result, metadata })
-        : React.createElement(CallLabReport, { result, metadata })
-    );
+    let pdfBuffer: Buffer;
+    if (isMarkdown) {
+      pdfBuffer = await renderToBuffer(
+        React.createElement(MarkdownReport, { markdown: result, metadata })
+      );
+    } else {
+      pdfBuffer = await renderToBuffer(
+        React.createElement(CallLabReport, { result, metadata })
+      );
+    }
 
     // Return PDF as download
     const filename = `call-lab-${metadata?.tier || 'report'}-${Date.now()}.pdf`;

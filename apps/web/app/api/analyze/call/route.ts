@@ -19,6 +19,12 @@ import {
   CALL_LAB_LITE_SYSTEM,
   CALL_LAB_LITE_USER,
   type CallLabLiteResponse,
+  CALLLAB_LITE_MARKDOWN_SYSTEM,
+  CALLLAB_LITE_MARKDOWN_USER,
+  CALLLAB_PRO_MARKDOWN_SYSTEM,
+  CALLLAB_PRO_MARKDOWN_USER,
+  parseMarkdownMetadata,
+  type MarkdownPromptParams,
 } from '@repo/prompts';
 
 export async function POST(request: NextRequest) {
@@ -37,7 +43,8 @@ export async function POST(request: NextRequest) {
 
     const {
       ingestion_item_id,
-      version = 'lite',
+      version = 'lite', // 'lite' or 'pro'
+      use_markdown = true, // Default to new markdown prompts
       rep_name = 'Sales Rep',
       known_objections,
       icp_context,
@@ -67,7 +74,7 @@ export async function POST(request: NextRequest) {
     const metadata = (ingestionItem.transcript_metadata as any) || {};
 
     // Prepare prompt parameters
-    const promptParams = {
+    const promptParams: MarkdownPromptParams = {
       transcript: ingestionItem.raw_content,
       rep_name,
       prospect_company: metadata.prospect_company,
@@ -75,172 +82,297 @@ export async function POST(request: NextRequest) {
       call_stage: metadata.call_stage,
     };
 
-    // Run AI analysis with retry logic
-    let analysisResult: CallLabLiteResponse;
     let usage: { input: number; output: number };
     let modelUsed: string;
+    let markdownResponse: string | null = null;
+    let analysisResult: CallLabLiteResponse | null = null;
 
-    try {
-      const response = await retryWithBackoff(async () => {
-        return await runModel(
-          'call-lab-lite',
-          CALL_LAB_LITE_SYSTEM,
-          CALL_LAB_LITE_USER(promptParams)
+    // Choose which prompt system to use
+    if (use_markdown) {
+      // NEW: Use markdown-based prompts
+      try {
+        const systemPrompt =
+          version === 'pro'
+            ? CALLLAB_PRO_MARKDOWN_SYSTEM
+            : CALLLAB_LITE_MARKDOWN_SYSTEM;
+        const userPrompt =
+          version === 'pro'
+            ? CALLLAB_PRO_MARKDOWN_USER(promptParams)
+            : CALLLAB_LITE_MARKDOWN_USER(promptParams);
+
+        const response = await retryWithBackoff(async () => {
+          return await runModel('call-lab-' + version, systemPrompt, userPrompt);
+        });
+
+        usage = response.usage;
+        modelUsed = 'claude-sonnet-4-5-20250929';
+        markdownResponse = response.content;
+      } catch (error) {
+        console.error('Error running Claude analysis, trying GPT-4o fallback:', error);
+
+        // Try GPT-4o as fallback
+        try {
+          const systemPrompt =
+            version === 'pro'
+              ? CALLLAB_PRO_MARKDOWN_SYSTEM
+              : CALLLAB_LITE_MARKDOWN_SYSTEM;
+          const userPrompt =
+            version === 'pro'
+              ? CALLLAB_PRO_MARKDOWN_USER(promptParams)
+              : CALLLAB_LITE_MARKDOWN_USER(promptParams);
+
+          const response = await retryWithBackoff(async () => {
+            return await runModel('call-lab-' + version, systemPrompt, userPrompt, {
+              provider: 'openai',
+              model: 'gpt-4o',
+            });
+          });
+
+          usage = response.usage;
+          modelUsed = 'gpt-4o';
+          markdownResponse = response.content;
+        } catch (fallbackError) {
+          console.error('Error running GPT-4o fallback:', fallbackError);
+
+          await updateIngestionItemStatus(
+            supabase,
+            ingestion_item_id,
+            'failed',
+            fallbackError instanceof Error ? fallbackError.message : 'Unknown error'
+          );
+
+          return NextResponse.json(
+            {
+              error: 'Failed to analyze call with both Claude and GPT',
+              details:
+                fallbackError instanceof Error ? fallbackError.message : 'Unknown error',
+            },
+            { status: 500 }
+          );
+        }
+      }
+
+      // Parse markdown to extract metadata
+      const markdownMetadata = parseMarkdownMetadata(markdownResponse!);
+
+      // Store markdown response in database
+      try {
+        const callScore = await createCallScore(supabase, {
+          ingestion_item_id,
+          agency_id: ingestionItem.agency_id,
+          user_id: ingestionItem.user_id || undefined,
+          version: version,
+          overall_score: markdownMetadata.score,
+          overall_grade: markdownMetadata.effectiveness,
+          diagnosis_summary: markdownResponse!.substring(0, 500), // First 500 chars as summary
+          markdown_response: markdownResponse!,
+        });
+
+        // Update ingestion item status
+        await updateIngestionItemStatus(supabase, ingestion_item_id, 'completed');
+
+        // Update tool run
+        const duration = Date.now() - startTime;
+        await updateToolRun(supabase, body.tool_run_id || '', {
+          status: 'completed',
+          completed_at: new Date().toISOString(),
+          duration_ms: duration,
+          result_ids: {
+            call_score_id: callScore.id,
+          },
+          model_used: modelUsed,
+          tokens_used: usage,
+        });
+
+        // Return markdown response
+        return NextResponse.json(
+          {
+            success: true,
+            call_score_id: callScore.id,
+            result: {
+              markdown: markdownResponse,
+              metadata: markdownMetadata,
+            },
+          },
+          { status: 200 }
         );
-      });
+      } catch (error) {
+        console.error('Error storing markdown results:', error);
 
-      usage = response.usage;
-      modelUsed = 'claude-sonnet-4-5-20250929';
-
-      // Parse JSON response
-      analysisResult = parseModelJSON<CallLabLiteResponse>(response.content);
-    } catch (error) {
-      console.error('Error running Claude analysis, trying GPT-4o fallback:', error);
-
-      // Try GPT-4o as fallback
+        return NextResponse.json(
+          {
+            error: 'Failed to store analysis results',
+            details: error instanceof Error ? error.message : 'Unknown error',
+          },
+          { status: 500 }
+        );
+      }
+    } else {
+      // OLD: Use JSON-based prompts (backwards compatibility)
       try {
         const response = await retryWithBackoff(async () => {
           return await runModel(
             'call-lab-lite',
             CALL_LAB_LITE_SYSTEM,
-            CALL_LAB_LITE_USER(promptParams),
-            { provider: 'openai', model: 'gpt-4o' }
+            CALL_LAB_LITE_USER(promptParams)
           );
         });
 
         usage = response.usage;
-        modelUsed = 'gpt-4o';
+        modelUsed = 'claude-sonnet-4-5-20250929';
 
         // Parse JSON response
         analysisResult = parseModelJSON<CallLabLiteResponse>(response.content);
-      } catch (fallbackError) {
-        console.error('Error running GPT-4o fallback:', fallbackError);
+      } catch (error) {
+        console.error('Error running Claude analysis, trying GPT-4o fallback:', error);
 
-        // Update status to failed
-        await updateIngestionItemStatus(
-          supabase,
-          ingestion_item_id,
-          'failed',
-          fallbackError instanceof Error ? fallbackError.message : 'Unknown error'
+        // Try GPT-4o as fallback
+        try {
+          const response = await retryWithBackoff(async () => {
+            return await runModel(
+              'call-lab-lite',
+              CALL_LAB_LITE_SYSTEM,
+              CALL_LAB_LITE_USER(promptParams),
+              { provider: 'openai', model: 'gpt-4o' }
+            );
+          });
+
+          usage = response.usage;
+          modelUsed = 'gpt-4o';
+
+          // Parse JSON response
+          analysisResult = parseModelJSON<CallLabLiteResponse>(response.content);
+        } catch (fallbackError) {
+          console.error('Error running GPT-4o fallback:', fallbackError);
+
+          // Update status to failed
+          await updateIngestionItemStatus(
+            supabase,
+            ingestion_item_id,
+            'failed',
+            fallbackError instanceof Error ? fallbackError.message : 'Unknown error'
+          );
+
+          return NextResponse.json(
+            {
+              error: 'Failed to analyze call with both Claude and GPT',
+              details:
+                fallbackError instanceof Error ? fallbackError.message : 'Unknown error',
+            },
+            { status: 500 }
+          );
+        }
+      }
+
+      // Validate response
+      if (!analysisResult!.validation?.valid) {
+        return NextResponse.json(
+          {
+            error: 'Transcript validation failed',
+            details:
+              analysisResult!.validation?.opening_lines || 'Could not read transcript',
+          },
+          { status: 400 }
         );
+      }
+
+      // Store results in database
+      try {
+        // Create call score
+        const callScore = await createCallScore(supabase, {
+          ingestion_item_id,
+          agency_id: ingestionItem.agency_id,
+          user_id: ingestionItem.user_id || undefined,
+          version: 'lite',
+          overall_score: analysisResult!.overall.score,
+          overall_grade: analysisResult!.overall.grade,
+          diagnosis_summary: analysisResult!.overall.one_liner,
+          lite_scores: analysisResult!.scores,
+        });
+
+        // Create snippets (strengths and weaknesses)
+        const snippets = [
+          ...analysisResult!.strengths.map((s, idx) => ({
+            call_score_id: callScore.id,
+            ingestion_item_id,
+            snippet_type: 'strength',
+            transcript_quote: s.quote,
+            rep_behavior: s.behavior,
+            coaching_note: s.note,
+            impact: 'positive',
+            display_order: idx,
+          })),
+          ...analysisResult!.weaknesses.map((w, idx) => ({
+            call_score_id: callScore.id,
+            ingestion_item_id,
+            snippet_type: 'weakness',
+            transcript_quote: w.quote,
+            rep_behavior: w.behavior,
+            coaching_note: w.note,
+            impact: 'negative',
+            display_order: idx + analysisResult!.strengths.length,
+          })),
+        ];
+
+        await createCallSnippets(supabase, snippets);
+
+        // Create follow-up templates
+        const followUps = analysisResult!.follow_ups.map((f, idx) => ({
+          call_score_id: callScore.id,
+          template_type: f.type,
+          subject_line: f.subject,
+          body: f.body,
+          display_order: idx,
+        }));
+
+        await createFollowUpTemplates(supabase, followUps);
+
+        // Update ingestion item status
+        await updateIngestionItemStatus(supabase, ingestion_item_id, 'completed');
+
+        // Update tool run
+        const duration = Date.now() - startTime;
+        await updateToolRun(supabase, body.tool_run_id || '', {
+          status: 'completed',
+          completed_at: new Date().toISOString(),
+          duration_ms: duration,
+          result_ids: {
+            call_score_id: callScore.id,
+          },
+          model_used: modelUsed,
+          tokens_used: usage,
+        });
+
+        // Return results
+        return NextResponse.json(
+          {
+            success: true,
+            call_score_id: callScore.id,
+            result: {
+              overall_score: analysisResult!.overall.score,
+              overall_grade: analysisResult!.overall.grade,
+              diagnosis_summary: analysisResult!.overall.one_liner,
+              scores: analysisResult!.scores,
+              strengths: analysisResult!.strengths,
+              weaknesses: analysisResult!.weaknesses,
+              focus_area: analysisResult!.focus_area,
+              follow_ups: analysisResult!.follow_ups,
+              tasks: analysisResult!.tasks,
+            },
+          },
+          { status: 200 }
+        );
+      } catch (error) {
+        console.error('Error storing results:', error);
 
         return NextResponse.json(
           {
-            error: 'Failed to analyze call with both Claude and GPT',
-            details: fallbackError instanceof Error ? fallbackError.message : 'Unknown error',
+            error: 'Failed to store analysis results',
+            details: error instanceof Error ? error.message : 'Unknown error',
           },
           { status: 500 }
         );
       }
-    }
-
-    // Validate response
-    if (!analysisResult.validation?.valid) {
-      return NextResponse.json(
-        {
-          error: 'Transcript validation failed',
-          details: analysisResult.validation?.opening_lines || 'Could not read transcript',
-        },
-        { status: 400 }
-      );
-    }
-
-    // Store results in database
-    try {
-      // Create call score
-      const callScore = await createCallScore(supabase, {
-        ingestion_item_id,
-        agency_id: ingestionItem.agency_id,
-        user_id: ingestionItem.user_id || undefined,
-        version: 'lite',
-        overall_score: analysisResult.overall.score,
-        overall_grade: analysisResult.overall.grade,
-        diagnosis_summary: analysisResult.overall.one_liner,
-        lite_scores: analysisResult.scores,
-      });
-
-      // Create snippets (strengths and weaknesses)
-      const snippets = [
-        ...analysisResult.strengths.map((s, idx) => ({
-          call_score_id: callScore.id,
-          ingestion_item_id,
-          snippet_type: 'strength',
-          transcript_quote: s.quote,
-          rep_behavior: s.behavior,
-          coaching_note: s.note,
-          impact: 'positive',
-          display_order: idx,
-        })),
-        ...analysisResult.weaknesses.map((w, idx) => ({
-          call_score_id: callScore.id,
-          ingestion_item_id,
-          snippet_type: 'weakness',
-          transcript_quote: w.quote,
-          rep_behavior: w.behavior,
-          coaching_note: w.note,
-          impact: 'negative',
-          display_order: idx + analysisResult.strengths.length,
-        })),
-      ];
-
-      await createCallSnippets(supabase, snippets);
-
-      // Create follow-up templates
-      const followUps = analysisResult.follow_ups.map((f, idx) => ({
-        call_score_id: callScore.id,
-        template_type: f.type,
-        subject_line: f.subject,
-        body: f.body,
-        display_order: idx,
-      }));
-
-      await createFollowUpTemplates(supabase, followUps);
-
-      // Update ingestion item status
-      await updateIngestionItemStatus(supabase, ingestion_item_id, 'completed');
-
-      // Update tool run
-      const duration = Date.now() - startTime;
-      await updateToolRun(supabase, body.tool_run_id || '', {
-        status: 'completed',
-        completed_at: new Date().toISOString(),
-        duration_ms: duration,
-        result_ids: {
-          call_score_id: callScore.id,
-        },
-        model_used: modelUsed,
-        tokens_used: usage,
-      });
-
-      // Return results
-      return NextResponse.json(
-        {
-          success: true,
-          call_score_id: callScore.id,
-          result: {
-            overall_score: analysisResult.overall.score,
-            overall_grade: analysisResult.overall.grade,
-            diagnosis_summary: analysisResult.overall.one_liner,
-            scores: analysisResult.scores,
-            strengths: analysisResult.strengths,
-            weaknesses: analysisResult.weaknesses,
-            focus_area: analysisResult.focus_area,
-            follow_ups: analysisResult.follow_ups,
-            tasks: analysisResult.tasks,
-          },
-        },
-        { status: 200 }
-      );
-    } catch (error) {
-      console.error('Error storing results:', error);
-
-      return NextResponse.json(
-        {
-          error: 'Failed to store analysis results',
-          details: error instanceof Error ? error.message : 'Unknown error',
-        },
-        { status: 500 }
-      );
     }
   } catch (error) {
     console.error('Error analyzing call:', error);
@@ -275,6 +407,27 @@ export async function GET(request: NextRequest) {
 
     if (scoreError) throw scoreError;
 
+    // If markdown response exists, return it
+    if ((callScore as any)?.markdown_response) {
+      const markdownMetadata = parseMarkdownMetadata(
+        (callScore as any).markdown_response
+      );
+
+      return NextResponse.json(
+        {
+          success: true,
+          result: {
+            id: (callScore as any)?.id,
+            markdown: (callScore as any)?.markdown_response,
+            metadata: markdownMetadata,
+            version: (callScore as any)?.version,
+          },
+        },
+        { status: 200 }
+      );
+    }
+
+    // Otherwise return JSON format (backwards compatibility)
     const { data: snippets, error: snippetsError } = await supabase
       .from('call_snippets')
       .select('*')

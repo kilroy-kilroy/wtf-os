@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { renderToBuffer } from '@react-pdf/renderer';
-import { CallLabReport } from '@repo/pdf';
+import { CallLabReport, MarkdownReport } from '@repo/pdf';
 import React from 'react';
 
 export async function POST(request: NextRequest) {
@@ -15,17 +15,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Generate PDF
+    // Detect if result is markdown (string) or JSON (object with structured data)
+    const isMarkdown = typeof result === 'string';
+
+    // Generate PDF with appropriate component
     const pdfBuffer = await renderToBuffer(
-      React.createElement(CallLabReport, { result, metadata })
+      isMarkdown
+        ? React.createElement(MarkdownReport, { markdown: result, metadata })
+        : React.createElement(CallLabReport, { result, metadata })
     );
 
     // Return PDF as download
+    const filename = `call-lab-${metadata?.tier || 'report'}-${Date.now()}.pdf`;
     return new NextResponse(pdfBuffer, {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="call-lab-report-${Date.now()}.pdf"`,
+        'Content-Disposition': `attachment; filename="${filename}"`,
       },
     });
   } catch (error) {

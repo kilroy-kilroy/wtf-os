@@ -186,7 +186,7 @@ export const CallLabReport: React.FC<CallLabReportProps> = ({ result, metadata }
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Category Scores</Text>
           {Object.entries(result.scores).map(([category, data]) => (
-            <View key={category} style={categoryRow}>
+            <View key={category} style={styles.categoryRow}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.categoryName}>
                   {category.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}

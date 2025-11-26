@@ -1,12 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { MarkdownRenderer } from '@/components/markdown-renderer';
+import {
+  ConsolePanel,
+  ConsoleHeading,
+  ConsoleButton,
+  ConsoleInput,
+  SalesOSHeader,
+  ConsoleMarkdownRenderer
+} from '@/components/console';
 
 // Union type for both response formats
 type AnalysisResult =
@@ -35,7 +37,8 @@ export default function CallLabPage() {
   const [formData, setFormData] = useState({
     email: '',
     first_name: '',
-    last_name: '',
+    phone: '',
+    role: '',
     transcript: '',
     prospect_company: '',
     prospect_role: '',
@@ -114,13 +117,6 @@ export default function CallLabPage() {
     }
   };
 
-  const getScoreColor = (score: number): string => {
-    if (score >= 4) return 'text-green-600';
-    if (score >= 3) return 'text-blue-600';
-    if (score >= 2) return 'text-yellow-600';
-    return 'text-red-600';
-  };
-
   const handleDownloadPdf = async () => {
     if (!result) return;
 
@@ -161,269 +157,184 @@ export default function CallLabPage() {
     }
   };
 
-  const renderJsonResult = (jsonResult: Extract<AnalysisResult, { type: 'json' }>) => (
-    <div className="space-y-6">
-      {/* Action Buttons */}
-      <div className="flex gap-4 justify-end">
-        <Button
-          onClick={handleDownloadPdf}
-          disabled={downloadingPdf}
-          variant="outline"
-        >
-          {downloadingPdf ? 'Generating PDF...' : 'Download PDF'}
-        </Button>
-        <Button onClick={() => setResult(null)}>Analyze Another Call</Button>
-      </div>
-
-      {/* Overall Score */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>Overall Grade: {jsonResult.overall_grade}</CardTitle>
-            <span
-              className={`text-4xl font-bold ${getScoreColor(jsonResult.overall_score)}`}
-            >
-              {jsonResult.overall_score.toFixed(1)}/5
-            </span>
-          </div>
-          <CardDescription>{jsonResult.diagnosis_summary}</CardDescription>
-        </CardHeader>
-      </Card>
-
-      {/* Category Scores */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Category Scores</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {Object.entries(jsonResult.scores).map(([category, data]) => (
-              <div key={category} className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="font-medium capitalize">
-                    {category.replace(/_/g, ' ')}
-                  </span>
-                  <span className={`font-bold ${getScoreColor(data.score)}`}>
-                    {data.score}/5
-                  </span>
-                </div>
-                <p className="text-sm text-muted-foreground">{data.reason}</p>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Strengths, Weaknesses, etc. - keeping existing JSON rendering */}
-      {/* ... rest of JSON rendering code ... */}
-    </div>
-  );
-
   const renderMarkdownResult = (mdResult: Extract<AnalysisResult, { type: 'markdown' }>) => (
     <div className="space-y-6">
       {/* Action Buttons */}
       <div className="flex gap-4 justify-end">
-        <Button
+        <ConsoleButton
           onClick={handleDownloadPdf}
           disabled={downloadingPdf}
-          variant="outline"
+          variant="secondary"
         >
-          {downloadingPdf ? (
-            <span className="flex items-center gap-2">
-              <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              Generating PDF...
-            </span>
-          ) : (
-            <>
-              <svg className="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              Download PDF
-            </>
-          )}
-        </Button>
-        <Button onClick={() => setResult(null)}>Analyze Another Call</Button>
+          {downloadingPdf ? 'GENERATING PDF...' : '↓ DOWNLOAD PDF'}
+        </ConsoleButton>
+        <ConsoleButton onClick={() => setResult(null)} variant="primary">
+          ← NEW ANALYSIS
+        </ConsoleButton>
       </div>
 
-      {/* Markdown Content */}
-      <Card>
-        <CardContent className="pt-6">
-          <MarkdownRenderer content={mdResult.markdown} />
-        </CardContent>
-      </Card>
+      {/* Report Content */}
+      <ConsolePanel>
+        <ConsoleHeading level={1} variant="yellow" className="mb-6">
+          CALL LAB LITE - DIAGNOSTIC SNAPSHOT
+        </ConsoleHeading>
+        <ConsoleMarkdownRenderer content={mdResult.markdown} />
+      </ConsolePanel>
 
-      {/* New Analysis Button */}
-      <Button
-        onClick={() => {
-          setResult(null);
-          setFormData({
-            ...formData,
-            transcript: '',
-            prospect_company: '',
-            prospect_role: '',
-          });
-        }}
-        className="w-full"
-        size="lg"
-      >
-        Analyze Another Call
-      </Button>
+      {/* Upgrade CTA */}
+      <ConsolePanel variant="red-highlight">
+        <div className="text-center space-y-4">
+          <ConsoleHeading level={2} variant="yellow">
+            UNLOCK THE DEEP ANALYSIS
+          </ConsoleHeading>
+          <p className="text-white font-poppins text-lg">
+            Lite shows you what happened. Pro shows you the repeatable patterns, trust acceleration map, and tactical rewrites.
+          </p>
+          <ConsoleButton
+            variant="secondary"
+            fullWidth
+            onClick={() => setFormData({ ...formData, tier: 'pro' })}
+          >
+            ▶ UPGRADE TO CALL LAB PRO
+          </ConsoleButton>
+        </div>
+      </ConsolePanel>
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 py-12 px-4">
-      <div className="max-w-4xl mx-auto space-y-8">
-        {/* Header */}
-        <div className="text-center space-y-4">
-          <h1 className="text-5xl font-bold text-white">
-            Call Lab {formData.tier === 'pro' ? 'Pro' : 'Lite'}
-          </h1>
-          <p className="text-xl text-slate-300">
-            {formData.tier === 'pro'
-              ? 'Deep analysis with Human-First Sales Methodology'
-              : 'Get instant feedback on your sales calls'}
-          </p>
-        </div>
+    <div className="min-h-screen bg-black py-12 px-4">
+      <div className="max-w-5xl mx-auto">
+        <SalesOSHeader systemStatus={loading ? 'PROCESSING' : 'READY'} />
 
         {!result ? (
           /* Input Form */
-          <Card>
-            <CardHeader>
-              <CardTitle>Submit Your Call Transcript</CardTitle>
-              <CardDescription>
-                Paste your sales call transcript below and get instant analysis
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-6">
-                {/* Tier Selection */}
-                <div className="space-y-2">
-                  <Label>Analysis Tier</Label>
-                  <div className="flex gap-4">
-                    <Button
-                      type="button"
-                      variant={formData.tier === 'lite' ? 'default' : 'outline'}
-                      onClick={() => setFormData({ ...formData, tier: 'lite' })}
-                    >
-                      Lite (Quick Diagnostic)
-                    </Button>
-                    <Button
-                      type="button"
-                      variant={formData.tier === 'pro' ? 'default' : 'outline'}
-                      onClick={() => setFormData({ ...formData, tier: 'pro' })}
-                    >
-                      Pro (Full Analysis)
-                    </Button>
-                  </div>
-                </div>
+          <ConsolePanel>
+            <div className="space-y-8">
+              {/* Header */}
+              <div className="space-y-3">
+                <ConsoleHeading level={1} className="mb-2">
+                  <span className="text-white">INITIALIZE </span>
+                  <span className="text-[#FFDE59]">ANALYSIS</span>
+                </ConsoleHeading>
+                <p className="text-[#B3B3B3] font-poppins text-lg">
+                  Feed Call Lab your transcript. We'll tell you what you missed.
+                </p>
+              </div>
 
-                {/* Contact Info */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email *</Label>
-                    <Input
-                      id="email"
+              <form onSubmit={handleSubmit} className="space-y-8">
+                {/* Operator Identity */}
+                <div className="space-y-4">
+                  <ConsoleHeading level={3} variant="yellow">
+                    OPERATOR IDENTITY
+                  </ConsoleHeading>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <ConsoleInput
                       type="email"
-                      placeholder="you@example.com"
+                      placeholder="operator@agency.com"
+                      label="EMAIL *"
                       required
                       value={formData.email}
                       onChange={(e) =>
-                        setFormData({ ...formData, email: e.target.value })
+                        setFormData({ ...formData, email: (e.target as HTMLInputElement).value })
                       }
                     />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="first_name">First Name</Label>
-                    <Input
-                      id="first_name"
+                    <ConsoleInput
+                      type="text"
                       placeholder="John"
+                      label="FIRST NAME"
                       value={formData.first_name}
                       onChange={(e) =>
-                        setFormData({ ...formData, first_name: e.target.value })
+                        setFormData({ ...formData, first_name: (e.target as HTMLInputElement).value })
+                      }
+                    />
+                    <ConsoleInput
+                      type="tel"
+                      placeholder="+1 (555) 123-4567"
+                      label="PHONE"
+                      value={formData.phone}
+                      onChange={(e) =>
+                        setFormData({ ...formData, phone: (e.target as HTMLInputElement).value })
+                      }
+                    />
+                    <ConsoleInput
+                      type="text"
+                      placeholder="Account Executive"
+                      label="ROLE"
+                      value={formData.role}
+                      onChange={(e) =>
+                        setFormData({ ...formData, role: (e.target as HTMLInputElement).value })
                       }
                     />
                   </div>
                 </div>
 
-                {/* Call Context */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="prospect_company">Prospect Company</Label>
-                    <Input
-                      id="prospect_company"
+                {/* Target Prospect */}
+                <div className="space-y-4">
+                  <ConsoleHeading level={3} variant="yellow">
+                    TARGET PROSPECT
+                  </ConsoleHeading>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <ConsoleInput
+                      type="text"
                       placeholder="Acme Corp"
+                      label="COMPANY"
                       value={formData.prospect_company}
                       onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          prospect_company: e.target.value,
-                        })
+                        setFormData({ ...formData, prospect_company: (e.target as HTMLInputElement).value })
                       }
                     />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="prospect_role">Prospect Role</Label>
-                    <Input
-                      id="prospect_role"
-                      placeholder="CEO"
+                    <ConsoleInput
+                      type="text"
+                      placeholder="VP of Sales"
+                      label="ROLE"
                       value={formData.prospect_role}
                       onChange={(e) =>
-                        setFormData({ ...formData, prospect_role: e.target.value })
+                        setFormData({ ...formData, prospect_role: (e.target as HTMLInputElement).value })
                       }
                     />
                   </div>
                 </div>
 
-                {/* Transcript */}
-                <div className="space-y-2">
-                  <Label htmlFor="transcript">Call Transcript *</Label>
-                  <Textarea
-                    id="transcript"
-                    placeholder="Paste your call transcript here..."
+                {/* Transcript Input */}
+                <div className="space-y-4">
+                  <ConsoleHeading level={3} variant="yellow">
+                    TRANSCRIPT INPUT
+                  </ConsoleHeading>
+                  <ConsoleInput
+                    multiline
+                    rows={16}
+                    placeholder="Paste your call transcript here... Supports Zoom, Fireflies, Gong, or any text format."
+                    label="CALL TRANSCRIPT *"
                     required
-                    rows={12}
                     value={formData.transcript}
                     onChange={(e) =>
-                      setFormData({ ...formData, transcript: e.target.value })
+                      setFormData({ ...formData, transcript: (e.target as HTMLTextAreaElement).value })
                     }
                   />
-                  <p className="text-sm text-muted-foreground">
-                    Supports transcripts from Zoom, Fireflies, Gong, or any text
-                    format
-                  </p>
                 </div>
 
                 {/* Error Message */}
                 {error && (
-                  <div className="p-4 bg-red-50 border border-red-200 rounded-md">
-                    <p className="text-sm text-red-600">{error}</p>
+                  <div className="bg-[#E51B23] border border-[#FF0000] rounded p-4">
+                    <p className="text-white font-poppins font-medium">ERROR: {error}</p>
                   </div>
                 )}
 
                 {/* Submit Button */}
-                <Button type="submit" className="w-full" size="lg" disabled={loading}>
+                <ConsoleButton type="submit" fullWidth disabled={loading}>
                   {loading ? (
-                    <span className="flex items-center gap-2">
-                      <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      {loadingStep === 'uploading' ? 'Uploading transcript...' : 'Analyzing with AI...'}
-                    </span>
+                    loadingStep === 'uploading' ? '⟳ UPLOADING TRANSCRIPT...' : '⟳ ANALYZING WITH AI...'
                   ) : (
-                    'Analyze Call'
+                    '▶ RUN CALL LAB'
                   )}
-                </Button>
+                </ConsoleButton>
               </form>
-            </CardContent>
-          </Card>
+            </div>
+          </ConsolePanel>
         ) : (
-          /* Results Display - render based on type */
-          result.type === 'markdown' ? renderMarkdownResult(result) : renderJsonResult(result)
+          /* Results Display */
+          result.type === 'markdown' && renderMarkdownResult(result)
         )}
       </div>
     </div>

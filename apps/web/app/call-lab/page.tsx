@@ -218,7 +218,7 @@ export default function CallLabPage() {
                   <span className="text-[#FFDE59]">ANALYSIS</span>
                 </ConsoleHeading>
                 <p className="text-[#B3B3B3] font-poppins text-lg">
-                  Feed Call Lab your transcript. We'll tell you what you missed.
+                  Feed Call Lab your transcript. We&apos;ll tell you what you missed.
                 </p>
               </div>
 

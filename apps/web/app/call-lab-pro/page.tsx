@@ -15,6 +15,7 @@ interface PersonalizedCopy {
 
 export default function CallLabProPage() {
   const [personalizedCopy, setPersonalizedCopy] = useState<PersonalizedCopy | null>(null);
+  const [checkoutLoading, setCheckoutLoading] = useState<'solo' | 'team' | null>(null);
 
   useEffect(() => {
     // TODO: In production, fetch this from the user's last Lite report
@@ -30,6 +31,30 @@ export default function CallLabProPage() {
     };
     setPersonalizedCopy(exampleCopy);
   }, []);
+
+  const handleCheckout = async (plan: 'solo' | 'team') => {
+    setCheckoutLoading(plan);
+    try {
+      const response = await fetch('/api/stripe/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to create checkout session');
+      }
+
+      // Redirect to Stripe Checkout
+      window.location.href = data.url;
+    } catch (error) {
+      console.error('Checkout error:', error);
+      alert('Failed to start checkout. Please try again.');
+      setCheckoutLoading(null);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-black text-white font-poppins overflow-x-hidden">
@@ -214,12 +239,17 @@ export default function CallLabProPage() {
                 Perfect for founders, solo consultants, and individual contributors who want to level up their close rate.
               </p>
 
-              <a
-                href="https://buy.stripe.com/fZuaEYfBz2yz1jn8YS1oI06"
-                className="block bg-[#E51B23] text-white border-none py-4 px-9 font-anton text-base font-bold tracking-[2px] cursor-pointer w-full transition-all duration-300 hover:bg-[#FFDE59] hover:text-black no-underline text-center"
+              <button
+                onClick={() => handleCheckout('solo')}
+                disabled={checkoutLoading !== null}
+                className={`block w-full py-4 px-9 font-anton text-base font-bold tracking-[2px] transition-all duration-300 ${
+                  checkoutLoading === 'solo'
+                    ? 'bg-[#333333] text-[#666666] cursor-wait'
+                    : 'bg-[#E51B23] text-white hover:bg-[#FFDE59] hover:text-black cursor-pointer'
+                }`}
               >
-                [ ACTIVATE PRO ]
-              </a>
+                {checkoutLoading === 'solo' ? '[ LOADING... ]' : '[ ACTIVATE PRO ]'}
+              </button>
             </div>
 
             {/* Team License */}
@@ -244,12 +274,17 @@ export default function CallLabProPage() {
                 For agencies and teams. Share pattern insights, compare performance, build a culture of continuous improvement.
               </p>
 
-              <a
-                href="https://buy.stripe.com/28EeVe60Z1uv5zDb701oI07"
-                className="block bg-[#333333] text-white border-none py-4 px-9 font-anton text-base font-bold tracking-[2px] cursor-pointer w-full transition-all duration-300 hover:bg-[#FFDE59] hover:text-black no-underline text-center"
+              <button
+                onClick={() => handleCheckout('team')}
+                disabled={checkoutLoading !== null}
+                className={`block w-full py-4 px-9 font-anton text-base font-bold tracking-[2px] transition-all duration-300 ${
+                  checkoutLoading === 'team'
+                    ? 'bg-[#222222] text-[#666666] cursor-wait'
+                    : 'bg-[#333333] text-white hover:bg-[#FFDE59] hover:text-black cursor-pointer'
+                }`}
               >
-                [ ACTIVATE PRO ]
-              </a>
+                {checkoutLoading === 'team' ? '[ LOADING... ]' : '[ ACTIVATE PRO ]'}
+              </button>
             </div>
           </div>
 
@@ -278,12 +313,17 @@ export default function CallLabProPage() {
               </div>
 
               <div className="text-center">
-                <a
-                  href="https://buy.stripe.com/fZuaEYfBz2yz1jn8YS1oI06"
-                  className="inline-block bg-[#E51B23] text-white border-2 border-[#E51B23] py-5 px-12 font-anton text-lg font-bold tracking-[3px] cursor-pointer transition-all duration-300 hover:bg-[#FFDE59] hover:border-[#FFDE59] hover:text-black hover:scale-105 no-underline"
+                <button
+                  onClick={() => handleCheckout('solo')}
+                  disabled={checkoutLoading !== null}
+                  className={`inline-block py-5 px-12 font-anton text-lg font-bold tracking-[3px] transition-all duration-300 border-2 ${
+                    checkoutLoading === 'solo'
+                      ? 'bg-[#333333] border-[#333333] text-[#666666] cursor-wait'
+                      : 'bg-[#E51B23] border-[#E51B23] text-white hover:bg-[#FFDE59] hover:border-[#FFDE59] hover:text-black hover:scale-105 cursor-pointer'
+                  }`}
                 >
-                  [ UPGRADE TO CALL LAB PRO ]
-                </a>
+                  {checkoutLoading === 'solo' ? '[ LOADING... ]' : '[ UPGRADE TO CALL LAB PRO ]'}
+                </button>
               </div>
             </div>
 

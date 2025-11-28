@@ -82,13 +82,20 @@ export default function CallLabProPage() {
             <div className="text-lg leading-[1.6] text-[#CCCCCC] max-w-[700px]">
               {personalizedCopy && (
                 <>
-                  <p className="mb-4">{personalizedCopy.pain_paragraph}</p>
-                  <p className="mb-4">
-                    <span className="text-white font-semibold">What you don&apos;t know:</span> {personalizedCopy.what_you_dont_know}
+                  <p className="mb-6">{personalizedCopy.pain_paragraph}</p>
+                  <p className="mb-2">
+                    <span className="text-white italic">What you don&apos;t know:</span>
                   </p>
-                  <p>
-                    <span className="text-white font-semibold">What you are going to learn:</span> The exact patterns that sabotage you every fucking call. The exact moments to accelerate. The exact minute to peel off because it&apos;s a bad fit. The exact version of you and your offer that needs to show up to stack win after win.
+                  <p className="mb-1">→ Where you missed the BUY signal (8 detected, how many did you act on?)</p>
+                  <p className="mb-1">→ Where you didn&apos;t handle the &quot;UH...I DON&apos;T KNOW IF THIS IS FOR ME&quot; pause (3 times)</p>
+                  <p className="mb-6">→ The exact moment trust peaked</p>
+                  <p className="mb-2">
+                    <span className="text-white italic">What you&apos;re going to learn:</span>
                   </p>
+                  <p className="mb-1">→ The exact patterns that sabotage you every fucking call</p>
+                  <p className="mb-1">→ The exact moments to accelerate</p>
+                  <p className="mb-1">→ The exact minute to peel off because it&apos;s a bad fit</p>
+                  <p>→ The exact version of you and your offer that needs to show up to stack win after win.</p>
                 </>
               )}
             </div>
@@ -101,7 +108,7 @@ export default function CallLabProPage() {
             WHAT YOU GET
           </h2>
 
-          <p className="text-base text-[#666666] mb-16 max-w-[600px]">
+          <p className="text-base text-white mb-16 max-w-[600px]">
             Everything in Lite, plus the pattern recognition system that turns good salespeople into closers.
           </p>
 
@@ -207,13 +214,20 @@ export default function CallLabProPage() {
                 Perfect for founders, solo consultants, and individual contributors who want to level up their close rate.
               </p>
 
-              <button className="bg-[#E51B23] text-white border-none py-4 px-9 font-anton text-base font-bold tracking-[2px] cursor-pointer w-full transition-all duration-300 hover:bg-[#FFDE59] hover:text-black">
+              <a
+                href="https://buy.stripe.com/fZuaEYfBz2yz1jn8YS1oI06"
+                className="block bg-[#E51B23] text-white border-none py-4 px-9 font-anton text-base font-bold tracking-[2px] cursor-pointer w-full transition-all duration-300 hover:bg-[#FFDE59] hover:text-black no-underline text-center"
+              >
                 [ ACTIVATE PRO ]
-              </button>
+              </a>
             </div>
 
             {/* Team License */}
             <div className="bg-[#1A1A1A] border border-[#333333] p-12 text-center relative transition-all duration-300 hover:scale-105 hover:border-[#E51B23] cursor-pointer">
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#FFDE59] text-black px-4 py-1 text-[11px] tracking-[2px] font-bold">
+                SCALE YOUR TEAM
+              </div>
+
               <div className="text-sm text-[#FFDE59] mb-4 tracking-wide font-semibold">
                 Team License
               </div>
@@ -230,9 +244,12 @@ export default function CallLabProPage() {
                 For agencies and teams. Share pattern insights, compare performance, build a culture of continuous improvement.
               </p>
 
-              <button className="bg-[#333333] text-white border-none py-4 px-9 font-anton text-base font-bold tracking-[2px] cursor-pointer w-full transition-all duration-300 hover:bg-[#FFDE59] hover:text-black">
+              <a
+                href="https://buy.stripe.com/28EeVe60Z1uv5zDb701oI07"
+                className="block bg-[#333333] text-white border-none py-4 px-9 font-anton text-base font-bold tracking-[2px] cursor-pointer w-full transition-all duration-300 hover:bg-[#FFDE59] hover:text-black no-underline text-center"
+              >
                 [ ACTIVATE PRO ]
-              </button>
+              </a>
             </div>
           </div>
 
@@ -242,26 +259,35 @@ export default function CallLabProPage() {
         </section>
 
         {/* Final CTA */}
-        <section className="bg-gradient-to-b from-[rgba(229,27,35,0.2)] to-black py-20 px-5 text-center border-t-2 border-[#E51B23]">
+        <section className="bg-gradient-to-b from-[rgba(229,27,35,0.2)] to-black py-20 px-5 border-t-2 border-[#E51B23]">
           <div className="max-w-[800px] mx-auto">
-            <h2 className="font-anton text-[clamp(32px,4vw,56px)] mb-6 leading-[1.1] tracking-[2px]">
-              {personalizedCopy?.cta_urgency.toUpperCase()}
-              <br />
-              <span className="text-[#FFDE59]">NOW LEARN FROM THEM.</span>
-            </h2>
+            <div className="bg-[#1A1A1A] border-2 border-[#E51B23] p-12">
+              <h2 className="font-anton text-[clamp(24px,3vw,36px)] mb-8 leading-[1.2] tracking-[2px] text-center">
+                CALL LAB LITE SHOWED YOU WHAT HAPPENED.
+                <br />
+                <span className="text-[#E51B23]">CALL LAB PRO SHOWS YOU THE SYSTEM.</span>
+              </h2>
 
-            <p className="text-lg text-[#CCCCCC] mb-12 leading-[1.6]">
-              Pro turns every sales call into a pattern recognition session. The more you analyze, the more your blind spots become undeniable—and fixable.
-            </p>
+              <div className="space-y-3 mb-10">
+                <p className="text-base text-[#CCCCCC]">→ <span className="text-white font-semibold">Pattern Library:</span> The 47 trust-building moves you&apos;re using (or missing)</p>
+                <p className="text-base text-[#CCCCCC]">→ <span className="text-white font-semibold">Trust Acceleration Map:</span> See exactly when buyers go from skeptical to sold</p>
+                <p className="text-base text-[#CCCCCC]">→ <span className="text-white font-semibold">Tactical Rewrites:</span> Word-for-word fixes for every weak moment</p>
+                <p className="text-base text-[#CCCCCC]">→ <span className="text-white font-semibold">Timestamp Analysis:</span> Every buying signal decoded with your exact response</p>
+                <p className="text-base text-[#CCCCCC]">→ <span className="text-white font-semibold">Framework Breakdowns:</span> When to deploy each close, how to recognize the setup</p>
+                <p className="text-base text-[#CCCCCC]">→ <span className="text-white font-semibold">Comparative Scoring:</span> How you stack up against 8 major sales methodologies</p>
+              </div>
 
-            <a
-              href="#pricing"
-              className="inline-block bg-[#E51B23] text-white border-2 border-[#E51B23] py-6 px-16 font-anton text-xl font-bold tracking-[3px] cursor-pointer transition-all duration-300 hover:bg-[#FFDE59] hover:border-[#FFDE59] hover:text-black hover:scale-105 no-underline animate-pulse"
-            >
-              [ UPGRADE TO PRO ]
-            </a>
+              <div className="text-center">
+                <a
+                  href="https://buy.stripe.com/fZuaEYfBz2yz1jn8YS1oI06"
+                  className="inline-block bg-[#E51B23] text-white border-2 border-[#E51B23] py-5 px-12 font-anton text-lg font-bold tracking-[3px] cursor-pointer transition-all duration-300 hover:bg-[#FFDE59] hover:border-[#FFDE59] hover:text-black hover:scale-105 no-underline"
+                >
+                  [ UPGRADE TO CALL LAB PRO ]
+                </a>
+              </div>
+            </div>
 
-            <div className="mt-8 text-[13px] text-[#666666]">
+            <div className="mt-8 text-[13px] text-[#666666] text-center">
               Questions? Email <span className="text-[#FFDE59]">tim@timkilroy.com</span>
             </div>
           </div>

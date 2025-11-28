@@ -2,13 +2,9 @@ import Anthropic from '@anthropic-ai/sdk';
 import OpenAI from 'openai';
 
 export type ModelProvider = 'anthropic' | 'openai';
-export type ModelId =
-  | 'claude-sonnet-4-5-20250929'
-  | 'claude-3-5-sonnet-20241022'
-  | 'claude-3-5-sonnet-20240620'
-  | 'claude-3-opus-20240229'
-  | 'gpt-4o'
-  | 'gpt-4o-mini';
+export type AnthropicModelId = 'claude-sonnet-4-5-20250929';
+export type OpenAIModelId = 'o1' | 'gpt-4o';
+export type ModelId = AnthropicModelId | OpenAIModelId;
 
 export interface ModelConfig {
   provider: ModelProvider;
@@ -17,19 +13,41 @@ export interface ModelConfig {
   temperature: number;
 }
 
+export interface FallbackConfig {
+  primary: ModelConfig;
+  fallback: ModelConfig;
+}
+
 // Default model configurations for different tools
-const MODEL_CONFIGS: Record<string, ModelConfig> = {
+// Primary: Claude Sonnet 4.5 | Fallback: OpenAI o1
+const MODEL_CONFIGS: Record<string, FallbackConfig> = {
   'call-lab-lite': {
-    provider: 'anthropic',
-    model: 'claude-sonnet-4-5-20250929',
-    maxTokens: 4096,
-    temperature: 0.3,
+    primary: {
+      provider: 'anthropic',
+      model: 'claude-sonnet-4-5-20250929',
+      maxTokens: 4096,
+      temperature: 0.3,
+    },
+    fallback: {
+      provider: 'openai',
+      model: 'o1',
+      maxTokens: 4096,
+      temperature: 1, // o1 models only support temperature=1
+    },
   },
   'call-lab-full': {
-    provider: 'anthropic',
-    model: 'claude-sonnet-4-5-20250929',
-    maxTokens: 8192,
-    temperature: 0.3,
+    primary: {
+      provider: 'anthropic',
+      model: 'claude-sonnet-4-5-20250929',
+      maxTokens: 8192,
+      temperature: 0.3,
+    },
+    fallback: {
+      provider: 'openai',
+      model: 'o1',
+      maxTokens: 8192,
+      temperature: 1,
+    },
   },
 };
 
@@ -43,16 +61,57 @@ export interface ModelResponse {
 
 /**
  * Run an AI model with the given prompts
- * Abstracts away provider-specific details
+ * Primary: Claude Sonnet 4.5 | Fallback: OpenAI o1
+ * Automatically falls back to OpenAI if Anthropic fails
  */
 export async function runModel(
   toolName: string,
   systemPrompt: string,
   userPrompt: string,
   options?: Partial<ModelConfig>
-): Promise<ModelResponse> {
-  const config = { ...MODEL_CONFIGS[toolName], ...options };
+): Promise<ModelResponse & { provider: ModelProvider }> {
+  const fallbackConfig = MODEL_CONFIGS[toolName];
+  if (!fallbackConfig) {
+    throw new Error(`No model configuration found for tool: ${toolName}`);
+  }
 
+  const primaryConfig = { ...fallbackConfig.primary, ...options };
+  const fallbackModelConfig = { ...fallbackConfig.fallback, ...options };
+
+  // Try primary provider (Claude Sonnet 4.5)
+  try {
+    const result = await runProvider(primaryConfig, systemPrompt, userPrompt);
+    return { ...result, provider: primaryConfig.provider };
+  } catch (primaryError) {
+    console.warn(
+      `Primary provider (${primaryConfig.provider}/${primaryConfig.model}) failed:`,
+      primaryError instanceof Error ? primaryError.message : primaryError
+    );
+
+    // Fall back to OpenAI o1
+    try {
+      console.log(`Falling back to ${fallbackModelConfig.provider}/${fallbackModelConfig.model}`);
+      const result = await runProvider(fallbackModelConfig, systemPrompt, userPrompt);
+      return { ...result, provider: fallbackModelConfig.provider };
+    } catch (fallbackError) {
+      console.error(
+        `Fallback provider (${fallbackModelConfig.provider}/${fallbackModelConfig.model}) also failed:`,
+        fallbackError instanceof Error ? fallbackError.message : fallbackError
+      );
+      // Throw the original error for better debugging
+      throw primaryError;
+    }
+  }
+}
+
+/**
+ * Run a specific provider
+ */
+async function runProvider(
+  config: ModelConfig,
+  systemPrompt: string,
+  userPrompt: string
+): Promise<ModelResponse> {
   if (config.provider === 'anthropic') {
     return runAnthropic(config, systemPrompt, userPrompt);
   } else {
@@ -105,7 +164,7 @@ async function runAnthropic(
 }
 
 /**
- * Run OpenAI GPT model
+ * Run OpenAI model (supports both GPT-4o and o1 models)
  */
 async function runOpenAI(
   config: ModelConfig,
@@ -121,13 +180,20 @@ async function runOpenAI(
     apiKey,
   });
 
+  const isO1Model = config.model.startsWith('o1');
+
+  // o1 models use different API parameters
+  // - Use 'developer' role instead of 'system'
+  // - Use 'max_completion_tokens' instead of 'max_tokens'
+  // - Don't pass temperature (fixed at 1)
   const completion = await openai.chat.completions.create({
     model: config.model,
-    max_tokens: config.maxTokens,
-    temperature: config.temperature,
+    ...(isO1Model
+      ? { max_completion_tokens: config.maxTokens }
+      : { max_tokens: config.maxTokens, temperature: config.temperature }),
     messages: [
       {
-        role: 'system',
+        role: isO1Model ? 'developer' : 'system',
         content: systemPrompt,
       },
       {
@@ -135,7 +201,7 @@ async function runOpenAI(
         content: userPrompt,
       },
     ],
-  });
+  } as Parameters<typeof openai.chat.completions.create>[0]);
 
   const choice = completion.choices[0];
   if (!choice.message.content) {

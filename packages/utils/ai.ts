@@ -3,7 +3,7 @@ import OpenAI from 'openai';
 
 export type ModelProvider = 'anthropic' | 'openai';
 export type AnthropicModelId = 'claude-sonnet-4-5-20250929';
-export type OpenAIModelId = 'o1' | 'gpt-4o';
+export type OpenAIModelId = 'gpt-5.1' | 'gpt-4o';
 export type ModelId = AnthropicModelId | OpenAIModelId;
 
 export interface ModelConfig {
@@ -30,9 +30,9 @@ const MODEL_CONFIGS: Record<string, FallbackConfig> = {
     },
     fallback: {
       provider: 'openai',
-      model: 'o1',
+      model: 'gpt-5.1',
       maxTokens: 4096,
-      temperature: 1, // o1 models only support temperature=1
+      temperature: 0.3,
     },
   },
   'call-lab-full': {
@@ -44,9 +44,9 @@ const MODEL_CONFIGS: Record<string, FallbackConfig> = {
     },
     fallback: {
       provider: 'openai',
-      model: 'o1',
+      model: 'gpt-5.1',
       maxTokens: 8192,
-      temperature: 1,
+      temperature: 0.3,
     },
   },
 };
@@ -164,7 +164,7 @@ async function runAnthropic(
 }
 
 /**
- * Run OpenAI model (supports both GPT-4o and o1 models)
+ * Run OpenAI GPT model
  */
 async function runOpenAI(
   config: ModelConfig,
@@ -180,20 +180,13 @@ async function runOpenAI(
     apiKey,
   });
 
-  const isO1Model = config.model.startsWith('o1');
-
-  // o1 models use different API parameters
-  // - Use 'developer' role instead of 'system'
-  // - Use 'max_completion_tokens' instead of 'max_tokens'
-  // - Don't pass temperature (fixed at 1)
   const completion = await openai.chat.completions.create({
     model: config.model,
-    ...(isO1Model
-      ? { max_completion_tokens: config.maxTokens }
-      : { max_tokens: config.maxTokens, temperature: config.temperature }),
+    max_tokens: config.maxTokens,
+    temperature: config.temperature,
     messages: [
       {
-        role: isO1Model ? 'developer' : 'system',
+        role: 'system',
         content: systemPrompt,
       },
       {
@@ -201,7 +194,7 @@ async function runOpenAI(
         content: userPrompt,
       },
     ],
-  } as Parameters<typeof openai.chat.completions.create>[0]);
+  });
 
   const choice = completion.choices[0];
   if (!choice.message.content) {

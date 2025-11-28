@@ -83,9 +83,9 @@ Examples:
 Short section selling why Pro exists. Three to four sentences maximum.
 
 Format:
-"Lite shows [simple list].
+"Call Lab Lite shows [simple list].
 
-Pro shows [bigger list]:
+Call Lab Pro shows [bigger list]:
 - [Benefit]
 - [Benefit]
 - [Benefit]

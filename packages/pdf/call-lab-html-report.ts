@@ -354,9 +354,14 @@ const HTML_TEMPLATE = `
 
 <!-- CTA -->
 <div class="cta-card">
-    <div class="cta-header">UNLOCK CALL LAB PRO</div>
-    {{cta_bullets}}
-    <div class="cta-button">[ UPGRADE NOW ]</div>
+    <div class="cta-header">CALL LAB LITE SHOWED YOU WHAT HAPPENED.<br>CALL LAB PRO SHOWS YOU THE SYSTEM.</div>
+    <div class="cta-bullet">→ Pattern Library: The 47 trust-building moves you're using (or missing)</div>
+    <div class="cta-bullet">→ Trust Acceleration Map: See exactly when buyers go from skeptical to sold</div>
+    <div class="cta-bullet">→ Tactical Rewrites: Word-for-word fixes for every weak moment</div>
+    <div class="cta-bullet">→ Timestamp Analysis: Every buying signal decoded with your exact response</div>
+    <div class="cta-bullet">→ Framework Breakdowns: When to deploy each close, how to recognize the setup</div>
+    <div class="cta-bullet">→ Comparative Scoring: How you stack up against 8 major sales methodologies</div>
+    <div class="cta-button">[ UPGRADE TO CALL LAB PRO ]</div>
 </div>
 
 </body>

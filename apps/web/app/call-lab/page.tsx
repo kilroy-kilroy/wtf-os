@@ -185,17 +185,25 @@ export default function CallLabPage() {
       <ConsolePanel variant="red-highlight">
         <div className="text-center space-y-4">
           <ConsoleHeading level={2} variant="yellow">
-            UNLOCK THE DEEP ANALYSIS
+            CALL LAB LITE SHOWED YOU WHAT HAPPENED.<br />CALL LAB PRO SHOWS YOU THE SYSTEM.
           </ConsoleHeading>
-          <p className="text-white font-poppins text-lg">
-            Lite shows you what happened. Pro shows you the repeatable patterns, trust acceleration map, and tactical rewrites.
-          </p>
+          <div className="text-left space-y-2 text-white font-poppins">
+            <div>→ Pattern Library: The 47 trust-building moves you&apos;re using (or missing)</div>
+            <div>→ Trust Acceleration Map: See exactly when buyers go from skeptical to sold</div>
+            <div>→ Tactical Rewrites: Word-for-word fixes for every weak moment</div>
+            <div>→ Timestamp Analysis: Every buying signal decoded with your exact response</div>
+            <div>→ Framework Breakdowns: When to deploy each close, how to recognize the setup</div>
+            <div>→ Comparative Scoring: How you stack up against 8 major sales methodologies</div>
+          </div>
           <ConsoleButton
             variant="secondary"
             fullWidth
-            onClick={() => setFormData({ ...formData, tier: 'pro' })}
+            onClick={() => {
+              // TODO: Integrate with Stripe checkout
+              console.log('Upgrade to Call Lab Pro clicked');
+            }}
           >
-            ▶ UPGRADE TO CALL LAB PRO
+            [ UPGRADE TO CALL LAB PRO ]
           </ConsoleButton>
         </div>
       </ConsolePanel>

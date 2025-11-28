@@ -280,7 +280,7 @@ export default function CallLabPage() {
         {/* Header */}
         <div className="text-center space-y-4">
           <h1 className="text-5xl font-bold text-white">
-            Call Lab {formData.tier === 'pro' ? 'Pro' : 'Lite'}
+            {formData.tier === 'pro' ? 'Call Lab Pro' : 'Call Lab Lite'}
           </h1>
           <p className="text-xl text-slate-300">
             {formData.tier === 'pro'
@@ -309,14 +309,14 @@ export default function CallLabPage() {
                       variant={formData.tier === 'lite' ? 'default' : 'outline'}
                       onClick={() => setFormData({ ...formData, tier: 'lite' })}
                     >
-                      Lite (Quick Diagnostic)
+                      Call Lab Lite (Quick Diagnostic)
                     </Button>
                     <Button
                       type="button"
                       variant={formData.tier === 'pro' ? 'default' : 'outline'}
                       onClick={() => setFormData({ ...formData, tier: 'pro' })}
                     >
-                      Pro (Full Analysis)
+                      Call Lab Pro (Full Analysis)
                     </Button>
                   </div>
                 </div>

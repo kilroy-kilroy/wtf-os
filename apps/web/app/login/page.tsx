@@ -37,22 +37,35 @@ export default function LoginPage() {
         });
         if (error) throw error;
 
-        // Check if user has analyzed any calls
+        // Check user's onboarding status and route accordingly
         if (authData.user) {
-          const { count } = await supabase
-            .from('call_lab_reports')
-            .select('*', { count: 'exact', head: true })
-            .eq('user_id', authData.user.id);
+          // Check if user has completed onboarding
+          const { data: userData } = await supabase
+            .from('users')
+            .select('onboarding_completed, org_id')
+            .eq('id', authData.user.id)
+            .single();
 
-          if (count && count > 0) {
-            // User has analyzed calls - go to dashboard
-            router.push('/dashboard');
+          if (!userData || !userData.onboarding_completed) {
+            // New user or hasn't completed onboarding
+            router.push('/onboarding/profile');
           } else {
-            // No calls yet - go to Pro analyze page
-            router.push('/call-lab/pro');
+            // Onboarding complete - check if has calls
+            const { count } = await supabase
+              .from('call_lab_reports')
+              .select('*', { count: 'exact', head: true })
+              .eq('user_id', authData.user.id);
+
+            if (count && count > 0) {
+              // User has analyzed calls - go to dashboard
+              router.push('/dashboard');
+            } else {
+              // No calls yet - go to Pro analyze page
+              router.push('/call-lab/pro');
+            }
           }
         } else {
-          router.push('/dashboard');
+          router.push('/onboarding/profile');
         }
         router.refresh();
       }

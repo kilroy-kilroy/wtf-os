@@ -9,9 +9,35 @@ export async function GET(request: NextRequest) {
 
   if (code) {
     const supabase = createRouteHandlerClient({ cookies });
-    await supabase.auth.exchangeCodeForSession(code);
+    const { data: { session } } = await supabase.auth.exchangeCodeForSession(code);
+
+    if (session?.user) {
+      // Check if user has completed onboarding
+      const { data: userData } = await supabase
+        .from('users')
+        .select('onboarding_completed')
+        .eq('id', session.user.id)
+        .single();
+
+      if (!userData || !userData.onboarding_completed) {
+        // New user - redirect to onboarding
+        return NextResponse.redirect(new URL('/onboarding/profile', request.url));
+      }
+
+      // Check if user has analyzed calls
+      const { count } = await supabase
+        .from('call_lab_reports')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', session.user.id);
+
+      if (count && count > 0) {
+        return NextResponse.redirect(new URL('/dashboard', request.url));
+      } else {
+        return NextResponse.redirect(new URL('/call-lab/pro', request.url));
+      }
+    }
   }
 
-  // Redirect to dashboard after auth
-  return NextResponse.redirect(new URL('/dashboard', request.url));
+  // Fallback - redirect to onboarding for new users
+  return NextResponse.redirect(new URL('/onboarding/profile', request.url));
 }

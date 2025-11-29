@@ -188,7 +188,7 @@ export default function CallLabProPage() {
   return (
     <div className="min-h-screen bg-black py-12 px-4">
       <div className="max-w-5xl mx-auto">
-        <SalesOSHeader systemStatus={loading ? 'PROCESSING' : 'PRO_READY'} />
+        <SalesOSHeader systemStatus={loading ? 'PROCESSING' : 'READY'} />
 
         {!result ? (
           /* Input Form */

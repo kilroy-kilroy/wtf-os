@@ -112,10 +112,11 @@ ALTER TABLE orgs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE invites ENABLE ROW LEVEL SECURITY;
 ALTER TABLE org_domains ENABLE ROW LEVEL SECURITY;
 
--- Users can read their own org
+-- Users can read their own org (via users.org_id OR if they created it)
 CREATE POLICY "Users read own org" ON orgs
   FOR SELECT USING (
     id IN (SELECT org_id FROM users WHERE id = auth.uid())
+    OR created_by_user_id = auth.uid()
   );
 
 -- Authenticated users can create orgs (during onboarding)

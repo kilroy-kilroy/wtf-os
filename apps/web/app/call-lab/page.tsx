@@ -102,6 +102,19 @@ export default function CallLabPage() {
     checkUserSubscription();
   }, []);
 
+  // Reset for new analysis - clear call data but keep user info
+  const handleNewAnalysis = () => {
+    setResult(null);
+    setError(null);
+    setFormData(prev => ({
+      ...prev,
+      transcript: '',
+      prospect_company: '',
+      prospect_role: '',
+      call_stage: 'discovery',
+    }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -218,7 +231,7 @@ export default function CallLabPage() {
         >
           {downloadingPdf ? 'GENERATING PDF...' : '↓ DOWNLOAD PDF'}
         </ConsoleButton>
-        <ConsoleButton onClick={() => setResult(null)} variant="primary">
+        <ConsoleButton onClick={handleNewAnalysis} variant="primary">
           ← NEW ANALYSIS
         </ConsoleButton>
       </div>
@@ -275,7 +288,7 @@ export default function CallLabPage() {
             <div className="flex gap-4 justify-center">
               <ConsoleButton
                 variant="secondary"
-                onClick={() => setResult(null)}
+                onClick={handleNewAnalysis}
               >
                 [ ANALYZE ANOTHER CALL ]
               </ConsoleButton>

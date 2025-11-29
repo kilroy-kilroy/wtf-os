@@ -31,12 +31,29 @@ export default function LoginPage() {
         if (error) throw error;
         setError('Check your email for the confirmation link.');
       } else {
-        const { error } = await supabase.auth.signInWithPassword({
+        const { data: authData, error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
         if (error) throw error;
-        router.push('/dashboard');
+
+        // Check if user has analyzed any calls
+        if (authData.user) {
+          const { count } = await supabase
+            .from('call_lab_reports')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', authData.user.id);
+
+          if (count && count > 0) {
+            // User has analyzed calls - go to dashboard
+            router.push('/dashboard');
+          } else {
+            // No calls yet - go to Pro analyze page
+            router.push('/call-lab/pro');
+          }
+        } else {
+          router.push('/dashboard');
+        }
         router.refresh();
       }
     } catch (err: any) {

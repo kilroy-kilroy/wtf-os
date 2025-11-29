@@ -85,10 +85,10 @@ export default function CallLabPage() {
 
             // Pre-fill email and name if available
             if (userData.email) {
-              setFormData(prev => ({ ...prev, email: userData.email }));
+              setFormData(prev => ({ ...prev, email: userData.email ?? '' }));
             }
             if (userData.first_name) {
-              setFormData(prev => ({ ...prev, first_name: userData.first_name }));
+              setFormData(prev => ({ ...prev, first_name: userData.first_name ?? '' }));
             }
           }
         }

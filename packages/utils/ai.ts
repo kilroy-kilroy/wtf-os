@@ -19,7 +19,7 @@ export interface FallbackConfig {
 }
 
 // Default model configurations for different tools
-// Primary: Claude Sonnet 4.5 | Fallback: OpenAI o1
+// Primary: Claude Sonnet 4.5 | Fallback: OpenAI GPT-5.1
 const MODEL_CONFIGS: Record<string, FallbackConfig> = {
   'call-lab-lite': {
     primary: {
@@ -32,6 +32,20 @@ const MODEL_CONFIGS: Record<string, FallbackConfig> = {
       provider: 'openai',
       model: 'gpt-5.1',
       maxTokens: 4096,
+      temperature: 0.3,
+    },
+  },
+  'call-lab-pro': {
+    primary: {
+      provider: 'anthropic',
+      model: 'claude-sonnet-4-5-20250929',
+      maxTokens: 8192,
+      temperature: 0.3,
+    },
+    fallback: {
+      provider: 'openai',
+      model: 'gpt-5.1',
+      maxTokens: 8192,
       temperature: 0.3,
     },
   },

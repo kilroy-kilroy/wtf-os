@@ -112,6 +112,21 @@ ALTER TABLE orgs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE invites ENABLE ROW LEVEL SECURITY;
 ALTER TABLE org_domains ENABLE ROW LEVEL SECURITY;
 
+-- USERS table RLS (if not already enabled)
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+
+-- Users can read their own record
+CREATE POLICY "Users read own record" ON users
+  FOR SELECT USING (id = auth.uid());
+
+-- Users can insert their own record (onboarding)
+CREATE POLICY "Users insert own record" ON users
+  FOR INSERT WITH CHECK (id = auth.uid());
+
+-- Users can update their own record
+CREATE POLICY "Users update own record" ON users
+  FOR UPDATE USING (id = auth.uid());
+
 -- Users can read their own org (via users.org_id OR if they created it)
 CREATE POLICY "Users read own org" ON orgs
   FOR SELECT USING (

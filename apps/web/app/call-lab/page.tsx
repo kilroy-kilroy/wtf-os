@@ -297,7 +297,7 @@ export default function CallLabPage() {
   return (
     <div className="min-h-screen bg-black py-12 px-4">
       <div className="max-w-5xl mx-auto">
-        <SalesOSHeader systemStatus={checkingAuth ? 'INITIALIZING' : loading ? 'PROCESSING' : 'READY'} />
+        <SalesOSHeader systemStatus={checkingAuth ? 'PROCESSING' : loading ? 'PROCESSING' : 'READY'} />
 
         {!result ? (
           /* Input Form */

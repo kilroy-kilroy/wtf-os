@@ -67,11 +67,12 @@ export default function CallLabPage() {
 
         if (session?.user) {
           // User is logged in - fetch their plan
+          // Using type assertion since we added columns that aren't in generated types
           const { data: userData } = await supabase
             .from('users')
             .select('plan, email, first_name')
             .eq('id', session.user.id)
-            .single();
+            .single() as { data: { plan: string | null; email: string | null; first_name: string | null } | null };
 
           if (userData) {
             const plan = userData.plan as 'lite' | 'solo' | 'team' | null;

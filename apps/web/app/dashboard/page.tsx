@@ -9,7 +9,7 @@ import {
   ConsoleButton,
   SalesOSHeader
 } from '@/components/console';
-import { createBrowserClient } from '@wtf-os/db/client';
+import { createBrowserClient } from '@repo/db';
 
 interface UserProfile {
   id: string;

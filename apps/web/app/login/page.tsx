@@ -9,7 +9,7 @@ import {
   ConsoleInput,
   SalesOSHeader
 } from '@/components/console';
-import { createBrowserClient } from '@wtf-os/db/client';
+import { createBrowserClient } from '@repo/db';
 
 export default function LoginPage() {
   const router = useRouter();

@@ -10,7 +10,7 @@ import {
   ConsoleMarkdownRenderer
 } from '@/components/console';
 import CallLabLoadingScreen from '@/components/CallLabLoadingScreen';
-import { createBrowserClient } from '@wtf-os/db/client';
+import { createBrowserClient } from '@repo/db';
 
 // Union type for both response formats
 type AnalysisResult =

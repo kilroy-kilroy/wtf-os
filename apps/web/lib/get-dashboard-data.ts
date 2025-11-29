@@ -1,6 +1,25 @@
 import { getSupabaseServerClient } from "./supabase-server";
-import { DashboardData, RecentCall, SkillTrend, PatternRadarData } from "./dashboard-types";
+import { DashboardData, RecentCall, SkillTrend, PatternRadarData, ChartDataPoint } from "./dashboard-types";
 import { subDays } from "date-fns";
+
+// Utility functions for real math
+const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
+
+const avg = (xs: (number | null | undefined)[]) => {
+  const vals = xs.filter((x): x is number => typeof x === "number");
+  if (!vals.length) return 0;
+  return vals.reduce((a, b) => a + b, 0) / vals.length;
+};
+
+const variance = (xs: (number | null | undefined)[]) => {
+  const vals = xs.filter((x): x is number => typeof x === "number");
+  if (vals.length < 2) return 0;
+  const mean = avg(vals);
+  const squaredDiffs = vals.map((v) => Math.pow(v - mean, 2));
+  return squaredDiffs.reduce((a, b) => a + b, 0) / vals.length;
+};
+
+const normalizeDelta = (x: number) => clamp(x / 10, -10, 10) * 10;
 
 export async function getDashboardData(userId: string): Promise<DashboardData> {
   const supabase = getSupabaseServerClient();
@@ -22,6 +41,7 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
     throw error;
   }
 
+  // Recent calls for display
   const recentCalls: RecentCall[] =
     calls.slice(0, 5).map((c) => ({
       id: c.id,
@@ -35,41 +55,73 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
       agendaControl: c.agenda_control,
     })) ?? [];
 
-  // calls in last 30 days
-  const callsLast30 = calls.filter(
-    (c) => new Date(c.created_at) >= new Date(thirtyDaysAgo)
-  );
-
-  // split periods: older 30 vs newer 30 for deltas
+  // Split periods: older 30 vs newer 30 for deltas
   const first30 = calls.filter(
     (c) =>
       new Date(c.created_at) >= new Date(sixtyDaysAgo) &&
       new Date(c.created_at) < new Date(thirtyDaysAgo)
   );
-  const second30 = callsLast30;
+  const second30 = calls.filter(
+    (c) => new Date(c.created_at) >= new Date(thirtyDaysAgo)
+  );
 
-  const avg = (xs: (number | null | undefined)[]) => {
-    const vals = xs.filter((x): x is number => typeof x === "number");
-    if (!vals.length) return 0;
-    return vals.reduce((a, b) => a + b, 0) / vals.length;
-  };
+  // ============================================
+  // METRIC 1: Calls Analyzed (last 30 days)
+  // ============================================
+  const callsLast30 = second30.length;
 
+  // ============================================
+  // METRIC 2: Trust Velocity Delta
+  // "How quickly the buyer relaxes and reveals meaningful info"
+  // ============================================
   const trustOld = avg(first30.map((c) => c.trust_velocity));
   const trustNew = avg(second30.map((c) => c.trust_velocity));
-  const trustVelocityDelta = trustNew - trustOld;
 
-  const agendaStability = avg(calls.map((c) => c.agenda_control));
+  // Trend % change, fallback to avgNew if no prior data
+  let trustVelocityDelta: number;
+  if (trustOld === 0 || first30.length === 0) {
+    trustVelocityDelta = trustNew;
+  } else {
+    trustVelocityDelta = ((trustNew - trustOld) / trustOld) * 100;
+  }
 
+  // ============================================
+  // METRIC 3: Agenda Control Stability
+  // "How consistently you control leverage moments"
+  // Stability = 100 - (variance * 1.5), clamped 0-100
+  // ============================================
+  const agendaScores = calls.map((c) => c.agenda_control);
+  const agendaVariance = variance(agendaScores);
+  const agendaStability = clamp(100 - agendaVariance * 1.5, 0, 100);
+
+  // ============================================
+  // METRIC 4: Pattern Density
+  // "Recurring friction that slows deals"
+  // Scale 0-100 (0 = clean calls, 100 = everything breaks)
+  // ============================================
   const patternDensity = avg(
     calls.map((c) => (typeof c.pattern_density === "number" ? c.pattern_density : 0))
   );
 
-  const skillImprovementIndex =
-    (trustVelocityDelta || 0) * 0.4 +
-    (agendaStability || 0) * 0.3 +
-    ((100 - patternDensity) || 0) * 0.3;
+  // ============================================
+  // METRIC 5: Skill Improvement Index ("Peloton Score")
+  // Weighted composite reflecting behavioral improvement
+  // ============================================
+  const agendaOld = avg(first30.map((c) => c.agenda_control));
+  const agendaNew = avg(second30.map((c) => c.agenda_control));
+  const agendaStabilityDelta = agendaNew - agendaOld;
 
-  // pattern radar rough calculation from trust_velocity, agenda_control and pattern_density
+  const skillImprovementIndex = clamp(
+    normalizeDelta(trustVelocityDelta) * 0.5 +
+    normalizeDelta(agendaStabilityDelta) * 0.25 +
+    (100 - patternDensity) * 0.25,
+    0,
+    100
+  );
+
+  // ============================================
+  // PATTERN RADAR
+  // ============================================
   const skills: SkillTrend[] = [
     {
       name: "Trust velocity",
@@ -79,16 +131,13 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
     {
       name: "Agenda control",
       current: agendaStability || 0,
-      delta:
-        avg(second30.map((c) => c.agenda_control)) -
-        avg(first30.map((c) => c.agenda_control)),
+      delta: agendaStabilityDelta,
     },
     {
       name: "Pattern density (inverse)",
       current: 100 - (patternDensity || 0),
       delta:
-        (100 -
-          avg(second30.map((c) => c.pattern_density || 0))) -
+        (100 - avg(second30.map((c) => c.pattern_density || 0))) -
         (100 - avg(first30.map((c) => c.pattern_density || 0))),
     },
   ];
@@ -111,14 +160,14 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
     skills,
   };
 
-  // quick insights: pull from most recent report if present
+  // ============================================
+  // QUICK INSIGHTS
+  // ============================================
   const latest = calls[0] || null;
   const latestReport = latest?.full_report || null;
 
   const quickInsights = {
-    topQuote:
-      latestReport?.narrativeCapture?.quotes?.[0] ??
-      null,
+    topQuote: latestReport?.narrativeCapture?.quotes?.[0] ?? null,
     missedMove:
       latestReport?.rebuild?.tldr ??
       latestReport?.wtfMethod?.moves?.[0] ??
@@ -129,7 +178,9 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
       null,
   };
 
-  // follow up tasks
+  // ============================================
+  // FOLLOW-UP TASKS
+  // ============================================
   const { data: followUps, error: followError } = await supabase
     .from("call_followups")
     .select("*")
@@ -141,9 +192,39 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
     console.error("Error fetching followups", followError);
   }
 
+  // ============================================
+  // CHART DATA (oldest → newest for line charts)
+  // ============================================
+  const formatDate = (dateStr: string) =>
+    new Date(dateStr).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+    });
+
+  const trustVelocityTrend: ChartDataPoint[] = calls
+    .map((c) => ({
+      date: formatDate(c.created_at),
+      value: c.trust_velocity ?? 0,
+    }))
+    .reverse();
+
+  const agendaControlTrend: ChartDataPoint[] = calls
+    .map((c) => ({
+      date: formatDate(c.created_at),
+      value: c.agenda_control ?? 0,
+    }))
+    .reverse();
+
+  const patternDensityTrend: ChartDataPoint[] = calls
+    .map((c) => ({
+      date: formatDate(c.created_at),
+      value: c.pattern_density ?? 0,
+    }))
+    .reverse();
+
   return {
     metrics: {
-      callsLast30: callsLast30.length,
+      callsLast30,
       trustVelocityDelta,
       agendaStability,
       patternDensity,
@@ -160,5 +241,10 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
         completed: f.completed,
         callId: f.call_id,
       })) ?? [],
+    charts: {
+      trustVelocityTrend,
+      agendaControlTrend,
+      patternDensityTrend,
+    },
   };
 }

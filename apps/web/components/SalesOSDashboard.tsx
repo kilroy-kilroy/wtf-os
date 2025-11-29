@@ -6,6 +6,7 @@ import { PatternRadar } from "./pattern-radar";
 import { RecentCallsList } from "./recent-calls";
 import { QuickInsightsPanel } from "./quick-insights";
 import { FollowUpsPanel } from "./follow-ups";
+import { TrustVelocityChart, AgendaControlChart, PatternDensityChart } from "./charts";
 
 type Props = {
   userName: string;
@@ -14,7 +15,7 @@ type Props = {
 };
 
 export function SalesOSDashboard({ userName, userEmail, data }: Props) {
-  const { metrics, patternRadar, recentCalls, quickInsights, followUps } = data;
+  const { metrics, patternRadar, recentCalls, quickInsights, followUps, charts } = data;
 
   return (
     <div className="min-h-screen bg-black py-8 px-4 text-white">
@@ -108,7 +109,7 @@ export function SalesOSDashboard({ userName, userEmail, data }: Props) {
           <MetricCard
             label="Agenda control"
             value={`${metrics.agendaStability.toFixed(0)}`}
-            helper="Average control score"
+            helper="Stability score (consistency)"
           />
           <MetricCard
             label="Pattern density"
@@ -120,6 +121,13 @@ export function SalesOSDashboard({ userName, userEmail, data }: Props) {
             value={metrics.skillImprovementIndex.toFixed(0)}
             helper="Higher is better"
           />
+        </section>
+
+        {/* Trend Charts */}
+        <section className="grid md:grid-cols-3 gap-6">
+          <TrustVelocityChart data={charts.trustVelocityTrend} />
+          <AgendaControlChart data={charts.agendaControlTrend} />
+          <PatternDensityChart data={charts.patternDensityTrend} />
         </section>
 
         {/* Middle band: pattern radar + quick insights */}

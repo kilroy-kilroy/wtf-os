@@ -51,10 +51,22 @@ export type DashboardMetrics = {
   skillImprovementIndex: number;
 };
 
+export type ChartDataPoint = {
+  date: string;
+  value: number;
+};
+
+export type DashboardCharts = {
+  trustVelocityTrend: ChartDataPoint[];
+  agendaControlTrend: ChartDataPoint[];
+  patternDensityTrend: ChartDataPoint[];
+};
+
 export type DashboardData = {
   metrics: DashboardMetrics;
   patternRadar: PatternRadarData;
   recentCalls: RecentCall[];
   quickInsights: QuickInsights;
   followUps: FollowUpTask[];
+  charts: DashboardCharts;
 };

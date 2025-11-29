@@ -9,6 +9,7 @@ import {
   SalesOSHeader,
   ConsoleMarkdownRenderer
 } from '@/components/console';
+import CallLabLoadingScreen from '@/components/CallLabLoadingScreen';
 
 // Union type for both response formats
 type AnalysisResult =
@@ -209,6 +210,16 @@ export default function CallLabPage() {
       </ConsolePanel>
     </div>
   );
+
+  // Show full-screen loading animation
+  if (loading && loadingStep) {
+    return (
+      <CallLabLoadingScreen
+        step={loadingStep}
+        tier={formData.tier as 'lite' | 'pro'}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-black py-12 px-4">

@@ -28,8 +28,11 @@ export default function CallLabProPage() {
     phone: '',
     role: '',
     transcript: '',
+    prospect_name: '',
     prospect_company: '',
+    prospect_url: '',
     prospect_role: '',
+    call_type: 'discovery',
     call_stage: 'discovery',
     tier: 'pro', // Always Pro
   });
@@ -217,11 +220,31 @@ export default function CallLabProPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <ConsoleInput
                       type="text"
+                      placeholder="John Smith"
+                      label="PROSPECT NAME"
+                      value={formData.prospect_name}
+                      onChange={(e) =>
+                        setFormData({ ...formData, prospect_name: (e.target as HTMLInputElement).value })
+                      }
+                    />
+                    <ConsoleInput
+                      type="text"
                       placeholder="Acme Corp"
                       label="PROSPECT COMPANY"
                       value={formData.prospect_company}
                       onChange={(e) =>
                         setFormData({ ...formData, prospect_company: (e.target as HTMLInputElement).value })
+                      }
+                    />
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <ConsoleInput
+                      type="url"
+                      placeholder="https://linkedin.com/in/johnsmith"
+                      label="PROSPECT URL"
+                      value={formData.prospect_url}
+                      onChange={(e) =>
+                        setFormData({ ...formData, prospect_url: (e.target as HTMLInputElement).value })
                       }
                     />
                     <ConsoleInput
@@ -233,6 +256,32 @@ export default function CallLabProPage() {
                         setFormData({ ...formData, prospect_role: (e.target as HTMLInputElement).value })
                       }
                     />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] tracking-[2px] text-[#666666] mb-2 font-poppins uppercase">
+                      CALL TYPE
+                    </label>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                      {[
+                        { value: 'discovery', label: 'Discovery' },
+                        { value: 'follow_up', label: 'Follow Up' },
+                        { value: 'presentation', label: 'Presentation' },
+                        { value: 'close', label: 'Close' },
+                      ].map((option) => (
+                        <button
+                          key={option.value}
+                          type="button"
+                          onClick={() => setFormData({ ...formData, call_type: option.value })}
+                          className={`px-4 py-3 text-sm font-poppins font-medium tracking-wide border rounded transition-all duration-200 ${
+                            formData.call_type === option.value
+                              ? 'bg-[#E51B23] border-[#E51B23] text-white'
+                              : 'bg-black border-[#333333] text-[#B3B3B3] hover:border-[#E51B23] hover:text-white'
+                          }`}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
 

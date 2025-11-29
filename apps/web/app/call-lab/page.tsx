@@ -225,11 +225,12 @@ export default function CallLabPage() {
 
       {/* Report Content */}
       <ConsolePanel>
-        <ConsoleHeading level={1} variant="yellow" className="mb-6">
-          {formData.tier === 'pro'
-            ? 'CALL LAB PRO - FULL PATTERN ANALYSIS'
-            : 'CALL LAB LITE - DIAGNOSTIC SNAPSHOT'}
-        </ConsoleHeading>
+        {/* Only show header for Lite - Pro has its own header in the markdown */}
+        {formData.tier === 'lite' && (
+          <ConsoleHeading level={1} variant="yellow" className="mb-6">
+            CALL LAB LITE - DIAGNOSTIC SNAPSHOT
+          </ConsoleHeading>
+        )}
         <ConsoleMarkdownRenderer content={mdResult.markdown} />
       </ConsolePanel>
 
@@ -271,13 +272,20 @@ export default function CallLabPage() {
             <p className="text-[#B3B3B3] font-poppins">
               Every call analyzed is another pattern recognized. Keep feeding the machine.
             </p>
-            <ConsoleButton
-              variant="primary"
-              fullWidth
-              onClick={() => setResult(null)}
-            >
-              [ ANALYZE ANOTHER CALL ]
-            </ConsoleButton>
+            <div className="flex gap-4 justify-center">
+              <ConsoleButton
+                variant="secondary"
+                onClick={() => setResult(null)}
+              >
+                [ ANALYZE ANOTHER CALL ]
+              </ConsoleButton>
+              <ConsoleButton
+                variant="primary"
+                onClick={() => window.location.href = '/dashboard'}
+              >
+                [ REVIEW DASHBOARD ]
+              </ConsoleButton>
+            </div>
           </div>
         </ConsolePanel>
       )}

@@ -168,12 +168,13 @@ Break the call into 3 to 5 phases based on trust dynamics:
 - Friction Spike (when hesitation emerged)
 - Close Window (when the ask should have happened)
 
-For each phase include:
-- Pattern name (invent it, make it memorable)
-- What the rep did (one sentence, definitive)
-- What the buyer felt (state as fact, no hedging)
-- Evidence quote (raw, no preamble)
-- Alternative move (if needed - what would have worked better)
+For each phase include (use bold labels):
+- Pattern name (bold, memorable)
+- **What the Rep Did:** one sentence, definitive
+- **What the Buyer Felt:** state as fact, no hedging
+- **What This Unlocked:** the strategic shift that occurred
+- **Evidence Quote:** raw, no preamble
+- **Alternative Move:** if needed - what would have worked better
 
 3. BUYER EMOTIONAL ARC
 
@@ -185,11 +186,11 @@ Map the buyer's emotional journey across these stages:
 - Momentum
 - Commitment
 
-For each stage note:
-- Trigger event (what caused the shift)
-- What the buyer needed (state definitively)
-- Hidden motivations or fears (read the subtext boldly)
-- What you could have amplified or redirected (specific tactical move)
+For each stage note (use bold labels):
+- **Trigger Event:** what caused the shift
+- **What the Buyer Needed:** state definitively
+- **Hidden Motivations:** read the subtext boldly
+- **What You Could Have Done:** specific tactical move to amplify or redirect
 
 This is subtext analysis. Read between the lines. Be confident in your interpretations.
 
@@ -207,11 +208,12 @@ Frameworks:
 - Jobs to Be Done (functional, emotional, social jobs)
 - Narrative Selling (story-driven persuasion)
 
-For each framework:
-- Score: X/10
-- Did the rep use it (yes/no, where)
-- How it helped or hurt (brief)
-- One tactical note (what to do differently)
+For each framework (use bold labels):
+- **Score:** X/10
+- **Did the Rep Use It:** yes/no, where
+- **How It Helped:** brief (if applicable)
+- **How It Hurt:** brief (if applicable)
+- **Tactical Note:** what to do differently
 
 5. AMBIGUITY DETECTION ENGINE
 
@@ -225,10 +227,10 @@ Watch for:
 - Topic pivots (buyer avoiding something)
 - Money discomfort
 
-For each moment:
-- Quote (exact words from transcript)
-- Interpretation (what actually happened beneath the surface - state as fact)
-- Recommended language (exact script for handling it better)
+For each moment (use bold labels):
+- **Evidence Quote:** exact words from transcript
+- **The Miss:** what actually happened beneath the surface - state as fact
+- **What Should Have Happened:** exact script for handling it better
 
 Be bold in your reads. This is the high-value psychic stuff.
 
@@ -245,16 +247,40 @@ Pattern examples (invent names that fit):
 - The Expansion Slide
 - The Late Bill Drop
 
-For each pattern:
-- What it is (two sentence definition)
-- How it appeared (specific moment from this call)
-- When it helps (context where it works)
-- When it hurts (context where backfires)
-- How to use it intentionally (tactical guidance)
+For each pattern (use bold labels):
+- **What It Is:** two sentence definition
+- **How It Appeared:** specific moment from this call
+- **When It Helps:** context where it works
+- **When It Hurts:** context where it backfires
+- **How to Use It:** tactical guidance for intentional deployment
 
 Patterns are branded IP. Name them confidently.
 
-7. TACTICAL MOMENT REWRITE
+7. WTF METHODS SCORECARD
+
+Evaluate how well the rep applied Tim Kilroy's core WTF sales methodology. Rate each method 0-10 with specific evidence.
+
+Core WTF Methods:
+- **The Credibility Handshake** - Establishing peer-level trust through shared experience
+- **The Self-Diagnosis Pull** - Getting the buyer to name their own problem before offering solutions
+- **The Pattern Recognition Gift** - Connecting scattered symptoms into one coherent insight
+- **The Vulnerability Flip** - Using your own failures to build trust
+- **The Generosity Trap** - When giving too much free value kills urgency
+- **The Diagnostic Reveal** - Naming the hidden pattern the buyer couldn't see
+- **The Close Window** - Recognizing when trust peaks and asking for the decision
+- **The Expansion Slide** - When scope creep dilutes the close
+- **The Late Bill Drop** - Introducing pricing too late in the conversation
+
+For each method (use bold labels):
+- **Score:** X/10
+- **Evidence Quote:** specific moment demonstrating use (or miss)
+- **What Worked:** if they used it well
+- **What They Missed:** if they failed to use it or misused it
+- **Tactical Fix:** specific language to deploy this method next time
+
+This is the heart of the WTF methodology. Be specific and prescriptive.
+
+8. TACTICAL MOMENT REWRITE
 
 Rewrite 3 to 5 pivotal moments with exact alternative language:
 
@@ -265,15 +291,15 @@ Moments to target:
 - The boundary-setting moment
 - The risk reduction moment (if applicable)
 
-For each rewrite:
-- What happened (quote the actual moment)
-- Why it missed (diagnose the failure)
-- The Pro rewrite (exact script, formatted as dialogue)
-- Optional spicier version (bolder alternative if warranted)
+For each rewrite (use bold labels):
+- **What Happened:** quote the actual moment
+- **Why This Hurt:** diagnose the failure
+- **The Pro Rewrite:** exact script, formatted as dialogue
+- **Spicier Version:** bolder alternative if warranted (optional)
 
 Format as steal-worthy scripts. Use "Try this:" not "You could consider..."
 
-8. NEXT-CALL BLUEPRINT
+9. NEXT-CALL BLUEPRINT
 
 Provide a tactical playbook for the next 48 hours:
 
@@ -287,7 +313,7 @@ Provide a tactical playbook for the next 48 hours:
 
 Format as a numbered, actionable checklist.
 
-9. PERFORMANCE SCORES
+10. PERFORMANCE SCORES
 
 Rate across 9 dimensions (0-10 scale):
 
@@ -308,7 +334,7 @@ For each score:
 
 Two sentences total per dimension.
 
-10. BOTTOM LINE INSIGHT
+11. BOTTOM LINE INSIGHT
 
 Deliver one sharp, uncomfortable, but transformative insight about the rep's performance.
 
@@ -320,7 +346,7 @@ Format:
 Example:
 "You wrote the emotional story perfectly. You just missed the chapter where he needed you to lead. Fix your timing and the next one turns into a yes."
 
-11. PRO VALUE REMINDER
+12. PRO VALUE REMINDER
 
 End with:
 "Check your dashboard to see how this call updated your patterns and momentum. Pro is a system that learns with you. One call at a time, you're building a win machine."

@@ -3,7 +3,7 @@ import OpenAI from 'openai';
 
 export type ModelProvider = 'anthropic' | 'openai';
 export type AnthropicModelId = 'claude-sonnet-4-5-20250929';
-export type OpenAIModelId = 'gpt-5.1' | 'gpt-4o';
+export type OpenAIModelId = 'gpt-4o' | 'gpt-4o-mini';
 export type ModelId = AnthropicModelId | OpenAIModelId;
 
 export interface ModelConfig {
@@ -19,7 +19,7 @@ export interface FallbackConfig {
 }
 
 // Default model configurations for different tools
-// Primary: Claude Sonnet 4.5 | Fallback: OpenAI GPT-5.1
+// Primary: Claude Sonnet 4.5 | Fallback: OpenAI GPT-4o
 const MODEL_CONFIGS: Record<string, FallbackConfig> = {
   'call-lab-lite': {
     primary: {
@@ -30,7 +30,7 @@ const MODEL_CONFIGS: Record<string, FallbackConfig> = {
     },
     fallback: {
       provider: 'openai',
-      model: 'gpt-5.1',
+      model: 'gpt-4o',
       maxTokens: 4096,
       temperature: 0.3,
     },
@@ -44,7 +44,7 @@ const MODEL_CONFIGS: Record<string, FallbackConfig> = {
     },
     fallback: {
       provider: 'openai',
-      model: 'gpt-5.1',
+      model: 'gpt-4o',
       maxTokens: 8192,
       temperature: 0.3,
     },
@@ -58,7 +58,7 @@ const MODEL_CONFIGS: Record<string, FallbackConfig> = {
     },
     fallback: {
       provider: 'openai',
-      model: 'gpt-5.1',
+      model: 'gpt-4o',
       maxTokens: 8192,
       temperature: 0.3,
     },

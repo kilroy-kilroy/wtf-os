@@ -225,152 +225,156 @@ No surrounding text.
 No markdown.
 No comments.
 
+Your output must be wrapped in a top-level object with two keys:
+- "report": the full analysis matching the schema below
+- "metadata": context about this analysis run
+
 ────────────────────────────────────────
 JSON SCHEMA (MANDATORY, EXACT)
 ────────────────────────────────────────
 
 {
-  "meta": {
-    "callId": "",
+  "report": {
+    "meta": {
+      "callId": "",
+      "version": "1.0",
+      "dashboardUrl": "",
+      "timestamp": "",
+      "repName": "",
+      "prospectName": "",
+      "prospectCompany": "",
+      "callStage": "",
+      "overallScore": 0,
+      "trustVelocity": 0
+    },
+    "snapTake": {
+      "tldr": "",
+      "analysis": ""
+    },
+    "scores": {
+      "gapCreation": 0,
+      "discoveryDepth": 0,
+      "narrativeControl": 0,
+      "emotionalWarmth": 0,
+      "credibilityFrame": 0,
+      "nextStepPrecision": 0
+    },
+    "kilroyFlavorIndex": {
+      "score": 0,
+      "tldr": "",
+      "notes": ""
+    },
+    "modelScores": {
+      "challenger": {
+        "score": 0,
+        "tldr": "",
+        "analysis": "",
+        "whatWorked": [],
+        "whatMissed": [],
+        "upgradeMove": ""
+      },
+      "gapSelling": {
+        "score": 0,
+        "tldr": "",
+        "analysis": "",
+        "whatWorked": [],
+        "whatMissed": [],
+        "upgradeMove": ""
+      },
+      "spin": {
+        "score": 0,
+        "tldr": "",
+        "analysis": "",
+        "whatWorked": [],
+        "whatMissed": [],
+        "upgradeMove": ""
+      },
+      "meddic": {
+        "score": 0,
+        "tldr": "",
+        "analysis": "",
+        "whatWorked": [],
+        "whatMissed": [],
+        "upgradeMove": ""
+      },
+      "buyerJourney": {
+        "score": 0,
+        "tldr": "",
+        "analysis": "",
+        "whatWorked": [],
+        "whatMissed": [],
+        "upgradeMove": ""
+      },
+      "wtfMethod": {
+        "score": 0,
+        "tldr": "",
+        "analysis": "",
+        "whatWorked": [],
+        "whatMissed": [],
+        "upgradeMove": ""
+      }
+    },
+    "patterns": [
+      {
+        "patternName": "",
+        "severity": "",
+        "tldr": "",
+        "timestamps": [],
+        "symptoms": [],
+        "whyItMatters": "",
+        "recommendedFixes": [],
+        "exampleRewrite": ""
+      }
+    ],
+    "ambiguityDetection": {
+      "tldr": "",
+      "moments": [
+        {
+          "quote": "",
+          "interpretation": "",
+          "impact": "",
+          "recommendedLanguage": ""
+        }
+      ]
+    },
+    "trustMap": {
+      "tldr": "",
+      "timeline": [
+        {
+          "timestamp": "",
+          "event": "",
+          "trustDelta": "",
+          "analysis": ""
+        }
+      ]
+    },
+    "tacticalRewrites": {
+      "tldr": "",
+      "items": [
+        {
+          "context": "",
+          "whatYouSaid": "",
+          "whyItMissed": "",
+          "strongerAlternative": ""
+        }
+      ]
+    },
+    "nextSteps": {
+      "tldr": "",
+      "actions": []
+    },
+    "followUpEmail": {
+      "subject": "",
+      "body": ""
+    }
+  },
+  "metadata": {
+    "user_id": "",
+    "agent": "pro",
+    "call_id": "",
     "version": "1.0",
-    "dashboardUrl": "",
-    "timestamp": "",
-    "repName": "",
-    "prospectName": "",
-    "prospectCompany": "",
-    "callStage": "",
-    "overallScore": 0,
-    "trustVelocity": 0
-  },
-
-  "snapTake": {
-    "tldr": "",
-    "analysis": ""
-  },
-
-  "scores": {
-    "gapCreation": 0,
-    "discoveryDepth": 0,
-    "narrativeControl": 0,
-    "emotionalWarmth": 0,
-    "credibilityFrame": 0,
-    "nextStepPrecision": 0
-  },
-
-  "kilroyFlavorIndex": {
-    "score": 0,
-    "tldr": "",
-    "notes": ""
-  },
-
-  "modelScores": {
-    "challenger": {
-      "score": 0,
-      "tldr": "",
-      "analysis": "",
-      "whatWorked": [],
-      "whatMissed": [],
-      "upgradeMove": ""
-    },
-    "gapSelling": {
-      "score": 0,
-      "tldr": "",
-      "analysis": "",
-      "whatWorked": [],
-      "whatMissed": [],
-      "upgradeMove": ""
-    },
-    "spin": {
-      "score": 0,
-      "tldr": "",
-      "analysis": "",
-      "whatWorked": [],
-      "whatMissed": [],
-      "upgradeMove": ""
-    },
-    "meddic": {
-      "score": 0,
-      "tldr": "",
-      "analysis": "",
-      "whatWorked": [],
-      "whatMissed": [],
-      "upgradeMove": ""
-    },
-    "buyerJourney": {
-      "score": 0,
-      "tldr": "",
-      "analysis": "",
-      "whatWorked": [],
-      "whatMissed": [],
-      "upgradeMove": ""
-    },
-    "wtfMethod": {
-      "score": 0,
-      "tldr": "",
-      "analysis": "",
-      "whatWorked": [],
-      "whatMissed": [],
-      "upgradeMove": ""
-    }
-  },
-
-  "patterns": [
-    {
-      "patternName": "",
-      "severity": "",
-      "tldr": "",
-      "timestamps": [],
-      "symptoms": [],
-      "whyItMatters": "",
-      "recommendedFixes": [],
-      "exampleRewrite": ""
-    }
-  ],
-
-  "ambiguityDetection": {
-    "tldr": "",
-    "moments": [
-      {
-        "quote": "",
-        "interpretation": "",
-        "impact": "",
-        "recommendedLanguage": ""
-      }
-    ]
-  },
-
-  "trustMap": {
-    "tldr": "",
-    "timeline": [
-      {
-        "timestamp": "",
-        "event": "",
-        "trustDelta": "",
-        "analysis": ""
-      }
-    ]
-  },
-
-  "tacticalRewrites": {
-    "tldr": "",
-    "items": [
-      {
-        "context": "",
-        "whatYouSaid": "",
-        "whyItMissed": "",
-        "strongerAlternative": ""
-      }
-    ]
-  },
-
-  "nextSteps": {
-    "tldr": "",
-    "actions": []
-  },
-
-  "followUpEmail": {
-    "subject": "",
-    "body": ""
+    "transcript": "",
+    "created_at": ""
   }
 }
 `;
@@ -386,32 +390,46 @@ You do NOT generate tactical rewrites or multi-model scoring.
 You do NOT output tables, markdown, or prose.
 You ONLY output the JSON object defined below.
 
+Your output must be wrapped in a top-level object with two keys:
+- "report": the analysis matching the schema below
+- "metadata": context about this analysis run
+
 ----------------------------------------------------
 OUTPUT FORMAT — DO NOT DEVIATE
 ----------------------------------------------------
 
 {
-  "overallScore": 0,
-  "grade": "",
-  "snapTake": "",
-  "whatWorked": [ "" ],
-  "whatMissed": [ "" ],
-  "signals": [
-    {
-      "type": "",
-      "quote": "",
-      "interpretation": ""
-    }
-  ],
-  "patterns": [
-    {
-      "name": "",
-      "description": ""
-    }
-  ],
-  "fixThisFirst": "",
-  "upgradeMoves": [ "" ],
-  "suggestPro": ""
+  "report": {
+    "overallScore": 0,
+    "grade": "",
+    "snapTake": "",
+    "whatWorked": [ "" ],
+    "whatMissed": [ "" ],
+    "signals": [
+      {
+        "type": "",
+        "quote": "",
+        "interpretation": ""
+      }
+    ],
+    "patterns": [
+      {
+        "name": "",
+        "description": ""
+      }
+    ],
+    "fixThisFirst": "",
+    "upgradeMoves": [ "" ],
+    "suggestPro": ""
+  },
+  "metadata": {
+    "user_id": "",
+    "agent": "lite",
+    "call_id": "",
+    "version": "1.0",
+    "transcript": "",
+    "created_at": ""
+  }
 }
 
 ----------------------------------------------------
@@ -519,25 +537,84 @@ No commentary. No intro. No epilogue.
 `;
 
 export const CALL_LAB_LITE_JSON_SCHEMA = {
-  overallScore: 0,
-  grade: "",
-  snapTake: "",
-  whatWorked: [""],
-  whatMissed: [""],
-  signals: [
-    {
-      type: "",
-      quote: "",
-      interpretation: ""
-    }
-  ],
-  patterns: [
-    {
-      name: "",
-      description: ""
-    }
-  ],
-  fixThisFirst: "",
-  upgradeMoves: [""],
-  suggestPro: ""
+  report: {
+    overallScore: 0,
+    grade: "",
+    snapTake: "",
+    whatWorked: [""],
+    whatMissed: [""],
+    signals: [
+      {
+        type: "",
+        quote: "",
+        interpretation: ""
+      }
+    ],
+    patterns: [
+      {
+        name: "",
+        description: ""
+      }
+    ],
+    fixThisFirst: "",
+    upgradeMoves: [""],
+    suggestPro: ""
+  },
+  metadata: {
+    user_id: "",
+    agent: "lite",
+    call_id: "",
+    version: "1.0",
+    transcript: "",
+    created_at: ""
+  }
+};
+
+export const CALL_LAB_PRO_JSON_SCHEMA = {
+  report: {
+    meta: {
+      callId: "",
+      version: "1.0",
+      dashboardUrl: "",
+      timestamp: "",
+      repName: "",
+      prospectName: "",
+      prospectCompany: "",
+      callStage: "",
+      overallScore: 0,
+      trustVelocity: 0
+    },
+    snapTake: { tldr: "", analysis: "" },
+    scores: {
+      gapCreation: 0,
+      discoveryDepth: 0,
+      narrativeControl: 0,
+      emotionalWarmth: 0,
+      credibilityFrame: 0,
+      nextStepPrecision: 0
+    },
+    kilroyFlavorIndex: { score: 0, tldr: "", notes: "" },
+    modelScores: {
+      challenger: { score: 0, tldr: "", analysis: "", whatWorked: [], whatMissed: [], upgradeMove: "" },
+      gapSelling: { score: 0, tldr: "", analysis: "", whatWorked: [], whatMissed: [], upgradeMove: "" },
+      spin: { score: 0, tldr: "", analysis: "", whatWorked: [], whatMissed: [], upgradeMove: "" },
+      meddic: { score: 0, tldr: "", analysis: "", whatWorked: [], whatMissed: [], upgradeMove: "" },
+      buyerJourney: { score: 0, tldr: "", analysis: "", whatWorked: [], whatMissed: [], upgradeMove: "" },
+      wtfMethod: { score: 0, tldr: "", analysis: "", whatWorked: [], whatMissed: [], upgradeMove: "" }
+    },
+    patterns: [],
+    ambiguityDetection: { tldr: "", moments: [] },
+    trustMap: { tldr: "", timeline: [] },
+    tacticalRewrites: { tldr: "", items: [] },
+    nextSteps: { tldr: "", actions: [] },
+    followUpEmail: { subject: "", body: "" }
+  },
+  metadata: {
+    user_id: "",
+    agent: "pro",
+    call_id: "",
+    version: "1.0",
+    transcript: "",
+    created_at: ""
+  }
 };

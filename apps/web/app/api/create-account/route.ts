@@ -2,14 +2,19 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import Stripe from 'stripe';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-02-24.acacia',
-});
+// Lazy-load clients to avoid build-time initialization
+function getStripe() {
+  return new Stripe(process.env.STRIPE_SECRET_KEY!, {
+    apiVersion: '2025-02-24.acacia',
+  });
+}
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+function getSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+}
 
 interface TeamMember {
   firstName: string;
@@ -37,6 +42,9 @@ interface CreateAccountRequest {
 
 export async function POST(request: NextRequest) {
   try {
+    const stripe = getStripe();
+    const supabase = getSupabase();
+
     const body: CreateAccountRequest = await request.json();
     const { sessionId, accountHolder, teamMembers } = body;
 

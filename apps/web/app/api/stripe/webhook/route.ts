@@ -2,14 +2,19 @@ import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-02-24.acacia',
-});
+// Lazy-load clients to avoid build-time initialization
+function getStripe() {
+  return new Stripe(process.env.STRIPE_SECRET_KEY!, {
+    apiVersion: '2025-02-24.acacia',
+  });
+}
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+function getSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+}
 
 export async function POST(request: NextRequest) {
   const body = await request.text();
@@ -22,6 +27,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const stripe = getStripe();
   let event: Stripe.Event;
 
   try {
@@ -70,6 +76,7 @@ export async function POST(request: NextRequest) {
  */
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   console.log('Checkout completed:', session.id);
+  const supabase = getSupabase();
 
   const customerId = typeof session.customer === 'string'
     ? session.customer
@@ -123,6 +130,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
  */
 async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
   console.log('Subscription updated:', subscription.id);
+  const supabase = getSupabase();
 
   const customerId = typeof subscription.customer === 'string'
     ? subscription.customer
@@ -149,6 +157,7 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
  */
 async function handleSubscriptionCanceled(subscription: Stripe.Subscription) {
   console.log('Subscription canceled:', subscription.id);
+  const supabase = getSupabase();
 
   const customerId = typeof subscription.customer === 'string'
     ? subscription.customer

@@ -1,18 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-02-24.acacia',
-});
-
-// Price IDs from your Stripe Dashboard
-const PRICE_IDS = {
-  solo: process.env.STRIPE_PRICE_SOLO || 'price_solo_monthly',
-  team: process.env.STRIPE_PRICE_TEAM || 'price_team_monthly',
-};
+// Lazy-load Stripe to avoid build-time initialization
+function getStripe() {
+  return new Stripe(process.env.STRIPE_SECRET_KEY!, {
+    apiVersion: '2025-02-24.acacia',
+  });
+}
 
 export async function POST(request: NextRequest) {
   try {
+    const stripe = getStripe();
+
+    // Price IDs from your Stripe Dashboard
+    const PRICE_IDS = {
+      solo: process.env.STRIPE_PRICE_SOLO || 'price_solo_monthly',
+      team: process.env.STRIPE_PRICE_TEAM || 'price_team_monthly',
+    };
+
     const body = await request.json();
     const { plan, email, referralCode } = body;
 

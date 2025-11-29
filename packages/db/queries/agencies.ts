@@ -50,6 +50,19 @@ export async function assignUserToAgency(
   agencyId: string,
   role: 'owner' | 'admin' | 'member' = 'member'
 ) {
+  // First check if assignment already exists
+  const { data: existing } = await supabase
+    .from('user_agency_assignments')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('agency_id', agencyId)
+    .single();
+
+  if (existing) {
+    // Already assigned, return silently
+    return existing;
+  }
+
   const { data, error } = await (supabase as any)
     .from('user_agency_assignments')
     .insert({
@@ -61,8 +74,8 @@ export async function assignUserToAgency(
     .single();
 
   if (error) {
-    // Ignore duplicate errors
-    if (error.code === '23505') {
+    // Ignore duplicate/conflict errors (23505 = PostgreSQL unique violation, 409 = HTTP conflict)
+    if (error.code === '23505' || error.code === 'PGRST409' || error.message?.includes('duplicate') || error.message?.includes('conflict')) {
       return null;
     }
     throw error;

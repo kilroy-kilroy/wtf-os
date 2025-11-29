@@ -21,11 +21,33 @@ interface UserProfile {
   created_at: string;
 }
 
+interface CallScore {
+  id: string;
+  overall_score: number | null;
+  overall_grade: string | null;
+  version: string | null;
+  created_at: string;
+  ingestion_item_id: string;
+  diagnosis_summary: string | null;
+}
+
+interface IngestionItem {
+  id: string;
+  transcript_metadata: {
+    prospect_company?: string;
+    prospect_name?: string;
+    prospect_role?: string;
+    call_stage?: string;
+  } | null;
+}
+
 export default function DashboardPage() {
   const router = useRouter();
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [recentCalls, setRecentCalls] = useState<(CallScore & { ingestion_item?: IngestionItem })[]>([]);
+  const [stats, setStats] = useState({ callsThisMonth: 0, avgScore: 0, patternsToImprove: 0 });
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -55,6 +77,56 @@ export default function DashboardPage() {
         }
 
         setUser(userData as UserProfile);
+
+        // Fetch user's call scores
+        const { data: callScores, error: callsError } = await supabase
+          .from('call_scores')
+          .select(`
+            id,
+            overall_score,
+            overall_grade,
+            version,
+            created_at,
+            ingestion_item_id,
+            diagnosis_summary
+          `)
+          .eq('user_id', session.user.id)
+          .order('created_at', { ascending: false })
+          .limit(10);
+
+        if (callsError) {
+          console.error('Error fetching calls:', callsError);
+        } else if (callScores && callScores.length > 0) {
+          // Fetch ingestion items for metadata
+          const ingestionIds = callScores.map(c => c.ingestion_item_id).filter(Boolean);
+          const { data: ingestionItems } = await supabase
+            .from('ingestion_items')
+            .select('id, transcript_metadata')
+            .in('id', ingestionIds);
+
+          // Map ingestion items to call scores
+          const callsWithMetadata = callScores.map(call => ({
+            ...call,
+            ingestion_item: ingestionItems?.find(i => i.id === call.ingestion_item_id) as IngestionItem | undefined
+          }));
+
+          setRecentCalls(callsWithMetadata);
+
+          // Calculate stats
+          const now = new Date();
+          const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+          const callsThisMonth = callScores.filter(c => new Date(c.created_at) >= startOfMonth).length;
+
+          const scoresWithValues = callScores.filter(c => c.overall_score !== null);
+          const avgScore = scoresWithValues.length > 0
+            ? scoresWithValues.reduce((sum, c) => sum + (c.overall_score || 0), 0) / scoresWithValues.length
+            : 0;
+
+          // Count patterns to improve (calls with score < 7)
+          const patternsToImprove = callScores.filter(c => (c.overall_score || 0) < 7).length;
+
+          setStats({ callsThisMonth, avgScore: Math.round(avgScore * 10) / 10, patternsToImprove });
+        }
       } catch (err) {
         console.error('Auth error:', err);
         router.push('/login');
@@ -190,7 +262,7 @@ export default function DashboardPage() {
                 CALLS ANALYZED
               </div>
               <div className="font-anton text-4xl text-white">
-                --
+                {stats.callsThisMonth || '--'}
               </div>
               <div className="text-[#666] text-xs font-poppins mt-1">
                 this month
@@ -204,7 +276,7 @@ export default function DashboardPage() {
                 AVERAGE SCORE
               </div>
               <div className="font-anton text-4xl text-[#FFDE59]">
-                --
+                {stats.avgScore || '--'}
               </div>
               <div className="text-[#666] text-xs font-poppins mt-1">
                 out of 10
@@ -215,13 +287,13 @@ export default function DashboardPage() {
           <ConsolePanel>
             <div className="text-center py-4">
               <div className="text-[#666] text-xs font-mono tracking-wider mb-2">
-                PATTERNS IDENTIFIED
+                CALLS TO REVIEW
               </div>
               <div className="font-anton text-4xl text-[#E51B23]">
-                --
+                {stats.patternsToImprove || '--'}
               </div>
               <div className="text-[#666] text-xs font-poppins mt-1">
-                to improve
+                score {"<"} 7
               </div>
             </div>
           </ConsolePanel>
@@ -232,17 +304,75 @@ export default function DashboardPage() {
           <ConsoleHeading level={3} variant="yellow" className="mb-4">
             RECENT CALLS
           </ConsoleHeading>
-          <div className="text-center py-12 border border-[#333] border-dashed">
-            <div className="text-4xl mb-4 opacity-30">📞</div>
-            <p className="text-[#666] font-poppins mb-4">
-              No calls analyzed yet. Start by analyzing your first call!
-            </p>
-            <Link href="/call-lab">
-              <ConsoleButton>
-                ▶ ANALYZE YOUR FIRST CALL
-              </ConsoleButton>
-            </Link>
-          </div>
+          {recentCalls.length > 0 ? (
+            <div className="space-y-3">
+              {recentCalls.map((call) => {
+                const metadata = call.ingestion_item?.transcript_metadata;
+                const prospectName = metadata?.prospect_name || metadata?.prospect_company || 'Unknown Prospect';
+                const callDate = new Date(call.created_at).toLocaleDateString('en-US', {
+                  month: 'short',
+                  day: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit'
+                });
+                const scoreColor = (call.overall_score || 0) >= 7
+                  ? 'text-[#4ADE80]'
+                  : (call.overall_score || 0) >= 5
+                  ? 'text-[#FFDE59]'
+                  : 'text-[#E51B23]';
+
+                return (
+                  <div
+                    key={call.id}
+                    className="flex items-center justify-between p-4 border border-[#333] hover:border-[#FFDE59] transition-colors cursor-pointer"
+                    onClick={() => window.location.href = `/call-lab/result/${call.id}`}
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className={`text-2xl font-anton ${scoreColor}`}>
+                        {call.overall_score ?? '--'}
+                      </div>
+                      <div>
+                        <div className="text-white font-poppins font-medium">
+                          {prospectName}
+                        </div>
+                        <div className="text-[#666] text-xs font-mono">
+                          {metadata?.prospect_role && <span>{metadata.prospect_role} • </span>}
+                          {callDate}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className={`px-2 py-1 text-xs font-mono tracking-wider ${
+                        call.version === 'pro'
+                          ? 'bg-[#FFDE59]/20 text-[#FFDE59] border border-[#FFDE59]'
+                          : 'bg-[#333] text-[#666]'
+                      }`}>
+                        {(call.version || 'lite').toUpperCase()}
+                      </span>
+                      <span className="text-[#666]">→</span>
+                    </div>
+                  </div>
+                );
+              })}
+              <Link href="/call-lab" className="block mt-4">
+                <ConsoleButton fullWidth variant="secondary">
+                  + ANALYZE ANOTHER CALL
+                </ConsoleButton>
+              </Link>
+            </div>
+          ) : (
+            <div className="text-center py-12 border border-[#333] border-dashed">
+              <div className="text-4xl mb-4 opacity-30">📞</div>
+              <p className="text-[#666] font-poppins mb-4">
+                No calls analyzed yet. Start by analyzing your first call!
+              </p>
+              <Link href="/call-lab">
+                <ConsoleButton>
+                  ▶ ANALYZE YOUR FIRST CALL
+                </ConsoleButton>
+              </Link>
+            </div>
+          )}
         </ConsolePanel>
 
         {/* Upgrade CTA for non-pro users */}

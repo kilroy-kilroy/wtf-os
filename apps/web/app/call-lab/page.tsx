@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   ConsolePanel,
   ConsoleHeading,
@@ -10,6 +10,7 @@ import {
   ConsoleMarkdownRenderer
 } from '@/components/console';
 import CallLabLoadingScreen from '@/components/CallLabLoadingScreen';
+import { createBrowserClient } from '@wtf-os/db/client';
 
 // Union type for both response formats
 type AnalysisResult =
@@ -52,6 +53,53 @@ export default function CallLabPage() {
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
+  const [userPlan, setUserPlan] = useState<'lite' | 'solo' | 'team' | null>(null);
+  const [checkingAuth, setCheckingAuth] = useState(true);
+
+  // Check if user is logged in and has Pro subscription
+  useEffect(() => {
+    const checkUserSubscription = async () => {
+      try {
+        const supabase = createBrowserClient();
+
+        // Get current session
+        const { data: { session } } = await supabase.auth.getSession();
+
+        if (session?.user) {
+          // User is logged in - fetch their plan
+          const { data: userData } = await supabase
+            .from('users')
+            .select('plan, email, first_name')
+            .eq('id', session.user.id)
+            .single();
+
+          if (userData) {
+            const plan = userData.plan as 'lite' | 'solo' | 'team' | null;
+            setUserPlan(plan);
+
+            // Auto-set tier to pro if they have a paid plan
+            if (plan === 'solo' || plan === 'team') {
+              setFormData(prev => ({ ...prev, tier: 'pro' }));
+            }
+
+            // Pre-fill email and name if available
+            if (userData.email) {
+              setFormData(prev => ({ ...prev, email: userData.email }));
+            }
+            if (userData.first_name) {
+              setFormData(prev => ({ ...prev, first_name: userData.first_name }));
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Error checking subscription:', err);
+      } finally {
+        setCheckingAuth(false);
+      }
+    };
+
+    checkUserSubscription();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -177,37 +225,61 @@ export default function CallLabPage() {
       {/* Report Content */}
       <ConsolePanel>
         <ConsoleHeading level={1} variant="yellow" className="mb-6">
-          CALL LAB LITE - DIAGNOSTIC SNAPSHOT
+          {formData.tier === 'pro'
+            ? 'CALL LAB PRO - FULL PATTERN ANALYSIS'
+            : 'CALL LAB LITE - DIAGNOSTIC SNAPSHOT'}
         </ConsoleHeading>
         <ConsoleMarkdownRenderer content={mdResult.markdown} />
       </ConsolePanel>
 
-      {/* Upgrade CTA */}
-      <ConsolePanel variant="red-highlight">
-        <div className="text-center space-y-4">
-          <ConsoleHeading level={2} variant="yellow">
-            CALL LAB LITE SHOWED YOU WHAT HAPPENED.<br />CALL LAB PRO SHOWS YOU THE SYSTEM.
-          </ConsoleHeading>
-          <div className="text-left space-y-2 text-white font-poppins">
-            <div>→ Pattern Library: The 47 trust-building moves you&apos;re using (or missing)</div>
-            <div>→ Trust Acceleration Map: See exactly when buyers go from skeptical to sold</div>
-            <div>→ Tactical Rewrites: Word-for-word fixes for every weak moment</div>
-            <div>→ Timestamp Analysis: Every buying signal decoded with your exact response</div>
-            <div>→ Framework Breakdowns: When to deploy each close, how to recognize the setup</div>
-            <div>→ Comparative Scoring: How you stack up against 8 major sales methodologies</div>
+      {/* Upgrade CTA - only show for Lite */}
+      {formData.tier === 'lite' && (
+        <ConsolePanel variant="red-highlight">
+          <div className="text-center space-y-4">
+            <ConsoleHeading level={2} variant="yellow">
+              CALL LAB LITE SHOWED YOU WHAT HAPPENED.<br />CALL LAB PRO SHOWS YOU THE SYSTEM.
+            </ConsoleHeading>
+            <div className="text-left space-y-2 text-white font-poppins">
+              <div>→ Pattern Library: The 47 trust-building moves you&apos;re using (or missing)</div>
+              <div>→ Trust Acceleration Map: See exactly when buyers go from skeptical to sold</div>
+              <div>→ Tactical Rewrites: Word-for-word fixes for every weak moment</div>
+              <div>→ Timestamp Analysis: Every buying signal decoded with your exact response</div>
+              <div>→ Framework Breakdowns: When to deploy each close, how to recognize the setup</div>
+              <div>→ Comparative Scoring: How you stack up against 8 major sales methodologies</div>
+            </div>
+            <ConsoleButton
+              variant="secondary"
+              fullWidth
+              onClick={() => {
+                window.location.href = '/call-lab-pro';
+              }}
+            >
+              [ UPGRADE TO CALL LAB PRO ]
+            </ConsoleButton>
           </div>
-          <ConsoleButton
-            variant="secondary"
-            fullWidth
-            onClick={() => {
-              // TODO: Integrate with Stripe checkout
-              console.log('Upgrade to Call Lab Pro clicked');
-            }}
-          >
-            [ UPGRADE TO CALL LAB PRO ]
-          </ConsoleButton>
-        </div>
-      </ConsolePanel>
+        </ConsolePanel>
+      )}
+
+      {/* Pro users get a different CTA */}
+      {formData.tier === 'pro' && (
+        <ConsolePanel>
+          <div className="text-center space-y-4">
+            <ConsoleHeading level={2} variant="yellow">
+              KEEP STACKING WINS
+            </ConsoleHeading>
+            <p className="text-[#B3B3B3] font-poppins">
+              Every call analyzed is another pattern recognized. Keep feeding the machine.
+            </p>
+            <ConsoleButton
+              variant="primary"
+              fullWidth
+              onClick={() => setResult(null)}
+            >
+              [ ANALYZE ANOTHER CALL ]
+            </ConsoleButton>
+          </div>
+        </ConsolePanel>
+      )}
     </div>
   );
 
@@ -224,7 +296,7 @@ export default function CallLabPage() {
   return (
     <div className="min-h-screen bg-black py-12 px-4">
       <div className="max-w-5xl mx-auto">
-        <SalesOSHeader systemStatus={loading ? 'PROCESSING' : 'READY'} />
+        <SalesOSHeader systemStatus={checkingAuth ? 'INITIALIZING' : loading ? 'PROCESSING' : 'READY'} />
 
         {!result ? (
           /* Input Form */
@@ -242,6 +314,70 @@ export default function CallLabPage() {
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-8">
+                {/* Tier Selector - only show if user is not a Pro subscriber */}
+                {checkingAuth ? (
+                  <div className="bg-[#1A1A1A] border border-[#333] p-4 animate-pulse">
+                    <div className="text-[#666] font-poppins text-sm">
+                      Checking subscription status...
+                    </div>
+                  </div>
+                ) : (userPlan === 'solo' || userPlan === 'team') ? (
+                  <div className="bg-[#1A1A1A] border-2 border-[#FFDE59] p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="text-2xl">⚡</div>
+                      <div>
+                        <div className="font-anton text-[#FFDE59] tracking-wider">
+                          CALL LAB PRO ACTIVE
+                        </div>
+                        <div className="text-xs text-[#B3B3B3] font-poppins">
+                          {userPlan === 'team' ? 'Team Plan' : 'Solo Plan'} • Full Pattern Analysis Enabled
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <ConsoleHeading level={3} variant="yellow">
+                      ANALYSIS MODE
+                    </ConsoleHeading>
+                    <div className="flex gap-4">
+                      <button
+                        type="button"
+                        onClick={() => setFormData({ ...formData, tier: 'lite' })}
+                        className={`flex-1 py-4 px-6 border-2 font-anton tracking-wider transition-all ${
+                          formData.tier === 'lite'
+                            ? 'bg-[#E51B23] border-[#E51B23] text-white'
+                            : 'bg-transparent border-[#333] text-[#666] hover:border-[#E51B23] hover:text-white'
+                        }`}
+                      >
+                        <div className="text-lg">LITE</div>
+                        <div className="text-xs font-poppins font-normal mt-1 opacity-70">
+                          Diagnostic Snapshot
+                        </div>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setFormData({ ...formData, tier: 'pro' })}
+                        className={`flex-1 py-4 px-6 border-2 font-anton tracking-wider transition-all ${
+                          formData.tier === 'pro'
+                            ? 'bg-[#FFDE59] border-[#FFDE59] text-black'
+                            : 'bg-transparent border-[#333] text-[#666] hover:border-[#FFDE59] hover:text-white'
+                        }`}
+                      >
+                        <div className="text-lg">PRO</div>
+                        <div className="text-xs font-poppins font-normal mt-1 opacity-70">
+                          Full Pattern Analysis
+                        </div>
+                      </button>
+                    </div>
+                    {formData.tier === 'pro' && !userPlan && (
+                      <p className="text-xs text-[#E51B23] font-poppins">
+                        Note: Pro analysis requires a subscription. <a href="/call-lab-pro" className="text-[#FFDE59] underline">Upgrade here</a>
+                      </p>
+                    )}
+                  </div>
+                )}
+
                 {/* Operator Identity */}
                 <div className="space-y-4">
                   <ConsoleHeading level={3} variant="yellow">

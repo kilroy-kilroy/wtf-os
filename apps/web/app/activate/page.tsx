@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 
 interface TeamMember {
@@ -34,7 +34,28 @@ const DEAL_SIZES = [
   { value: '250k-plus', label: '$250K+' },
 ];
 
+// Loading fallback for Suspense
+function ActivateLoading() {
+  return (
+    <div className="min-h-screen bg-black text-white flex items-center justify-center font-poppins">
+      <div className="text-center">
+        <div className="text-[#E51B23] text-2xl mb-4 animate-pulse">●</div>
+        <div className="text-[#666666] text-sm tracking-[2px]">INITIALIZING...</div>
+      </div>
+    </div>
+  );
+}
+
+// Main page wrapped in Suspense
 export default function ActivatePage() {
+  return (
+    <Suspense fallback={<ActivateLoading />}>
+      <ActivateForm />
+    </Suspense>
+  );
+}
+
+function ActivateForm() {
   const searchParams = useSearchParams();
   const sessionId = searchParams.get('session_id');
 

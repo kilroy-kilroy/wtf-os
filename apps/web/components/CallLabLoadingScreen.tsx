@@ -13,6 +13,7 @@ export const CallLabLoadingScreen: React.FC<CallLabLoadingScreenProps> = ({
 }) => {
   const [logIndex, setLogIndex] = useState(0);
   const [glitchText, setGlitchText] = useState('');
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
   const uploadLogs = [
     "INITIALIZING CALL_LAB KERNEL...",
@@ -31,7 +32,14 @@ export const CallLabLoadingScreen: React.FC<CallLabLoadingScreenProps> = ({
     "IDENTIFYING MISSED OPPORTUNITIES...",
     "CALCULATING TRUST PEAKS...",
     "GENERATING TACTICAL REWRITES...",
+    "EVALUATING WTF METHODOLOGY ALIGNMENT...",
     "COMPILING STRATEGIC PROTOCOL...",
+    "DEEP SCANNING BUYER PSYCHOLOGY...",
+    "MAPPING EMOTIONAL ARC...",
+    "DETECTING AMBIGUITY PATTERNS...",
+    "BUILDING PATTERN LIBRARY...",
+    "CALCULATING FRAMEWORK SCORES...",
+    "GENERATING NEXT-CALL BLUEPRINT...",
     "FINALIZING PRO DIAGNOSTIC..."
   ] : [
     "LOADING PATTERN RECOGNITION ENGINE...",
@@ -41,8 +49,10 @@ export const CallLabLoadingScreen: React.FC<CallLabLoadingScreenProps> = ({
     "MAPPING TRUST TRAJECTORY...",
     "IDENTIFYING CRITICAL MOMENTS...",
     "CALCULATING EFFECTIVENESS SCORE...",
-    "GENERATING DIAGNOSTIC SNAPSHOT...",
-    "FINALIZING REPORT..."
+    "DETECTING CALL SIGNALS...",
+    "ANALYZING WHAT WORKED...",
+    "FINDING WHAT TO WATCH...",
+    "GENERATING DIAGNOSTIC SNAPSHOT..."
   ];
 
   const logs = step === 'uploading' ? uploadLogs : analyzeLogs;
@@ -58,12 +68,21 @@ export const CallLabLoadingScreen: React.FC<CallLabLoadingScreenProps> = ({
   ];
 
   useEffect(() => {
-    // Progress through logs
+    // Progress through logs - slower pace, loops back if still waiting
+    // Pro analysis takes 20-40 seconds typically, so we pace accordingly
+    const baseInterval = step === 'uploading' ? 600 : (tier === 'pro' ? 1800 : 1400);
     const interval = setInterval(() => {
-      setLogIndex((prev) => (prev < logs.length - 1 ? prev + 1 : prev));
-    }, step === 'uploading' ? 800 : 1200);
+      setLogIndex((prev) => {
+        // If we've shown all logs and still processing, loop back with variation
+        if (prev >= logs.length - 1) {
+          // Keep showing last log but don't reset to avoid jarring experience
+          return prev;
+        }
+        return prev + 1;
+      });
+    }, baseInterval);
     return () => clearInterval(interval);
-  }, [logs.length, step]);
+  }, [logs.length, step, tier]);
 
   useEffect(() => {
     // Random glitch text
@@ -71,6 +90,14 @@ export const CallLabLoadingScreen: React.FC<CallLabLoadingScreenProps> = ({
       setGlitchText(glitchOptions[Math.floor(Math.random() * glitchOptions.length)]);
     }, 150);
     return () => clearInterval(glitchInterval);
+  }, []);
+
+  useEffect(() => {
+    // Elapsed time counter
+    const timer = setInterval(() => {
+      setElapsedSeconds((prev) => prev + 1);
+    }, 1000);
+    return () => clearInterval(timer);
   }, []);
 
   return (
@@ -192,11 +219,11 @@ export const CallLabLoadingScreen: React.FC<CallLabLoadingScreenProps> = ({
           Do not close this window
         </div>
 
-        {/* Fun stats ticker */}
+        {/* Fun stats ticker with elapsed time */}
         <div className="flex justify-center gap-8 text-[10px] text-[#333] tracking-wider">
-          <span>PATTERNS: <span className="text-[#E51B23]">47</span></span>
-          <span>SIGNALS: <span className="text-[#FFDE59]">SCANNING</span></span>
-          <span>TRUST: <span className="text-[#E51B23]">MAPPING</span></span>
+          <span>TIME: <span className="text-[#FFDE59]">{elapsedSeconds}s</span></span>
+          <span>PATTERNS: <span className="text-[#E51B23]">{tier === 'pro' ? '47' : '12'}</span></span>
+          <span>STATUS: <span className={elapsedSeconds % 2 === 0 ? "text-[#E51B23]" : "text-[#FFDE59]"}>ACTIVE</span></span>
         </div>
       </div>
 

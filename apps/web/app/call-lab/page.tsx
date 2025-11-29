@@ -43,8 +43,10 @@ export default function CallLabPage() {
     role: '',
     transcript: '',
     prospect_company: '',
+    prospect_name: '',
     prospect_role: '',
-    call_stage: 'discovery',
+    prospect_url: '',
+    call_stage: 'intro' as 'intro' | 'follow-up' | 'pitch' | 'close',
     tier: 'lite', // 'lite' or 'pro'
   });
 
@@ -110,8 +112,10 @@ export default function CallLabPage() {
       ...prev,
       transcript: '',
       prospect_company: '',
+      prospect_name: '',
       prospect_role: '',
-      call_stage: 'discovery',
+      prospect_url: '',
+      call_stage: 'intro',
     }));
   };
 
@@ -400,51 +404,44 @@ export default function CallLabPage() {
                   </div>
                 )}
 
-                {/* Operator Identity */}
-                <div className="space-y-4">
-                  <ConsoleHeading level={3} variant="yellow">
-                    OPERATOR IDENTITY
-                  </ConsoleHeading>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <ConsoleInput
-                      type="email"
-                      placeholder="operator@agency.com"
-                      label="EMAIL *"
-                      required
-                      value={formData.email}
-                      onChange={(e) =>
-                        setFormData({ ...formData, email: (e.target as HTMLInputElement).value })
-                      }
-                    />
-                    <ConsoleInput
-                      type="text"
-                      placeholder="John"
-                      label="FIRST NAME"
-                      value={formData.first_name}
-                      onChange={(e) =>
-                        setFormData({ ...formData, first_name: (e.target as HTMLInputElement).value })
-                      }
-                    />
-                    <ConsoleInput
-                      type="tel"
-                      placeholder="+1 (555) 123-4567"
-                      label="PHONE"
-                      value={formData.phone}
-                      onChange={(e) =>
-                        setFormData({ ...formData, phone: (e.target as HTMLInputElement).value })
-                      }
-                    />
-                    <ConsoleInput
-                      type="text"
-                      placeholder="Account Executive"
-                      label="ROLE"
-                      value={formData.role}
-                      onChange={(e) =>
-                        setFormData({ ...formData, role: (e.target as HTMLInputElement).value })
-                      }
-                    />
+                {/* Operator Greeting - for logged-in users */}
+                {userPlan && formData.first_name && (
+                  <div className="bg-[#1A1A1A] border border-[#333] p-4">
+                    <p className="text-white font-poppins text-lg">
+                      Hi, <span className="text-[#FFDE59] font-bold">{formData.first_name}</span>!
+                    </p>
                   </div>
-                </div>
+                )}
+
+                {/* Operator Identity - only show for non-logged-in users */}
+                {!userPlan && (
+                  <div className="space-y-4">
+                    <ConsoleHeading level={3} variant="yellow">
+                      OPERATOR IDENTITY
+                    </ConsoleHeading>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <ConsoleInput
+                        type="email"
+                        placeholder="operator@agency.com"
+                        label="EMAIL *"
+                        required
+                        value={formData.email}
+                        onChange={(e) =>
+                          setFormData({ ...formData, email: (e.target as HTMLInputElement).value })
+                        }
+                      />
+                      <ConsoleInput
+                        type="text"
+                        placeholder="John"
+                        label="FIRST NAME"
+                        value={formData.first_name}
+                        onChange={(e) =>
+                          setFormData({ ...formData, first_name: (e.target as HTMLInputElement).value })
+                        }
+                      />
+                    </div>
+                  </div>
+                )}
 
                 {/* Target Prospect */}
                 <div className="space-y-4">
@@ -463,13 +460,62 @@ export default function CallLabPage() {
                     />
                     <ConsoleInput
                       type="text"
+                      placeholder="Jane Smith"
+                      label="PROSPECT NAME"
+                      value={formData.prospect_name}
+                      onChange={(e) =>
+                        setFormData({ ...formData, prospect_name: (e.target as HTMLInputElement).value })
+                      }
+                    />
+                    <ConsoleInput
+                      type="text"
                       placeholder="VP of Sales"
-                      label="ROLE"
+                      label="TITLE"
                       value={formData.prospect_role}
                       onChange={(e) =>
                         setFormData({ ...formData, prospect_role: (e.target as HTMLInputElement).value })
                       }
                     />
+                    <ConsoleInput
+                      type="url"
+                      placeholder="https://linkedin.com/in/..."
+                      label="LINKEDIN / WEBSITE (optional)"
+                      value={formData.prospect_url}
+                      onChange={(e) =>
+                        setFormData({ ...formData, prospect_url: (e.target as HTMLInputElement).value })
+                      }
+                    />
+                  </div>
+                </div>
+
+                {/* Call Stage */}
+                <div className="space-y-4">
+                  <ConsoleHeading level={3} variant="yellow">
+                    CALL STAGE
+                  </ConsoleHeading>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {[
+                      { value: 'intro', label: 'INTRO', desc: 'First contact' },
+                      { value: 'follow-up', label: 'FOLLOW-UP', desc: 'Continued discussion' },
+                      { value: 'pitch', label: 'PITCH', desc: 'Presenting solution' },
+                      { value: 'close', label: 'CLOSE', desc: 'Decision time' },
+                    ].map((stage) => (
+                      <button
+                        key={stage.value}
+                        type="button"
+                        onClick={() => setFormData({ ...formData, call_stage: stage.value as typeof formData.call_stage })}
+                        className={`py-3 px-4 border-2 font-anton tracking-wider transition-all text-center ${
+                          formData.call_stage === stage.value
+                            ? 'bg-[#FFDE59] border-[#FFDE59] text-black'
+                            : 'bg-transparent border-[#333] text-[#666] hover:border-[#FFDE59] hover:text-white'
+                        }`}
+                      >
+                        <div className="text-sm">{stage.label}</div>
+                        <div className="text-xs font-poppins font-normal mt-1 opacity-70">
+                          {stage.desc}
+                        </div>
+                      </button>
+                    ))}
                   </div>
                 </div>
 

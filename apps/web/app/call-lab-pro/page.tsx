@@ -33,6 +33,7 @@ export default function CallLabProPage() {
   }, []);
 
   const handleCheckout = async (plan: 'solo' | 'team') => {
+    console.log('Starting checkout for plan:', plan);
     setCheckoutLoading(plan);
     try {
       const response = await fetch('/api/stripe/checkout', {
@@ -41,17 +42,25 @@ export default function CallLabProPage() {
         body: JSON.stringify({ plan }),
       });
 
+      console.log('Checkout response status:', response.status);
       const data = await response.json();
+      console.log('Checkout response data:', data);
 
       if (!response.ok) {
         throw new Error(data.error || 'Failed to create checkout session');
       }
 
+      if (!data.url) {
+        throw new Error('No checkout URL returned from server');
+      }
+
       // Redirect to Stripe Checkout
+      console.log('Redirecting to:', data.url);
       window.location.href = data.url;
     } catch (error) {
       console.error('Checkout error:', error);
-      alert('Failed to start checkout. Please try again.');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      alert(`Failed to start checkout: ${errorMessage}`);
       setCheckoutLoading(null);
     }
   };

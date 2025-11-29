@@ -10,16 +10,35 @@ function getStripe() {
 
 export async function POST(request: NextRequest) {
   try {
+    // Validate environment variables
+    if (!process.env.STRIPE_SECRET_KEY) {
+      console.error('Missing STRIPE_SECRET_KEY environment variable');
+      return NextResponse.json(
+        { error: 'Payment system not configured' },
+        { status: 500 }
+      );
+    }
+
+    if (!process.env.STRIPE_PRICE_SOLO || !process.env.STRIPE_PRICE_TEAM) {
+      console.error('Missing STRIPE_PRICE_SOLO or STRIPE_PRICE_TEAM environment variables');
+      return NextResponse.json(
+        { error: 'Product pricing not configured' },
+        { status: 500 }
+      );
+    }
+
     const stripe = getStripe();
 
     // Price IDs from your Stripe Dashboard
     const PRICE_IDS = {
-      solo: process.env.STRIPE_PRICE_SOLO || 'price_solo_monthly',
-      team: process.env.STRIPE_PRICE_TEAM || 'price_team_monthly',
+      solo: process.env.STRIPE_PRICE_SOLO,
+      team: process.env.STRIPE_PRICE_TEAM,
     };
 
     const body = await request.json();
     const { plan, email, referralCode } = body;
+
+    console.log('Creating checkout session for plan:', plan);
 
     if (!plan || !['solo', 'team'].includes(plan)) {
       return NextResponse.json(
@@ -29,6 +48,7 @@ export async function POST(request: NextRequest) {
     }
 
     const priceId = PRICE_IDS[plan as keyof typeof PRICE_IDS];
+    console.log('Using price ID:', priceId);
 
     // Build the success URL with session ID
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';

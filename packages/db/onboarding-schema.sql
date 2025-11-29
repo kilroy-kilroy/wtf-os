@@ -118,6 +118,12 @@ CREATE POLICY "Users read own org" ON orgs
     id IN (SELECT org_id FROM users WHERE id = auth.uid())
   );
 
+-- Authenticated users can create orgs (during onboarding)
+CREATE POLICY "Authenticated users create orgs" ON orgs
+  FOR INSERT WITH CHECK (
+    auth.uid() IS NOT NULL
+  );
+
 -- Org owners can update their org
 CREATE POLICY "Org owners update org" ON orgs
   FOR UPDATE USING (
@@ -135,3 +141,18 @@ CREATE POLICY "Org owners create invites" ON invites
   FOR INSERT WITH CHECK (
     org_id IN (SELECT org_id FROM users WHERE id = auth.uid() AND is_org_owner = true)
   );
+
+-- Anyone can read invites by token (for accepting)
+CREATE POLICY "Read invites by token" ON invites
+  FOR SELECT USING (true);
+
+-- Users can read org domains for their org
+CREATE POLICY "Users read org domains" ON org_domains
+  FOR SELECT USING (
+    org_id IN (SELECT org_id FROM users WHERE id = auth.uid())
+  );
+
+-- Public email domains readable by all authenticated users
+ALTER TABLE public_email_domains ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Anyone can read public domains" ON public_email_domains
+  FOR SELECT USING (true);

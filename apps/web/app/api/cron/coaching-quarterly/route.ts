@@ -2,22 +2,23 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { subQuarters, startOfQuarter, endOfQuarter, format, getQuarter } from 'date-fns';
 
-// Initialize clients
-const supabase = createClient(
+// Lazy-load clients to avoid build-time errors
+const getSupabase = () => createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-// Cron secret for verification
-const CRON_SECRET = process.env.CRON_SECRET;
-
 export async function GET(request: NextRequest) {
+  const CRON_SECRET = process.env.CRON_SECRET;
+
   try {
     // Verify cron secret
     const authHeader = request.headers.get('authorization');
     if (CRON_SECRET && authHeader !== `Bearer ${CRON_SECRET}`) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    const supabase = getSupabase();
 
     // Calculate the previous quarter's date range
     const now = new Date();

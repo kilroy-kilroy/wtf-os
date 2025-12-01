@@ -1,26 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { subDays, startOfWeek, endOfWeek, format } from 'date-fns';
-import { Resend } from 'resend';
 
-// Initialize clients
-const supabase = createClient(
+// Lazy-load clients to avoid build-time errors
+const getSupabase = () => createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-
-// Cron secret for verification
-const CRON_SECRET = process.env.CRON_SECRET;
-
 export async function GET(request: NextRequest) {
+  const CRON_SECRET = process.env.CRON_SECRET;
+
   try {
     // Verify cron secret
     const authHeader = request.headers.get('authorization');
     if (CRON_SECRET && authHeader !== `Bearer ${CRON_SECRET}`) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    const supabase = getSupabase();
 
     // Calculate the previous week's date range
     // Sunday 00:00 to Saturday 23:59

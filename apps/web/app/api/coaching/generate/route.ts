@@ -9,13 +9,13 @@ import {
   type ReportType,
 } from '@repo/prompts/coaching/coaching-prompts';
 
-// Initialize clients
-const supabase = createClient(
+// Lazy-load clients to avoid build-time errors
+const getSupabase = () => createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-const anthropic = new Anthropic({
+const getAnthropic = () => new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY!,
 });
 
@@ -45,6 +45,9 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    const supabase = getSupabase();
+    const anthropic = getAnthropic();
 
     // Get user info
     const { data: user, error: userError } = await supabase

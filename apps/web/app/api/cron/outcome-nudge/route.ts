@@ -3,29 +3,32 @@ import { createClient } from '@supabase/supabase-js';
 import { Resend } from 'resend';
 import { subDays, format } from 'date-fns';
 
-// Initialize clients
-const supabase = createClient(
+// Lazy-load clients to avoid build-time errors
+const getSupabase = () => createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-
-const CRON_SECRET = process.env.CRON_SECRET;
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://app.timkilroy.com';
-const FROM_EMAIL = process.env.FROM_EMAIL || 'coaching@timkilroy.com';
+const getResend = () => new Resend(process.env.RESEND_API_KEY);
 
 // Nudge calls that are 3-7 days old without an outcome
 const NUDGE_AFTER_DAYS = 3;
 const STOP_NUDGING_AFTER_DAYS = 14;
 
 export async function GET(request: NextRequest) {
+  const CRON_SECRET = process.env.CRON_SECRET;
+  const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://app.timkilroy.com';
+  const FROM_EMAIL = process.env.FROM_EMAIL || 'coaching@timkilroy.com';
+
   try {
     // Verify cron secret
     const authHeader = request.headers.get('authorization');
     if (CRON_SECRET && authHeader !== `Bearer ${CRON_SECRET}`) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    const supabase = getSupabase();
+    const resend = getResend();
 
     const now = new Date();
     const nudgeStart = subDays(now, STOP_NUDGING_AFTER_DAYS).toISOString();

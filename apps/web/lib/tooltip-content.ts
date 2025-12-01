@@ -10,8 +10,12 @@ export const dashboardTooltips = {
     tooltip: "Your ability to keep the call on a linear, low-friction journey. Higher is better. Calculated from detours, interruptions, topic shifts, and transition smoothness."
   },
   patternFriction: {
-    label: "Pattern Friction Index",
-    tooltip: "Measures how many friction patterns appear across your calls. Lower is better. Decreasing friction means cleaner, easier conversations."
+    label: "Red Flag Frequency",
+    tooltip: "How often problematic patterns appear in your calls. Lower is better. Tracks risk behaviors like giving away strategy, soft closes, and interrogation spirals."
+  },
+  redFlagFrequency: {
+    label: "Red Flag Frequency",
+    tooltip: "How often problematic patterns appear in your calls. Lower is better. Tracks risk behaviors like giving away strategy, soft closes, and interrogation spirals."
   },
   skillImprovementIndex: {
     label: "Skill Improvement Index",
@@ -67,8 +71,8 @@ export const dashboardTooltips = {
       tooltip: "Shows how consistently you held structure across calls."
     },
     patternFriction: {
-      label: "Pattern Friction Trend",
-      tooltip: "Shows whether friction patterns are increasing or fading."
+      label: "Red Flag Frequency Trend",
+      tooltip: "Shows whether problematic patterns are increasing or fading. Downward trend means cleaner calls."
     }
   },
   salesIdentity: {

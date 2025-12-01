@@ -8,6 +8,7 @@ import { QuickInsightsPanel } from "./quick-insights";
 import { FollowUpsPanel } from "./follow-ups";
 import { TrustVelocityChart, AgendaControlChart, PatternDensityChart } from "./charts";
 import { CoachingTimeline } from "./coaching-timeline";
+import { MethodologyAlignment } from "./methodology-alignment";
 import { dashboardTooltips } from "@/lib/tooltip-content";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
 
@@ -120,9 +121,9 @@ export function SalesOSDashboard({ userName, userEmail, data }: Props) {
             tooltip={dashboardTooltips.agendaControl.tooltip}
           />
           <MetricCard
-            label="Pattern friction"
+            label="Red flag frequency"
             value={metrics.patternDensity.toFixed(0)}
-            helper="Recurring friction spots"
+            helper="Lower is better"
             tooltip={dashboardTooltips.patternFriction.tooltip}
           />
           <MetricCard
@@ -196,6 +197,9 @@ export function SalesOSDashboard({ userName, userEmail, data }: Props) {
 
         {/* Coaching Timeline */}
         <CoachingTimeline reports={coachingReports} />
+
+        {/* Methodology Alignment (collapsed by default) */}
+        <MethodologyAlignment />
       </div>
     </div>
   );

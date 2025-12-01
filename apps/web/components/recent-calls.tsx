@@ -1,4 +1,5 @@
 import { RecentCall } from "@/lib/dashboard-types";
+import { PatternTag } from "./pattern-tag";
 
 type Props = {
   calls: RecentCall[];
@@ -45,13 +46,11 @@ export function RecentCallsList({ calls }: Props) {
 
           <div className="mt-2 flex flex-wrap gap-2 text-[11px]">
             {call.primaryPattern && (
-              <span className="px-2 py-0.5 rounded bg-[#1A1A1A] border border-[#E51B23]">
-                Pattern: {call.primaryPattern}
-              </span>
+              <PatternTag pattern={call.primaryPattern} />
             )}
             {call.improvementHighlight && (
               <span className="px-2 py-0.5 rounded bg-[#1A1A1A] border border-[#333]">
-                Improvement: {call.improvementHighlight}
+                Focus: {call.improvementHighlight}
               </span>
             )}
           </div>

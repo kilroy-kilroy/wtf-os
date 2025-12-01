@@ -14,7 +14,7 @@ export function PatternDensityChart({ data }: { data: { date: string; value: num
   return (
     <div className="bg-black border border-[#E51B23] rounded-lg p-4">
       <h3 className="font-anton text-sm uppercase text-[#FFDE59] mb-3">
-        Pattern Density Trend
+        Red Flag Frequency
       </h3>
 
       <ResponsiveContainer width="100%" height={200}>

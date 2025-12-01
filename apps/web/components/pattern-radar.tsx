@@ -1,6 +1,7 @@
 "use client";
 
 import { PatternRadarData } from "@/lib/dashboard-types";
+import { PatternTag } from "./pattern-tag";
 
 type Props = {
   data: PatternRadarData;
@@ -23,8 +24,8 @@ export function PatternRadar({ data }: Props) {
           </h3>
           <ul className="text-sm text-[#B3B3B3] space-y-1">
             {data.topStrengths.map((s) => (
-              <li key={s.name}>
-                <span className="text-[#FFDE59] font-semibold">{s.name}</span>{" "}
+              <li key={s.name} className="flex items-center gap-2 flex-wrap">
+                <PatternTag pattern={s.name} />
                 <span className="text-xs text-[#777]">
                   {s.current.toFixed(0)} score, {s.delta >= 0 ? "+" : ""}
                   {s.delta.toFixed(1)} recent change
@@ -43,8 +44,8 @@ export function PatternRadar({ data }: Props) {
           </h3>
           <ul className="text-sm text-[#B3B3B3] space-y-1">
             {data.topWeaknesses.map((s) => (
-              <li key={s.name}>
-                <span className="text-[#E51B23] font-semibold">{s.name}</span>{" "}
+              <li key={s.name} className="flex items-center gap-2 flex-wrap">
+                <PatternTag pattern={s.name} />
                 <span className="text-xs text-[#777]">
                   {s.current.toFixed(0)} score, {s.delta >= 0 ? "+" : ""}
                   {s.delta.toFixed(1)} recent change
@@ -63,19 +64,21 @@ export function PatternRadar({ data }: Props) {
           <div className="font-anton text-xs uppercase text-[#B3B3B3] tracking-wide mb-1">
             Most frequent friction
           </div>
-          <p>
-            {data.mostFrequentMistake ||
-              "Once patterns repeat, we will show your most common deal friction here."}
-          </p>
+          {data.mostFrequentMistake ? (
+            <PatternTag pattern={data.mostFrequentMistake} />
+          ) : (
+            <p>Once patterns repeat, we will show your most common deal friction here.</p>
+          )}
         </div>
         <div className="text-sm text-[#B3B3B3]">
           <div className="font-anton text-xs uppercase text-[#B3B3B3] tracking-wide mb-1">
             Most improved skill
           </div>
-          <p>
-            {data.mostImprovedSkill ||
-              "Keep running calls through Call Lab Pro to see what is improving fastest."}
-          </p>
+          {data.mostImprovedSkill ? (
+            <PatternTag pattern={data.mostImprovedSkill} />
+          ) : (
+            <p>Keep running calls through Call Lab Pro to see what is improving fastest.</p>
+          )}
         </div>
       </div>
 
@@ -91,7 +94,7 @@ export function PatternRadar({ data }: Props) {
             return (
               <div key={s.name}>
                 <div className="flex items-center justify-between text-xs text-[#B3B3B3] mb-1">
-                  <span>{s.name}</span>
+                  <PatternTag pattern={s.name} className="text-xs" />
                   <span className={deltaColor}>
                     {s.delta > 0 ? "+" : s.delta < 0 ? "" : "±"}
                     {s.delta.toFixed(1)}

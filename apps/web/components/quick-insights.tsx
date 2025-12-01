@@ -1,4 +1,5 @@
 import { QuickInsights } from "@/lib/dashboard-types";
+import { PatternTag } from "./pattern-tag";
 
 type Props = {
   insights: QuickInsights;
@@ -27,20 +28,26 @@ export function QuickInsightsPanel({ insights }: Props) {
           <div className="font-anton text-[10px] uppercase text-[#777]">
             Biggest missed move
           </div>
-          <p className="mt-1">
-            {insights.missedMove ||
-              "Once we see a consistent missed move across calls, it will show up here."}
-          </p>
+          <div className="mt-1">
+            {insights.missedMove ? (
+              <PatternTag pattern={insights.missedMove} />
+            ) : (
+              <p>Once we see a consistent missed move across calls, it will show up here.</p>
+            )}
+          </div>
         </div>
 
         <div>
           <div className="font-anton text-[10px] uppercase text-[#777]">
             Skill to practice next call
           </div>
-          <p className="mt-1">
-            {insights.skillToPractice ||
-              "Run another call through Call Lab Pro and we will tell you what to sharpen next."}
-          </p>
+          <div className="mt-1">
+            {insights.skillToPractice ? (
+              <PatternTag pattern={insights.skillToPractice} />
+            ) : (
+              <p>Run another call through Call Lab Pro and we will tell you what to sharpen next.</p>
+            )}
+          </div>
         </div>
       </div>
     </section>

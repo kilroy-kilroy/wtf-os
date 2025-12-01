@@ -12,54 +12,63 @@ import React from 'react';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { result, metadata, useHtmlPdf = true } = body;
+    const { result, report, markdown, metadata, useHtmlPdf = true } = body;
 
-    if (!result) {
+    // Support both legacy 'result' and new 'report'/'markdown' params
+    const content = report || result || markdown;
+
+    if (!content) {
       return NextResponse.json(
-        { error: 'Missing result data' },
+        { error: 'Missing report data' },
         { status: 400 }
       );
     }
 
-    // Detect if result is markdown (string) or JSON (object with structured data)
-    const isMarkdown = typeof result === 'string';
+    // Detect content type
+    const isMarkdown = typeof content === 'string';
+    const isProReport = !isMarkdown && content.meta !== undefined;
 
-    // Generate PDF with appropriate method
     let pdfBuffer: Buffer;
 
     if (isMarkdown && useHtmlPdf) {
-      // NEW: Use HTML/CSS approach for markdown reports
+      // HTML/CSS approach for markdown reports (Lite)
       try {
-        // Parse markdown to extract structured data
-        const reportData = parseCallLabLiteMarkdown(result);
-
-        // Generate HTML from template
+        const reportData = parseCallLabLiteMarkdown(content);
         const html = generateCallLabLiteHTML(reportData);
-
-        // Convert HTML to PDF
         pdfBuffer = await htmlToPdf(html);
       } catch (parseError) {
         console.error('Error with HTML/CSS PDF generation, falling back to React PDF:', parseError);
-
-        // Fallback to legacy React PDF approach
         pdfBuffer = await renderToBuffer(
-          React.createElement(MarkdownReport, { markdown: result, metadata }) as any
+          React.createElement(MarkdownReport, { markdown: content, metadata }) as any
         );
       }
     } else if (isMarkdown) {
-      // Legacy: Use React PDF for markdown
+      // Legacy React PDF for markdown
       pdfBuffer = await renderToBuffer(
-        React.createElement(MarkdownReport, { markdown: result, metadata }) as any
+        React.createElement(MarkdownReport, { markdown: content, metadata }) as any
+      );
+    } else if (isProReport) {
+      // Pro report - use structured CallLabReport with enhanced metadata
+      const enhancedMetadata = {
+        ...metadata,
+        score: content.meta?.overallScore,
+        tier: 'pro',
+      };
+      pdfBuffer = await renderToBuffer(
+        React.createElement(CallLabReport, { result: content, metadata: enhancedMetadata }) as any
       );
     } else {
-      // Legacy: Use React PDF for JSON results
+      // Legacy JSON result
       pdfBuffer = await renderToBuffer(
-        React.createElement(CallLabReport, { result, metadata }) as any
+        React.createElement(CallLabReport, { result: content, metadata }) as any
       );
     }
 
-    // Return PDF as download
-    const filename = `call-lab-${metadata?.tier || 'report'}-${Date.now()}.pdf`;
+    // Return PDF with descriptive filename
+    const companyName = metadata?.prospectCompany || metadata?.company || 'report';
+    const tier = metadata?.tier || 'lite';
+    const filename = `call-lab-${tier}-${companyName.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}.pdf`;
+
     return new NextResponse(pdfBuffer as any, {
       status: 200,
       headers: {

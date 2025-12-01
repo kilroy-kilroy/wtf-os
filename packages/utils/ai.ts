@@ -34,7 +34,7 @@ const MODEL_CONFIGS: Record<string, ModelConfig> = {
   'call-lab-pro': {
     provider: 'anthropic',
     model: 'claude-sonnet-4-5-20250929',
-    maxTokens: 8192,
+    maxTokens: 16384,
     temperature: 0.3,
   },
 };

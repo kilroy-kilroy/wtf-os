@@ -106,7 +106,7 @@ export function MethodologyAlignment({ scores = DEFAULT_METHODOLOGIES }: Methodo
           {/* Note about methodologies */}
           <div className="bg-[#0A0A0A] border border-[#222] rounded p-4">
             <p className="text-xs text-[#666] italic">
-              These scores reflect how your conversational patterns align with each methodology's principles.
+              These scores reflect how your conversational patterns align with each methodology&apos;s principles.
               WTF Method is the lens through which all analysis is performed - other frameworks are validation, not standards.
             </p>
           </div>

@@ -1,4 +1,6 @@
 import { InfoTooltip } from "@/components/ui/info-tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { getPatternByName } from "@/lib/patternGlossary";
 
 type MetricCardProps = {
   label: string;
@@ -6,9 +8,28 @@ type MetricCardProps = {
   helper?: string;
   icon?: string;
   tooltip?: string;
+  isPatternValue?: boolean;
 };
 
-export function MetricCard({ label, value, helper, icon, tooltip }: MetricCardProps) {
+export function MetricCard({ label, value, helper, icon, tooltip, isPatternValue }: MetricCardProps) {
+  const patternDef = isPatternValue ? getPatternByName(value) : null;
+
+  const valueElement = patternDef ? (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span className="cursor-help underline decoration-dotted underline-offset-4 decoration-[#555]">
+          {value}
+        </span>
+      </TooltipTrigger>
+      <TooltipContent className="max-w-xs bg-[#1A1A1A] border border-[#333] text-sm">
+        <p className="font-semibold text-[#FFDE59] mb-1">{patternDef.name}</p>
+        <p className="text-[#B3B3B3]">{patternDef.description}</p>
+      </TooltipContent>
+    </Tooltip>
+  ) : (
+    value
+  );
+
   return (
     <div className="bg-black border border-[#E51B23] rounded-lg px-4 py-3 flex flex-col justify-between">
       <div className="flex items-center justify-between">
@@ -21,7 +42,7 @@ export function MetricCard({ label, value, helper, icon, tooltip }: MetricCardPr
         {icon && <span className="text-lg">{icon}</span>}
       </div>
       <div className="font-anton text-2xl text-[#FFDE59] mt-2">
-        {value}
+        {valueElement}
       </div>
       {helper && (
         <div className="text-[11px] text-[#777] mt-1 font-poppins">

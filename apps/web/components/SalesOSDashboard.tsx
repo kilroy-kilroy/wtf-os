@@ -80,6 +80,7 @@ export function SalesOSDashboard({ userName, userEmail, data }: Props) {
               }
               icon="🔥"
               tooltip={dashboardTooltips.mostImprovedSkill.tooltip}
+              isPatternValue={!!patternRadar.topStrengths[0]}
             />
             <MetricCard
               label="Weakest link"
@@ -90,6 +91,7 @@ export function SalesOSDashboard({ userName, userEmail, data }: Props) {
               }
               icon="⚠️"
               tooltip={dashboardTooltips.mostFrequentPattern.tooltip}
+              isPatternValue={!!patternRadar.topWeaknesses[0]}
             />
             <MetricCard
               label="Next call focus"
@@ -97,6 +99,7 @@ export function SalesOSDashboard({ userName, userEmail, data }: Props) {
               helper={quickInsights.missedMove ?? "We will pin a specific move after your next analysis."}
               icon="🎯"
               tooltip={dashboardTooltips.weeklyFocus.tooltip}
+              isPatternValue={!!quickInsights.skillToPractice}
             />
           </div>
         </section>

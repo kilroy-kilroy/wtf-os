@@ -1,5 +1,5 @@
 import { getSupabaseServerClient } from "./supabase-server";
-import { DashboardData, RecentCall, SkillTrend, PatternRadarData, ChartDataPoint } from "./dashboard-types";
+import { DashboardData, RecentCall, SkillTrend, PatternRadarData, ChartDataPoint, CoachingReport } from "./dashboard-types";
 import { subDays } from "date-fns";
 
 // Utility functions for real math
@@ -193,6 +193,29 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
   }
 
   // ============================================
+  // COACHING REPORTS
+  // ============================================
+  const { data: coachingReportsData, error: coachingError } = await supabase
+    .from("coaching_reports")
+    .select("id, report_type, period_start, period_end, scores_aggregate, created_at")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(20);
+
+  if (coachingError) {
+    console.error("Error fetching coaching reports", coachingError);
+  }
+
+  const coachingReports: CoachingReport[] = (coachingReportsData || []).map((r) => ({
+    id: r.id,
+    report_type: r.report_type,
+    period_start: r.period_start,
+    period_end: r.period_end,
+    scores_aggregate: r.scores_aggregate,
+    created_at: r.created_at,
+  }));
+
+  // ============================================
   // CHART DATA (oldest → newest for line charts)
   // ============================================
   const formatDate = (dateStr: string) =>
@@ -246,5 +269,6 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
       agendaControlTrend,
       patternDensityTrend,
     },
+    coachingReports,
   };
 }

@@ -7,6 +7,7 @@ import { RecentCallsList } from "./recent-calls";
 import { QuickInsightsPanel } from "./quick-insights";
 import { FollowUpsPanel } from "./follow-ups";
 import { TrustVelocityChart, AgendaControlChart, PatternDensityChart } from "./charts";
+import { CoachingTimeline } from "./coaching-timeline";
 import { dashboardTooltips } from "@/lib/tooltip-content";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
 
@@ -17,7 +18,7 @@ type Props = {
 };
 
 export function SalesOSDashboard({ userName, userEmail, data }: Props) {
-  const { metrics, patternRadar, recentCalls, quickInsights, followUps, charts } = data;
+  const { metrics, patternRadar, recentCalls, quickInsights, followUps, charts, coachingReports } = data;
 
   return (
     <div className="min-h-screen bg-black py-8 px-4 text-white">
@@ -192,6 +193,9 @@ export function SalesOSDashboard({ userName, userEmail, data }: Props) {
 
           <RecentCallsList calls={recentCalls} />
         </section>
+
+        {/* Coaching Timeline */}
+        <CoachingTimeline reports={coachingReports} />
       </div>
     </div>
   );

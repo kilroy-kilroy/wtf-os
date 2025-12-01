@@ -62,6 +62,18 @@ export type DashboardCharts = {
   patternDensityTrend: ChartDataPoint[];
 };
 
+export type CoachingReport = {
+  id: string;
+  report_type: "weekly" | "monthly" | "quarterly";
+  period_start: string;
+  period_end: string;
+  scores_aggregate?: {
+    overall: number;
+    trust_velocity: number;
+  };
+  created_at: string;
+};
+
 export type DashboardData = {
   metrics: DashboardMetrics;
   patternRadar: PatternRadarData;
@@ -69,4 +81,5 @@ export type DashboardData = {
   quickInsights: QuickInsights;
   followUps: FollowUpTask[];
   charts: DashboardCharts;
+  coachingReports: CoachingReport[];
 };

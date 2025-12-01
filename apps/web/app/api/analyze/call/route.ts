@@ -262,6 +262,22 @@ ${ingestionItem.raw_content}`;
             }
           }
 
+          // Store Pro results in database
+          const report = proResult.report || proResult;
+          const overallScore = report.meta?.overallScore || 0;
+          const snapTldr = report.snapTake?.tldr || '';
+
+          const callScore = await createCallScore(supabase, {
+            ingestion_item_id,
+            agency_id: ingestionItem.agency_id,
+            user_id: ingestionItem.user_id || undefined,
+            version: 'pro',
+            overall_score: Math.round(overallScore / 10), // Convert 0-100 to 0-10
+            overall_grade: overallScore >= 80 ? 'A' : overallScore >= 60 ? 'B' : overallScore >= 40 ? 'C' : 'D',
+            diagnosis_summary: snapTldr,
+            markdown_response: JSON.stringify(proResult, null, 2), // Store full JSON
+          });
+
           // Update ingestion item status
           await updateIngestionItemStatus(supabase, ingestion_item_id, 'completed');
 
@@ -271,14 +287,18 @@ ${ingestionItem.raw_content}`;
             status: 'completed',
             completed_at: new Date().toISOString(),
             duration_ms: duration,
+            result_ids: {
+              call_score_id: callScore.id,
+            },
             model_used: modelUsed,
             tokens_used: usage,
           });
 
-          // Return Pro JSON result directly
+          // Return Pro JSON result
           return NextResponse.json(
             {
               success: true,
+              call_score_id: callScore.id,
               result: proResult,
             },
             { status: 200 }

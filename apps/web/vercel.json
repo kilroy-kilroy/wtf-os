@@ -15,6 +15,10 @@
     {
       "path": "/api/cron/coaching-emails",
       "schedule": "0 6,12,18 * * *"
+    },
+    {
+      "path": "/api/cron/outcome-nudge",
+      "schedule": "0 10 * * *"
     }
   ]
 }

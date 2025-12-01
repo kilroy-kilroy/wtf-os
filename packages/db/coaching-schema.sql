@@ -45,6 +45,7 @@ CREATE TABLE IF NOT EXISTS call_lab_reports (
   -- Call Outcome
   outcome             text,               -- 'won', 'lost', 'ghosted', 'next_step', 'unknown'
   outcome_updated_at  timestamptz,
+  last_nudge_at       timestamptz,        -- Last time we sent a nudge email
 
   -- Full Report Content
   full_report         jsonb,              -- Complete analysis output
@@ -222,4 +223,8 @@ CREATE POLICY "Service role insert coaching reports" ON coaching_reports
   FOR INSERT WITH CHECK (true);
 
 CREATE POLICY "Service role update coaching reports" ON coaching_reports
+  FOR UPDATE USING (true);
+
+-- Service role can update call_lab_reports (for nudge tracking)
+CREATE POLICY "Service role update call reports" ON call_lab_reports
   FOR UPDATE USING (true);

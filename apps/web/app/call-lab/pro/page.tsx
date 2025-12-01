@@ -411,6 +411,56 @@ export default function CallLabProPage() {
           )}
         </ConsolePanel>
 
+        {/* Model Scores (Challenger, SPIN, MEDDIC, etc.) */}
+        {report.modelScores && Object.keys(report.modelScores).length > 0 && (
+          <ConsolePanel>
+            <ConsoleHeading level={2} variant="yellow" className="mb-4">SALES FRAMEWORK ANALYSIS</ConsoleHeading>
+            <div className="grid md:grid-cols-2 gap-4">
+              {Object.entries(report.modelScores).map(([model, data]) => (
+                <div key={model} className="bg-[#1A1A1A] border border-[#333] p-4 rounded">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="font-anton text-white uppercase">
+                      {model === 'gapSelling' ? 'GAP SELLING' :
+                       model === 'buyerJourney' ? 'BUYER JOURNEY' :
+                       model === 'wtfMethod' ? 'WTF METHOD' :
+                       model.toUpperCase()}
+                    </span>
+                    <span className="text-2xl font-anton text-[#E51B23]">{getScoreValue(data?.score)}</span>
+                  </div>
+                  {data?.tldr && (
+                    <p className="text-[#FFDE59] text-sm mb-2">{safeText(data.tldr)}</p>
+                  )}
+                  {data?.analysis && (
+                    <p className="text-[#B3B3B3] text-sm mb-3">{safeText(data.analysis)}</p>
+                  )}
+                  {data?.whatWorked && data.whatWorked.length > 0 && (
+                    <div className="mb-2">
+                      <p className="text-[#00FF00] text-xs mb-1">WHAT WORKED:</p>
+                      <ul className="text-[#B3B3B3] text-xs list-disc list-inside">
+                        {data.whatWorked.slice(0, 3).map((item, j) => <li key={j}>{safeText(item)}</li>)}
+                      </ul>
+                    </div>
+                  )}
+                  {data?.whatMissed && data.whatMissed.length > 0 && (
+                    <div className="mb-2">
+                      <p className="text-[#E51B23] text-xs mb-1">WHAT MISSED:</p>
+                      <ul className="text-[#B3B3B3] text-xs list-disc list-inside">
+                        {data.whatMissed.slice(0, 3).map((item, j) => <li key={j}>{safeText(item)}</li>)}
+                      </ul>
+                    </div>
+                  )}
+                  {data?.upgradeMove && (
+                    <div className="mt-2 pt-2 border-t border-[#333]">
+                      <p className="text-[#666] text-xs mb-1">UPGRADE MOVE:</p>
+                      <p className="text-white text-sm">{safeText(data.upgradeMove)}</p>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </ConsolePanel>
+        )}
+
         {/* Patterns */}
         {report.patterns && report.patterns.length > 0 && (
           <ConsolePanel>

@@ -305,6 +305,14 @@ interface ProReportProps {
     };
     nextSteps?: { actions?: string[] };
     followUpEmail?: { subject?: string; body?: string };
+    modelScores?: Record<string, {
+      score?: number;
+      tldr?: string;
+      analysis?: string;
+      whatWorked?: string[];
+      whatMissed?: string[];
+      upgradeMove?: string;
+    }>;
   };
   metadata?: {
     date?: string;
@@ -441,7 +449,57 @@ export const CallLabProReport: React.FC<ProReportProps> = ({ result, metadata })
         </Page>
       )}
 
-      {/* Page 3: Tactical Rewrites */}
+      {/* Page: Model Scores (Challenger, SPIN, MEDDIC, etc.) */}
+      {result.modelScores && Object.keys(result.modelScores).length > 0 && (
+        <Page size="A4" style={styles.page}>
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>SALES FRAMEWORK ANALYSIS</Text>
+            {Object.entries(result.modelScores).map(([model, data]) => (
+              <View key={model} style={styles.patternCard} wrap={false}>
+                <View style={styles.patternHeader}>
+                  <Text style={styles.patternName}>
+                    {model === 'gapSelling' ? 'GAP SELLING' :
+                     model === 'buyerJourney' ? 'BUYER JOURNEY' :
+                     model === 'wtfMethod' ? 'WTF METHOD' :
+                     model.toUpperCase()}
+                  </Text>
+                  <Text style={[styles.severityBadge, { backgroundColor: colors.red, color: colors.white }]}>
+                    {data?.score || 0}
+                  </Text>
+                </View>
+                {data?.tldr && <Text style={{ fontSize: 10, color: colors.yellow, marginBottom: 4 }}>{data.tldr}</Text>}
+                {data?.analysis && <Text style={styles.patternTldr}>{data.analysis}</Text>}
+                {data?.whatWorked && data.whatWorked.length > 0 && (
+                  <View style={{ marginTop: 6 }}>
+                    <Text style={{ fontSize: 8, color: '#16a34a', marginBottom: 2 }}>WHAT WORKED:</Text>
+                    {data.whatWorked.slice(0, 3).map((item, j) => (
+                      <Text key={j} style={styles.fixItem}>• {item}</Text>
+                    ))}
+                  </View>
+                )}
+                {data?.whatMissed && data.whatMissed.length > 0 && (
+                  <View style={{ marginTop: 6 }}>
+                    <Text style={{ fontSize: 8, color: colors.red, marginBottom: 2 }}>WHAT MISSED:</Text>
+                    {data.whatMissed.slice(0, 3).map((item, j) => (
+                      <Text key={j} style={styles.fixItem}>• {item}</Text>
+                    ))}
+                  </View>
+                )}
+                {data?.upgradeMove && (
+                  <View style={{ marginTop: 6, paddingTop: 6, borderTopWidth: 1, borderTopColor: '#e0e0e0' }}>
+                    <Text style={{ fontSize: 8, color: colors.lightGray, marginBottom: 2 }}>UPGRADE MOVE:</Text>
+                    <Text style={{ fontSize: 9, color: colors.black }}>{data.upgradeMove}</Text>
+                  </View>
+                )}
+              </View>
+            ))}
+          </View>
+          <Text style={styles.footer}>Call Lab Pro - Sales Call Analysis Report</Text>
+          <Text style={styles.pageNumber} render={({ pageNumber, totalPages }) => `${pageNumber} / ${totalPages}`} fixed />
+        </Page>
+      )}
+
+      {/* Page: Tactical Rewrites */}
       {result.tacticalRewrites?.items && result.tacticalRewrites.items.length > 0 && (
         <Page size="A4" style={styles.page}>
           <View style={styles.section}>

@@ -25,11 +25,9 @@ import {
   CALLLAB_PRO_MARKDOWN_USER,
   parseMarkdownMetadata,
   type MarkdownPromptParams,
-} from '@repo/prompts';
-import {
   CALL_LAB_PRO_SYSTEM_PROMPT,
   CALL_LAB_PRO_JSON_SCHEMA,
-} from '../../../../lib/call-lab-system-prompt';
+} from '@repo/prompts';
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now();

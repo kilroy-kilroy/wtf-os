@@ -193,39 +193,14 @@ export default function CallLabProPage() {
       const callId = crypto.randomUUID();
       const createdAt = new Date().toISOString();
 
-      // Step 3: Save to dashboard via ingest API
-      setLoadingStep('saving');
+      // Get the report from the response
       const report = analyzeData.result?.report || analyzeData.result;
 
-      const ingestPayload = {
-        report: report,
-        metadata: {
-          userId: userId,
-          agent: 'pro',
-          version: '1.0',
-          callId: callId,
-          transcript: formData.transcript,
-          createdAt: createdAt,
-          buyerName: formData.prospect_name,
-          companyName: formData.prospect_company,
-        }
-      };
-
-      const saveResponse = await fetch('/api/call-lab/ingest', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(ingestPayload),
-      });
-
-      if (!saveResponse.ok) {
-        console.error('Failed to save to dashboard, but analysis completed');
-      }
-
-      // Set result for display
-      if (analyzeData.result?.report) {
+      // Set result for display FIRST (before ingest, so we don't lose it)
+      if (report) {
         setResult({
           type: 'json',
-          report: analyzeData.result.report,
+          report: report,
           metadata: {
             agent: 'pro',
             version: '1.0',
@@ -240,6 +215,37 @@ export default function CallLabProPage() {
           type: 'markdown',
           markdown: analyzeData.result.markdown,
         });
+      }
+
+      // Step 3: Save to dashboard via ingest API (non-blocking)
+      setLoadingStep('saving');
+      try {
+        const ingestPayload = {
+          report: report,
+          metadata: {
+            userId: userId,
+            agent: 'pro',
+            version: '1.0',
+            callId: callId,
+            transcript: formData.transcript,
+            createdAt: createdAt,
+            buyerName: formData.prospect_name,
+            companyName: formData.prospect_company,
+          }
+        };
+
+        const saveResponse = await fetch('/api/call-lab/ingest', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(ingestPayload),
+        });
+
+        if (!saveResponse.ok) {
+          const errorData = await saveResponse.json().catch(() => ({}));
+          console.error('Failed to save to dashboard:', errorData);
+        }
+      } catch (ingestError) {
+        console.error('Ingest error (non-fatal):', ingestError);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');

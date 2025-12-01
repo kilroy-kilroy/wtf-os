@@ -59,7 +59,15 @@ export async function GET(request: NextRequest) {
 
     for (const report of pendingReports) {
       try {
-        const user = (report as { users: { email: string; first_name: string } }).users;
+        // Supabase returns users as an array when using joins
+        const usersData = report.users as unknown as { email: string; first_name: string }[];
+        const user = Array.isArray(usersData) ? usersData[0] : usersData;
+
+        if (!user?.email) {
+          console.error(`No user email for report ${report.id}`);
+          continue;
+        }
+
         const viewUrl = `${APP_URL}/dashboard/coaching/${report.id}`;
 
         let subject: string;

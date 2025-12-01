@@ -73,7 +73,15 @@ export async function GET(request: NextRequest) {
 
     for (const call of callsToNudge) {
       try {
-        const user = (call as { users: { email: string; first_name: string } }).users;
+        // Supabase returns users as an array when using joins
+        const usersData = call.users as unknown as { email: string; first_name: string }[];
+        const user = Array.isArray(usersData) ? usersData[0] : usersData;
+
+        if (!user?.email) {
+          console.error(`No user email for call ${call.id}`);
+          continue;
+        }
+
         const callDate = call.call_date
           ? format(new Date(call.call_date), 'MMM d')
           : format(new Date(call.created_at), 'MMM d');

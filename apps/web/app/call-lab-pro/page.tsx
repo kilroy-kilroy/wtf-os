@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { InfoTooltip, LabelWithTooltip } from '@/components/ui/info-tooltip';
+import { proReportTooltips, methodologyTooltips } from '@/lib/tooltip-content';
 
 // Type definition for personalized copy
 interface PersonalizedCopy {
@@ -110,32 +112,38 @@ export default function CallLabProPage() {
               {
                 icon: '⚡',
                 title: 'The Exact Moment They Decided',
-                description: 'Timestamp-level breakdown of every buying signal, objection, and decision point. See the three seconds where they went from \'maybe\' to \'yes\'—and what you said that triggered it.'
+                description: 'Timestamp-level breakdown of every buying signal, objection, and decision point. See the three seconds where they went from \'maybe\' to \'yes\'—and what you said that triggered it.',
+                tooltipKey: 'trustCurve' as const
               },
               {
                 icon: '🎯',
                 title: 'Pattern Library',
-                description: 'Every named pattern in Tim\'s methodology. The Mirror Close. The Generosity Trap. The Diagnostic Reveal. The Vulnerability Flip. Learn when you\'re using them and when you\'re fucking them up.'
+                description: 'Every named pattern in Tim\'s methodology. The Mirror Close. The Generosity Trap. The Diagnostic Reveal. The Vulnerability Flip. Learn when you\'re using them and when you\'re fucking them up.',
+                tooltipKey: 'patternsDetected' as const
               },
               {
                 icon: '📈',
                 title: 'Trust Curve Visualization',
-                description: 'Watch trust build and break across the call timeline. See exactly where you gained credibility and where you killed momentum. This is what separates closers from consultants.'
+                description: 'Watch trust build and break across the call timeline. See exactly where you gained credibility and where you killed momentum. This is what separates closers from consultants.',
+                tooltipKey: 'trustCurve' as const
               },
               {
                 icon: '🔍',
                 title: 'Multi-Call Performance Tracking',
-                description: 'Spot your patterns across 10, 20, 50 calls. Are you consistently giving away strategy? Always soft on close? Your blind spots become undeniable.'
+                description: 'Spot your patterns across 10, 20, 50 calls. Are you consistently giving away strategy? Always soft on close? Your blind spots become undeniable.',
+                tooltipKey: 'overallScore' as const
               },
               {
                 icon: '⚔️',
                 title: 'Competitor Framework Comparison',
-                description: 'See how your call stacks up against 8 other sales methodologies: Sandler, SPIN, Challenger, MEDDIC, Gap Selling, and more. What they\'d say you missed—and why Tim\'s approach is different.'
+                description: 'See how your call stacks up against 8 other sales methodologies: Sandler, SPIN, Challenger, MEDDIC, Gap Selling, and more. What they\'d say you missed—and why Tim\'s approach is different.',
+                tooltipKey: 'methodSynthesis' as const
               },
               {
                 icon: '💬',
                 title: 'Tactical Language Examples',
-                description: 'Not just \'you should have closed harder.\' Get the exact phrases, transitions, and questions that would have changed the outcome. Copy-paste-worthy coaching.'
+                description: 'Not just \'you should have closed harder.\' Get the exact phrases, transitions, and questions that would have changed the outcome. Copy-paste-worthy coaching.',
+                tooltipKey: 'tacticalRewrites' as const
               }
             ].map((feature, index) => (
               <div
@@ -147,12 +155,100 @@ export default function CallLabProPage() {
                 <div className="text-5xl mb-4 animate-float" style={{ animationDelay: `${index * 0.2}s` }}>
                   {feature.icon}
                 </div>
-                <h3 className="font-anton text-xl text-[#FFDE59] mb-3 tracking-wide">
-                  {feature.title}
-                </h3>
+                <div className="flex items-start gap-2 mb-3">
+                  <h3 className="font-anton text-xl text-[#FFDE59] tracking-wide">
+                    {feature.title}
+                  </h3>
+                  <InfoTooltip
+                    content={proReportTooltips[feature.tooltipKey].tooltip}
+                    iconClassName="h-3.5 w-3.5"
+                  />
+                </div>
                 <p className="text-sm leading-[1.6] text-[#CCCCCC]">
                   {feature.description}
                 </p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Pro Report Sections Preview */}
+        <section className="py-20 px-5 bg-gradient-to-b from-transparent to-[rgba(229,27,35,0.05)]">
+          <div className="max-w-[1200px] mx-auto">
+            <h2 className="font-anton text-[clamp(32px,4vw,48px)] text-[#E51B23] mb-4 tracking-[2px]">
+              INSIDE YOUR PRO REPORT
+            </h2>
+
+            <p className="text-base text-[#666666] mb-12 max-w-[600px]">
+              Every Pro analysis includes these deep-dive sections, each designed to accelerate your skills.
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[
+                { key: 'overallScore' as const, icon: '📊' },
+                { key: 'trustCurve' as const, icon: '📈' },
+                { key: 'methodSynthesis' as const, icon: '🎯' },
+                { key: 'callOpening' as const, icon: '🚀' },
+                { key: 'gapSeeding' as const, icon: '🌱' },
+                { key: 'gapDeepening' as const, icon: '🔍' },
+                { key: 'impactProbing' as const, icon: '💥' },
+                { key: 'decisionModel' as const, icon: '🧠' },
+                { key: 'prescription' as const, icon: '💊' },
+                { key: 'tacticalRewrites' as const, icon: '✏️' },
+                { key: 'callRebuild' as const, icon: '🔄' },
+                { key: 'nextSteps' as const, icon: '➡️' },
+                { key: 'followUpEmail' as const, icon: '📧' },
+                { key: 'sessionSummary' as const, icon: '📝' },
+              ].map((section) => (
+                <div key={section.key} className="bg-[#1A1A1A] border border-[#333333] p-4 rounded-lg hover:border-[#666666] transition-colors">
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">{section.icon}</span>
+                    <LabelWithTooltip
+                      label={proReportTooltips[section.key].label}
+                      tooltip={proReportTooltips[section.key].tooltip}
+                      labelClassName="text-sm font-semibold text-white"
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Methodology Comparison */}
+        <section className="py-20 px-5 max-w-[1200px] mx-auto">
+          <h2 className="font-anton text-[clamp(32px,4vw,48px)] text-[#E51B23] mb-4 tracking-[2px]">
+            FRAMEWORK SCORING
+          </h2>
+
+          <p className="text-base text-[#666666] mb-12 max-w-[600px]">
+            See how your calls measure up against the world&apos;s leading sales methodologies.
+          </p>
+
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            {[
+              { key: 'challenger' as const, color: '#E51B23' },
+              { key: 'spin' as const, color: '#FFDE59' },
+              { key: 'sandler' as const, color: '#4ADE80' },
+              { key: 'meddic' as const, color: '#60A5FA' },
+              { key: 'neat' as const, color: '#A78BFA' },
+              { key: 'wtfMethod' as const, color: '#F472B6' },
+            ].map((methodology) => (
+              <div
+                key={methodology.key}
+                className="bg-[#1A1A1A] border border-[#333333] p-4 rounded-lg text-center hover:border-[#666666] transition-colors"
+              >
+                <LabelWithTooltip
+                  label={methodologyTooltips[methodology.key].label}
+                  tooltip={methodologyTooltips[methodology.key].tooltip}
+                  labelClassName="text-sm font-bold"
+                  className="justify-center"
+                  side="bottom"
+                />
+                <div
+                  className="mt-3 h-1 rounded-full"
+                  style={{ backgroundColor: methodology.color }}
+                />
               </div>
             ))}
           </div>
@@ -175,7 +271,7 @@ export default function CallLabProPage() {
         </section>
 
         {/* Pricing */}
-        <section className="py-20 px-5 max-w-[1000px] mx-auto">
+        <section id="pricing" className="py-20 px-5 max-w-[1000px] mx-auto">
           <h2 className="font-anton text-[clamp(32px,4vw,48px)] text-[#E51B23] mb-4 tracking-[2px] text-center">
             CHOOSE YOUR DEPLOYMENT
           </h2>

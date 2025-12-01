@@ -29,7 +29,7 @@ import {
 import {
   CALL_LAB_PRO_SYSTEM_PROMPT,
   CALL_LAB_PRO_JSON_SCHEMA,
-} from '@/lib/call-lab-system-prompt';
+} from '../../../../lib/call-lab-system-prompt';
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now();

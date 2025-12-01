@@ -26,6 +26,10 @@ import {
   parseMarkdownMetadata,
   type MarkdownPromptParams,
 } from '@repo/prompts';
+import {
+  CALL_LAB_PRO_SYSTEM_PROMPT,
+  CALL_LAB_PRO_JSON_SCHEMA,
+} from '@/lib/call-lab-system-prompt';
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
@@ -46,6 +50,9 @@ export async function POST(request: NextRequest) {
       version = 'lite', // 'lite' or 'pro'
       use_markdown = true, // Default to new markdown prompts
       rep_name = 'Sales Rep',
+      prospect_name,
+      prospect_company,
+      call_type,
       known_objections,
       icp_context,
     } = body;
@@ -208,7 +215,97 @@ export async function POST(request: NextRequest) {
         );
       }
     } else {
-      // OLD: Use JSON-based prompts (backwards compatibility)
+      // JSON-based prompts mode
+
+      // Handle Pro JSON mode separately
+      if (version === 'pro') {
+        const proUserPrompt = `Analyze this sales call transcript.
+
+Rep Name: ${rep_name}
+${prospect_name ? `Prospect Name: ${prospect_name}` : ''}
+${prospect_company || metadata.prospect_company ? `Prospect Company: ${prospect_company || metadata.prospect_company}` : ''}
+${metadata.prospect_role ? `Prospect Role: ${metadata.prospect_role}` : ''}
+${call_type || metadata.call_stage ? `Call Type: ${call_type || metadata.call_stage}` : ''}
+
+TRANSCRIPT:
+${ingestionItem.raw_content}`;
+
+        try {
+          const response = await retryWithBackoff(async () => {
+            return await runModel(
+              'call-lab-pro',
+              CALL_LAB_PRO_SYSTEM_PROMPT,
+              proUserPrompt
+            );
+          });
+
+          usage = response.usage;
+          modelUsed = 'claude-sonnet-4-5-20250929';
+
+          // Parse JSON response - try to extract JSON from response
+          let proResult;
+          try {
+            // Try to parse directly
+            proResult = JSON.parse(response.content);
+          } catch {
+            // Try to extract JSON from markdown code blocks
+            const jsonMatch = response.content.match(/```(?:json)?\s*([\s\S]*?)```/);
+            if (jsonMatch) {
+              proResult = JSON.parse(jsonMatch[1].trim());
+            } else {
+              // Try to find JSON object in response
+              const jsonStart = response.content.indexOf('{');
+              const jsonEnd = response.content.lastIndexOf('}');
+              if (jsonStart !== -1 && jsonEnd !== -1) {
+                proResult = JSON.parse(response.content.slice(jsonStart, jsonEnd + 1));
+              } else {
+                throw new Error('Could not parse JSON from response');
+              }
+            }
+          }
+
+          // Update ingestion item status
+          await updateIngestionItemStatus(supabase, ingestion_item_id, 'completed');
+
+          // Update tool run
+          const duration = Date.now() - startTime;
+          await updateToolRun(supabase, body.tool_run_id || '', {
+            status: 'completed',
+            completed_at: new Date().toISOString(),
+            duration_ms: duration,
+            model_used: modelUsed,
+            tokens_used: usage,
+          });
+
+          // Return Pro JSON result directly
+          return NextResponse.json(
+            {
+              success: true,
+              result: proResult,
+            },
+            { status: 200 }
+          );
+        } catch (error) {
+          console.error('Error running Pro JSON analysis:', error);
+
+          await updateIngestionItemStatus(
+            supabase,
+            ingestion_item_id,
+            'failed',
+            error instanceof Error ? error.message : 'Unknown error'
+          );
+
+          return NextResponse.json(
+            {
+              error: 'Failed to analyze call with Pro JSON mode',
+              details: error instanceof Error ? error.message : 'Unknown error',
+            },
+            { status: 500 }
+          );
+        }
+      }
+
+      // OLD: Use JSON-based prompts for Lite (backwards compatibility)
       // Create params with required fields for old JSON prompts
       const jsonPromptParams = {
         transcript: ingestionItem.raw_content,

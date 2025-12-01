@@ -12,6 +12,31 @@ import {
   ConsoleMarkdownRenderer
 } from '@/components/console';
 
+// Helper to safely extract score value (handles both number and {score, reason} format)
+function getScoreValue(value: unknown): number {
+  if (typeof value === 'number') return value;
+  if (typeof value === 'object' && value !== null && 'score' in value) {
+    return (value as { score: number }).score;
+  }
+  return 0;
+}
+
+// Helper to safely render text (prevents rendering objects)
+function safeText(value: unknown): string {
+  if (value === null || value === undefined) return '';
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number') return String(value);
+  if (typeof value === 'object') {
+    // If it's an object with a specific text field, extract it
+    const obj = value as Record<string, unknown>;
+    if ('tldr' in obj) return String(obj.tldr || '');
+    if ('text' in obj) return String(obj.text || '');
+    if ('value' in obj) return String(obj.value || '');
+    return JSON.stringify(value);
+  }
+  return String(value);
+}
+
 type ProReport = {
   meta: {
     callId: string;
@@ -352,7 +377,7 @@ export default function CallLabProPage() {
               CALL LAB <span className="text-[#E51B23]">PRO</span> - FULL DIAGNOSTIC
             </ConsoleHeading>
             <div className="text-right">
-              <div className="text-5xl font-anton text-[#E51B23]">{report.meta?.overallScore || 0}</div>
+              <div className="text-5xl font-anton text-[#E51B23]">{getScoreValue(report.meta?.overallScore)}</div>
               <div className="text-[#666] text-xs tracking-wider">OVERALL SCORE</div>
             </div>
           </div>
@@ -360,8 +385,8 @@ export default function CallLabProPage() {
           {/* Snap Take */}
           <div className="bg-[#1A1A1A] border-l-4 border-[#FFDE59] p-4 mb-6">
             <h3 className="font-anton text-[#FFDE59] text-sm tracking-wider mb-2">SNAP TAKE</h3>
-            <p className="text-white font-poppins text-lg">{report.snapTake?.tldr}</p>
-            <p className="text-[#B3B3B3] font-poppins mt-2">{report.snapTake?.analysis}</p>
+            <p className="text-white font-poppins text-lg">{safeText(report.snapTake?.tldr)}</p>
+            <p className="text-[#B3B3B3] font-poppins mt-2">{safeText(report.snapTake?.analysis)}</p>
           </div>
 
           {/* Scores Grid */}
@@ -369,7 +394,7 @@ export default function CallLabProPage() {
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
               {Object.entries(report.scores).map(([key, value]) => (
                 <div key={key} className="bg-[#111] border border-[#333] p-3 rounded">
-                  <div className="text-2xl font-anton text-white">{value as number}</div>
+                  <div className="text-2xl font-anton text-white">{getScoreValue(value)}</div>
                   <div className="text-[#666] text-xs tracking-wider uppercase">
                     {key.replace(/([A-Z])/g, ' $1').trim()}
                   </div>
@@ -387,20 +412,20 @@ export default function CallLabProPage() {
               {report.patterns.map((pattern, i) => (
                 <div key={i} className="bg-[#1A1A1A] border border-[#333] p-4 rounded">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="font-anton text-[#E51B23]">{pattern.patternName}</span>
+                    <span className="font-anton text-[#E51B23]">{safeText(pattern.patternName)}</span>
                     <span className={`text-xs px-2 py-1 rounded ${
-                      pattern.severity === 'critical' ? 'bg-[#E51B23] text-white' :
-                      pattern.severity === 'high' ? 'bg-[#FF9500] text-black' :
-                      pattern.severity === 'medium' ? 'bg-[#FFDE59] text-black' :
+                      safeText(pattern.severity) === 'critical' ? 'bg-[#E51B23] text-white' :
+                      safeText(pattern.severity) === 'high' ? 'bg-[#FF9500] text-black' :
+                      safeText(pattern.severity) === 'medium' ? 'bg-[#FFDE59] text-black' :
                       'bg-[#333] text-white'
-                    }`}>{pattern.severity?.toUpperCase()}</span>
+                    }`}>{safeText(pattern.severity).toUpperCase()}</span>
                   </div>
-                  <p className="text-[#B3B3B3] text-sm">{pattern.tldr}</p>
+                  <p className="text-[#B3B3B3] text-sm">{safeText(pattern.tldr)}</p>
                   {pattern.recommendedFixes && pattern.recommendedFixes.length > 0 && (
                     <div className="mt-3 pt-3 border-t border-[#333]">
                       <p className="text-[#666] text-xs mb-1">RECOMMENDED FIXES:</p>
                       <ul className="text-[#B3B3B3] text-sm list-disc list-inside">
-                        {pattern.recommendedFixes.map((fix, j) => <li key={j}>{fix}</li>)}
+                        {pattern.recommendedFixes.map((fix, j) => <li key={j}>{safeText(fix)}</li>)}
                       </ul>
                     </div>
                   )}
@@ -417,18 +442,18 @@ export default function CallLabProPage() {
             <div className="space-y-4">
               {report.tacticalRewrites.items.map((item, i) => (
                 <div key={i} className="bg-[#1A1A1A] border border-[#333] p-4 rounded">
-                  <p className="text-[#666] text-xs mb-2">{item.context}</p>
+                  <p className="text-[#666] text-xs mb-2">{safeText(item.context)}</p>
                   <div className="grid md:grid-cols-2 gap-4">
                     <div>
                       <p className="text-[#E51B23] text-xs mb-1">WHAT YOU SAID:</p>
-                      <p className="text-[#999] text-sm italic">&quot;{item.whatYouSaid}&quot;</p>
+                      <p className="text-[#999] text-sm italic">&quot;{safeText(item.whatYouSaid)}&quot;</p>
                     </div>
                     <div>
                       <p className="text-[#00FF00] text-xs mb-1">STRONGER ALTERNATIVE:</p>
-                      <p className="text-white text-sm">&quot;{item.strongerAlternative}&quot;</p>
+                      <p className="text-white text-sm">&quot;{safeText(item.strongerAlternative)}&quot;</p>
                     </div>
                   </div>
-                  <p className="text-[#B3B3B3] text-sm mt-2">{item.whyItMissed}</p>
+                  <p className="text-[#B3B3B3] text-sm mt-2">{safeText(item.whyItMissed)}</p>
                 </div>
               ))}
             </div>
@@ -443,7 +468,7 @@ export default function CallLabProPage() {
               {report.nextSteps.actions.map((action, i) => (
                 <li key={i} className="flex items-start gap-3">
                   <span className="text-[#FFDE59] font-anton">{i + 1}.</span>
-                  <span className="text-[#B3B3B3]">{action}</span>
+                  <span className="text-[#B3B3B3]">{safeText(action)}</span>
                 </li>
               ))}
             </ul>
@@ -457,17 +482,17 @@ export default function CallLabProPage() {
             <div className="bg-[#1A1A1A] border border-[#333] p-4 rounded">
               <div className="mb-4">
                 <p className="text-[#666] text-xs mb-1">SUBJECT:</p>
-                <p className="text-white font-medium">{report.followUpEmail.subject}</p>
+                <p className="text-white font-medium">{safeText(report.followUpEmail.subject)}</p>
               </div>
               <div>
                 <p className="text-[#666] text-xs mb-1">BODY:</p>
                 <pre className="text-[#B3B3B3] text-sm whitespace-pre-wrap font-poppins">
-                  {report.followUpEmail.body}
+                  {safeText(report.followUpEmail.body)}
                 </pre>
               </div>
               <button
                 onClick={() => {
-                  navigator.clipboard.writeText(`Subject: ${report.followUpEmail.subject}\n\n${report.followUpEmail.body}`);
+                  navigator.clipboard.writeText(`Subject: ${safeText(report.followUpEmail.subject)}\n\n${safeText(report.followUpEmail.body)}`);
                   alert('Email copied to clipboard!');
                 }}
                 className="mt-4 px-4 py-2 bg-[#333] text-white text-sm rounded hover:bg-[#444] transition-colors"

@@ -74,6 +74,67 @@ type AnalysisResult = {
   };
 };
 
+// Terminal-style loading screen
+function AnalysisLoader({ step }: { step: 'uploading' | 'analyzing' | 'saving' }) {
+  const [logIndex, setLogIndex] = useState(0);
+
+  const logs = [
+    "INITIALIZING CALL_LAB PRO ENGINE...",
+    "PARSING TRANSCRIPT DATA...",
+    "DETECTING CONVERSATION PATTERNS...",
+    "ANALYZING TRUST DYNAMICS...",
+    "SCORING AGAINST SALES FRAMEWORKS...",
+    "IDENTIFYING TACTICAL OPPORTUNITIES...",
+    "GENERATING STRATEGIC REWRITES...",
+    "COMPILING DIAGNOSTIC REPORT..."
+  ];
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setLogIndex((prev) => (prev < logs.length - 1 ? prev + 1 : prev));
+    }, 1500);
+    return () => clearInterval(interval);
+  }, [logs.length]);
+
+  const stepLabel = step === 'uploading' ? 'UPLOADING' : step === 'saving' ? 'SAVING' : 'ANALYZING';
+
+  return (
+    <div className="fixed inset-0 bg-black z-50 flex flex-col items-center justify-center p-8 font-mono">
+      <div className="w-full max-w-md space-y-6">
+
+        {/* Icon Animation */}
+        <div className="flex justify-center mb-8 relative">
+          <div className="absolute inset-0 bg-[#E51B23] blur-2xl opacity-20 animate-pulse"></div>
+          <div className="text-[#E51B23] text-6xl font-anton animate-bounce">PRO</div>
+        </div>
+
+        {/* Progress Bar */}
+        <div className="w-full h-2 bg-[#111] border border-[#333]">
+          <div
+            className="h-full bg-[#E51B23] transition-all duration-500 ease-out"
+            style={{ width: `${((logIndex + 1) / logs.length) * 100}%` }}
+          ></div>
+        </div>
+
+        {/* Terminal Output */}
+        <div className="bg-[#0a0a0a] border border-[#333] p-4 font-mono text-xs h-48 overflow-hidden flex flex-col justify-end">
+          {logs.slice(0, logIndex + 1).map((log, i) => (
+            <div key={i} className={`mb-1 flex items-center gap-2 ${i === logIndex ? 'text-[#FFDE59] animate-pulse' : 'text-[#666]'}`}>
+              <span className="opacity-50">{`>`}</span> {log}
+            </div>
+          ))}
+          <div className="text-[#E51B23] animate-pulse mt-2">_{stepLabel}</div>
+        </div>
+
+        <div className="text-center text-[#666] text-xs uppercase tracking-widest">
+          Do not close this window
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
 export default function CallLabProPage() {
   const [formData, setFormData] = useState({
     email: '',
@@ -454,6 +515,9 @@ export default function CallLabProPage() {
 
   return (
     <div className="min-h-screen bg-black py-12 px-4">
+      {/* Loading overlay */}
+      {loading && loadingStep && <AnalysisLoader step={loadingStep} />}
+
       <div className="max-w-5xl mx-auto">
         <SalesOSHeader systemStatus={loading ? 'PROCESSING' : 'READY'} />
 

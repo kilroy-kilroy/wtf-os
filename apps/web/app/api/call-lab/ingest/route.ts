@@ -49,16 +49,19 @@ export async function POST(req: Request) {
     );
 
     // --- Prepare row object for call_lab_reports table ---------------------
+    // Handle both flat (Lite) and nested (Pro) report structures
+    const isPro = metadata.agent === 'pro' && report.meta;
+
     const row = {
       user_id: metadata.userId || null,
       buyer_name: metadata.buyerName || "",
       company_name: metadata.companyName || "",
-      overall_score: report.overallScore ?? null,
-      trust_velocity: report.trustVelocity ?? null, // only Pro uses this
-      agenda_control: report.agendaControl ?? null,
-      pattern_density: report.patternDensity ?? null,
-      primary_pattern: report.primaryPattern ?? "",
-      improvement_highlight: report.fixThisFirst ?? "",
+      overall_score: isPro ? (report.meta.overallScore ?? null) : (report.overallScore ?? null),
+      trust_velocity: isPro ? (report.meta.trustVelocity ?? null) : (report.trustVelocity ?? null),
+      agenda_control: isPro ? (report.scores?.narrativeControl ?? null) : (report.agendaControl ?? null),
+      pattern_density: isPro ? (report.patterns?.length ?? 0) * 10 : (report.patternDensity ?? null),
+      primary_pattern: isPro ? (report.patterns?.[0]?.patternName ?? "") : (report.primaryPattern ?? ""),
+      improvement_highlight: isPro ? (report.nextSteps?.actions?.[0] ?? "") : (report.fixThisFirst ?? ""),
       full_report: report,
       created_at: metadata.createdAt,
       agent: metadata.agent,

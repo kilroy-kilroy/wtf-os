@@ -74,60 +74,6 @@ type AnalysisResult = {
   };
 };
 
-// Loading animation component
-function AnalysisLoader({ step }: { step: 'uploading' | 'analyzing' | 'saving' }) {
-  const steps = [
-    { key: 'uploading', label: 'Uploading transcript', icon: '↑' },
-    { key: 'analyzing', label: 'Running Pro analysis', icon: '⚡' },
-    { key: 'saving', label: 'Saving to dashboard', icon: '✓' },
-  ];
-
-  return (
-    <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center">
-      <div className="text-center space-y-8 max-w-md">
-        {/* Animated logo */}
-        <div className="relative">
-          <div className="w-24 h-24 mx-auto border-4 border-[#333] rounded-full animate-pulse" />
-          <div className="absolute inset-0 flex items-center justify-center">
-            <span className="font-anton text-[#E51B23] text-3xl animate-bounce">PRO</span>
-          </div>
-        </div>
-
-        {/* Progress steps */}
-        <div className="space-y-4">
-          {steps.map((s, i) => {
-            const isActive = s.key === step;
-            const isPast = steps.findIndex(x => x.key === step) > i;
-            return (
-              <div
-                key={s.key}
-                className={`flex items-center gap-4 px-6 py-3 rounded transition-all duration-300 ${
-                  isActive ? 'bg-[#E51B23]/20 border border-[#E51B23]' :
-                  isPast ? 'bg-[#1A1A1A] border border-[#333] opacity-50' :
-                  'bg-[#1A1A1A] border border-[#333] opacity-30'
-                }`}
-              >
-                <span className={`text-2xl ${isActive ? 'animate-spin' : ''}`}>
-                  {isPast ? '✓' : s.icon}
-                </span>
-                <span className={`font-poppins ${isActive ? 'text-white' : 'text-[#666]'}`}>
-                  {s.label}
-                  {isActive && <span className="animate-pulse">...</span>}
-                </span>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Kilroy quote */}
-        <p className="text-[#666] text-sm font-poppins italic">
-          &quot;Good analysis takes time. Bad calls take longer to fix.&quot;
-        </p>
-      </div>
-    </div>
-  );
-}
-
 export default function CallLabProPage() {
   const [formData, setFormData] = useState({
     email: '',
@@ -508,9 +454,6 @@ export default function CallLabProPage() {
 
   return (
     <div className="min-h-screen bg-black py-12 px-4">
-      {/* Loading overlay */}
-      {loading && loadingStep && <AnalysisLoader step={loadingStep} />}
-
       <div className="max-w-5xl mx-auto">
         <SalesOSHeader systemStatus={loading ? 'PROCESSING' : 'READY'} />
 
@@ -613,7 +556,13 @@ export default function CallLabProPage() {
                 )}
 
                 <ConsoleButton type="submit" fullWidth disabled={loading}>
-                  {loading ? '⟳ ANALYZING...' : '▶ RUN CALL LAB PRO'}
+                  {loading ? (
+                    loadingStep === 'uploading' ? '⟳ UPLOADING TRANSCRIPT...' :
+                    loadingStep === 'saving' ? '⟳ SAVING TO DASHBOARD...' :
+                    '⟳ RUNNING PRO ANALYSIS...'
+                  ) : (
+                    '▶ RUN CALL LAB PRO'
+                  )}
                 </ConsoleButton>
               </form>
             </div>

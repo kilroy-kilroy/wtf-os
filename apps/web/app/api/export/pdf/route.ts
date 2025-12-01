@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { renderToBuffer } from '@react-pdf/renderer';
 import {
   CallLabReport,
+  CallLabProReport,
   MarkdownReport,
   parseCallLabLiteMarkdown,
   generateCallLabLiteHTML,
@@ -48,14 +49,13 @@ export async function POST(request: NextRequest) {
         React.createElement(MarkdownReport, { markdown: content, metadata }) as any
       );
     } else if (isProReport) {
-      // Pro report - use structured CallLabReport with enhanced metadata
+      // Pro report - use dedicated CallLabProReport component
       const enhancedMetadata = {
         ...metadata,
-        score: content.meta?.overallScore,
-        tier: 'pro',
+        date: metadata?.date || new Date().toLocaleDateString(),
       };
       pdfBuffer = await renderToBuffer(
-        React.createElement(CallLabReport, { result: content, metadata: enhancedMetadata }) as any
+        React.createElement(CallLabProReport, { result: content, metadata: enhancedMetadata }) as any
       );
     } else {
       // Legacy JSON result

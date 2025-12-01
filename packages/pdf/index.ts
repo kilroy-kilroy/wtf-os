@@ -1,5 +1,6 @@
 // Legacy React PDF exports (kept for backwards compatibility)
 export { CallLabReport } from './call-lab-report';
+export { CallLabProReport } from './call-lab-pro-report';
 export { MarkdownReport } from './markdown-report';
 
 // New HTML/CSS-based PDF generation

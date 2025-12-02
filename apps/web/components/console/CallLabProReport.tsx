@@ -387,7 +387,7 @@ function PatternCard({ pattern }: { pattern: Pattern }) {
       {pattern.exampleRewrite && (
         <div className="bg-[#0a0a0a] p-3 rounded border border-[#333]">
           <span className="text-xs font-semibold text-[#666] uppercase">Example Rewrite:</span>
-          <p className="text-sm text-[#FFDE59] mt-1 italic">"{pattern.exampleRewrite}"</p>
+          <p className="text-sm text-[#FFDE59] mt-1 italic">&ldquo;{pattern.exampleRewrite}&rdquo;</p>
         </div>
       )}
     </div>
@@ -458,12 +458,12 @@ function TacticalRewriteCard({ rewrite }: { rewrite: TacticalRewrite }) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="bg-[#1A1A1A] border border-[#E51B23] p-4 rounded">
           <span className="text-xs font-semibold text-[#E51B23] uppercase block mb-2">What You Said</span>
-          <p className="text-sm text-white italic">"{rewrite.whatYouSaid}"</p>
+          <p className="text-sm text-white italic">&ldquo;{rewrite.whatYouSaid}&rdquo;</p>
           <p className="text-xs text-[#B3B3B3] mt-2">{rewrite.whyItMissed}</p>
         </div>
         <div className="bg-[#FFDE59] p-4 rounded">
           <span className="text-xs font-semibold text-black uppercase block mb-2">Stronger Alternative</span>
-          <p className="text-sm text-black italic">"{rewrite.strongerAlternative}"</p>
+          <p className="text-sm text-black italic">&ldquo;{rewrite.strongerAlternative}&rdquo;</p>
         </div>
       </div>
     </div>
@@ -613,7 +613,7 @@ export function CallLabProReport({ content }: CallLabProReportProps) {
       {/* Footer */}
       <div className="text-center text-sm text-[#666] pt-4 border-t border-[#333]">
         Check your dashboard to see how this call updated your patterns and momentum.
-        Pro is a system that learns with you. One call at a time, you're building a win machine.
+        Pro is a system that learns with you. One call at a time, you&apos;re building a win machine.
       </div>
     </div>
   );

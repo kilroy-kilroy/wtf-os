@@ -16,8 +16,8 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  title: "WTF Growth OS - Call Lab",
-  description: "Sales call diagnostic and coaching platform",
+  title: "SalesOS Call Lab | AI-Powered Sales Coaching & Training",
+  description: "Get SalesOS Call Lab - the AI-powered sales call coaching & feedback tool. Upload your call transcript. Get a brutally honest diagnostic on what went wrong and what to fix. Get better at closing sales.",
 };
 
 export default function RootLayout({

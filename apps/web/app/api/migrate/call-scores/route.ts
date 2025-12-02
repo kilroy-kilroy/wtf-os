@@ -77,7 +77,7 @@ export async function POST(request: Request) {
 
     // Prepare records for insertion
     const records = toMigrate.map((cs: any) => {
-      const metadata = ingestionMap.get(cs.ingestion_item_id) || {};
+      const metadata = ingestionMap.get(cs.ingestion_item_id) as Record<string, any> || {};
       return {
         user_id: cs.user_id,
         buyer_name: metadata.prospect_name || metadata.buyer_name || '',

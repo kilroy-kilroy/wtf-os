@@ -21,6 +21,8 @@ export function PatternTag({ pattern, className = '' }: PatternTagProps) {
     ? "bg-[#1A1A1A] border border-green-700 text-green-400"
     : patternDef?.type === 'risk'
     ? "bg-[#1A1A1A] border border-[#E51B23] text-[#E51B23]"
+    : patternDef?.type === 'metric'
+    ? "bg-[#1A1A1A] border border-[#FFDE59] text-[#FFDE59]"
     : "bg-[#1A1A1A] border border-[#333] text-white";
 
   if (!patternDef) {
@@ -46,6 +48,9 @@ export function PatternTag({ pattern, className = '' }: PatternTagProps) {
             {patternDef.type === 'risk' && (
               <span className="text-[#E51B23] text-xs">!</span>
             )}
+            {patternDef.type === 'metric' && (
+              <span className="text-[#FFDE59] text-xs">◆</span>
+            )}
             {pattern}
           </span>
         </TooltipTrigger>
@@ -55,6 +60,8 @@ export function PatternTag({ pattern, className = '' }: PatternTagProps) {
           className={`max-w-[280px] text-sm ${
             patternDef.type === 'positive'
               ? 'border-green-700 bg-black'
+              : patternDef.type === 'metric'
+              ? 'border-[#FFDE59] bg-black'
               : 'border-[#E51B23] bg-black'
           }`}
         >

@@ -4,10 +4,27 @@
 export interface PatternDefinition {
   name: string;
   description: string;
-  type: 'positive' | 'risk';
+  type: 'positive' | 'risk' | 'metric';
 }
 
 export const patternGlossary: Record<string, PatternDefinition> = {
+  // Core Metrics (dashboard KPIs)
+  'trust-velocity': {
+    name: 'Trust Velocity',
+    description: 'How quickly the buyer relaxes and reveals meaningful information. Higher scores mean faster trust-building.',
+    type: 'metric'
+  },
+  'agenda-control': {
+    name: 'Agenda Control',
+    description: 'Your ability to steer conversations toward outcomes. Measures consistency in controlling leverage moments.',
+    type: 'metric'
+  },
+  'red-flag-frequency': {
+    name: 'Red Flag Frequency',
+    description: 'How often friction patterns appear in your calls. Lower is better - clean calls close faster.',
+    type: 'metric'
+  },
+
   // Risk Patterns (things to avoid)
   'the-scenic-route': {
     name: 'The Scenic Route',

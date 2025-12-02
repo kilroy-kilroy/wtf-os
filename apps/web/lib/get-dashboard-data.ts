@@ -124,17 +124,17 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
   // ============================================
   const skills: SkillTrend[] = [
     {
-      name: "Trust velocity",
+      name: "Trust Velocity",
       current: trustNew || trustOld || 0,
       delta: trustVelocityDelta || 0,
     },
     {
-      name: "Agenda control",
+      name: "Agenda Control",
       current: agendaStability || 0,
       delta: agendaStabilityDelta,
     },
     {
-      name: "Red flag frequency",
+      name: "Red Flag Frequency",
       current: 100 - (patternDensity || 0),
       delta:
         (100 - avg(second30.map((c) => c.pattern_density || 0))) -
@@ -164,14 +164,36 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
   // QUICK INSIGHTS
   // ============================================
   const latest = calls[0] || null;
-  const latestReport = latest?.full_report || null;
+  const latestReport = (latest?.full_report as Record<string, any>) || null;
+
+  // Extract from Pro JSON format (meta, snapTake, tacticalRewrites, patterns)
+  // or fall back to old format fields
+  const extractQuote = () => {
+    // Pro JSON: snapTake.tldr or analysis
+    if (latestReport?.snapTake?.tldr) return latestReport.snapTake.tldr;
+    if (latestReport?.snapTake?.analysis) return latestReport.snapTake.analysis;
+    // Old format
+    if (latestReport?.narrativeCapture?.quotes?.[0]) return latestReport.narrativeCapture.quotes[0];
+    return null;
+  };
+
+  const extractMissedMove = () => {
+    // Pro JSON: first tactical rewrite or first pattern
+    if (latestReport?.tacticalRewrites?.items?.[0]?.whyItMissed) {
+      return latestReport.tacticalRewrites.items[0].whyItMissed;
+    }
+    if (latestReport?.patterns?.[0]?.patternName) {
+      return latestReport.patterns[0].patternName;
+    }
+    // Old format
+    if (latestReport?.rebuild?.tldr) return latestReport.rebuild.tldr;
+    if (latestReport?.wtfMethod?.moves?.[0]) return latestReport.wtfMethod.moves[0];
+    return null;
+  };
 
   const quickInsights = {
-    topQuote: latestReport?.narrativeCapture?.quotes?.[0] ?? null,
-    missedMove:
-      latestReport?.rebuild?.tldr ??
-      latestReport?.wtfMethod?.moves?.[0] ??
-      null,
+    topQuote: extractQuote(),
+    missedMove: extractMissedMove(),
     skillToPractice:
       patternRadar.mostImprovedSkill ??
       patternRadar.topWeaknesses[0]?.name ??

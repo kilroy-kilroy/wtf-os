@@ -38,7 +38,11 @@ export function RecentCallsList({ calls }: Props) {
             </div>
             <div className="text-right">
               <div className="font-anton text-lg text-white">
-                {typeof call.score === "number" ? call.score.toFixed(1) : "--"}/10
+                {typeof call.score === "number"
+                  ? (call.score > 10
+                      ? `${Math.round(call.score)}/100`
+                      : `${call.score.toFixed(1)}/10`)
+                  : "--"}
               </div>
               <div className="text-[10px] text-[#777]">Overall score</div>
             </div>

@@ -49,16 +49,22 @@ export async function POST(req: Request) {
     );
 
     // --- Prepare row object for call_lab_reports table ---------------------
+    // Handle both Pro JSON format (meta.overallScore) and old format (overallScore)
+    const overallScore = report.meta?.overallScore ?? report.overallScore ?? null;
+    const trustVelocity = report.meta?.trustVelocity ?? report.trustVelocity ?? null;
+    const primaryPattern = report.patterns?.[0]?.patternName ?? report.primaryPattern ?? "";
+    const improvementHighlight = report.nextSteps?.actions?.[0] ?? report.fixThisFirst ?? "";
+
     const row = {
       user_id: metadata.userId || null,
       buyer_name: metadata.buyerName || "",
       company_name: metadata.companyName || "",
-      overall_score: report.overallScore ?? null,
-      trust_velocity: report.trustVelocity ?? null, // only Pro uses this
+      overall_score: overallScore,
+      trust_velocity: trustVelocity,
       agenda_control: report.agendaControl ?? null,
       pattern_density: report.patternDensity ?? null,
-      primary_pattern: report.primaryPattern ?? "",
-      improvement_highlight: report.fixThisFirst ?? "",
+      primary_pattern: primaryPattern,
+      improvement_highlight: improvementHighlight,
       full_report: report,
       created_at: metadata.createdAt,
       agent: metadata.agent,

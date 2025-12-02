@@ -283,7 +283,6 @@ ${ingestionItem.raw_content}`;
           const primaryPattern = report.patterns?.[0]?.patternName || '';
           const nextAction = report.nextSteps?.actions?.[0] || '';
 
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           await (supabase as any).from('call_lab_reports').insert({
             user_id: ingestionItem.user_id || null,
             buyer_name: prospect_name || metadata.prospect_name || '',

@@ -1,5 +1,14 @@
-// Inline markdown prompts for CallLab Lite and Pro
-// These are inlined to avoid file system dependencies during build
+// ============================================================================
+// CANONICAL CALL LAB PROMPTS - SINGLE SOURCE OF TRUTH
+// ============================================================================
+//
+// WARNING: Do not create duplicate prompt files elsewhere in the codebase.
+// This file is used by /api/analyze/call and is the only prompt source.
+//
+// If you need to modify prompts, update THIS file only.
+// Last verified working: 2024-12-02
+//
+// ============================================================================
 
 export const CALLLAB_LITE_MARKDOWN_SYSTEM = `You are Call Lab Lite, the fast, sharp diagnostic engine built for agency founders.
 

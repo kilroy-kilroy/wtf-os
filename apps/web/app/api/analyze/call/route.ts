@@ -168,6 +168,24 @@ export async function POST(request: NextRequest) {
           markdown_response: markdownResponse!,
         });
 
+        // Also save to call_lab_reports for dashboard visibility
+        if (ingestionItem.user_id) {
+          try {
+            await supabase.from('call_lab_reports').insert({
+              user_id: ingestionItem.user_id,
+              buyer_name: metadata.prospect_name || metadata.buyer_name || '',
+              company_name: metadata.prospect_company || '',
+              call_type: metadata.call_type || metadata.call_stage || null,
+              overall_score: markdownMetadata.score,
+              full_report: { markdown: markdownResponse },
+              tier: version,
+            });
+          } catch (reportError) {
+            console.error('Error saving to call_lab_reports:', reportError);
+            // Don't fail the request, just log the error
+          }
+        }
+
         // Update ingestion item status
         await updateIngestionItemStatus(supabase, ingestion_item_id, 'completed');
 

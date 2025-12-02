@@ -80,7 +80,7 @@ export default async function CallReportPage({
     { label: "Objection", value: report.objection_score },
     { label: "Commitment", value: report.commitment_score },
     { label: "Human-First", value: report.human_first_score },
-  ].filter((s) => s.value !== null);
+  ].filter((s) => s.value != null && typeof s.value === 'number');
 
   const callDate = report.call_date || report.created_at;
   const prospect = report.buyer_name || report.company_name || "Unknown Prospect";

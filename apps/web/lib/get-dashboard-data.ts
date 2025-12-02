@@ -134,7 +134,7 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
       delta: agendaStabilityDelta,
     },
     {
-      name: "Pattern density (inverse)",
+      name: "Red flag frequency",
       current: 100 - (patternDensity || 0),
       delta:
         (100 - avg(second30.map((c) => c.pattern_density || 0))) -

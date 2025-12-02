@@ -171,7 +171,7 @@ export async function POST(request: NextRequest) {
         // Also save to call_lab_reports for dashboard visibility
         if (ingestionItem.user_id) {
           try {
-            await supabase.from('call_lab_reports').insert({
+            await (supabase as any).from('call_lab_reports').insert({
               user_id: ingestionItem.user_id,
               buyer_name: metadata.prospect_name || metadata.buyer_name || '',
               company_name: metadata.prospect_company || '',

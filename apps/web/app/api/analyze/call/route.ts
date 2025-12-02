@@ -271,7 +271,7 @@ ${ingestionItem.raw_content}`;
             ingestion_item_id,
             agency_id: ingestionItem.agency_id,
             user_id: ingestionItem.user_id || undefined,
-            version: 'pro',
+            version: 'full', // Pro uses 'full' version type in database
             overall_score: Math.round(overallScore / 10), // Convert 0-100 to 0-10
             overall_grade: overallScore >= 80 ? 'A' : overallScore >= 60 ? 'B' : overallScore >= 40 ? 'C' : 'D',
             diagnosis_summary: snapTldr,

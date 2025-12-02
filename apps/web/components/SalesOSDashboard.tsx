@@ -5,7 +5,6 @@ import { MetricCard, TrendMetricCard } from "./metric-cards";
 import { PatternRadar } from "./pattern-radar";
 import { RecentCallsList } from "./recent-calls";
 import { QuickInsightsPanel } from "./quick-insights";
-import { FollowUpsPanel } from "./follow-ups";
 import { TrustVelocityChart, AgendaControlChart, PatternDensityChart } from "./charts";
 import { CoachingTimeline } from "./coaching-timeline";
 import { MethodologyAlignment } from "./methodology-alignment";
@@ -19,7 +18,7 @@ type Props = {
 };
 
 export function SalesOSDashboard({ userName, userEmail, data }: Props) {
-  const { metrics, patternRadar, recentCalls, quickInsights, followUps, charts, coachingReports } = data;
+  const { metrics, patternRadar, recentCalls, quickInsights, charts, coachingReports } = data;
 
   return (
     <div className="min-h-screen bg-black py-8 px-4 text-white">
@@ -169,12 +168,6 @@ export function SalesOSDashboard({ userName, userEmail, data }: Props) {
           </div>
           <div className="space-y-4">
             <QuickInsightsPanel insights={quickInsights} />
-            <div className="relative">
-              <div className="absolute top-4 right-4 z-10">
-                <InfoTooltip content={dashboardTooltips.followUps.tooltip} />
-              </div>
-              <FollowUpsPanel tasks={followUps} />
-            </div>
           </div>
         </section>
 

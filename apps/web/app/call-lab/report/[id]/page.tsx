@@ -3,7 +3,7 @@ import { createServerComponentClient } from "@supabase/auth-helpers-nextjs";
 import { cookies } from "next/headers";
 import { format } from "date-fns";
 import Link from "next/link";
-import { ConsolePanel, ConsoleHeading, ConsoleMarkdownRenderer } from "@/components/console";
+import { ConsolePanel, ConsoleHeading, CallLabProReport } from "@/components/console";
 
 interface CallReport {
   id: string;
@@ -115,34 +115,9 @@ export default async function CallReportPage({
 
         {/* Main Report */}
         <ConsolePanel>
-          <ConsoleHeading level={1} variant="yellow" className="mb-2">
-            CALL LAB <span className="text-[#E51B23]">{report.tier?.toUpperCase() || "PRO"}</span> - FULL DIAGNOSTIC
-          </ConsoleHeading>
-
-          <div className="flex items-center justify-between mb-6 pb-4 border-b border-[#333]">
-            <div>
-              <h2 className="font-anton text-2xl uppercase tracking-wide text-white">
-                {prospect}
-              </h2>
-              <p className="text-[#B3B3B3] text-sm mt-1">
-                {format(new Date(callDate), "MMMM d, yyyy 'at' h:mm a")}
-                {report.duration_minutes && ` • ${report.duration_minutes} minutes`}
-                {report.call_type && ` • ${report.call_type.replace("_", " ")}`}
-              </p>
-            </div>
-            {report.overall_score !== null && (
-              <div className="text-right">
-                <div className="text-[#666] text-xs uppercase">Score</div>
-                <div className="font-anton text-3xl text-[#FFDE59]">
-                  {report.overall_score.toFixed(1)}/10
-                </div>
-              </div>
-            )}
-          </div>
-
           {/* Full Markdown Report (primary content) */}
           {markdownContent ? (
-            <ConsoleMarkdownRenderer content={markdownContent} />
+            <CallLabProReport content={markdownContent} />
           ) : (
             <>
               {/* Fallback to structured data if no markdown */}

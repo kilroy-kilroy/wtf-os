@@ -9,7 +9,7 @@ import {
   ConsoleButton,
   ConsoleInput,
   SalesOSHeader,
-  ConsoleMarkdownRenderer,
+  CallLabProReport,
   LoadingTerminal
 } from '@/components/console';
 
@@ -181,10 +181,7 @@ export default function CallLabProPage() {
 
       {/* Report Content */}
       <ConsolePanel>
-        <ConsoleHeading level={1} variant="yellow" className="mb-6">
-          CALL LAB <span className="text-[#E51B23]">PRO</span> - FULL DIAGNOSTIC
-        </ConsoleHeading>
-        {result && <ConsoleMarkdownRenderer content={result.markdown} />}
+        {result && <CallLabProReport content={result.markdown} />}
       </ConsolePanel>
     </div>
   );

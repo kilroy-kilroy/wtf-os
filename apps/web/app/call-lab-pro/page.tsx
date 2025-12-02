@@ -17,6 +17,32 @@ interface PersonalizedCopy {
 
 export default function CallLabProPage() {
   const [personalizedCopy, setPersonalizedCopy] = useState<PersonalizedCopy | null>(null);
+  const [isLoading, setIsLoading] = useState<'solo' | 'team' | null>(null);
+
+  const handleCheckout = async (priceType: 'solo' | 'team') => {
+    setIsLoading(priceType);
+    try {
+      const response = await fetch('/api/stripe/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ priceType }),
+      });
+
+      const data = await response.json();
+
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        console.error('No checkout URL returned');
+        alert('Failed to start checkout. Please try again.');
+      }
+    } catch (error) {
+      console.error('Checkout error:', error);
+      alert('Failed to start checkout. Please try again.');
+    } finally {
+      setIsLoading(null);
+    }
+  };
 
   useEffect(() => {
     // TODO: In production, fetch this from the user's last Lite report
@@ -303,8 +329,12 @@ export default function CallLabProPage() {
                 Perfect for founders, solo consultants, and individual contributors who want to level up their close rate.
               </p>
 
-              <button className="bg-[#E51B23] text-white border-none py-4 px-9 font-anton text-base font-bold tracking-[2px] cursor-pointer w-full transition-all duration-300 hover:bg-[#FFDE59] hover:text-black">
-                [ ACTIVATE PRO ]
+              <button
+                onClick={() => handleCheckout('solo')}
+                disabled={isLoading === 'solo'}
+                className="bg-[#E51B23] text-white border-none py-4 px-9 font-anton text-base font-bold tracking-[2px] cursor-pointer w-full transition-all duration-300 hover:bg-[#FFDE59] hover:text-black disabled:opacity-50 disabled:cursor-wait"
+              >
+                {isLoading === 'solo' ? '[ LOADING... ]' : '[ ACTIVATE PRO ]'}
               </button>
             </div>
 
@@ -326,8 +356,12 @@ export default function CallLabProPage() {
                 For agencies and teams. Share pattern insights, compare performance, build a culture of continuous improvement.
               </p>
 
-              <button className="bg-[#333333] text-white border-none py-4 px-9 font-anton text-base font-bold tracking-[2px] cursor-pointer w-full transition-all duration-300 hover:bg-[#FFDE59] hover:text-black">
-                [ ACTIVATE PRO ]
+              <button
+                onClick={() => handleCheckout('team')}
+                disabled={isLoading === 'team'}
+                className="bg-[#333333] text-white border-none py-4 px-9 font-anton text-base font-bold tracking-[2px] cursor-pointer w-full transition-all duration-300 hover:bg-[#FFDE59] hover:text-black disabled:opacity-50 disabled:cursor-wait"
+              >
+                {isLoading === 'team' ? '[ LOADING... ]' : '[ ACTIVATE PRO ]'}
               </button>
             </div>
           </div>

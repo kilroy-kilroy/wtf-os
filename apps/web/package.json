@@ -29,6 +29,7 @@
     "recharts": "^3.5.1",
     "remark-gfm": "^4.0.0",
     "resend": "^4.0.1",
+    "stripe": "^17.3.1",
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7",
     "zod": "^3.23.8"

@@ -31,6 +31,12 @@ const MODEL_CONFIGS: Record<string, ModelConfig> = {
     maxTokens: 8192,
     temperature: 0.3,
   },
+  'call-lab-pro': {
+    provider: 'anthropic',
+    model: 'claude-sonnet-4-5-20250929',
+    maxTokens: 16384,
+    temperature: 0.3,
+  },
 };
 
 export interface ModelResponse {

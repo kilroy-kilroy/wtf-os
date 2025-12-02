@@ -1,5 +1,5 @@
 import { InfoTooltip } from "@/components/ui/info-tooltip";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { getPatternByName } from "@/lib/patternGlossary";
 
 type MetricCardProps = {
@@ -15,17 +15,19 @@ export function MetricCard({ label, value, helper, icon, tooltip, isPatternValue
   const patternDef = isPatternValue ? getPatternByName(value) : null;
 
   const valueElement = patternDef ? (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <span className="cursor-help underline decoration-dotted underline-offset-4 decoration-[#555]">
-          {value}
-        </span>
-      </TooltipTrigger>
-      <TooltipContent className="max-w-xs bg-[#1A1A1A] border border-[#333] text-sm">
-        <p className="font-semibold text-[#FFDE59] mb-1">{patternDef.name}</p>
-        <p className="text-[#B3B3B3]">{patternDef.description}</p>
-      </TooltipContent>
-    </Tooltip>
+    <TooltipProvider delayDuration={200}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className="cursor-help underline decoration-dotted underline-offset-4 decoration-[#555]">
+            {value}
+          </span>
+        </TooltipTrigger>
+        <TooltipContent className="max-w-xs bg-[#1A1A1A] border border-[#333] text-sm">
+          <p className="font-semibold text-[#FFDE59] mb-1">{patternDef.name}</p>
+          <p className="text-[#B3B3B3]">{patternDef.description}</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   ) : (
     value
   );

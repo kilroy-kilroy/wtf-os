@@ -37,11 +37,19 @@ interface CallReport {
 function extractMarkdown(fullReport: Record<string, unknown> | null): string | null {
   if (!fullReport) return null;
 
-  // Check direct markdown property
+  // Check direct markdown property (new format from migration/analyze)
   if (typeof fullReport.markdown === 'string') return fullReport.markdown;
 
   // Check if full_report itself is a string (raw markdown)
   if (typeof fullReport === 'string') return fullReport;
+
+  // Check for markdown_response property
+  if (typeof fullReport.markdown_response === 'string') return fullReport.markdown_response;
+
+  // Check for result.markdown (API response format)
+  if (fullReport.result && typeof (fullReport.result as any).markdown === 'string') {
+    return (fullReport.result as any).markdown;
+  }
 
   return null;
 }

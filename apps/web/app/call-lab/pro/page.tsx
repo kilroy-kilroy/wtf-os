@@ -9,7 +9,8 @@ import {
   ConsoleButton,
   ConsoleInput,
   SalesOSHeader,
-  ConsoleMarkdownRenderer
+  ConsoleMarkdownRenderer,
+  LoadingTerminal
 } from '@/components/console';
 
 type AnalysisResult = {
@@ -193,7 +194,10 @@ export default function CallLabProPage() {
       <div className="max-w-5xl mx-auto">
         <SalesOSHeader systemStatus={loading ? 'PROCESSING' : 'READY'} />
 
-        {!result ? (
+        {loading && loadingStep ? (
+          /* Loading Terminal Animation */
+          <LoadingTerminal step={loadingStep} />
+        ) : !result ? (
           /* Input Form */
           <ConsolePanel>
             <div className="space-y-8">
@@ -312,11 +316,7 @@ export default function CallLabProPage() {
 
                 {/* Submit Button */}
                 <ConsoleButton type="submit" fullWidth disabled={loading}>
-                  {loading ? (
-                    loadingStep === 'uploading' ? '⟳ UPLOADING TRANSCRIPT...' : '⟳ RUNNING PRO ANALYSIS...'
-                  ) : (
-                    '▶ RUN CALL LAB PRO'
-                  )}
+                  ▶ RUN CALL LAB PRO
                 </ConsoleButton>
               </form>
             </div>

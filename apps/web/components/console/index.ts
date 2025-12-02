@@ -4,3 +4,4 @@ export { ConsoleButton } from './ConsoleButton';
 export { ConsoleInput } from './ConsoleInput';
 export { SalesOSHeader } from './SalesOSHeader';
 export { ConsoleMarkdownRenderer } from './ConsoleMarkdownRenderer';
+export { LoadingTerminal } from './LoadingTerminal';

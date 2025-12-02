@@ -278,6 +278,29 @@ ${ingestionItem.raw_content}`;
             markdown_response: JSON.stringify(proResult, null, 2), // Store full JSON
           });
 
+          // Also save to call_lab_reports for dashboard
+          const trustVelocity = report.meta?.trustVelocity || 0;
+          const primaryPattern = report.patterns?.[0]?.patternName || '';
+          const nextAction = report.nextSteps?.actions?.[0] || '';
+
+          await supabase.from('call_lab_reports').insert({
+            user_id: ingestionItem.user_id || null,
+            buyer_name: prospect_name || metadata.prospect_name || '',
+            company_name: prospect_company || metadata.prospect_company || '',
+            overall_score: overallScore, // Store as 0-100
+            trust_velocity: trustVelocity,
+            agenda_control: report.scores?.narrativeControl || null,
+            pattern_density: report.patterns?.length ? report.patterns.length * 10 : 0,
+            primary_pattern: primaryPattern,
+            improvement_highlight: nextAction,
+            full_report: report,
+            created_at: new Date().toISOString(),
+            agent: 'pro',
+            version: '1.0',
+            call_id: callScore.id,
+            transcript: ingestionItem.raw_content || '',
+          });
+
           // Update ingestion item status
           await updateIngestionItemStatus(supabase, ingestion_item_id, 'completed');
 

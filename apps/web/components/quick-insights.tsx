@@ -15,12 +15,12 @@ export function QuickInsightsPanel({ insights }: Props) {
       <div className="space-y-2 text-sm text-[#B3B3B3]">
         <div>
           <div className="font-anton text-[10px] uppercase text-[#777]">
-            Top buyer quote
+            Call snapshot
           </div>
           <p className="mt-1">
             {insights.topQuote
-              ? `"${insights.topQuote}"`
-              : "We will surface your sharpest buyer quote after your next analysis."}
+              ? insights.topQuote
+              : "We will surface your call snapshot after your next analysis."}
           </p>
         </div>
 

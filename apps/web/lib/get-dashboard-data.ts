@@ -147,10 +147,28 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
   const mostImprovedSkill =
     [...skills].sort((a, b) => b.delta - a.delta)[0]?.name ?? null;
 
-  const mostFrequentMistake =
-    calls[0]?.full_report?.modelLayer?.crossTheme ??
-    calls[0]?.primary_pattern ??
-    null;
+  // Aggregate patterns across ALL calls to find most frequent friction
+  const patternCounts: Record<string, number> = {};
+  for (const call of calls) {
+    const report = call.full_report as Record<string, any> | null;
+    // Pro JSON: patterns array
+    if (report?.patterns && Array.isArray(report.patterns)) {
+      for (const p of report.patterns) {
+        if (p.patternName) {
+          patternCounts[p.patternName] = (patternCounts[p.patternName] || 0) + 1;
+        }
+      }
+    }
+    // Also count primary_pattern from the call record
+    if (call.primary_pattern) {
+      patternCounts[call.primary_pattern] = (patternCounts[call.primary_pattern] || 0) + 1;
+    }
+  }
+
+  // Find the most frequent pattern
+  const sortedPatterns = Object.entries(patternCounts)
+    .sort(([, a], [, b]) => b - a);
+  const mostFrequentMistake = sortedPatterns[0]?.[0] ?? null;
 
   const patternRadar: PatternRadarData = {
     topStrengths,
@@ -166,22 +184,18 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
   const latest = calls[0] || null;
   const latestReport = (latest?.full_report as Record<string, any>) || null;
 
-  // Extract from Pro JSON format (meta, snapTake, tacticalRewrites, patterns)
-  // or fall back to old format fields
-  const extractQuote = () => {
-    // Pro JSON: snapTake.tldr or analysis
+  // Extract the call snapshot (one-liner summary of the call)
+  const extractCallSnapshot = () => {
+    // Pro JSON: snapTake.tldr is the one-liner summary
     if (latestReport?.snapTake?.tldr) return latestReport.snapTake.tldr;
-    if (latestReport?.snapTake?.analysis) return latestReport.snapTake.analysis;
     // Old format
     if (latestReport?.narrativeCapture?.quotes?.[0]) return latestReport.narrativeCapture.quotes[0];
     return null;
   };
 
+  // Extract the biggest missed move - the PATTERN NAME, not the analysis
   const extractMissedMove = () => {
-    // Pro JSON: first tactical rewrite or first pattern
-    if (latestReport?.tacticalRewrites?.items?.[0]?.whyItMissed) {
-      return latestReport.tacticalRewrites.items[0].whyItMissed;
-    }
+    // Pro JSON: first pattern name (the behavioral pattern detected)
     if (latestReport?.patterns?.[0]?.patternName) {
       return latestReport.patterns[0].patternName;
     }
@@ -191,9 +205,21 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
     return null;
   };
 
+  // Extract next call focus - brief action from nextSteps
+  const extractNextAction = () => {
+    // Pro JSON: first action from nextSteps
+    if (latestReport?.nextSteps?.actions?.[0]) {
+      return latestReport.nextSteps.actions[0];
+    }
+    // Old format
+    if (latestReport?.wtfMethod?.nextMove) return latestReport.wtfMethod.nextMove;
+    return null;
+  };
+
   const quickInsights = {
-    topQuote: extractQuote(),
+    topQuote: extractCallSnapshot(),
     missedMove: extractMissedMove(),
+    nextAction: extractNextAction(),
     skillToPractice:
       patternRadar.mostImprovedSkill ??
       patternRadar.topWeaknesses[0]?.name ??

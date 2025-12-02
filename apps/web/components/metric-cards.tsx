@@ -33,7 +33,7 @@ export function MetricCard({ label, value, helper, icon, tooltip, isPatternValue
   );
 
   return (
-    <div className="bg-black border border-[#E51B23] rounded-lg px-4 py-3 flex flex-col justify-between">
+    <div className="bg-black border border-[#E51B23] rounded-lg px-4 py-3 flex flex-col h-full">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5">
           <span className="font-anton text-[11px] uppercase tracking-wide text-[#B3B3B3]">
@@ -68,7 +68,7 @@ export function TrendMetricCard({ label, valueChange, helper, tooltip }: TrendMe
     valueChange > 0 ? "text-green-400" : valueChange < 0 ? "text-red-400" : "text-[#FFDE59]";
 
   return (
-    <div className="bg-black border border-[#E51B23] rounded-lg px-4 py-3 flex flex-col justify-between">
+    <div className="bg-black border border-[#E51B23] rounded-lg px-4 py-3 flex flex-col h-full">
       <div className="flex items-center gap-1.5">
         <span className="font-anton text-[11px] uppercase tracking-wide text-[#B3B3B3]">
           {label}

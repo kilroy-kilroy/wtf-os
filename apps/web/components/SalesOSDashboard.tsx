@@ -95,7 +95,7 @@ export function SalesOSDashboard({ userName, userEmail, data }: Props) {
             <MetricCard
               label="Next call focus"
               value={quickInsights.skillToPractice ?? "Run a new call through Call Lab Pro"}
-              helper={quickInsights.missedMove ?? "We will pin a specific move after your next analysis."}
+              helper={quickInsights.nextAction ?? "We will pin a specific move after your next analysis."}
               icon="🎯"
               tooltip={dashboardTooltips.weeklyFocus.tooltip}
               isPatternValue={!!quickInsights.skillToPractice}

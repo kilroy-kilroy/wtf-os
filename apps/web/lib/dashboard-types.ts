@@ -38,8 +38,9 @@ export type PatternRadarData = {
 };
 
 export type QuickInsights = {
-  topQuote: string | null;
-  missedMove: string | null;
+  topQuote: string | null;  // Call snapshot (one-liner summary)
+  missedMove: string | null;  // Pattern name of biggest missed move
+  nextAction: string | null;  // Brief next step action
   skillToPractice: string | null;
 };
 

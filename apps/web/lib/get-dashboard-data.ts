@@ -242,10 +242,26 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
 
   // ============================================
   // COACHING REPORTS
-  // Note: coaching_reports table not yet created in production
-  // Skipping query until table migration is run
   // ============================================
-  const coachingReports: CoachingReport[] = [];
+  const { data: coachingReportsData, error: coachingError } = await supabase
+    .from("coaching_reports")
+    .select("id, report_type, period_start, period_end, scores_aggregate, created_at")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(20);
+
+  if (coachingError) {
+    console.error("Error fetching coaching reports", coachingError);
+  }
+
+  const coachingReports: CoachingReport[] = (coachingReportsData || []).map((r) => ({
+    id: r.id,
+    report_type: r.report_type,
+    period_start: r.period_start,
+    period_end: r.period_end,
+    scores_aggregate: r.scores_aggregate,
+    created_at: r.created_at,
+  }));
 
   // ============================================
   // CHART DATA (oldest → newest for line charts)

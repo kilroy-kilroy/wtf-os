@@ -9,8 +9,6 @@ export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   typescript: true,
 })
 
-// Price IDs from Stripe Dashboard
-// TODO: Replace these with your actual Stripe Price IDs after creating products
 export const PRICES = {
   solo: process.env.STRIPE_PRICE_SOLO || 'price_solo_placeholder',
   team: process.env.STRIPE_PRICE_TEAM || 'price_team_placeholder',

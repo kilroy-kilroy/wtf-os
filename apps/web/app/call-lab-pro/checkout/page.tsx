@@ -29,21 +29,17 @@ export default async function CheckoutPage({ searchParams }: CheckoutPageProps) 
 
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.timkilroy.com'
 
-  try {
-    const session = await stripe.checkout.sessions.create({
-      mode: 'subscription',
-      payment_method_types: ['card'],
-      line_items: [{ price: priceId, quantity: 1 }],
-      success_url: `${baseUrl}/call-lab-pro/welcome?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${baseUrl}/call-lab-pro`,
-      metadata: { plan: selectedPlan },
-    })
+  const session = await stripe.checkout.sessions.create({
+    mode: 'subscription',
+    payment_method_types: ['card'],
+    line_items: [{ price: priceId, quantity: 1 }],
+    success_url: `${baseUrl}/call-lab-pro/welcome?session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${baseUrl}/call-lab-pro`,
+    metadata: { plan: selectedPlan },
+  })
 
-    if (session.url) {
-      redirect(session.url)
-    }
-  } catch (error) {
-    console.error('Checkout error:', error)
+  if (session.url) {
+    redirect(session.url)
   }
 
   return (

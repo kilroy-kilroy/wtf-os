@@ -10,7 +10,8 @@ export default async function CheckoutPage({ searchParams }: CheckoutPageProps) 
   const selectedPlan: PlanType = plan && plan in PRICES ? plan : 'solo'
   const priceId = PRICES[selectedPlan]
 
-  if (priceId.includes('placeholder')) {
+  // Check if Stripe is configured
+  if (!stripe || priceId.includes('placeholder')) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center p-4">
         <div className="bg-[#1a1a1a] border border-[#333] p-8 max-w-md text-center">

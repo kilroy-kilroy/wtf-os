@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
         },
       ],
       customer_email: email || undefined,
-      success_url: `${appUrl}/dashboard?checkout=success`,
+      success_url: `${appUrl}/call-lab-pro/welcome?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${appUrl}/call-lab-pro?checkout=cancelled`,
       metadata: {
         priceType,

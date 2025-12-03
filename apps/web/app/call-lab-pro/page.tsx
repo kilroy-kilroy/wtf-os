@@ -207,9 +207,12 @@ export default function CallLabProPage() {
                 Perfect for founders, solo consultants, and individual contributors who want to level up their close rate.
               </p>
 
-              <button className="bg-[#E51B23] text-white border-none py-4 px-9 font-anton text-base font-bold tracking-[2px] cursor-pointer w-full transition-all duration-300 hover:bg-[#FFDE59] hover:text-black">
+              <a
+                href="/call-lab-pro/checkout?plan=solo"
+                className="block bg-[#E51B23] text-white border-none py-4 px-9 font-anton text-base font-bold tracking-[2px] cursor-pointer w-full transition-all duration-300 hover:bg-[#FFDE59] hover:text-black text-center no-underline"
+              >
                 [ ACTIVATE PRO ]
-              </button>
+              </a>
             </div>
 
             {/* Team License */}
@@ -230,15 +233,19 @@ export default function CallLabProPage() {
                 For agencies and teams. Share pattern insights, compare performance, build a culture of continuous improvement.
               </p>
 
-              <button className="bg-[#333333] text-white border-none py-4 px-9 font-anton text-base font-bold tracking-[2px] cursor-pointer w-full transition-all duration-300 hover:bg-[#FFDE59] hover:text-black">
+              <a
+                href="/call-lab-pro/checkout?plan=team"
+                className="block bg-[#333333] text-white border-none py-4 px-9 font-anton text-base font-bold tracking-[2px] cursor-pointer w-full transition-all duration-300 hover:bg-[#FFDE59] hover:text-black text-center no-underline"
+              >
                 [ ACTIVATE PRO ]
-              </button>
+              </a>
             </div>
           </div>
 
           <p className="text-center mt-10 text-[13px] text-[#666666]">
             Cancel anytime. No long-term contracts. No bullshit.
           </p>
+
         </section>
 
         {/* Final CTA */}

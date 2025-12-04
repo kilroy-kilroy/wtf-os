@@ -5,7 +5,6 @@ import {
   findOrCreateAgency,
   assignUserToAgency,
   createDiscoveryBrief,
-  updateDiscoveryBrief,
   getDiscoveryBrief,
   createToolRun,
   updateToolRun,
@@ -26,34 +25,36 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    // Validate required fields
-    if (!body.what_you_sell || !body.target_company || !body.email) {
+    // Validate required fields (aligned with new Lindy structure)
+    if (!body.service_offered || !body.target_company || !body.requestor_email) {
       return NextResponse.json(
-        { error: 'Missing required fields: what_you_sell, target_company, and email' },
+        { error: 'Missing required fields: service_offered, target_company, and requestor_email' },
         { status: 400 }
       );
     }
 
     const {
-      // User info
-      email,
-      first_name,
-      last_name,
-      agency_name,
-      // Required inputs
-      what_you_sell,
+      // Requestor info
+      requestor_name,
+      requestor_email,
+      requestor_company,
+      requestor_website,
+      service_offered,
+      // Target info
       target_company,
-      // Optional inputs
-      market_concerns,
+      target_website,
       target_contact_name,
       target_contact_title,
-      // Pro-only inputs
-      target_company_url,
-      target_linkedin_url,
-      product_strengths,
-      deal_size,
-      deal_stage,
-      deal_urgency,
+      target_linkedin,
+      target_icp,
+      // Context
+      competitors,
+      // Pro-only research outputs (populated by research layer)
+      requestor_insights,
+      target_insights,
+      contact_insights,
+      competitor_intel,
+      industry_signals,
       // Version
       version = 'lite', // 'lite' or 'pro'
     } = body;
@@ -62,15 +63,20 @@ export async function POST(request: NextRequest) {
     const supabase = createServerClient();
 
     // Find or create user
-    const user = await findOrCreateUser(supabase, email, first_name, last_name);
+    const user = await findOrCreateUser(
+      supabase,
+      requestor_email,
+      requestor_name?.split(' ')[0], // first name
+      requestor_name?.split(' ').slice(1).join(' ') // last name
+    );
 
     // Find or create agency
     let agency = null;
-    if (agency_name) {
-      agency = await findOrCreateAgency(supabase, agency_name);
+    if (requestor_company) {
+      agency = await findOrCreateAgency(supabase, requestor_company, requestor_website);
       await assignUserToAgency(supabase, user.id, agency.id, 'member');
     } else {
-      agency = await findOrCreateAgency(supabase, `${first_name || email}'s Agency`);
+      agency = await findOrCreateAgency(supabase, `${requestor_name || requestor_email}'s Agency`);
       await assignUserToAgency(supabase, user.id, agency.id, 'owner');
     }
 
@@ -78,38 +84,49 @@ export async function POST(request: NextRequest) {
     const toolRun = await createToolRun(supabase, {
       user_id: user.id,
       agency_id: agency.id,
-      lead_email: email,
-      lead_name: first_name ? `${first_name} ${last_name || ''}`.trim() : undefined,
+      lead_email: requestor_email,
+      lead_name: requestor_name,
       tool_name: `discovery_lab_${version}`,
-      tool_version: '1.0',
+      tool_version: '2.0', // Updated version for Lindy-aligned prompts
       input_data: {
-        what_you_sell,
+        requestor_name,
+        requestor_email,
+        requestor_company,
+        requestor_website,
+        service_offered,
         target_company,
-        market_concerns,
+        target_website,
         target_contact_name,
         target_contact_title,
-        target_company_url,
-        target_linkedin_url,
-        product_strengths,
-        deal_size,
-        deal_stage,
-        deal_urgency,
+        target_linkedin,
+        target_icp,
+        competitors,
       },
     });
 
     // Prepare prompt parameters
     const promptParams: DiscoveryLabPromptParams = {
-      what_you_sell,
-      market_concerns,
+      // Requestor info
+      requestor_name,
+      requestor_email,
+      requestor_company,
+      requestor_website,
+      service_offered,
+      // Target info
       target_company,
+      target_website,
       target_contact_name,
       target_contact_title,
-      target_company_url,
-      target_linkedin_url,
-      product_strengths,
-      deal_size,
-      deal_stage,
-      deal_urgency,
+      target_linkedin,
+      target_icp,
+      // Context
+      competitors,
+      // Pro research (if available)
+      requestor_insights,
+      target_insights,
+      contact_insights,
+      competitor_intel,
+      industry_signals,
     };
 
     let usage: { input: number; output: number };
@@ -185,23 +202,32 @@ export async function POST(request: NextRequest) {
         user_id: user.id,
         agency_id: agency.id,
         version,
-        what_you_sell,
-        market_concerns,
+        what_you_sell: service_offered, // Map to existing field
         target_company,
         target_contact_name,
         target_contact_title,
-        target_company_url,
-        target_linkedin_url,
-        product_strengths,
-        deal_context: {
-          size: deal_size,
-          stage: deal_stage,
-          urgency: deal_urgency,
-        },
+        target_company_url: target_website,
+        target_linkedin_url: target_linkedin,
         markdown_response: markdownResponse,
         metadata: {
+          // New Lindy-aligned fields
+          requestor_name,
+          requestor_company,
+          requestor_website,
+          target_icp,
+          competitors,
+          // Metadata counts
           question_count: metadata.questionCount,
-          meeting_frame_count: metadata.meetingFrameCount,
+          hook_count: metadata.hookCount,
+          competitor_count: metadata.competitorCount,
+          // Research outputs (Pro only)
+          ...(version === 'pro' && {
+            requestor_insights,
+            target_insights,
+            contact_insights,
+            competitor_intel,
+            industry_signals,
+          }),
         },
       });
 
@@ -233,12 +259,17 @@ export async function POST(request: NextRequest) {
     } catch (error) {
       console.error('Error storing discovery brief:', error);
 
+      // Still return the result even if storage fails
       return NextResponse.json(
         {
-          error: 'Failed to store discovery brief',
-          details: error instanceof Error ? error.message : 'Unknown error',
+          success: true,
+          storage_error: true,
+          result: {
+            markdown: markdownResponse,
+            metadata,
+          },
         },
-        { status: 500 }
+        { status: 200 }
       );
     }
   } catch (error) {

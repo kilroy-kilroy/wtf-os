@@ -14,20 +14,26 @@ interface DiscoveryResult {
   markdown: string;
   metadata: {
     questionCount: number;
-    meetingFrameCount: number;
+    hookCount: number;
+    competitorCount: number;
     version: 'lite' | 'pro';
   };
 }
 
 export default function DiscoveryLabPage() {
   const [formData, setFormData] = useState({
-    email: '',
-    first_name: '',
-    what_you_sell: '',
-    market_concerns: '',
+    // Requestor info
+    requestor_name: '',
+    requestor_email: '',
+    requestor_company: '',
+    service_offered: '',
+    // Target info
     target_company: '',
+    target_website: '',
     target_contact_name: '',
     target_contact_title: '',
+    // Context
+    competitors: '',
   });
 
   const [loading, setLoading] = useState(false);
@@ -77,7 +83,7 @@ export default function DiscoveryLabPage() {
           result: result.markdown,
           metadata: {
             date: new Date().toLocaleDateString(),
-            repName: formData.first_name || 'Sales Rep',
+            repName: formData.requestor_name || 'Sales Rep',
             prospectCompany: formData.target_company,
             tier: 'lite',
             product: 'discovery-lab',
@@ -125,7 +131,7 @@ export default function DiscoveryLabPage() {
       {/* Report Content */}
       <ConsolePanel>
         <ConsoleHeading level={1} variant="yellow" className="mb-6">
-          DISCOVERY LAB LITE - PRE-CALL BRIEF
+          YOUR DISCOVERYLAB CALL GUIDE
         </ConsoleHeading>
         <ConsoleMarkdownRenderer content={result!.markdown} />
       </ConsolePanel>
@@ -134,28 +140,26 @@ export default function DiscoveryLabPage() {
       <ConsolePanel variant="red-highlight">
         <div className="text-center space-y-4">
           <ConsoleHeading level={2} variant="yellow">
-            DISCOVERY LAB LITE GAVE YOU QUESTIONS.
-            <br />
-            DISCOVERY LAB PRO GIVES YOU THE PLAYBOOK.
+            WANT THE FULL PLAYBOOK?
           </ConsoleHeading>
           <div className="text-left space-y-2 text-white font-poppins">
             <div>
-              → Full Company Intel: Website analysis, positioning, recent news
+              → Full Company Research: Website analysis, positioning, verbatim phrases
             </div>
             <div>
-              → Prospect Deep Dive: LinkedIn analysis, hot buttons, what they care about
+              → LinkedIn Intelligence: Contact insights, role context, hot buttons
             </div>
             <div>
-              → Opening 60 Seconds: Scripted authority frame for the first minute
+              → Competitor Analysis: Why each competitor matters to this conversation
             </div>
             <div>
-              → Question Arsenal: Authority, Depth, and Guidance questions with context
+              → Industry Signals: What&apos;s happened in their world the last 90 days
             </div>
             <div>
-              → Permission Gates: Specific qualifiers to advance the deal
+              → Emotional/Identity Probe: The question that makes them feel seen
             </div>
             <div>
-              → Conversation Decision Tree: If/then paths for common objections
+              → Complete Decision Tree: If/then paths for every direction
             </div>
           </div>
           <ConsoleButton
@@ -191,44 +195,57 @@ export default function DiscoveryLabPage() {
                   <span className="text-[#FFDE59]">PRE-CALL INTEL</span>
                 </ConsoleHeading>
                 <p className="text-[#B3B3B3] font-poppins text-lg">
-                  Tell us what you sell and who you&apos;re selling to. We&apos;ll make you
-                  sound smarter.
+                  Tell us what you sell and who you&apos;re selling to. We&apos;ll arm you with
+                  the questions that make prospects think &quot;this person did their homework.&quot;
                 </p>
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-8">
-                {/* Operator Identity */}
+                {/* Your Info */}
                 <div className="space-y-4">
                   <ConsoleHeading level={3} variant="yellow">
                     YOUR INFO
                   </ConsoleHeading>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <ConsoleInput
-                      type="email"
-                      placeholder="you@company.com"
-                      label="EMAIL *"
+                      type="text"
+                      placeholder="John Smith"
+                      label="YOUR NAME *"
                       required
-                      value={formData.email}
+                      value={formData.requestor_name}
                       onChange={(e) =>
                         setFormData({
                           ...formData,
-                          email: (e.target as HTMLInputElement).value,
+                          requestor_name: (e.target as HTMLInputElement).value,
                         })
                       }
                     />
                     <ConsoleInput
-                      type="text"
-                      placeholder="John"
-                      label="FIRST NAME"
-                      value={formData.first_name}
+                      type="email"
+                      placeholder="you@company.com"
+                      label="EMAIL *"
+                      required
+                      value={formData.requestor_email}
                       onChange={(e) =>
                         setFormData({
                           ...formData,
-                          first_name: (e.target as HTMLInputElement).value,
+                          requestor_email: (e.target as HTMLInputElement).value,
                         })
                       }
                     />
                   </div>
+                  <ConsoleInput
+                    type="text"
+                    placeholder="Acme Agency"
+                    label="YOUR COMPANY"
+                    value={formData.requestor_company}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        requestor_company: (e.target as HTMLInputElement).value,
+                      })
+                    }
+                  />
                 </div>
 
                 {/* What You Sell */}
@@ -239,27 +256,14 @@ export default function DiscoveryLabPage() {
                   <ConsoleInput
                     multiline
                     rows={3}
-                    placeholder="We help B2B SaaS companies reduce churn by 30% through proactive customer success automation..."
-                    label="DESCRIBE YOUR PRODUCT/SERVICE IN ONE SENTENCE *"
+                    placeholder="Paid media management for ecommerce brands that want to scale profitably without wasting ad spend on the wrong audiences..."
+                    label="DESCRIBE YOUR SERVICE (BE SPECIFIC) *"
                     required
-                    value={formData.what_you_sell}
+                    value={formData.service_offered}
                     onChange={(e) =>
                       setFormData({
                         ...formData,
-                        what_you_sell: (e.target as HTMLTextAreaElement).value,
-                      })
-                    }
-                  />
-                  <ConsoleInput
-                    multiline
-                    rows={2}
-                    placeholder="Budget freezes, AI disruption, layoffs in our target market..."
-                    label="CURRENT MARKET CONCERNS (OPTIONAL)"
-                    value={formData.market_concerns}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        market_concerns: (e.target as HTMLTextAreaElement).value,
+                        service_offered: (e.target as HTMLTextAreaElement).value,
                       })
                     }
                   />
@@ -270,7 +274,7 @@ export default function DiscoveryLabPage() {
                   <ConsoleHeading level={3} variant="yellow">
                     TARGET PROSPECT
                   </ConsoleHeading>
-                  <div className="grid grid-cols-1 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <ConsoleInput
                       type="text"
                       placeholder="Acme Corp"
@@ -281,6 +285,18 @@ export default function DiscoveryLabPage() {
                         setFormData({
                           ...formData,
                           target_company: (e.target as HTMLInputElement).value,
+                        })
+                      }
+                    />
+                    <ConsoleInput
+                      type="url"
+                      placeholder="https://acmecorp.com"
+                      label="COMPANY WEBSITE"
+                      value={formData.target_website}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          target_website: (e.target as HTMLInputElement).value,
                         })
                       }
                     />
@@ -300,7 +316,7 @@ export default function DiscoveryLabPage() {
                     />
                     <ConsoleInput
                       type="text"
-                      placeholder="VP of Sales"
+                      placeholder="VP of Marketing"
                       label="CONTACT TITLE"
                       value={formData.target_contact_title}
                       onChange={(e) =>
@@ -313,6 +329,28 @@ export default function DiscoveryLabPage() {
                   </div>
                 </div>
 
+                {/* Competitors */}
+                <div className="space-y-4">
+                  <ConsoleHeading level={3} variant="yellow">
+                    COMPETITORS (OPTIONAL)
+                  </ConsoleHeading>
+                  <ConsoleInput
+                    type="text"
+                    placeholder="Competitor A, Competitor B, Competitor C"
+                    label="WHO ELSE MIGHT THEY BE TALKING TO?"
+                    value={formData.competitors}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        competitors: (e.target as HTMLInputElement).value,
+                      })
+                    }
+                  />
+                  <p className="text-[#666] text-sm font-poppins">
+                    Comma-separated. We&apos;ll infer likely competitors if you don&apos;t know.
+                  </p>
+                </div>
+
                 {/* Error Message */}
                 {error && (
                   <div className="bg-[#E51B23] border border-[#FF0000] rounded p-4">
@@ -322,7 +360,7 @@ export default function DiscoveryLabPage() {
 
                 {/* Submit Button */}
                 <ConsoleButton type="submit" fullWidth disabled={loading}>
-                  {loading ? '⟳ GENERATING INTEL...' : '▶ GENERATE PRE-CALL BRIEF'}
+                  {loading ? '⟳ GENERATING CALL GUIDE...' : '▶ GENERATE CALL GUIDE'}
                 </ConsoleButton>
               </form>
             </div>

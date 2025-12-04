@@ -84,6 +84,7 @@ interface MarkdownReportProps {
     repName?: string;
     prospectCompany?: string;
     tier?: string;
+    product?: 'call-lab' | 'discovery-lab';
   };
 }
 
@@ -164,13 +165,21 @@ export const MarkdownReport: React.FC<MarkdownReportProps> = ({ markdown, metada
 
   const content = parseMarkdown(markdown);
 
+  // Determine product name for display
+  const isDiscoveryLab = metadata?.product === 'discovery-lab';
+  const productName = isDiscoveryLab ? 'DISCOVERY LAB' : 'CALL LAB';
+  const reportType = isDiscoveryLab ? 'PRE-CALL BRIEF' : 'DIAGNOSTIC SNAPSHOT';
+  const footerDescription = isDiscoveryLab
+    ? 'Pre-Call Intelligence Brief'
+    : 'Sales Call Analysis Report';
+
   return (
     <Document>
       <Page size="A4" style={styles.page}>
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.title}>
-            CALL LAB {metadata?.tier === 'pro' ? 'PRO' : 'LITE'} — DIAGNOSTIC SNAPSHOT
+            {productName} {metadata?.tier === 'pro' ? 'PRO' : 'LITE'} — {reportType}
           </Text>
           <Text style={styles.subtitle}>Part of SalesOS</Text>
           {(metadata?.date || metadata?.repName || metadata?.prospectCompany) && (
@@ -182,7 +191,9 @@ export const MarkdownReport: React.FC<MarkdownReportProps> = ({ markdown, metada
                 <Text style={styles.metaInfo}>Sales Rep: {metadata.repName}</Text>
               )}
               {metadata?.prospectCompany && (
-                <Text style={styles.metaInfo}>Prospect: {metadata.prospectCompany}</Text>
+                <Text style={styles.metaInfo}>
+                  {isDiscoveryLab ? 'Target Company' : 'Prospect'}: {metadata.prospectCompany}
+                </Text>
               )}
             </View>
           )}
@@ -193,7 +204,7 @@ export const MarkdownReport: React.FC<MarkdownReportProps> = ({ markdown, metada
 
         {/* Footer */}
         <Text style={styles.footer}>
-          Call Lab {metadata?.tier === 'pro' ? 'Pro' : 'Lite'} - Sales Call Analysis Report | SalesOS
+          {productName} {metadata?.tier === 'pro' ? 'Pro' : 'Lite'} - {footerDescription} | SalesOS
         </Text>
       </Page>
     </Document>

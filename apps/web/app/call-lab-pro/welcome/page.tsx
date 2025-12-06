@@ -2,11 +2,12 @@ import { getStripe } from '@/lib/stripe'
 import Link from 'next/link'
 
 interface WelcomePageProps {
-  searchParams: { session_id?: string }
+  searchParams: Promise<{ session_id?: string }>
 }
 
 export default async function WelcomePage({ searchParams }: WelcomePageProps) {
-  const sessionId = searchParams.session_id
+  const params = await searchParams
+  const sessionId = params.session_id
   let customerEmail: string | null = null
   let plan: string | null = null
 

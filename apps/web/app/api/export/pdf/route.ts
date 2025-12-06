@@ -59,7 +59,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Return PDF as download
-    const filename = `call-lab-${metadata?.tier || 'report'}-${Date.now()}.pdf`;
+    const productName = metadata?.product === 'discovery-lab' ? 'discovery-lab' : 'call-lab';
+    const filename = `${productName}-${metadata?.tier || 'report'}-${Date.now()}.pdf`;
     return new NextResponse(pdfBuffer as any, {
       status: 200,
       headers: {

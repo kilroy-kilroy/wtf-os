@@ -37,6 +37,18 @@ const MODEL_CONFIGS: Record<string, ModelConfig> = {
     maxTokens: 16384,
     temperature: 0.3,
   },
+  'discovery-lab-lite': {
+    provider: 'anthropic',
+    model: 'claude-sonnet-4-5-20250929',
+    maxTokens: 4096,
+    temperature: 0.4,
+  },
+  'discovery-lab-pro': {
+    provider: 'anthropic',
+    model: 'claude-sonnet-4-5-20250929',
+    maxTokens: 8192,
+    temperature: 0.4,
+  },
 };
 
 export interface ModelResponse {

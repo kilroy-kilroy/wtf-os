@@ -369,6 +369,7 @@ export default function CallLabProPage() {
           <p className="text-center mt-10 text-[13px] text-[#666666]">
             Cancel anytime. No long-term contracts. No bullshit.
           </p>
+
         </section>
 
         {/* Final CTA */}

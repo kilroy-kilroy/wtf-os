@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 
@@ -14,8 +14,9 @@ const OUTCOMES = [
 export default function OutcomeUpdatePage({
   params,
 }: {
-  params: { callId: string };
+  params: Promise<{ callId: string }>;
 }) {
+  const { callId } = use(params);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [call, setCall] = useState<{
@@ -41,7 +42,7 @@ export default function OutcomeUpdatePage({
       const { data, error } = await supabase
         .from("call_lab_reports")
         .select("buyer_name, company_name, outcome")
-        .eq("id", params.callId)
+        .eq("id", callId)
         .eq("user_id", user.id)
         .single();
 
@@ -54,14 +55,14 @@ export default function OutcomeUpdatePage({
     };
 
     fetchCall();
-  }, [params.callId, router, supabase]);
+  }, [callId, router, supabase]);
 
   const handleOutcomeSelect = async (outcome: string) => {
     setUpdating(true);
     setError(null);
 
     try {
-      const response = await fetch(`/api/calls/${params.callId}/outcome`, {
+      const response = await fetch(`/api/calls/${callId}/outcome`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ outcome }),

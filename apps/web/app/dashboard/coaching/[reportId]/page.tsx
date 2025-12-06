@@ -62,8 +62,9 @@ interface CoachingReportFull {
 export default async function CoachingReportPage({
   params,
 }: {
-  params: { reportId: string };
+  params: Promise<{ reportId: string }>;
 }) {
+  const { reportId } = await params;
   const supabase = createServerComponentClient({ cookies });
 
   const {
@@ -77,7 +78,7 @@ export default async function CoachingReportPage({
   const { data: report, error } = await supabase
     .from("coaching_reports")
     .select("*")
-    .eq("id", params.reportId)
+    .eq("id", reportId)
     .eq("user_id", user.id)
     .single<CoachingReportFull>();
 

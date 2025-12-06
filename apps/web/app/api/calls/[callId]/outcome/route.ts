@@ -4,9 +4,10 @@ import { cookies } from 'next/headers';
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { callId: string } }
+  { params }: { params: Promise<{ callId: string }> }
 ) {
   try {
+    const { callId } = await params;
     const supabase = createRouteHandlerClient({ cookies });
 
     const {
@@ -34,7 +35,7 @@ export async function PATCH(
         outcome,
         outcome_updated_at: new Date().toISOString(),
       })
-      .eq('id', params.callId)
+      .eq('id', callId)
       .eq('user_id', user.id)
       .select()
       .single();

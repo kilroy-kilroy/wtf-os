@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
       metadata?.product === 'discovery-lab' ? 'discovery-lab' : 'call-lab';
     const filename = `${productName}-${metadata?.tier || 'report'}-${Date.now()}.pdf`;
 
-    return new NextResponse(pdfBuffer, {
+    return new NextResponse(Buffer.from(pdfBuffer), {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',

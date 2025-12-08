@@ -9,7 +9,7 @@ import {
   createToolRun,
   updateToolRun,
 } from '@repo/db';
-import { runModel, retryWithBackoff } from '@repo/utils';
+import { runModel, retryWithBackoff, runDiscoveryResearch } from '@repo/utils';
 import {
   DISCOVERY_LAB_LITE_SYSTEM,
   DISCOVERY_LAB_LITE_USER,
@@ -104,6 +104,91 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    // For Pro version, run research layer first
+    let researchedInsights = {
+      requestor_insights,
+      target_insights,
+      contact_insights,
+      competitor_intel,
+      industry_signals,
+    };
+
+    if (version === 'pro') {
+      console.log('Running Discovery Lab Pro research layer...');
+      try {
+        const research = await runDiscoveryResearch({
+          targetCompany: target_company,
+          targetWebsite: target_website,
+          targetIndustry: target_icp, // Use ICP as industry hint
+          contactName: target_contact_name,
+          contactTitle: target_contact_title,
+          contactLinkedIn: target_linkedin,
+          serviceOffered: service_offered,
+        });
+
+        // Format research results for the prompt
+        if (research.market) {
+          researchedInsights.industry_signals = `
+INDUSTRY TRENDS:
+${research.market.industry_trends}
+
+MARKET DYNAMICS:
+${research.market.market_dynamics}
+
+RECENT NEWS:
+${research.market.recent_news}
+          `.trim();
+        }
+
+        if (research.company) {
+          researchedInsights.target_insights = `
+COMPANY OVERVIEW:
+${research.company.company_overview}
+
+SERVICES & OFFERINGS:
+${research.company.services_offerings}
+
+POSITIONING & DIFFERENTIATION:
+${research.company.positioning}
+
+RECENT UPDATES:
+${research.company.recent_updates}
+
+KEY PHRASES THEY USE:
+${research.company.key_phrases.join(', ')}
+          `.trim();
+        }
+
+        if (research.contact) {
+          researchedInsights.contact_insights = `
+PROFESSIONAL BACKGROUND:
+${research.contact.tenure_experience}
+
+ROLE CONTEXT:
+${research.contact.role_context}
+
+LINKEDIN SUMMARY:
+${research.contact.linkedin_summary}
+
+PUBLISHED CONTENT & MEDIA:
+${research.contact.content_published}
+
+TALKING POINTS:
+${research.contact.talking_points.map((p, i) => `${i + 1}. ${p}`).join('\n')}
+          `.trim();
+        }
+
+        if (research.errors.length > 0) {
+          console.warn('Research completed with some errors:', research.errors);
+        }
+
+        console.log('Research layer completed successfully');
+      } catch (researchError) {
+        console.error('Research layer failed, continuing without research:', researchError);
+        // Continue without research - Pro will still generate output, just less informed
+      }
+    }
+
     // Prepare prompt parameters
     const promptParams: DiscoveryLabPromptParams = {
       // Requestor info
@@ -121,12 +206,12 @@ export async function POST(request: NextRequest) {
       target_icp,
       // Context
       competitors,
-      // Pro research (if available)
-      requestor_insights,
-      target_insights,
-      contact_insights,
-      competitor_intel,
-      industry_signals,
+      // Pro research (from research layer or passed in)
+      requestor_insights: researchedInsights.requestor_insights,
+      target_insights: researchedInsights.target_insights,
+      contact_insights: researchedInsights.contact_insights,
+      competitor_intel: researchedInsights.competitor_intel,
+      industry_signals: researchedInsights.industry_signals,
     };
 
     let usage: { input: number; output: number };
@@ -222,11 +307,11 @@ export async function POST(request: NextRequest) {
           competitor_count: metadata.competitorCount,
           // Research outputs (Pro only)
           ...(version === 'pro' && {
-            requestor_insights,
-            target_insights,
-            contact_insights,
-            competitor_intel,
-            industry_signals,
+            requestor_insights: researchedInsights.requestor_insights,
+            target_insights: researchedInsights.target_insights,
+            contact_insights: researchedInsights.contact_insights,
+            competitor_intel: researchedInsights.competitor_intel,
+            industry_signals: researchedInsights.industry_signals,
           }),
         },
       });

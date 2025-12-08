@@ -3,3 +3,4 @@ export * from './ai';
 export * from './scoring';
 export * from './transcript';
 export * from './upgrade-personalizer';
+export * from './research';

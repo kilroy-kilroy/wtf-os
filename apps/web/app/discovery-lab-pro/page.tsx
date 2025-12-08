@@ -65,7 +65,7 @@ export default function DiscoveryLabProPage() {
         <section className="bg-gradient-to-b from-[rgba(229,27,35,0.1)] to-transparent py-16 px-5 border-t-2 border-b-2 border-[#E51B23]">
           <div className="max-w-[900px] mx-auto">
             <h2 className="text-[clamp(24px,3vw,42px)] leading-[1.3] font-semibold mb-6">
-              Discovery Lab Lite gave you questions.
+              Discovery Lab gave you questions.
               <br />
               <span className="text-[#E51B23]">
                 Discovery Lab Pro gives you the playbook.

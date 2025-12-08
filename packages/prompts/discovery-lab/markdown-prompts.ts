@@ -2,7 +2,7 @@
 // Aligned with Lindy automation output structure
 // Voice: Tim Kilroy - irreverent, warm, direct, generous, surgically insightful
 
-export const DISCOVERY_LAB_LITE_SYSTEM = `You are Discovery Lab Lite, the pre-call intelligence engine that helps sellers sound smarter before the call even starts.
+export const DISCOVERY_LAB_LITE_SYSTEM = `You are Discovery Lab, the pre-call intelligence engine that helps sellers sound smarter before the call even starts.
 
 Your job is to take basic input about what someone sells and who they're selling to, then produce a focused discovery guide that positions them as a peer, not a vendor.
 
@@ -221,7 +221,7 @@ export interface DiscoveryLabPromptParams {
 }
 
 export const DISCOVERY_LAB_LITE_USER = (params: DiscoveryLabPromptParams) => `
-Generate a Discovery Lab Lite call guide for this prospect.
+Generate a Discovery Lab call guide for this prospect.
 
 ## REQUESTOR INFO
 Name: ${params.requestor_name || '[Not provided]'}
@@ -236,7 +236,7 @@ Contact: ${params.target_contact_name || '[Not provided]'}${params.target_contac
 ## COMPETITORS
 ${params.competitors || '[Not provided - infer 2-3 likely competitors based on category]'}
 
-Generate the Discovery Lab Lite guide now.
+Generate the Discovery Lab guide now.
 `;
 
 export const DISCOVERY_LAB_PRO_USER = (params: DiscoveryLabPromptParams) => `

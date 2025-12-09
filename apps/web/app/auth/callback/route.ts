@@ -24,17 +24,8 @@ export async function GET(request: NextRequest) {
         return NextResponse.redirect(new URL('/onboarding/profile', request.url));
       }
 
-      // Check if user has analyzed calls
-      const { count } = await supabase
-        .from('call_lab_reports')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', session.user.id);
-
-      if (count && count > 0) {
-        return NextResponse.redirect(new URL('/dashboard', request.url));
-      } else {
-        return NextResponse.redirect(new URL('/call-lab/pro', request.url));
-      }
+      // Onboarding complete - redirect to labs home
+      return NextResponse.redirect(new URL('/labs', request.url));
     }
   }
 

@@ -50,19 +50,8 @@ export default function LoginPage() {
             // New user or hasn't completed onboarding
             router.push('/onboarding/profile');
           } else {
-            // Onboarding complete - check if has calls
-            const { count } = await supabase
-              .from('call_lab_reports')
-              .select('*', { count: 'exact', head: true })
-              .eq('user_id', authData.user.id);
-
-            if (count && count > 0) {
-              // User has analyzed calls - go to dashboard
-              router.push('/dashboard');
-            } else {
-              // No calls yet - go to Pro analyze page
-              router.push('/call-lab/pro');
-            }
+            // Onboarding complete - go to labs home
+            router.push('/labs');
           }
         } else {
           router.push('/onboarding/profile');

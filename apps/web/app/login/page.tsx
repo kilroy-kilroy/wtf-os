@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { useRouter } from 'next/navigation';
 
@@ -13,6 +13,20 @@ export default function LoginPage() {
 
   const router = useRouter();
   const supabase = createClientComponentClient();
+
+  // Check for recovery tokens in URL hash
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash && hash.includes('access_token')) {
+      const hashParams = new URLSearchParams(hash.substring(1));
+      const type = hashParams.get('type');
+
+      if (type === 'recovery') {
+        // Redirect to password reset page with the hash
+        router.push(`/auth/reset-password${hash}`);
+      }
+    }
+  }, [router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -50,7 +50,9 @@ export async function GET(request: NextRequest) {
 
     // Process each user
     for (const assignment of userAssignments || []) {
-      const user = assignment.users as { id: string; email: string; first_name: string } | null;
+      // users comes back as an array from the join, get first element
+      const usersData = assignment.users as unknown as { id: string; email: string; first_name: string }[] | null;
+      const user = usersData?.[0];
       if (!user) continue;
 
       try {

@@ -21,15 +21,88 @@ const getAnthropic = () => new Anthropic({
 
 interface GenerateCoachingRequest {
   user_id: string;
+  agency_id?: string;
   report_type: ReportType;
   period_start: string;
   period_end: string;
 }
 
+// Helper to extract scores from call_scores record
+interface CallScoreRecord {
+  id: string;
+  created_at: string;
+  overall_score: number | null;
+  lite_scores: {
+    control_confidence?: number;
+    discovery_depth?: number;
+    relevance_narrative?: number;
+    objection_handling?: number;
+    next_steps_clarity?: number;
+  } | null;
+  full_scores: {
+    core?: {
+      control_authority?: number;
+      discovery_depth?: number;
+      diagnostic_insight?: number;
+      value_articulation?: number;
+      objection_navigation?: number;
+      commitment_framing?: number;
+    };
+    eq?: {
+      human_first?: number;
+    };
+  } | null;
+  diagnosis_summary: string | null;
+  ingestion_items?: {
+    participants?: Array<{ name: string; role: string }>;
+    transcript_metadata?: { duration_seconds?: number };
+  };
+}
+
+function mapCallScoresToCallData(record: CallScoreRecord): CallData {
+  // Get scores from full_scores if available, otherwise from lite_scores
+  const fullCore = record.full_scores?.core;
+  const liteScores = record.lite_scores;
+
+  // Map scores (convert 1-5 lite to 1-10 scale, full is already 1-10)
+  const opening = fullCore?.control_authority || (liteScores?.control_confidence ? liteScores.control_confidence * 2 : 5);
+  const discovery = fullCore?.discovery_depth || (liteScores?.discovery_depth ? liteScores.discovery_depth * 2 : 5);
+  const diagnostic = fullCore?.diagnostic_insight || 5;
+  const value_articulation = fullCore?.value_articulation || (liteScores?.relevance_narrative ? liteScores.relevance_narrative * 2 : 5);
+  const objection_navigation = fullCore?.objection_navigation || (liteScores?.objection_handling ? liteScores.objection_handling * 2 : 5);
+  const commitment = fullCore?.commitment_framing || (liteScores?.next_steps_clarity ? liteScores.next_steps_clarity * 2 : 5);
+  const human_first = record.full_scores?.eq?.human_first || 5;
+
+  // Get prospect info from ingestion item if available
+  const participants = record.ingestion_items?.participants || [];
+  const prospect = participants.find(p => p.role === 'prospect')?.name || 'Unknown Prospect';
+  const duration = record.ingestion_items?.transcript_metadata?.duration_seconds
+    ? Math.round(record.ingestion_items.transcript_metadata.duration_seconds / 60)
+    : 30;
+
+  return {
+    date: record.created_at,
+    prospect,
+    duration_minutes: duration,
+    outcome: 'unknown', // call_scores doesn't track outcome
+    scores: {
+      opening,
+      discovery,
+      diagnostic,
+      value_articulation,
+      objection_navigation,
+      commitment,
+      human_first,
+    },
+    patterns_detected: [], // Would need to parse from diagnosis_summary
+    key_moments: record.diagnosis_summary ? [record.diagnosis_summary.slice(0, 200)] : [],
+  };
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body: GenerateCoachingRequest = await request.json();
-    const { user_id, report_type, period_start, period_end } = body;
+    const { user_id, agency_id, report_type, period_start, period_end } = body;
 
     // Validate inputs
     if (!user_id || !report_type || !period_start || !period_end) {
@@ -52,7 +125,7 @@ export async function POST(request: NextRequest) {
     // Get user info
     const { data: user, error: userError } = await supabase
       .from('users')
-      .select('id, first_name, email, org_id')
+      .select('id, first_name, email')
       .eq('id', user_id)
       .single();
 
@@ -60,13 +133,35 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // Fetch calls for the period
+    // Get agency_id from assignment if not provided
+    let resolvedAgencyId = agency_id;
+    if (!resolvedAgencyId) {
+      const { data: assignment } = await supabase
+        .from('user_agency_assignments')
+        .select('agency_id')
+        .eq('user_id', user_id)
+        .single();
+      resolvedAgencyId = assignment?.agency_id;
+    }
+
+    // Fetch call_scores for the period with related ingestion data
     const { data: calls, error: callsError } = await supabase
-      .from('call_lab_reports')
-      .select('*')
+      .from('call_scores')
+      .select(`
+        id,
+        created_at,
+        overall_score,
+        lite_scores,
+        full_scores,
+        diagnosis_summary,
+        ingestion_items (
+          participants,
+          transcript_metadata
+        )
+      `)
       .eq('user_id', user_id)
       .gte('created_at', period_start)
-      .lte('created_at', period_end)
+      .lte('created_at', period_end + 'T23:59:59')
       .order('created_at', { ascending: true });
 
     if (callsError) {
@@ -83,23 +178,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Transform calls to CallData format
-    const callData: CallData[] = calls.map(call => ({
-      date: call.call_date || call.created_at,
-      prospect: call.company_name || call.buyer_name || 'Unknown',
-      duration_minutes: call.duration_minutes || 30,
-      outcome: call.outcome || 'unknown',
-      scores: {
-        opening: call.opening_score || 5,
-        discovery: call.discovery_score || 5,
-        diagnostic: call.diagnostic_score || 5,
-        value_articulation: call.value_score || 5,
-        objection_navigation: call.objection_score || 5,
-        commitment: call.commitment_score || 5,
-        human_first: call.human_first_score || 5,
-      },
-      patterns_detected: call.patterns_detected || [],
-      key_moments: call.key_moments?.map((m: { description: string }) => m.description) || [],
-    }));
+    const callData: CallData[] = calls.map(call => mapCallScoresToCallData(call as CallScoreRecord));
 
     // Fetch previous reports for context (for monthly/quarterly)
     let previousReports: { type: ReportType; period: string; summary: string }[] = [];
@@ -119,7 +198,7 @@ export async function POST(request: NextRequest) {
         previousReports = weeklyReports.map(r => ({
           type: r.report_type as ReportType,
           period: `${r.period_start} to ${r.period_end}`,
-          summary: r.content?.wrap_up || 'No summary available',
+          summary: (r.content as { wrap_up?: string })?.wrap_up || 'No summary available',
         }));
       }
     } else if (report_type === 'quarterly') {
@@ -137,7 +216,7 @@ export async function POST(request: NextRequest) {
         previousReports = monthlyReports.map(r => ({
           type: r.report_type as ReportType,
           period: `${r.period_start} to ${r.period_end}`,
-          summary: r.content?.wrap_up || 'No summary available',
+          summary: (r.content as { wrap_up?: string })?.wrap_up || 'No summary available',
         }));
       }
     }
@@ -209,7 +288,7 @@ export async function POST(request: NextRequest) {
       .from('coaching_reports')
       .insert({
         user_id,
-        org_id: user.org_id,
+        agency_id: resolvedAgencyId,
         report_type,
         period_start,
         period_end,

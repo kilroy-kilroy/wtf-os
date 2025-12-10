@@ -32,11 +32,11 @@ export async function GET(request: NextRequest) {
 
     console.log(`Generating quarterly coaching reports for ${quarterLabel}`);
 
-    // Get all users with coaching enabled
-    const { data: users, error: usersError } = await supabase
-      .from('users')
-      .select('id, email, first_name, org_id')
-      .not('org_id', 'is', null);
+    // Get all users with agency assignments (active users)
+    const { data: userAssignments, error: usersError } = await supabase
+      .from('user_agency_assignments')
+      .select('user_id, agency_id, users(id, email, first_name)')
+      .not('user_id', 'is', null);
 
     if (usersError) {
       console.error('Error fetching users:', usersError);
@@ -50,11 +50,14 @@ export async function GET(request: NextRequest) {
     };
 
     // Process each user
-    for (const user of users || []) {
+    for (const assignment of userAssignments || []) {
+      const user = assignment.users as { id: string; email: string; first_name: string } | null;
+      if (!user) continue;
+
       try {
-        // Check if user has calls in the period
+        // Check if user has call_scores in the period
         const { data: calls, error: callsError } = await supabase
-          .from('call_lab_reports')
+          .from('call_scores')
           .select('id')
           .eq('user_id', user.id)
           .gte('created_at', periodStart)
@@ -93,6 +96,7 @@ export async function GET(request: NextRequest) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             user_id: user.id,
+            agency_id: assignment.agency_id,
             report_type: 'quarterly',
             period_start: periodStart,
             period_end: periodEnd,

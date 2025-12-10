@@ -1,9 +1,47 @@
 import type { SupabaseClient } from '../client';
-import type { Database, Json } from '../types';
+import type { Json } from '../types';
 
-type DiscoveryBriefRow = Database['public']['Tables']['discovery_briefs']['Row'];
-type DiscoveryBriefInsert = Database['public']['Tables']['discovery_briefs']['Insert'];
-type DiscoveryBriefUpdate = Database['public']['Tables']['discovery_briefs']['Update'];
+// Manual type definitions until types.ts is regenerated with discovery_briefs table
+export interface DiscoveryBriefRow {
+  id: string;
+  user_id: string | null;
+  agency_id: string;
+  version: string;
+  what_you_sell: string;
+  market_concerns: string | null;
+  target_company: string;
+  target_contact_name: string | null;
+  target_contact_title: string | null;
+  target_company_url: string | null;
+  target_linkedin_url: string | null;
+  product_strengths: string | null;
+  deal_context: Json;
+  markdown_response: string | null;
+  questions: Json;
+  meeting_frames: Json;
+  market_intel: Json;
+  company_intel: Json;
+  prospect_intel: Json;
+  opening_script: string | null;
+  authority_questions: Json;
+  depth_questions: Json;
+  guidance_questions: Json;
+  permission_gates: Json;
+  google_radar: Json;
+  meeting_agenda: string | null;
+  decision_tree: Json;
+  metadata: Json;
+  created_at: string;
+  updated_at: string;
+}
+
+type DiscoveryBriefInsert = Partial<DiscoveryBriefRow> & {
+  agency_id: string;
+  what_you_sell: string;
+  target_company: string;
+};
+
+type DiscoveryBriefUpdate = Partial<DiscoveryBriefRow>;
 
 export interface CreateDiscoveryBriefParams {
   user_id?: string;

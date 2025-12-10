@@ -21,7 +21,7 @@ const getAnthropic = () => new Anthropic({
 
 interface GenerateCoachingRequest {
   user_id: string;
-  agency_id?: string;
+  org_id?: string;
   report_type: ReportType;
   period_start: string;
   period_end: string;
@@ -102,7 +102,7 @@ function mapCallScoresToCallData(record: CallScoreRecord): CallData {
 export async function POST(request: NextRequest) {
   try {
     const body: GenerateCoachingRequest = await request.json();
-    const { user_id, agency_id, report_type, period_start, period_end } = body;
+    const { user_id, org_id, report_type, period_start, period_end } = body;
 
     // Validate inputs
     if (!user_id || !report_type || !period_start || !period_end) {
@@ -133,15 +133,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // Get agency_id from assignment if not provided
-    let resolvedAgencyId = agency_id;
-    if (!resolvedAgencyId) {
+    // Get org_id from assignment if not provided
+    let resolvedOrgId = org_id;
+    if (!resolvedOrgId) {
       const { data: assignment } = await supabase
         .from('user_agency_assignments')
         .select('agency_id')
         .eq('user_id', user_id)
         .single();
-      resolvedAgencyId = assignment?.agency_id;
+      resolvedOrgId = assignment?.agency_id;
     }
 
     // Fetch call_scores for the period with related ingestion data
@@ -275,28 +275,38 @@ export async function POST(request: NextRequest) {
     // Calculate aggregate scores
     const scoresAggregate = aggregateCallScores(callData);
 
-    // Calculate trends (compare to previous period if available)
-    const trends = {
-      overall_delta: 0,
-      trust_velocity_delta: 0,
-      patterns_trending_up: [] as string[],
-      patterns_trending_down: [] as string[],
+    // Map report content to existing table columns
+    // Existing table has: key_wins, areas_to_improve, action_items, pattern_breakdown, trend_analysis, executive_summary
+    const keyWins = reportContent.reinforcements || reportContent.key_wins || [];
+    const areasToImprove = reportContent.attack_list || reportContent.areas_to_improve || [];
+    const actionItems = reportContent.action_items || [];
+    const patternBreakdown = {
+      wtf_trends: reportContent.wtf_trends || [],
+      emergent_patterns: reportContent.emergent_patterns || [],
     };
+    const trendAnalysis = {
+      human_first_trendline: reportContent.human_first_trendline || {},
+      overall_delta: 0,
+      calls_analyzed: callData.length,
+    };
+    const executiveSummary = reportContent.wrap_up || reportContent.executive_summary || '';
 
-    // Store the report
+    // Store the report using existing table columns
     const { data: coachingReport, error: insertError } = await supabase
       .from('coaching_reports')
       .insert({
         user_id,
-        agency_id: resolvedAgencyId,
+        org_id: resolvedOrgId,
         report_type,
         period_start,
         period_end,
         scores_aggregate: scoresAggregate,
-        calls_analyzed: callData.length,
-        trends,
-        content: reportContent,
-        email_status: 'pending',
+        key_wins: keyWins,
+        areas_to_improve: areasToImprove,
+        action_items: actionItems,
+        pattern_breakdown: patternBreakdown,
+        trend_analysis: trendAnalysis,
+        executive_summary: executiveSummary,
       })
       .select()
       .single();
@@ -316,7 +326,12 @@ export async function POST(request: NextRequest) {
         period_end,
         calls_analyzed: callData.length,
         scores_aggregate: scoresAggregate,
-        content: reportContent,
+        key_wins: keyWins,
+        areas_to_improve: areasToImprove,
+        action_items: actionItems,
+        pattern_breakdown: patternBreakdown,
+        trend_analysis: trendAnalysis,
+        executive_summary: executiveSummary,
       },
     });
   } catch (error) {

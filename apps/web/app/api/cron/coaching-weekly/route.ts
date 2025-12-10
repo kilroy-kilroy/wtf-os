@@ -95,7 +95,7 @@ export async function GET(request: NextRequest) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             user_id: user.id,
-            agency_id: assignment.agency_id,
+            org_id: assignment.agency_id,
             report_type: 'weekly',
             period_start: periodStart,
             period_end: periodEnd,
@@ -108,14 +108,9 @@ export async function GET(request: NextRequest) {
           continue;
         }
 
-        const { report_id } = await generateResponse.json();
+        await generateResponse.json();
 
-        // Queue email for Monday 6 AM (handled by separate cron)
-        await supabase
-          .from('coaching_reports')
-          .update({ email_status: 'queued' })
-          .eq('id', report_id);
-
+        // Report generated successfully
         results.processed++;
       } catch (error) {
         results.errors.push(`User ${user.id}: ${error instanceof Error ? error.message : 'Unknown error'}`);

@@ -278,26 +278,7 @@ For each framework:
 - How it helped or hurt (brief)
 - One tactical note (what to do differently)
 
-5. AMBIGUITY DETECTION ENGINE
-
-Identify 4 to 6 subtle moments the rep may have missed:
-
-Watch for:
-- Humor that could be misread
-- Power dynamics shifting
-- Hidden objections
-- Decision-maker clues
-- Topic pivots (buyer avoiding something)
-- Money discomfort
-
-For each moment:
-- Quote (exact words from transcript)
-- Interpretation (what actually happened beneath the surface - state as fact)
-- Recommended language (exact script for handling it better)
-
-Be bold in your reads. This is the high-value psychic stuff.
-
-6. PATTERN INTELLIGENCE
+5. PATTERN INTELLIGENCE
 
 Identify patterns from the CANONICAL PATTERN LIBRARY that occurred in this call.
 
@@ -342,7 +323,7 @@ For each negative pattern detected (list 2-4):
 
 Do NOT invent new pattern names. Use ONLY patterns from the canonical library.
 
-7. TACTICAL MOMENT REWRITE
+6. TACTICAL MOMENT REWRITE
 
 Rewrite 3 to 5 pivotal moments with exact alternative language:
 
@@ -361,7 +342,7 @@ For each rewrite:
 
 Format as steal-worthy scripts. Use "Try this:" not "You could consider..."
 
-8. NEXT-CALL BLUEPRINT
+7. NEXT-CALL BLUEPRINT
 
 Provide a tactical playbook for the next 48 hours:
 
@@ -375,7 +356,7 @@ Provide a tactical playbook for the next 48 hours:
 
 Format as a numbered, actionable checklist.
 
-9. PERFORMANCE SCORES
+8. PERFORMANCE SCORES
 
 Rate across 9 dimensions (0-10 scale):
 
@@ -396,7 +377,7 @@ For each score:
 
 Two sentences total per dimension.
 
-10. BOTTOM LINE INSIGHT
+9. BOTTOM LINE INSIGHT
 
 Deliver one sharp, uncomfortable, but transformative insight about the rep's performance.
 
@@ -408,7 +389,7 @@ Format:
 Example:
 "You wrote the emotional story perfectly. You just missed the chapter where he needed you to lead. Fix your timing and the next one turns into a yes."
 
-11. PRO VALUE REMINDER
+10. PRO VALUE REMINDER
 
 End with:
 "Check your dashboard to see how this call updated your patterns and momentum. Pro is a system that learns with you. One call at a time, you're building a win machine."

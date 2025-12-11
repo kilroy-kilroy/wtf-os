@@ -56,17 +56,13 @@ export async function POST(request: NextRequest) {
       : CALLLAB_LITE_MARKDOWN_USER(promptParams);
 
     // Run the model
-    const result = await runModel({
-      model: 'claude-sonnet-4-20250514',
-      systemPrompt,
-      userPrompt,
-      maxTokens: version === 'pro' ? 8000 : 2000,
-    });
+    const toolName = version === 'pro' ? 'call-lab-full' : 'call-lab-lite';
+    const result = await runModel(toolName, systemPrompt, userPrompt);
 
     return NextResponse.json({
       success: true,
       version,
-      markdown: result,
+      markdown: result.content,
       metadata: {
         rep_name,
         prospect_company,

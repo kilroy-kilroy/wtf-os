@@ -90,7 +90,6 @@ export function DashboardClient({
   quickWins,
 }: DashboardClientProps) {
   const [selectedPattern, setSelectedPattern] = useState<DetectedPattern | null>(null);
-  const [completedWins, setCompletedWins] = useState<Set<string>>(new Set());
 
   const handlePatternClick = (pattern: DetectedPattern) => {
     setSelectedPattern(pattern);
@@ -98,18 +97,6 @@ export function DashboardClient({
 
   const handleCloseModal = () => {
     setSelectedPattern(null);
-  };
-
-  const handleCompleteWin = (winId: string) => {
-    setCompletedWins(prev => {
-      const next = new Set(prev);
-      if (next.has(winId)) {
-        next.delete(winId);
-      } else {
-        next.add(winId);
-      }
-      return next;
-    });
   };
 
   return (
@@ -208,11 +195,7 @@ export function DashboardClient({
 
             {/* Quick Wins */}
             {quickWins.length > 0 && (
-              <QuickWins
-                wins={quickWins}
-                onComplete={handleCompleteWin}
-                completedWins={completedWins}
-              />
+              <QuickWins wins={quickWins} />
             )}
           </div>
         </div>

@@ -1,33 +1,43 @@
 'use client';
 
-import { type MacroCategory } from '@wtf/patterns';
+import { isValidPattern } from './PatternIntelligence';
+
+// ============================================
+// TYPES
+// ============================================
+
+type Category = "connection" | "diagnosis" | "control" | "activation";
+
+interface DetectedPattern {
+  id: string;
+  name: string;
+  category: Category;
+}
 
 interface CallCardProps {
   call: {
     id: string;
-    name: string;
+    buyer_name: string;
     company?: string;
     date: string;
     score: number;
-    top_positive_pattern?: {
-      macro_name: string;
-      category: MacroCategory;
-    };
-    top_negative_pattern?: {
-      macro_name: string;
-      category: MacroCategory;
-    };
+    top_positive_pattern: DetectedPattern | null;
+    top_negative_pattern: DetectedPattern | null;
     next_step?: string;
   };
   onClick?: () => void;
 }
 
-function getCategoryColorClass(category: MacroCategory): string {
-  const colors: Record<MacroCategory, string> = {
-    connection: 'bg-[#FFDE59] text-black',
-    diagnosis: 'bg-blue-500 text-white',
-    control: 'bg-orange-500 text-white',
-    activation: 'bg-[#E51B23] text-white',
+// ============================================
+// HELPERS
+// ============================================
+
+function getCategoryColor(category: Category): string {
+  const colors: Record<Category, string> = {
+    connection: "#FFDE59",
+    diagnosis: "#4A90E2",
+    control: "#FF8C42",
+    activation: "#E51B23",
   };
   return colors[category];
 }
@@ -38,56 +48,80 @@ function getScoreColor(score: number): string {
   return 'text-[#E51B23]';
 }
 
+// ============================================
+// COMPONENT
+// ============================================
+
 export function CallCard({ call, onClick }: CallCardProps) {
+  // Validate patterns
+  const validPositive = call.top_positive_pattern && isValidPattern(call.top_positive_pattern.name)
+    ? call.top_positive_pattern
+    : null;
+  const validNegative = call.top_negative_pattern && isValidPattern(call.top_negative_pattern.name)
+    ? call.top_negative_pattern
+    : null;
+
   return (
     <div
-      className="bg-black border border-[#333] rounded-lg p-4 hover:border-[#E51B23] transition-colors cursor-pointer"
+      className="bg-[#1A1A1A] border border-[#333] p-5 hover:border-[#E51B23] transition-colors cursor-pointer"
       onClick={onClick}
     >
       {/* Header */}
-      <div className="flex justify-between items-start mb-3">
+      <div className="flex justify-between items-start mb-4">
         <div>
-          <h3 className="text-white font-semibold">
-            {call.name}
+          <h3 className="text-white font-bold text-base">
+            {call.buyer_name}
             {call.company && (
-              <span className="text-[#B3B3B3]"> - {call.company}</span>
+              <span className="font-normal text-[#999]"> - {call.company}</span>
             )}
           </h3>
-          <p className="text-[#666] text-xs mt-1">{call.date}</p>
+          <p className="text-[#666] text-[11px] mt-1">{call.date}</p>
         </div>
-        <span className={`text-2xl font-bold ${getScoreColor(call.score)}`}>
+        <span className={`font-anton text-[32px] leading-none ${getScoreColor(call.score)}`}>
           {call.score}
         </span>
       </div>
 
       {/* Patterns */}
-      <div className="space-y-2 mb-3">
+      <div className="space-y-2 mb-4">
         {/* Positive Pattern */}
-        {call.top_positive_pattern && (
-          <div className="flex items-center gap-2">
-            <span className="text-green-400 text-sm">✓</span>
-            <span className="text-[#FFDE59] text-sm font-medium">
-              {call.top_positive_pattern.macro_name}
+        {validPositive && (
+          <div
+            className="flex items-center gap-2 p-2 bg-[#0A0A0A] border-l-[3px] border-[#FFDE59]"
+          >
+            <span className="text-[#FFDE59] font-bold text-sm">✓</span>
+            <span className="text-white text-[11px] font-semibold flex-1">
+              {validPositive.name}
             </span>
             <span
-              className={`text-[10px] px-2 py-0.5 rounded font-semibold uppercase ${getCategoryColorClass(call.top_positive_pattern.category)}`}
+              className="text-[9px] font-bold tracking-wide px-2 py-0.5 rounded"
+              style={{
+                backgroundColor: getCategoryColor(validPositive.category),
+                color: validPositive.category === 'connection' ? '#000' : '#FFF'
+              }}
             >
-              {call.top_positive_pattern.category}
+              {validPositive.category.toUpperCase()}
             </span>
           </div>
         )}
 
         {/* Negative Pattern */}
-        {call.top_negative_pattern && (
-          <div className="flex items-center gap-2">
-            <span className="text-[#E51B23] text-sm">!</span>
-            <span className="text-[#B3B3B3] text-sm font-medium">
-              {call.top_negative_pattern.macro_name}
+        {validNegative && (
+          <div
+            className="flex items-center gap-2 p-2 bg-[#0A0A0A] border-l-[3px] border-[#E51B23]"
+          >
+            <span className="text-[#E51B23] font-bold text-sm">!</span>
+            <span className="text-white text-[11px] font-semibold flex-1">
+              {validNegative.name}
             </span>
             <span
-              className={`text-[10px] px-2 py-0.5 rounded font-semibold uppercase ${getCategoryColorClass(call.top_negative_pattern.category)}`}
+              className="text-[9px] font-bold tracking-wide px-2 py-0.5 rounded"
+              style={{
+                backgroundColor: getCategoryColor(validNegative.category),
+                color: validNegative.category === 'connection' ? '#000' : '#FFF'
+              }}
             >
-              {call.top_negative_pattern.category}
+              {validNegative.category.toUpperCase()}
             </span>
           </div>
         )}
@@ -95,9 +129,8 @@ export function CallCard({ call, onClick }: CallCardProps) {
 
       {/* Next Step */}
       {call.next_step && (
-        <div className="border-t border-[#333] pt-2 mt-2">
-          <span className="text-[#666] text-xs font-semibold">NEXT: </span>
-          <span className="text-[#B3B3B3] text-xs">{call.next_step}</span>
+        <div className="text-[11px] text-[#999]">
+          <span className="font-bold text-[#E51B23]">NEXT:</span> {call.next_step}
         </div>
       )}
     </div>

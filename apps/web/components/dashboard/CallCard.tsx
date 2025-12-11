@@ -70,7 +70,7 @@ export function CallCard({ call }: CallCardProps) {
 
   return (
     <Link
-      href={`/calls/${call.id}`}
+      href={`/call-lab/report/${call.id}`}
       className="block bg-[#1A1A1A] border-2 border-[#333] p-6 hover:border-[#E51B23] hover:-translate-y-0.5 transition-all cursor-pointer no-underline"
     >
       {/* Header */}
@@ -147,7 +147,7 @@ export function CallCard({ call }: CallCardProps) {
             📧 GENERATE EMAIL
           </button>
           <Link
-            href={`/calls/${call.id}/outcome`}
+            href={`/call-lab/report/${call.id}`}
             onClick={e => e.stopPropagation()}
             className="flex-1 bg-[#0A0A0A] border border-[#333] text-white py-2.5 px-4 text-[10px] font-semibold tracking-wide hover:bg-[#E51B23] hover:border-[#E51B23] transition-all text-center no-underline"
           >

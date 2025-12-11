@@ -1,0 +1,283 @@
+{
+  "macros": [
+    {
+      "id": "cultural_handshake",
+      "name": "The Cultural Handshake",
+      "category": "connection",
+      "polarity": "positive",
+      "summary": "Fast shared context and comfort that accelerates trust.",
+      "behavioral_signals": [
+        "early humor landing",
+        "shared frame formation",
+        "buyer mirrors tone",
+        "smooth energy matching",
+        "psychological safety signal",
+        "natural back and forth rhythm",
+        "shared context snap"
+      ]
+    },
+    {
+      "id": "peer_validation_engine",
+      "name": "The Peer Validation Engine",
+      "category": "connection",
+      "polarity": "positive",
+      "summary": "Buyer treats you like a peer or advisor and adopts your language.",
+      "behavioral_signals": [
+        "authority framing by buyer",
+        "buyer language adoption",
+        "buyer narrative expansion",
+        "expertise mirror",
+        "vocabulary handoff",
+        "newsletter pre-sale"
+      ]
+    },
+    {
+      "id": "vulnerability_flip",
+      "name": "The Vulnerability Flip",
+      "category": "connection",
+      "polarity": "positive",
+      "summary": "A personal story unlocks truth and reduces buyer shame.",
+      "behavioral_signals": [
+        "buyer voluntary vulnerability",
+        "empathy reflection",
+        "buyer motivator identification",
+        "loss aversion confirmation",
+        "desire framing",
+        "emotional weight acknowledgement"
+      ]
+    },
+    {
+      "id": "scenic_route",
+      "name": "The Scenic Route",
+      "category": "connection",
+      "polarity": "negative",
+      "summary": "Rapport drifts into tangents and control is lost.",
+      "behavioral_signals": [
+        "topic hopping",
+        "meandering structure",
+        "talking through buyer",
+        "letting buyer drift unchecked",
+        "forced warmth",
+        "over eagerness",
+        "ignoring buyer tone",
+        "energy mismatch"
+      ]
+    },
+    {
+      "id": "business_blitzer",
+      "name": "The Business Blitzer",
+      "category": "connection",
+      "polarity": "negative",
+      "summary": "You rush into business without emotional calibration.",
+      "behavioral_signals": [
+        "business first jump",
+        "abrupt agenda start",
+        "ignoring emotional cues",
+        "no rapport stage",
+        "acronym dumping",
+        "industry flex"
+      ]
+    },
+    {
+      "id": "diagnostic_reveal",
+      "name": "The Diagnostic Reveal",
+      "category": "diagnosis",
+      "polarity": "positive",
+      "summary": "You articulate the real problem before the buyer fully says it.",
+      "behavioral_signals": [
+        "clean problem summary",
+        "problem excavation",
+        "impact excavation",
+        "strategic depth link",
+        "context mapping",
+        "clear outcome reframe",
+        "signal based relevance delivery",
+        "story to strategy bridge",
+        "pricing intervention"
+      ]
+    },
+    {
+      "id": "self_diagnosis_pull",
+      "name": "The Self Diagnosis Pull",
+      "category": "diagnosis",
+      "polarity": "positive",
+      "summary": "Questions lead the buyer to discover their own truth.",
+      "behavioral_signals": [
+        "future state painting",
+        "criteria surfacing",
+        "decision journey discovery",
+        "budget realism probe",
+        "buyer connects dots unprompted"
+      ]
+    },
+    {
+      "id": "generous_professor",
+      "name": "The Generous Professor",
+      "category": "diagnosis",
+      "polarity": "negative",
+      "summary": "You teach too much and diagnose too little.",
+      "behavioral_signals": [
+        "conceptual over explanation",
+        "feature drowning",
+        "misaligned story choice",
+        "premature pitch",
+        "non listening question",
+        "over customization without buy-in",
+        "over solutioning",
+        "generosity trap"
+      ]
+    },
+    {
+      "id": "advice_avalanche",
+      "name": "The Advice Avalanche",
+      "category": "diagnosis",
+      "polarity": "negative",
+      "summary": "You give away full solutions during discovery.",
+      "behavioral_signals": [
+        "advice avalanche",
+        "giving full roadmap",
+        "pretend strategy session",
+        "step by step teaching"
+      ]
+    },
+    {
+      "id": "surface_scanner",
+      "name": "The Surface Scanner",
+      "category": "diagnosis",
+      "polarity": "negative",
+      "summary": "Discovery stays shallow and never hits impact or criteria.",
+      "behavioral_signals": [
+        "surface pain looping",
+        "no impact excavation",
+        "no strategic depth",
+        "no criteria discovery",
+        "detached question sequencing",
+        "problem switching without closure",
+        "premature diagnosis",
+        "evaluation fog",
+        "risk profile unexplored"
+      ]
+    },
+    {
+      "id": "framework_drop",
+      "name": "The Framework Drop",
+      "category": "control",
+      "polarity": "positive",
+      "summary": "A simple model organizes the buyer's chaos and builds authority.",
+      "behavioral_signals": [
+        "clear framing",
+        "story deployment",
+        "controlled feature use",
+        "one problem one promise",
+        "team visibility engine",
+        "expansion slide"
+      ]
+    },
+    {
+      "id": "agenda_abandoner",
+      "name": "The Agenda Abandoner",
+      "category": "control",
+      "polarity": "negative",
+      "summary": "You set an agenda but never return to it.",
+      "behavioral_signals": [
+        "agenda abandonment",
+        "time mismanagement",
+        "priority landscape ignored",
+        "buying process ignored",
+        "no timeline mapping"
+      ]
+    },
+    {
+      "id": "passenger",
+      "name": "The Passenger",
+      "category": "control",
+      "polarity": "negative",
+      "summary": "Buyer leads the call while you follow.",
+      "behavioral_signals": [
+        "no permission asking",
+        "undefined ownership",
+        "hidden decider missed",
+        "buyer led sequencing",
+        "no conversation reset"
+      ]
+    },
+    {
+      "id": "premature_solution",
+      "name": "The Premature Solution",
+      "category": "control",
+      "polarity": "negative",
+      "summary": "Solution talk appears before discovery is complete.",
+      "behavioral_signals": [
+        "premature solution",
+        "early feature talk",
+        "assumption based prescribing",
+        "solving before stakeholder clarity",
+        "offer drift",
+        "promise stack",
+        "misaligned promise",
+        "price framing before value"
+      ]
+    },
+    {
+      "id": "mirror_close",
+      "name": "The Mirror Close",
+      "category": "activation",
+      "polarity": "positive",
+      "summary": "You reflect the buyer's own desires and stakes back to them.",
+      "behavioral_signals": [
+        "buyer pulling forward",
+        "clear timeline alignment",
+        "agreement on success criteria",
+        "micro commitment capture",
+        "next step precision",
+        "clean decision reflection"
+      ]
+    },
+    {
+      "id": "permission_builder",
+      "name": "The Permission Builder",
+      "category": "activation",
+      "polarity": "positive",
+      "summary": "You make the decision feel safe and pressure free.",
+      "behavioral_signals": [
+        "permission asking",
+        "permission pattern",
+        "controlled parking of topics",
+        "risk reduction language"
+      ]
+    },
+    {
+      "id": "soft_close_fade",
+      "name": "The Soft Close Fade",
+      "category": "activation",
+      "polarity": "negative",
+      "summary": "The close loses energy due to vague next steps.",
+      "behavioral_signals": [
+        "no clear next step",
+        "weak close",
+        "action ambiguity",
+        "no confirmation of interest",
+        "late bill drop"
+      ]
+    },
+    {
+      "id": "over_explain_loop",
+      "name": "The Over Explain Loop",
+      "category": "activation",
+      "polarity": "negative",
+      "summary": "You try to explain your way out instead of asking or reframing.",
+      "behavioral_signals": [
+        "defensive response",
+        "over reassurance",
+        "pressure spike",
+        "expertise overcompensation",
+        "credibility erosion",
+        "hesitation cascade",
+        "apology overuse",
+        "uncertain framing",
+        "outcome undersell",
+        "confidence overcompensation"
+      ]
+    }
+  ]
+}

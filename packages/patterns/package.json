@@ -1,0 +1,14 @@
+{
+  "name": "@wtf/patterns",
+  "version": "1.0.0",
+  "private": true,
+  "main": "./loader.ts",
+  "types": "./loader.ts",
+  "exports": {
+    ".": "./loader.ts",
+    "./macro_patterns.json": "./macro_patterns.json",
+    "./micro_patterns.json": "./micro_patterns.json",
+    "./pattern_mapping.json": "./pattern_mapping.json",
+    "./pattern_counters.json": "./pattern_counters.json"
+  }
+}

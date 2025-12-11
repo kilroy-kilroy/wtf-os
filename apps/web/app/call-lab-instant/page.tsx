@@ -8,12 +8,13 @@ export const metadata = {
 
 export default function CallLabInstantPage() {
   return (
-    <div className="min-h-screen bg-black text-white font-[Poppins] flex flex-col justify-center items-center p-8 relative overflow-hidden">
-      <style jsx global>{`
-        @import url('https://fonts.googleapis.com/css2?family=Anton&family=Poppins:wght@400;600;700&display=swap');
-      `}</style>
-
-      {/* Background glow */}
+    <>
+      <link
+        href="https://fonts.googleapis.com/css2?family=Anton&family=Poppins:wght@400;600;700&display=swap"
+        rel="stylesheet"
+      />
+      <div className="min-h-screen bg-black text-white font-[Poppins] flex flex-col justify-center items-center p-8 relative overflow-hidden">
+        {/* Background glow */}
       <div
         className="absolute top-[-20%] right-[-10%] w-[600px] h-[600px] bg-[#E51B23] rounded-full opacity-10 blur-[120px] z-0"
         aria-hidden="true"
@@ -84,5 +85,6 @@ export default function CallLabInstantPage() {
         </div>
       </div>
     </div>
+    </>
   );
 }

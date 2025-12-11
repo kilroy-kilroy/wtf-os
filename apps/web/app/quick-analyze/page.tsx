@@ -158,12 +158,17 @@ export default function QuickAnalyzePage() {
           </p>
 
           <div className="my-8 p-6 bg-[#FFDE59]/10 border-l-4 border-[#FFDE59] text-left">
-            <div className="font-bold text-[#FFDE59] mb-2">Suggested Prompt:</div>
+            <div className="font-bold text-[#FFDE59] mb-2">Pick A Scenario:</div>
             <div className="text-white/90 leading-relaxed">
-              &ldquo;Hi [prospect name], I&apos;m calling because we help agencies like yours
-              increase close rates by analyzing their sales calls with AI. Most agencies are leaving
-              money on the table without realizing it. Would you be open to a quick 15-minute
-              conversation to see if we can help?&rdquo;
+              <ul className="list-none space-y-2 mb-4">
+                <li><strong>Discovery Call Opener:</strong> &ldquo;So tell me about your agency...&rdquo;</li>
+                <li><strong>Value Prop Pitch:</strong> &ldquo;Here&apos;s how we help agencies like yours...&rdquo;</li>
+                <li><strong>Pricing Presentation:</strong> &ldquo;Our engagement typically runs...&rdquo;</li>
+                <li><strong>Objection Response:</strong> &ldquo;We need to think about it...&rdquo; → You say...</li>
+              </ul>
+              <p className="text-white/70">
+                Try one of those or just launch into your elevator pitch...whatever you want to get some real, actionable feedback on...
+              </p>
             </div>
           </div>
 

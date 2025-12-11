@@ -45,7 +45,7 @@ export function WeeklyFocus({ focus, weekLabel }: WeeklyFocusProps) {
       {/* Header */}
       <div className="flex justify-between items-center mb-5">
         <h2 className="font-anton text-xl tracking-wide text-white">
-          THIS WEEK'S FOCUS
+          THIS WEEK&apos;S FOCUS
         </h2>
         <div className="bg-[#0A0A0A] border border-[#333] px-3 py-1.5 text-[9px] font-bold tracking-wider text-[#999]">
           {weekLabel || defaultWeekLabel}

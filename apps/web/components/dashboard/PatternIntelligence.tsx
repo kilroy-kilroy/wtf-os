@@ -199,7 +199,7 @@ export function PatternIntelligence({
         <div className="mt-6 pt-6 border-t-2 border-[#333] flex items-start gap-3">
           <div className="text-2xl leading-none">💡</div>
           <div className="flex-1 text-[12px] leading-relaxed text-white">
-            You're crushing <strong className="text-[#FFDE59]">{topStrengths[0].name}</strong> but{' '}
+            You&apos;re crushing <strong className="text-[#FFDE59]">{topStrengths[0].name}</strong> but{' '}
             <strong className="text-[#E51B23]">{topWeaknesses[0].name}</strong> is costing you deals.
           </div>
         </div>

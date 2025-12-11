@@ -64,7 +64,7 @@ export function QuickWins({ wins }: QuickWinsProps) {
               {/* Example */}
               <div className="bg-[#1A1A1A] border-l-[3px] border-[#FFDE59] px-4 py-3 mb-4">
                 <div className="text-[9px] font-bold tracking-wider text-[#FFDE59] mb-1.5">SAY THIS:</div>
-                <div className="text-[13px] leading-relaxed text-white italic">"{win.example_phrase}"</div>
+                <div className="text-[13px] leading-relaxed text-white italic">&ldquo;{win.example_phrase}&rdquo;</div>
               </div>
 
               {/* Action */}

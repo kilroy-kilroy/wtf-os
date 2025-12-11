@@ -40,9 +40,16 @@ function getCleanCallLabel(percentage: number): string {
 
 function getCleanCallColor(percentage: number): string {
   if (percentage >= 80) return 'text-green-400';
-  if (percentage >= 60) return 'text-yellow-400';
+  if (percentage >= 60) return 'text-[#FFDE59]';
   if (percentage >= 40) return 'text-orange-400';
-  return 'text-red-400';
+  return 'text-[#E51B23]';
+}
+
+function getProgressColor(percentage: number): string {
+  if (percentage >= 80) return 'bg-green-500';
+  if (percentage >= 60) return 'bg-[#FFDE59]';
+  if (percentage >= 40) return 'bg-orange-500';
+  return 'bg-[#E51B23]';
 }
 
 export function CleanCallRate({ clean_count, total_count }: CleanCallRateProps) {
@@ -52,8 +59,8 @@ export function CleanCallRate({ clean_count, total_count }: CleanCallRateProps) 
   const color = getCleanCallColor(percentage);
 
   return (
-    <div className="bg-slate-800 border border-slate-700 rounded-lg p-4">
-      <h3 className="text-slate-400 text-xs font-semibold uppercase mb-2">
+    <div className="bg-black border border-[#E51B23] rounded-lg p-4">
+      <h3 className="text-[#B3B3B3] text-xs font-semibold uppercase mb-2">
         CLEAN CALL RATE
       </h3>
 
@@ -61,30 +68,22 @@ export function CleanCallRate({ clean_count, total_count }: CleanCallRateProps) 
         <>
           <div className="flex items-baseline gap-2">
             <span className={`text-2xl font-bold ${color}`}>{percentage}%</span>
-            <span className="text-slate-400 text-sm">
+            <span className="text-[#666] text-sm">
               ({clean_count} of {total_count} calls)
             </span>
           </div>
-          <p className="text-slate-300 text-sm mt-2">{label}</p>
+          <p className="text-[#B3B3B3] text-sm mt-2">{label}</p>
 
           {/* Progress bar */}
-          <div className="mt-3 h-2 bg-slate-700 rounded-full overflow-hidden">
+          <div className="mt-3 h-2 bg-[#333] rounded-full overflow-hidden">
             <div
-              className={`h-full rounded-full transition-all ${
-                percentage >= 80
-                  ? 'bg-green-500'
-                  : percentage >= 60
-                    ? 'bg-yellow-500'
-                    : percentage >= 40
-                      ? 'bg-orange-500'
-                      : 'bg-red-500'
-              }`}
+              className={`h-full rounded-full transition-all ${getProgressColor(percentage)}`}
               style={{ width: `${percentage}%` }}
             />
           </div>
         </>
       ) : (
-        <p className="text-slate-500 text-sm">No calls analyzed yet</p>
+        <p className="text-[#666] text-sm">No calls analyzed yet</p>
       )}
     </div>
   );

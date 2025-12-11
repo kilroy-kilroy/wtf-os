@@ -34,8 +34,10 @@ export function PatternIntelligence({
   const mostFrequentFriction = negativePatterns[0];
 
   return (
-    <div className="bg-slate-800 border border-slate-700 rounded-lg p-6">
-      <h2 className="text-white font-bold text-lg mb-4">PATTERN INTELLIGENCE</h2>
+    <div className="bg-black border border-[#E51B23] rounded-lg p-6">
+      <h2 className="font-anton text-lg uppercase tracking-wide text-[#FFDE59] mb-4">
+        PATTERN INTELLIGENCE
+      </h2>
 
       <div className="grid grid-cols-2 gap-6">
         {/* Top Strengths */}
@@ -50,23 +52,23 @@ export function PatternIntelligence({
                   key={pattern.macro_id}
                   className="flex justify-between items-center"
                 >
-                  <span className="text-slate-300 text-sm">
+                  <span className="text-[#B3B3B3] text-sm">
                     {pattern.macro_name}
                   </span>
-                  <span className="text-yellow-400 text-sm font-mono">
+                  <span className="text-[#FFDE59] text-sm font-mono">
                     ({pattern.count})
                   </span>
                 </div>
               ))
             ) : (
-              <p className="text-slate-500 text-sm">No data yet</p>
+              <p className="text-[#666] text-sm">No data yet</p>
             )}
           </div>
         </div>
 
         {/* Top Weaknesses */}
         <div>
-          <h3 className="text-red-400 font-semibold text-sm mb-3">
+          <h3 className="text-[#E51B23] font-semibold text-sm mb-3">
             TOP WEAKNESSES
           </h3>
           <div className="space-y-2">
@@ -76,16 +78,16 @@ export function PatternIntelligence({
                   key={pattern.macro_id}
                   className="flex justify-between items-center"
                 >
-                  <span className="text-slate-300 text-sm">
+                  <span className="text-[#B3B3B3] text-sm">
                     {pattern.macro_name}
                   </span>
-                  <span className="text-red-400 text-sm font-mono">
+                  <span className="text-[#E51B23] text-sm font-mono">
                     ({pattern.count})
                   </span>
                 </div>
               ))
             ) : (
-              <p className="text-slate-500 text-sm">No data yet</p>
+              <p className="text-[#666] text-sm">No data yet</p>
             )}
           </div>
         </div>
@@ -93,14 +95,14 @@ export function PatternIntelligence({
 
       {/* Summary Stats */}
       {(mostConsistentWin || mostFrequentFriction) && (
-        <div className="border-t border-slate-700 mt-4 pt-4 grid grid-cols-2 gap-4">
+        <div className="border-t border-[#333] mt-4 pt-4 grid grid-cols-2 gap-4">
           {mostConsistentWin && (
             <div>
-              <span className="text-slate-500 text-xs">MOST CONSISTENT WIN</span>
-              <p className="text-yellow-400 font-medium">
+              <span className="text-[#666] text-xs">MOST CONSISTENT WIN</span>
+              <p className="text-[#FFDE59] font-medium">
                 {mostConsistentWin.macro_name}
               </p>
-              <p className="text-slate-400 text-xs">
+              <p className="text-[#B3B3B3] text-xs">
                 {mostConsistentWin.count}/{totalCalls} calls (
                 {Math.round((mostConsistentWin.count / totalCalls) * 100)}%)
               </p>
@@ -108,13 +110,13 @@ export function PatternIntelligence({
           )}
           {mostFrequentFriction && (
             <div>
-              <span className="text-slate-500 text-xs">
+              <span className="text-[#666] text-xs">
                 MOST FREQUENT FRICTION
               </span>
-              <p className="text-red-400 font-medium">
+              <p className="text-[#E51B23] font-medium">
                 {mostFrequentFriction.macro_name}
               </p>
-              <p className="text-slate-400 text-xs">
+              <p className="text-[#B3B3B3] text-xs">
                 {mostFrequentFriction.count}/{totalCalls} calls (
                 {Math.round((mostFrequentFriction.count / totalCalls) * 100)}%)
               </p>

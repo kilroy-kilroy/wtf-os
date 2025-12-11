@@ -15,20 +15,20 @@ function getScoreGrade(value: number, max: number): ScoreGrade {
     return {
       grade: 'Strong',
       icon: '⚡',
-      className: 'bg-yellow-500 text-black',
+      className: 'bg-[#FFDE59] text-black',
     };
   }
   if (percentage >= 60) {
     return {
       grade: 'Developing',
       icon: '◆',
-      className: 'bg-slate-600 text-white border border-slate-500',
+      className: 'bg-[#333] text-white border border-[#666]',
     };
   }
   return {
     grade: 'Needs Work',
     icon: '⚠️',
-    className: 'bg-red-500 text-white',
+    className: 'bg-[#E51B23] text-white',
   };
 }
 
@@ -48,17 +48,17 @@ export function ScoreCard({
   const { grade, icon, className } = getScoreGrade(value, max);
 
   return (
-    <div className="bg-slate-800 border border-slate-700 rounded-lg p-4">
-      <label className="text-slate-400 text-xs font-semibold uppercase">
+    <div className="bg-black border border-[#333] rounded-lg p-4">
+      <label className="text-[#B3B3B3] text-xs font-semibold uppercase">
         {dimension}
       </label>
       {description && (
-        <p className="text-slate-500 text-xs mt-0.5">{description}</p>
+        <p className="text-[#666] text-xs mt-0.5">{description}</p>
       )}
       <div className="flex justify-between items-center mt-2">
         <span className="text-white text-2xl font-bold">
           {value}
-          <span className="text-slate-500 text-lg">/{max}</span>
+          <span className="text-[#666] text-lg">/{max}</span>
         </span>
         <span className={`text-xs px-2 py-1 rounded font-semibold ${className}`}>
           {icon} {grade}
@@ -80,7 +80,7 @@ interface MultiScoreCardProps {
 
 export function MultiScoreCard({ title, scores }: MultiScoreCardProps) {
   return (
-    <div className="bg-slate-800 border border-slate-700 rounded-lg p-4">
+    <div className="bg-black border border-[#333] rounded-lg p-4">
       <h3 className="text-white font-bold text-sm mb-3">{title}</h3>
       <div className="space-y-3">
         {scores.map((score) => {
@@ -89,7 +89,7 @@ export function MultiScoreCard({ title, scores }: MultiScoreCardProps) {
 
           return (
             <div key={score.dimension} className="flex justify-between items-center">
-              <span className="text-slate-300 text-sm">{score.dimension}</span>
+              <span className="text-[#B3B3B3] text-sm">{score.dimension}</span>
               <div className="flex items-center gap-2">
                 <span className="text-white font-mono">
                   {score.value}/{max}

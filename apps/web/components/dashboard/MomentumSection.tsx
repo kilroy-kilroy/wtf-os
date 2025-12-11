@@ -36,7 +36,7 @@ function getTrendIcon(trend: Trend): string {
 function getTrendColor(trend: Trend): string {
   const colors: Record<Trend, string> = {
     rising: 'text-green-400',
-    stable: 'text-slate-400',
+    stable: 'text-[#B3B3B3]',
     falling: 'text-orange-400',
   };
   return colors[trend];
@@ -48,23 +48,25 @@ export function MomentumSection({
   next_call_focus,
 }: MomentumSectionProps) {
   return (
-    <div className="bg-slate-800 border border-slate-700 rounded-lg p-6">
-      <h2 className="text-white font-bold text-lg mb-4">MOMENTUM</h2>
+    <div className="bg-black border border-[#E51B23] rounded-lg p-6">
+      <h2 className="font-anton text-lg uppercase tracking-wide text-[#FFDE59] mb-4">
+        MOMENTUM
+      </h2>
 
       <div className="space-y-4">
         {/* Biggest Win - NEW */}
         {top_positive_pattern && (
-          <div className="bg-slate-900/50 border-l-4 border-yellow-500 p-4 rounded-r">
-            <span className="text-slate-500 text-xs font-semibold">
+          <div className="bg-[#0A0A0A] border-l-4 border-[#FFDE59] p-4 rounded-r">
+            <span className="text-[#666] text-xs font-semibold">
               BIGGEST WIN
             </span>
             <div className="flex items-center gap-2 mt-1">
-              <span className="text-yellow-400 font-bold text-lg">
+              <span className="text-[#FFDE59] font-bold text-lg">
                 {top_positive_pattern.macro_name}
               </span>
-              <span className="text-yellow-500">⚡</span>
+              <span className="text-[#FFDE59]">⚡</span>
             </div>
-            <p className="text-slate-400 text-sm mt-1">
+            <p className="text-[#B3B3B3] text-sm mt-1">
               Appearing in {top_positive_pattern.frequency}/
               {top_positive_pattern.total_calls} calls (
               {Math.round(
@@ -87,16 +89,16 @@ export function MomentumSection({
 
         {/* Biggest Missed Move */}
         {top_negative_pattern && (
-          <div className="bg-slate-900/50 border-l-4 border-red-500 p-4 rounded-r">
-            <span className="text-slate-500 text-xs font-semibold">
+          <div className="bg-[#0A0A0A] border-l-4 border-[#E51B23] p-4 rounded-r">
+            <span className="text-[#666] text-xs font-semibold">
               BIGGEST MISSED MOVE
             </span>
             <div className="flex items-center gap-2 mt-1">
-              <span className="text-red-400 font-bold text-lg">
+              <span className="text-[#E51B23] font-bold text-lg">
                 {top_negative_pattern.macro_name}
               </span>
             </div>
-            <p className="text-slate-400 text-sm mt-1">
+            <p className="text-[#B3B3B3] text-sm mt-1">
               Appearing in {top_negative_pattern.frequency}/
               {top_negative_pattern.total_calls} calls (
               {Math.round(
@@ -111,8 +113,8 @@ export function MomentumSection({
 
         {/* Next Call Focus */}
         {next_call_focus && (
-          <div className="bg-slate-900/50 border-l-4 border-blue-500 p-4 rounded-r">
-            <span className="text-slate-500 text-xs font-semibold">
+          <div className="bg-[#0A0A0A] border-l-4 border-blue-500 p-4 rounded-r">
+            <span className="text-[#666] text-xs font-semibold">
               NEXT CALL FOCUS
             </span>
             <p className="text-white font-medium mt-1">{next_call_focus}</p>
@@ -122,7 +124,7 @@ export function MomentumSection({
         {/* Empty State */}
         {!top_positive_pattern && !top_negative_pattern && !next_call_focus && (
           <div className="text-center py-8">
-            <p className="text-slate-500">
+            <p className="text-[#666]">
               Analyze some calls to see your momentum
             </p>
           </div>

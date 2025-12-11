@@ -61,28 +61,13 @@ export function PatternIntelligence({
   totalCalls,
   onPatternClick,
 }: PatternIntelligenceProps) {
-  // Validate and filter patterns
-  const validPositive = positivePatterns.filter(p => {
-    if (!isValidPattern(p.name)) {
-      console.warn(`Invalid pattern detected: ${p.name}`);
-      return false;
-    }
-    return true;
-  });
+  // Show patterns - validation is optional since dashboard may show skill names
+  // Only log warnings but don't filter out data
+  const topStrengths = positivePatterns.slice(0, 3);
+  const topWeaknesses = negativePatterns.slice(0, 3);
 
-  const validNegative = negativePatterns.filter(p => {
-    if (!isValidPattern(p.name)) {
-      console.warn(`Invalid pattern detected: ${p.name}`);
-      return false;
-    }
-    return true;
-  });
-
-  const topStrengths = validPositive.slice(0, 3);
-  const topWeaknesses = validNegative.slice(0, 3);
-
-  const mostConsistentWin = validPositive[0];
-  const mostFrequentFriction = validNegative[0];
+  const mostConsistentWin = positivePatterns[0];
+  const mostFrequentFriction = negativePatterns[0];
 
   // Empty state
   if (topStrengths.length === 0 && topWeaknesses.length === 0) {

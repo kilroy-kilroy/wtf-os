@@ -181,7 +181,7 @@ export default async function DashboardPage() {
   }
 
   const data = await getDashboardData(user.id);
-  const { metrics, patternRadar, recentCalls, quickInsights } = data;
+  const { metrics, patternRadar, detectedPatterns, recentCalls, quickInsights } = data;
 
   // Calculate scores
   const overallScore = Math.round(metrics.skillImprovementIndex);
@@ -222,48 +222,39 @@ export default async function DashboardPage() {
     next_step: call.improvementHighlight || undefined,
   }));
 
-  // Transform pattern data for PatternIntelligence
-  const positivePatterns: DetectedPattern[] = patternRadar.topStrengths.map((s, i) => ({
-    id: `strength_${i}`,
-    name: s.name,
-    category: "connection" as const,
-    polarity: "positive" as const,
-    frequency: Math.round(s.current),
-    percentage: s.current,
-  }));
+  // Use aggregated patterns from calls (canonical pattern names)
+  const positivePatterns: DetectedPattern[] = detectedPatterns
+    .filter(p => p.polarity === "positive")
+    .slice(0, 5);
 
-  const negativePatterns: DetectedPattern[] = patternRadar.topWeaknesses.map((w, i) => ({
-    id: w.name.toLowerCase().replace(/\s+/g, '_').replace(/^the_/, ''),
-    name: w.name,
-    category: "connection" as const,
-    polarity: "negative" as const,
-    frequency: Math.round(100 - w.current),
-    percentage: 100 - w.current,
-  }));
+  const negativePatterns: DetectedPattern[] = detectedPatterns
+    .filter(p => p.polarity === "negative")
+    .slice(0, 5);
 
-  // Momentum data
-  const biggestWin = patternRadar.mostImprovedSkill
+  // Momentum data - use top detected patterns
+  const topPositive = positivePatterns[0];
+  const topNegative = negativePatterns[0];
+
+  const biggestWin = topPositive
     ? {
-        pattern_id: patternRadar.mostImprovedSkill.toLowerCase().replace(/\s+/g, '_'),
-        macro_name: patternRadar.mostImprovedSkill,
-        frequency: Math.round(patternRadar.topStrengths[0]?.current || 0),
+        pattern_id: topPositive.id,
+        macro_name: topPositive.name,
+        frequency: topPositive.frequency,
         total_calls: metrics.callsLast30,
-        percentage: patternRadar.topStrengths[0]?.current || 0,
+        percentage: topPositive.percentage,
         trend: "rising" as const,
       }
     : undefined;
 
-  const biggestFixId = patternRadar.mostFrequentMistake
-    ? patternRadar.mostFrequentMistake.toLowerCase().replace(/\s+/g, '_').replace(/^the_/, '')
-    : undefined;
+  const biggestFixId = topNegative?.id;
 
-  const biggestFix = patternRadar.mostFrequentMistake
+  const biggestFix = topNegative
     ? {
-        pattern_id: biggestFixId!,
-        macro_name: patternRadar.mostFrequentMistake,
-        frequency: Math.round(metrics.patternDensity),
+        pattern_id: topNegative.id,
+        macro_name: topNegative.name,
+        frequency: topNegative.frequency,
         total_calls: metrics.callsLast30,
-        percentage: metrics.patternDensity,
+        percentage: topNegative.percentage,
       }
     : undefined;
 

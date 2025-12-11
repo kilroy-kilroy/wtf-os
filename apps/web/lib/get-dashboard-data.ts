@@ -1,6 +1,33 @@
 import { getSupabaseServerClient } from "./supabase-server";
-import { DashboardData, RecentCall, SkillTrend, PatternRadarData, ChartDataPoint, CoachingReport } from "./dashboard-types";
+import { DashboardData, RecentCall, SkillTrend, PatternRadarData, ChartDataPoint, CoachingReport, DetectedPattern } from "./dashboard-types";
 import { subDays } from "date-fns";
+
+// ============================================
+// CANONICAL PATTERNS
+// ============================================
+
+const CANONICAL_PATTERNS: Record<string, { category: "connection" | "diagnosis" | "control" | "activation"; polarity: "positive" | "negative" }> = {
+  // Positive patterns (8)
+  "The Cultural Handshake": { category: "connection", polarity: "positive" },
+  "The Peer Validation Engine": { category: "connection", polarity: "positive" },
+  "The Vulnerability Flip": { category: "connection", polarity: "positive" },
+  "The Diagnostic Reveal": { category: "diagnosis", polarity: "positive" },
+  "The Self Diagnosis Pull": { category: "diagnosis", polarity: "positive" },
+  "The Framework Drop": { category: "control", polarity: "positive" },
+  "The Permission Builder": { category: "control", polarity: "positive" },
+  "The Mirror Close": { category: "activation", polarity: "positive" },
+  // Negative patterns (10)
+  "The Scenic Route": { category: "connection", polarity: "negative" },
+  "The Business Blitzer": { category: "connection", polarity: "negative" },
+  "The Generous Professor": { category: "diagnosis", polarity: "negative" },
+  "The Advice Avalanche": { category: "diagnosis", polarity: "negative" },
+  "The Surface Scanner": { category: "diagnosis", polarity: "negative" },
+  "The Agenda Abandoner": { category: "control", polarity: "negative" },
+  "The Passenger": { category: "control", polarity: "negative" },
+  "The Premature Solution": { category: "control", polarity: "negative" },
+  "The Soft Close Fade": { category: "activation", polarity: "negative" },
+  "The Over Explain Loop": { category: "activation", polarity: "negative" },
+};
 
 // Utility functions for real math
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
@@ -20,6 +47,116 @@ const variance = (xs: (number | null | undefined)[]) => {
 };
 
 const normalizeDelta = (x: number) => clamp(x / 10, -10, 10) * 10;
+
+// ============================================
+// PATTERN AGGREGATION FROM CALLS
+// ============================================
+
+interface CallRecord {
+  id: string;
+  created_at: string;
+  buyer_name: string | null;
+  company_name: string | null;
+  primary_pattern: string | null;
+  full_report: Record<string, unknown> | null;
+}
+
+function aggregatePatternsFromCalls(calls: CallRecord[]): DetectedPattern[] {
+  const patternMap = new Map<string, {
+    count: number;
+    polarity: "positive" | "negative";
+    category: "connection" | "diagnosis" | "control" | "activation";
+    examples: Array<{ call_id: string; buyer_name: string; company: string; timestamp: string }>;
+  }>();
+
+  for (const call of calls) {
+    const fullReport = call.full_report as Record<string, unknown> | null;
+
+    // Extract patterns from full_report.patterns array (Pro JSON format)
+    if (fullReport?.patterns && Array.isArray(fullReport.patterns)) {
+      for (const pattern of fullReport.patterns) {
+        const patternObj = pattern as Record<string, unknown>;
+        const patternName = (patternObj.patternName || patternObj.macro_name || patternObj.name) as string | undefined;
+
+        if (patternName && CANONICAL_PATTERNS[patternName]) {
+          const canonical = CANONICAL_PATTERNS[patternName];
+
+          if (!patternMap.has(patternName)) {
+            patternMap.set(patternName, {
+              count: 0,
+              polarity: canonical.polarity,
+              category: canonical.category,
+              examples: []
+            });
+          }
+
+          const existing = patternMap.get(patternName)!;
+          existing.count++;
+          if (existing.examples.length < 3) {
+            existing.examples.push({
+              call_id: call.id,
+              buyer_name: call.buyer_name || "Unknown",
+              company: call.company_name || "",
+              timestamp: call.created_at
+            });
+          }
+        }
+      }
+    }
+
+    // Also capture primary_pattern from the call record
+    if (call.primary_pattern) {
+      const patternName = call.primary_pattern;
+      const canonical = CANONICAL_PATTERNS[patternName];
+
+      if (canonical) {
+        if (!patternMap.has(patternName)) {
+          patternMap.set(patternName, {
+            count: 0,
+            polarity: canonical.polarity,
+            category: canonical.category,
+            examples: []
+          });
+        }
+
+        const existing = patternMap.get(patternName)!;
+        existing.count++;
+        if (existing.examples.length < 3) {
+          existing.examples.push({
+            call_id: call.id,
+            buyer_name: call.buyer_name || "Unknown",
+            company: call.company_name || "",
+            timestamp: call.created_at
+          });
+        }
+      }
+    }
+  }
+
+  // Convert to array and calculate percentages
+  const totalCalls = calls.length || 1;
+  const detectedPatterns: DetectedPattern[] = [];
+
+  for (const [name, data] of patternMap.entries()) {
+    const id = name
+      .toLowerCase()
+      .replace(/^the\s+/, '')
+      .replace(/\s+/g, '_');
+
+    detectedPatterns.push({
+      id,
+      name,
+      category: data.category,
+      polarity: data.polarity,
+      frequency: data.count,
+      percentage: Math.round((data.count / totalCalls) * 100),
+      call_examples: data.examples
+    });
+  }
+
+  // Sort by frequency (most common first)
+  return detectedPatterns.sort((a, b) => b.frequency - a.frequency);
+}
 
 export async function getDashboardData(userId: string): Promise<DashboardData> {
   const supabase = getSupabaseServerClient();
@@ -293,6 +430,11 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
     }))
     .reverse();
 
+  // ============================================
+  // AGGREGATE PATTERNS FROM CALLS
+  // ============================================
+  const detectedPatterns = aggregatePatternsFromCalls(calls as CallRecord[]);
+
   return {
     metrics: {
       callsLast30,
@@ -302,6 +444,7 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
       skillImprovementIndex,
     },
     patternRadar,
+    detectedPatterns,
     recentCalls,
     quickInsights,
     followUps:

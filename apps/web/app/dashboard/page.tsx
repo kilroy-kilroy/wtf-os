@@ -39,7 +39,7 @@ function getCounterPatternAdvice(patternId: string): string {
 }
 
 // Generate weekly focus based on most frequent mistake
-function generateWeeklyFocus(patternId: string | undefined, patternName: string | undefined): FocusArea | null {
+function generateWeeklyFocus(patternId: string | undefined | null, patternName: string | undefined | null): FocusArea | null {
   if (!patternId || !patternName) return null;
 
   const counterPatternId = PATTERN_COUNTERS[patternId];

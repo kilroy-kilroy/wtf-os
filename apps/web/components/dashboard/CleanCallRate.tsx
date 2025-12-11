@@ -36,34 +36,37 @@ export function CleanCallRate({ percentage, cleanCalls, totalCalls }: CleanCallR
   const label = getCleanCallLabel(percentage);
 
   return (
-    <div className="bg-[#1A1A1A] border border-[#333] p-5">
-      <div className="flex flex-col gap-1 mb-4">
-        <span className="text-[11px] font-bold tracking-wide text-[#999]">
+    <div className="bg-[#1A1A1A] border-2 border-[#333] p-6">
+      {/* Header */}
+      <div className="mb-5">
+        <div className="text-[10px] font-bold tracking-wider text-[#999] mb-1">
           CLEAN CALL RATE
-        </span>
-        <span className="text-[10px] text-[#666]">Calls without major friction</span>
+        </div>
+        <div className="text-[11px] text-[#666] tracking-wide">Calls without major friction</div>
       </div>
 
       {totalCalls > 0 ? (
-        <>
-          <div className="flex items-baseline gap-2 mb-2">
-            <span className="font-anton text-[48px] leading-none text-white">
+        <div className="flex flex-col gap-3">
+          {/* Value */}
+          <div className="flex items-baseline gap-2">
+            <span className="font-anton text-[56px] leading-none text-white">
               {percentage}%
             </span>
-            <span className="text-[12px] text-[#999]">
-              ({cleanCalls} of {totalCalls} calls)
-            </span>
           </div>
-          <div className="text-[11px] text-[#666] mb-2">{label}</div>
 
-          {/* Progress bar */}
-          <div className="h-1 bg-[#333] rounded-sm overflow-hidden">
+          {/* Detail */}
+          <div className="text-[11px] text-[#999]">
+            ({cleanCalls} of {totalCalls} calls)
+          </div>
+
+          {/* Progress bar - NO border-radius */}
+          <div className="h-1.5 bg-[#0A0A0A] border border-[#333] overflow-hidden">
             <div
-              className={`h-full transition-all ${getProgressColor(percentage)}`}
+              className={`h-full transition-all duration-500 ${getProgressColor(percentage)}`}
               style={{ width: `${percentage}%` }}
             />
           </div>
-        </>
+        </div>
       ) : (
         <p className="text-[#666] text-sm">No calls analyzed yet</p>
       )}

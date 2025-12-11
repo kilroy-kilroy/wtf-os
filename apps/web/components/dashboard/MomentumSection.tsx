@@ -72,80 +72,73 @@ export function MomentumSection({
   nextFocus,
 }: MomentumSectionProps) {
   return (
-    <div className="bg-[#1A1A1A] border border-[#333]">
-      <div className="p-6">
-        <h2 className="font-anton text-lg uppercase tracking-wide text-white mb-5">
-          MOMENTUM
-        </h2>
+    <div className="bg-[#1A1A1A] border-2 border-[#333] p-6">
+      <h2 className="font-anton text-xl tracking-wide text-white mb-5">
+        MOMENTUM
+      </h2>
 
-        <div className="space-y-4">
-          {/* Biggest Win */}
-          {biggestWin && (
-            <div className="bg-[rgba(255,222,89,0.05)] border-l-4 border-[#FFDE59] p-4">
-              <div className="text-[10px] font-bold tracking-wide text-[#666] mb-2">
-                BIGGEST WIN
-              </div>
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-[#FFDE59] font-bold text-base">
-                  {biggestWin.macro_name}
-                </span>
-                <span className="text-[#FFDE59]">⚡</span>
-              </div>
-              <div className="text-[11px] text-[#999] mb-2">
-                Appearing in {biggestWin.frequency}/{biggestWin.total_calls} calls ({Math.round(biggestWin.percentage)}%)
-              </div>
-              {biggestWin.trend && (
-                <div className="text-[11px] text-green-400 mb-2">
-                  {getTrendIcon(biggestWin.trend)} {getTrendLabel(biggestWin.trend)}
-                </div>
-              )}
-              <div className="text-[12px] text-[#CCC] leading-relaxed">
-                {getWinContext(biggestWin.pattern_id)}
-              </div>
+      <div className="flex flex-col gap-4">
+        {/* Biggest Win */}
+        {biggestWin && (
+          <div className="bg-[#0A0A0A] border-l-4 border-[#FFDE59] p-5">
+            <div className="text-[9px] font-bold tracking-wider text-[#666] mb-2.5">
+              BIGGEST WIN
             </div>
-          )}
+            <div className="text-[17px] font-bold text-[#FFDE59] leading-tight mb-1.5">
+              {biggestWin.macro_name} ⚡
+            </div>
+            <div className="text-[11px] text-[#999] mb-2.5">
+              Appearing in {biggestWin.frequency}/{biggestWin.total_calls} calls ({Math.round(biggestWin.percentage)}%)
+            </div>
+            {biggestWin.trend && (
+              <div className="text-[11px] text-green-400 mb-2.5">
+                {getTrendIcon(biggestWin.trend)} {getTrendLabel(biggestWin.trend)}
+              </div>
+            )}
+            <div className="text-[12px] text-white leading-relaxed">
+              {getWinContext(biggestWin.pattern_id)}
+            </div>
+          </div>
+        )}
 
-          {/* Biggest Thing to Fix */}
-          {biggestFix && (
-            <div className="bg-[rgba(229,27,35,0.05)] border-l-4 border-[#E51B23] p-4">
-              <div className="text-[10px] font-bold tracking-wide text-[#666] mb-2">
-                BIGGEST THING TO FIX
-              </div>
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-[#E51B23] font-bold text-base">
-                  {biggestFix.macro_name}
-                </span>
-              </div>
-              <div className="text-[11px] text-[#999] mb-2">
-                Appearing in {biggestFix.frequency}/{biggestFix.total_calls} calls ({Math.round(biggestFix.percentage)}%)
-              </div>
-              <div className="text-[12px] text-[#CCC] leading-relaxed">
-                {getFixContext(biggestFix.pattern_id)}
-              </div>
+        {/* Biggest Thing to Fix */}
+        {biggestFix && (
+          <div className="bg-[#0A0A0A] border-l-4 border-[#E51B23] p-5">
+            <div className="text-[9px] font-bold tracking-wider text-[#666] mb-2.5">
+              BIGGEST THING TO FIX
             </div>
-          )}
+            <div className="text-[17px] font-bold text-[#E51B23] leading-tight mb-1.5">
+              {biggestFix.macro_name}
+            </div>
+            <div className="text-[11px] text-[#999] mb-2.5">
+              Appearing in {biggestFix.frequency}/{biggestFix.total_calls} calls ({Math.round(biggestFix.percentage)}%)
+            </div>
+            <div className="text-[12px] text-white leading-relaxed">
+              {getFixContext(biggestFix.pattern_id)}
+            </div>
+          </div>
+        )}
 
-          {/* Next Call Focus */}
-          {nextFocus && (
-            <div className="bg-[rgba(74,144,226,0.05)] border-l-4 border-[#4A90E2] p-4">
-              <div className="text-[10px] font-bold tracking-wide text-[#666] mb-2">
-                NEXT CALL FOCUS
-              </div>
-              <div className="text-[13px] text-white leading-relaxed">
-                {nextFocus}
-              </div>
+        {/* Next Call Focus */}
+        {nextFocus && (
+          <div className="bg-[#0A0A0A] border-l-4 border-[#4A90E2] p-5">
+            <div className="text-[9px] font-bold tracking-wider text-[#666] mb-2.5">
+              NEXT CALL FOCUS
             </div>
-          )}
+            <div className="text-[13px] text-white leading-relaxed">
+              {nextFocus}
+            </div>
+          </div>
+        )}
 
-          {/* Empty State */}
-          {!biggestWin && !biggestFix && !nextFocus && (
-            <div className="text-center py-8">
-              <p className="text-[#666]">
-                Analyze some calls to see your momentum
-              </p>
-            </div>
-          )}
-        </div>
+        {/* Empty State */}
+        {!biggestWin && !biggestFix && !nextFocus && (
+          <div className="text-center py-10">
+            <p className="text-[#666]">
+              Analyze some calls to see your momentum
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

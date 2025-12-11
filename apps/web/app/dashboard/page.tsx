@@ -2,15 +2,11 @@ import { getDashboardData } from "@/lib/get-dashboard-data";
 import { createServerComponentClient } from "@supabase/auth-helpers-nextjs";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
 import {
-  CallCard,
-  PatternIntelligence,
-  MomentumSection,
-  ScoreCard,
-  CleanCallRate,
+  DashboardClient,
   type DetectedPattern,
+  type FocusArea,
+  type QuickWin,
 } from "@/components/dashboard";
 
 // Pattern counter mapping for next call focus advice
@@ -42,6 +38,140 @@ function getCounterPatternAdvice(patternId: string): string {
   return adviceMap[counterPatternId] || "Focus on closing with clarity";
 }
 
+// Generate weekly focus based on most frequent mistake
+function generateWeeklyFocus(patternId: string | undefined, patternName: string | undefined): FocusArea | null {
+  if (!patternId || !patternName) return null;
+
+  const counterPatternId = PATTERN_COUNTERS[patternId];
+  if (!counterPatternId) return null;
+
+  const counterNames: Record<string, string> = {
+    framework_drop: "The Framework Drop",
+    cultural_handshake: "The Cultural Handshake",
+    diagnostic_reveal: "The Diagnostic Reveal",
+    self_diagnosis_pull: "The Self Diagnosis Pull",
+    permission_builder: "The Permission Builder",
+    mirror_close: "The Mirror Close",
+  };
+
+  const practiceSteps: Record<string, string[]> = {
+    framework_drop: [
+      "Prepare 2-3 frameworks before each call",
+      "Introduce your framework in the first 5 minutes",
+      "Use the framework to guide discovery questions",
+    ],
+    cultural_handshake: [
+      "Research the prospect's background before the call",
+      "Find a genuine shared interest or experience",
+      "Lead with warmth before diving into business",
+    ],
+    diagnostic_reveal: [
+      "Ask 'what else?' at least twice per discovery",
+      "Quantify the cost of the current problem",
+      "Name the hidden risk they haven't articulated",
+    ],
+    self_diagnosis_pull: [
+      "Use 'what happens if you do nothing?' questions",
+      "Let them voice the pain before offering solutions",
+      "Reflect back their language to confirm understanding",
+    ],
+    permission_builder: [
+      "Ask permission before changing topics",
+      "Use 'would it be okay if...' transitions",
+      "Create psychological safety through permission",
+    ],
+    mirror_close: [
+      "Summarize their stated criteria back to them",
+      "Use 'based on what you said...' framing",
+      "Ask for the decision calmly and directly",
+    ],
+  };
+
+  return {
+    pattern_id: counterPatternId,
+    pattern_name: counterNames[counterPatternId] || "Unknown Pattern",
+    reason: `Counter your tendency toward ${patternName}`,
+    practice_steps: practiceSteps[counterPatternId] || ["Practice this pattern consciously"],
+    progress: 0,
+    calls_this_week: 0,
+    target_calls: 5,
+  };
+}
+
+// Generate quick wins based on negative patterns
+function generateQuickWins(negativePatterns: DetectedPattern[]): QuickWin[] {
+  const quickWinTemplates: Record<string, { title: string; description: string; example: string; time: string }> = {
+    scenic_route: {
+      title: "Set a 3-minute timer for rapport",
+      description: "Rapport is essential but shouldn't derail discovery",
+      example: "After 3 minutes, say: 'I want to be respectful of your time - let me share why I was excited to connect...'",
+      time: "30 seconds",
+    },
+    business_blitzer: {
+      title: "Ask about their weekend first",
+      description: "One personal question builds trust before business",
+      example: "Before business: 'How was your weekend?' or 'How's your [time of year] going?'",
+      time: "1 minute",
+    },
+    generous_professor: {
+      title: "Stop at 2 insights max",
+      description: "Share enough to demonstrate value, not to teach everything",
+      example: "After 2 insights: 'I have more on this, but let me make sure this is relevant first...'",
+      time: "Ongoing",
+    },
+    advice_avalanche: {
+      title: "Ask 'what have you tried?' first",
+      description: "Understand their context before offering solutions",
+      example: "Before solving: 'What have you tried already?' and 'What worked/didn't work?'",
+      time: "2 minutes",
+    },
+    surface_scanner: {
+      title: "Use 'what else?' twice per topic",
+      description: "The first answer is rarely the real answer",
+      example: "After their response: 'What else is contributing to that?' and wait",
+      time: "30 seconds each",
+    },
+    premature_solution: {
+      title: "Pause before pitching",
+      description: "Ask one more question before jumping to solutions",
+      example: "Before pitching: 'Before I share how we might help, can I ask one more thing?'",
+      time: "15 seconds",
+    },
+    soft_close_fade: {
+      title: "End with 'what's our next step?'",
+      description: "Never end a call without a concrete commitment",
+      example: "At call end: 'Based on our conversation, what's the logical next step?'",
+      time: "30 seconds",
+    },
+    over_explain_loop: {
+      title: "Answer objections with questions",
+      description: "Re-frame challenges instead of defending",
+      example: "When challenged: 'Help me understand what's driving that concern?'",
+      time: "Immediate",
+    },
+  };
+
+  const wins: QuickWin[] = [];
+
+  for (const pattern of negativePatterns.slice(0, 3)) {
+    const patternKey = pattern.id.toLowerCase().replace(/\s+/g, '_').replace(/^the_/, '');
+    const template = quickWinTemplates[patternKey];
+
+    if (template) {
+      wins.push({
+        id: `win_${patternKey}`,
+        title: template.title,
+        description: template.description,
+        example_phrase: template.example,
+        time_to_implement: template.time,
+        related_pattern_id: patternKey,
+      });
+    }
+  }
+
+  return wins;
+}
+
 export default async function DashboardPage() {
   const supabase = createServerComponentClient({ cookies });
   const { data: { user } } = await supabase.auth.getUser();
@@ -52,10 +182,6 @@ export default async function DashboardPage() {
 
   const data = await getDashboardData(user.id);
   const { metrics, patternRadar, recentCalls, quickInsights } = data;
-
-  // Get user's name from metadata or email
-  const userName = user.user_metadata?.first_name || user.email?.split("@")[0] || "there";
-  const userEmail = user.email || "";
 
   // Calculate scores
   const overallScore = Math.round(metrics.skillImprovementIndex);
@@ -81,8 +207,11 @@ export default async function DashboardPage() {
       year: "numeric",
     }),
     score: call.score || 0,
-    // Map primary pattern as negative (historically these were friction patterns)
-    top_positive_pattern: null, // Will come from full_report in future
+    top_positive_pattern: null as {
+      id: string;
+      name: string;
+      category: "connection" | "diagnosis" | "control" | "activation";
+    } | null,
     top_negative_pattern: call.primaryPattern
       ? {
           id: call.primaryPattern.toLowerCase().replace(/\s+/g, '_').replace(/^the_/, ''),
@@ -94,8 +223,6 @@ export default async function DashboardPage() {
   }));
 
   // Transform pattern data for PatternIntelligence
-  // Note: Current data structure doesn't separate patterns by polarity
-  // We'll show skills as proxy until pattern extraction is updated
   const positivePatterns: DetectedPattern[] = patternRadar.topStrengths.map((s, i) => ({
     id: `strength_${i}`,
     name: s.name,
@@ -106,7 +233,7 @@ export default async function DashboardPage() {
   }));
 
   const negativePatterns: DetectedPattern[] = patternRadar.topWeaknesses.map((w, i) => ({
-    id: `weakness_${i}`,
+    id: w.name.toLowerCase().replace(/\s+/g, '_').replace(/^the_/, ''),
     name: w.name,
     category: "connection" as const,
     polarity: "negative" as const,
@@ -144,96 +271,30 @@ export default async function DashboardPage() {
     ? getCounterPatternAdvice(biggestFixId)
     : quickInsights.nextAction || quickInsights.skillToPractice || "Keep building trust";
 
+  // Generate weekly focus and quick wins
+  const weeklyFocus = generateWeeklyFocus(biggestFixId, patternRadar.mostFrequentMistake);
+  const quickWins = generateQuickWins(negativePatterns);
+
   return (
-    <div className="min-h-screen bg-black py-8 px-8">
-      <div className="max-w-7xl mx-auto space-y-8">
-        {/* Header */}
-        <div className="flex items-start justify-between">
-          <div>
-            <h1 className="font-anton text-[48px] tracking-wide text-white">Dashboard</h1>
-            <p className="text-[#666] text-sm">Your sales call performance</p>
-          </div>
-          <Link href="/call-lab">
-            <button className="bg-[#E51B23] text-white px-8 py-4 font-anton text-sm tracking-wide hover:bg-[#FF2930] transition-colors">
-              Analyze New Call
-            </button>
-          </Link>
-        </div>
-
-        {/* Metrics Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <ScoreCard
-            label="OVERALL SCORE"
-            subtitle={`Average across ${metrics.callsLast30} calls`}
-            value={overallScore}
-            maxValue={100}
-          />
-          <ScoreCard
-            label="TRUST VELOCITY"
-            subtitle="How fast you build trust"
-            value={trustVelocity}
-            maxValue={100}
-          />
-          <ScoreCard
-            label="CLOSE DISCIPLINE"
-            subtitle="Next step commitment rate"
-            value={closeDiscipline}
-            maxValue={100}
-          />
-          <CleanCallRate
-            percentage={cleanCallPercentage}
-            cleanCalls={cleanCallCount}
-            totalCalls={metrics.callsLast30}
-          />
-        </div>
-
-        {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-6">
-          {/* Left Column - Recent Calls */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="font-anton text-lg tracking-wide text-white">
-                Recent Calls
-              </h2>
-              <button className="text-[#E51B23] text-sm font-semibold underline hover:text-[#FF2930]">
-                View All
-              </button>
-            </div>
-
-            {transformedCalls.length > 0 ? (
-              <div className="space-y-4">
-                {transformedCalls.map((call) => (
-                  <CallCard key={call.id} call={call} />
-                ))}
-              </div>
-            ) : (
-              <div className="bg-[#1A1A1A] border border-[#333] p-8 text-center">
-                <p className="text-[#666]">No calls analyzed yet</p>
-                <Link href="/call-lab">
-                  <Button className="mt-4 bg-[#E51B23] hover:bg-[#FF2930]">
-                    Analyze Your First Call
-                  </Button>
-                </Link>
-              </div>
-            )}
-          </div>
-
-          {/* Right Column - Sidebar */}
-          <div className="space-y-6">
-            <PatternIntelligence
-              positivePatterns={positivePatterns}
-              negativePatterns={negativePatterns}
-              totalCalls={metrics.callsLast30}
-            />
-
-            <MomentumSection
-              biggestWin={biggestWin}
-              biggestFix={biggestFix}
-              nextFocus={nextFocus}
-            />
-          </div>
-        </div>
-      </div>
-    </div>
+    <DashboardClient
+      metrics={{
+        overallScore,
+        trustVelocity,
+        closeDiscipline,
+        cleanCallPercentage,
+        cleanCallCount,
+        totalCalls: metrics.callsLast30,
+      }}
+      positivePatterns={positivePatterns}
+      negativePatterns={negativePatterns}
+      transformedCalls={transformedCalls}
+      momentum={{
+        biggestWin,
+        biggestFix,
+        nextFocus,
+      }}
+      weeklyFocus={weeklyFocus}
+      quickWins={quickWins}
+    />
   );
 }

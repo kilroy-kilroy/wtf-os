@@ -60,28 +60,33 @@ export function ScoreCard({
   const { label: gradeLabel, icon, className } = getScoreGrade(value, maxValue);
 
   return (
-    <div className="bg-[#1A1A1A] border border-[#333] p-5">
-      <div className="flex flex-col gap-1 mb-4">
-        <span className="text-[11px] font-bold tracking-wide text-[#999]">
+    <div className="bg-[#1A1A1A] border-2 border-[#333] p-6">
+      {/* Header */}
+      <div className="mb-5">
+        <div className="text-[10px] font-bold tracking-wider text-[#999] mb-1">
           {label}
-        </span>
-        <span className="text-[10px] text-[#666]">{subtitle}</span>
+        </div>
+        <div className="text-[11px] text-[#666] tracking-wide">{subtitle}</div>
       </div>
-      <div className="flex items-baseline gap-2">
-        <span className="font-anton text-[48px] leading-none text-white">
-          {value}
-        </span>
-        <span className="text-[24px] text-[#666]">/{maxValue}</span>
-        <span className={`ml-auto text-[11px] font-bold px-3 py-1 rounded ${className}`}>
+
+      {/* Value & Badge */}
+      <div className="flex flex-col gap-3">
+        <div className="flex items-baseline gap-1">
+          <span className="font-anton text-[56px] leading-none text-white">
+            {value}
+          </span>
+          <span className="text-[28px] text-[#666]">/{maxValue}</span>
+        </div>
+        <div className={`inline-block px-3.5 py-1.5 text-[10px] font-bold tracking-wide ${className}`}>
           {icon} {gradeLabel}
-        </span>
+        </div>
       </div>
     </div>
   );
 }
 
 // ============================================
-// MULTI SCORE CARD (for reference)
+// MULTI SCORE CARD
 // ============================================
 
 interface MultiScoreCardProps {
@@ -95,8 +100,8 @@ interface MultiScoreCardProps {
 
 export function MultiScoreCard({ title, scores }: MultiScoreCardProps) {
   return (
-    <div className="bg-[#1A1A1A] border border-[#333] p-5">
-      <h3 className="text-white font-bold text-sm mb-3">{title}</h3>
+    <div className="bg-[#1A1A1A] border-2 border-[#333] p-6">
+      <h3 className="text-white font-bold text-sm mb-4">{title}</h3>
       <div className="space-y-3">
         {scores.map((score) => {
           const max = score.max ?? 100;
@@ -109,7 +114,7 @@ export function MultiScoreCard({ title, scores }: MultiScoreCardProps) {
                 <span className="text-white font-mono">
                   {score.value}/{max}
                 </span>
-                <span className={`text-[10px] px-1.5 py-0.5 rounded font-semibold ${className}`}>
+                <span className={`text-[10px] px-2 py-0.5 font-semibold ${className}`}>
                   {icon}
                 </span>
               </div>

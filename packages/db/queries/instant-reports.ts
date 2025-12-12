@@ -1,11 +1,42 @@
 import type { SupabaseClient } from '../client';
 import type { Json } from '../types';
 
+export interface WtfScores {
+  radicalRelevance: number;
+  radicalRelevanceNote: string;
+  radicalRelevanceEvidence?: string;
+  radicalRelevanceImprove?: string;
+  diagnosticGenerosity: number;
+  diagnosticGenerosityNote: string;
+  diagnosticGenerosityEvidence?: string;
+  diagnosticGenerosityImprove?: string;
+  permissionProgression: number;
+  permissionProgressionNote: string;
+  permissionProgressionEvidence?: string;
+  permissionProgressionImprove?: string;
+  overall: string;
+}
+
+export interface TechnicalScores {
+  talkRatio?: string;
+  questionQuality?: number;
+  activeListening?: number;
+}
+
 export interface InstantReportAnalysis {
+  // WTF Method scores (primary)
+  wtf?: WtfScores;
+  // Technical scores (secondary)
+  technical?: TechnicalScores;
+  // Narrative feedback
   summary: string;
   what_worked: string[];
   what_to_watch: string[];
   one_move: string;
+  // Additional structured feedback
+  strengths?: string[];
+  opportunities?: string[];
+  actions?: string[];
 }
 
 export interface InstantReport {

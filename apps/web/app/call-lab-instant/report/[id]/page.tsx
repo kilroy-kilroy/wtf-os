@@ -3,11 +3,35 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 
+interface WtfScores {
+  radicalRelevance: number;
+  radicalRelevanceNote: string;
+  radicalRelevanceEvidence?: string;
+  radicalRelevanceImprove?: string;
+  diagnosticGenerosity: number;
+  diagnosticGenerosityNote: string;
+  diagnosticGenerosityEvidence?: string;
+  diagnosticGenerosityImprove?: string;
+  permissionProgression: number;
+  permissionProgressionNote: string;
+  permissionProgressionEvidence?: string;
+  permissionProgressionImprove?: string;
+  overall: string;
+}
+
+interface TechnicalScores {
+  talkRatio?: string;
+  questionQuality?: number;
+  activeListening?: number;
+}
+
 interface ReportData {
   id: string;
   score: number;
   transcript: string;
   analysis: {
+    wtf?: WtfScores;
+    technical?: TechnicalScores;
     summary: string;
     what_worked: string[];
     what_to_watch: string[];
@@ -110,6 +134,9 @@ export default function ReportPage() {
     );
   }
 
+  const wtf = report.analysis.wtf;
+  const technical = report.analysis.technical;
+
   return (
     <div className="min-h-screen bg-black text-white font-poppins">
       {/* Header */}
@@ -161,6 +188,108 @@ export default function ReportPage() {
             {report.analysis.summary}
           </p>
         </div>
+
+        {/* WTF Method Assessment - PROMINENT */}
+        {wtf && (
+          <div className="bg-[#1a1a1a] border-l-4 border-[#E51B23] rounded-r-lg p-8 mb-8">
+            <h2 className="font-anton text-2xl text-[#E51B23] mb-6 tracking-wide">
+              WTF SALES METHOD ASSESSMENT
+            </h2>
+
+            {/* WTF Scores Grid */}
+            <div className="grid md:grid-cols-3 gap-6 mb-6">
+              {/* Radical Relevance */}
+              <div>
+                <div className="text-4xl font-bold text-[#E51B23] mb-1">
+                  {wtf.radicalRelevance}/10
+                </div>
+                <div className="text-sm font-semibold text-white mb-2">
+                  Radical Relevance
+                </div>
+                <p className="text-sm text-white/60 leading-relaxed">
+                  {wtf.radicalRelevanceNote}
+                </p>
+                {wtf.radicalRelevanceEvidence && (
+                  <p className="text-xs text-white/40 mt-2 italic">
+                    &quot;{wtf.radicalRelevanceEvidence}&quot;
+                  </p>
+                )}
+              </div>
+
+              {/* Diagnostic Generosity */}
+              <div>
+                <div className="text-4xl font-bold text-[#E51B23] mb-1">
+                  {wtf.diagnosticGenerosity}/10
+                </div>
+                <div className="text-sm font-semibold text-white mb-2">
+                  Diagnostic Generosity
+                </div>
+                <p className="text-sm text-white/60 leading-relaxed">
+                  {wtf.diagnosticGenerosityNote}
+                </p>
+                {wtf.diagnosticGenerosityEvidence && (
+                  <p className="text-xs text-white/40 mt-2 italic">
+                    &quot;{wtf.diagnosticGenerosityEvidence}&quot;
+                  </p>
+                )}
+              </div>
+
+              {/* Permission-Based Progression */}
+              <div>
+                <div className="text-4xl font-bold text-[#E51B23] mb-1">
+                  {wtf.permissionProgression}/10
+                </div>
+                <div className="text-sm font-semibold text-white mb-2">
+                  Permission-Based Progression
+                </div>
+                <p className="text-sm text-white/60 leading-relaxed">
+                  {wtf.permissionProgressionNote}
+                </p>
+                {wtf.permissionProgressionEvidence && (
+                  <p className="text-xs text-white/40 mt-2 italic">
+                    &quot;{wtf.permissionProgressionEvidence}&quot;
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Overall Assessment */}
+            <div className="bg-black/40 rounded p-4">
+              <div className="text-sm text-white/80 leading-relaxed">
+                <strong className="text-white">Overall:</strong> {wtf.overall}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Technical Scores */}
+        {technical && (
+          <div className="mb-8">
+            <h3 className="font-anton text-lg text-white/70 mb-4 tracking-wide uppercase">
+              Technical Scores
+            </h3>
+            <div className="grid grid-cols-3 gap-4">
+              {technical.talkRatio && (
+                <div className="bg-[#1a1a1a] rounded p-4 text-center">
+                  <div className="text-2xl font-bold text-[#FFDE59]">{technical.talkRatio}</div>
+                  <div className="text-xs text-white/50 mt-1">Talk Ratio</div>
+                </div>
+              )}
+              {technical.questionQuality !== undefined && (
+                <div className="bg-[#1a1a1a] rounded p-4 text-center">
+                  <div className="text-2xl font-bold text-[#FFDE59]">{technical.questionQuality}/10</div>
+                  <div className="text-xs text-white/50 mt-1">Question Quality</div>
+                </div>
+              )}
+              {technical.activeListening !== undefined && (
+                <div className="bg-[#1a1a1a] rounded p-4 text-center">
+                  <div className="text-2xl font-bold text-[#FFDE59]">{technical.activeListening}/10</div>
+                  <div className="text-xs text-white/50 mt-1">Active Listening</div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Transcript */}
         <div className="bg-white/5 border-l-4 border-[#E51B23] rounded-r-lg p-6 mb-8">
@@ -237,7 +366,7 @@ export default function ReportPage() {
               UPGRADE TO PRO
             </h3>
             <p className="text-white/80 text-sm">
-              Track patterns across all your calls. See what really works.
+              Track your WTF scores over time. See patterns across all your calls.
             </p>
           </a>
         </div>

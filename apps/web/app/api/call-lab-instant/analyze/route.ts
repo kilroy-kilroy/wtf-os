@@ -152,6 +152,11 @@ export async function POST(request: NextRequest) {
 
     try {
       const analysis: InstantReportAnalysis = {
+        // WTF Method scores (primary)
+        wtf: analysisResult.wtf,
+        // Technical scores (secondary)
+        technical: analysisResult.technical,
+        // Narrative feedback
         summary: analysisResult.summary,
         what_worked: analysisResult.what_worked,
         what_to_watch: analysisResult.what_to_watch,
@@ -183,6 +188,11 @@ export async function POST(request: NextRequest) {
       transcript,
       score: analysisResult.score,
       analysis: {
+        // WTF Method scores (primary)
+        wtf: analysisResult.wtf,
+        // Technical scores (secondary)
+        technical: analysisResult.technical,
+        // Narrative feedback
         summary: analysisResult.summary,
         what_worked: analysisResult.what_worked,
         what_to_watch: analysisResult.what_to_watch,

@@ -5,11 +5,32 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 type Scenario = 'discovery' | 'value_prop' | 'pricing' | 'objection';
 type RecordingState = 'idle' | 'recording' | 'processing' | 'results' | 'capturing';
 
+interface WtfScores {
+  radicalRelevance: number;
+  radicalRelevanceNote: string;
+  radicalRelevanceEvidence?: string;
+  diagnosticGenerosity: number;
+  diagnosticGenerosityNote: string;
+  diagnosticGenerosityEvidence?: string;
+  permissionProgression: number;
+  permissionProgressionNote: string;
+  permissionProgressionEvidence?: string;
+  overall: string;
+}
+
+interface TechnicalScores {
+  talkRatio?: string;
+  questionQuality?: number;
+  activeListening?: number;
+}
+
 interface AnalysisResult {
   reportId: string;
   transcript: string;
   score: number;
   analysis: {
+    wtf?: WtfScores;
+    technical?: TechnicalScores;
     summary: string;
     what_worked: string[];
     what_to_watch: string[];
@@ -302,6 +323,80 @@ export default function CallLabInstantPage() {
           {/* Results */}
           {(recordingState === 'results' || recordingState === 'capturing') && result && (
             <div className="mt-8 space-y-6">
+              {/* Score Card */}
+              <div className="p-6 bg-white/5 border-2 border-[#E51B23] rounded-xl text-center">
+                <div className="inline-block bg-[#E51B23] text-white px-6 py-3 rounded-lg mb-3">
+                  <span className="font-anton text-4xl">{result.score}</span>
+                  <span className="text-xl">/10</span>
+                </div>
+                <p className="text-white/80">{result.analysis.summary}</p>
+              </div>
+
+              {/* WTF Method Assessment - PROMINENT */}
+              {result.analysis.wtf && (
+                <div className="p-6 bg-[#1a1a1a] border-l-4 border-[#E51B23] rounded-r">
+                  <h3 className="font-anton text-xl text-[#E51B23] mb-4 tracking-wide">
+                    WTF SALES METHOD ASSESSMENT
+                  </h3>
+
+                  {/* WTF Scores Grid */}
+                  <div className="grid grid-cols-3 gap-4 mb-4">
+                    {/* Radical Relevance */}
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-[#E51B23]">
+                        {result.analysis.wtf.radicalRelevance}/10
+                      </div>
+                      <div className="text-xs text-white/70 mt-1">Radical Relevance</div>
+                    </div>
+
+                    {/* Diagnostic Generosity */}
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-[#E51B23]">
+                        {result.analysis.wtf.diagnosticGenerosity}/10
+                      </div>
+                      <div className="text-xs text-white/70 mt-1">Diagnostic Generosity</div>
+                    </div>
+
+                    {/* Permission-Based Progression */}
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-[#E51B23]">
+                        {result.analysis.wtf.permissionProgression}/10
+                      </div>
+                      <div className="text-xs text-white/70 mt-1">Permission Progression</div>
+                    </div>
+                  </div>
+
+                  {/* WTF Overall */}
+                  <div className="bg-black/40 rounded p-3 text-sm text-white/80">
+                    <strong className="text-white">Overall:</strong> {result.analysis.wtf.overall}
+                  </div>
+                </div>
+              )}
+
+              {/* Technical Scores */}
+              {result.analysis.technical && (
+                <div className="grid grid-cols-3 gap-3">
+                  {result.analysis.technical.talkRatio && (
+                    <div className="bg-white/5 rounded p-3 text-center">
+                      <div className="text-lg font-bold text-[#FFDE59]">{result.analysis.technical.talkRatio}</div>
+                      <div className="text-xs text-white/50">Talk Ratio</div>
+                    </div>
+                  )}
+                  {result.analysis.technical.questionQuality !== undefined && (
+                    <div className="bg-white/5 rounded p-3 text-center">
+                      <div className="text-lg font-bold text-[#FFDE59]">{result.analysis.technical.questionQuality}/10</div>
+                      <div className="text-xs text-white/50">Question Quality</div>
+                    </div>
+                  )}
+                  {result.analysis.technical.activeListening !== undefined && (
+                    <div className="bg-white/5 rounded p-3 text-center">
+                      <div className="text-lg font-bold text-[#FFDE59]">{result.analysis.technical.activeListening}/10</div>
+                      <div className="text-xs text-white/50">Active Listening</div>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Transcript */}
               <div className="p-6 bg-white/5 border-l-4 border-[#E51B23]">
                 <h3 className="font-anton text-xl text-[#FFDE59] mb-3 tracking-wide">
@@ -310,27 +405,16 @@ export default function CallLabInstantPage() {
                 <p className="text-white/80 leading-relaxed">{result.transcript}</p>
               </div>
 
-              {/* Score & Analysis */}
-              <div className="p-6 bg-white/5 border-l-4 border-[#E51B23]">
-                <h3 className="font-anton text-xl text-[#FFDE59] mb-4 tracking-wide">
-                  CALL LAB ANALYSIS
-                </h3>
-
-                {/* Score Badge */}
-                <div className="inline-block bg-[#E51B23] text-white px-4 py-2 rounded font-bold text-lg mb-4">
-                  Score: {result.score}/10
-                </div>
-
-                {/* Summary */}
-                <p className="text-white/90 mb-6">{result.analysis.summary}</p>
-
+              {/* What Worked & What to Watch */}
+              <div className="grid md:grid-cols-2 gap-4">
                 {/* What Worked */}
-                <div className="mb-4">
-                  <h4 className="text-green-400 font-semibold mb-2">What Worked:</h4>
-                  <ul className="space-y-1">
+                <div className="p-4 bg-white/5 rounded-lg">
+                  <h4 className="text-green-400 font-semibold mb-2 flex items-center gap-2">
+                    <span className="text-xl">+</span> What Worked
+                  </h4>
+                  <ul className="space-y-2">
                     {result.analysis.what_worked.map((item, i) => (
-                      <li key={i} className="text-white/80 flex gap-2">
-                        <span className="text-green-400">+</span>
+                      <li key={i} className="text-white/80 text-sm pl-3 border-l-2 border-green-400/50">
                         {item}
                       </li>
                     ))}
@@ -338,23 +422,24 @@ export default function CallLabInstantPage() {
                 </div>
 
                 {/* What to Watch */}
-                <div className="mb-4">
-                  <h4 className="text-orange-400 font-semibold mb-2">What to Watch:</h4>
-                  <ul className="space-y-1">
+                <div className="p-4 bg-white/5 rounded-lg">
+                  <h4 className="text-orange-400 font-semibold mb-2 flex items-center gap-2">
+                    <span className="text-xl">-</span> What to Watch
+                  </h4>
+                  <ul className="space-y-2">
                     {result.analysis.what_to_watch.map((item, i) => (
-                      <li key={i} className="text-white/80 flex gap-2">
-                        <span className="text-orange-400">-</span>
+                      <li key={i} className="text-white/80 text-sm pl-3 border-l-2 border-orange-400/50">
                         {item}
                       </li>
                     ))}
                   </ul>
                 </div>
+              </div>
 
-                {/* One Move */}
-                <div className="bg-[#FFDE59]/10 p-4 border-l-4 border-[#FFDE59] rounded-r">
-                  <h4 className="text-[#FFDE59] font-semibold mb-2">Your One Move:</h4>
-                  <p className="text-white/90">{result.analysis.one_move}</p>
-                </div>
+              {/* One Move */}
+              <div className="bg-[#FFDE59]/10 p-4 border-l-4 border-[#FFDE59] rounded-r">
+                <h4 className="text-[#FFDE59] font-semibold mb-2">Your One Move:</h4>
+                <p className="text-white/90">{result.analysis.one_move}</p>
               </div>
 
               {/* Email Capture CTA */}

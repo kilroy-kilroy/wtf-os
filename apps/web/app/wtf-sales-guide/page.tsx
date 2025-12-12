@@ -11,8 +11,9 @@ export default function WTFSalesGuidePage() {
       {/* Header */}
       <header className="border-b-2 border-[#E51B23] py-5">
         <div className="max-w-[1200px] mx-auto px-5 flex justify-between items-center">
-          <a href="/" className="font-anton text-2xl tracking-wider">
-            TIM<span className="text-[#E51B23]">KILROY</span>
+          <a href="https://timkilroy.com">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/images/TKLogo.jpg" alt="Tim Kilroy" className="h-10" />
           </a>
           <nav className="hidden md:flex gap-8">
             <a href="/" className="text-white text-sm font-semibold hover:text-[#E51B23] transition-colors">Home</a>
@@ -25,12 +26,12 @@ export default function WTFSalesGuidePage() {
       {/* Hero */}
       <section className="py-20 px-5 text-center border-b-2 border-[#333]">
         <h1 className="font-anton text-[clamp(48px,10vw,64px)] text-[#E51B23] tracking-wider mb-5">
-          WTF SALES METHOD
+          <span className="text-[#FFDE59]">WTF</span> SALES METHOD
         </h1>
         <p className="text-2xl font-semibold mb-8">
           The Trust Layer Every Other Framework Skips
         </p>
-        <p className="text-lg text-[#999] max-w-[700px] mx-auto leading-relaxed">
+        <p className="text-lg text-[#FFDE59] max-w-[700px] mx-auto leading-relaxed">
           A 3-pillar framework for building trust-based selling relationships
           that makes every other sales methodology actually work
         </p>
@@ -45,11 +46,19 @@ export default function WTFSalesGuidePage() {
           </h2>
 
           <p className="text-lg text-[#CCC] leading-relaxed mb-5">
-            You&apos;ve been trained in SPIN Selling. Or Challenger. Or Sandler. Or MEDDIC. Or Gap Selling.
+            You have been trained in <span className="text-[#FFDE59] font-bold">SPIN Selling</span>. Or{' '}
+            <span className="text-[#FFDE59] font-bold">Challenger</span>. Or{' '}
+            <span className="text-[#FFDE59] font-bold">Sandler</span>. Or{' '}
+            <span className="text-[#FFDE59] font-bold">MEDDIC</span>. Or{' '}
+            <span className="text-[#FFDE59] font-bold">Gap Selling</span>.
           </p>
 
           <p className="text-lg text-[#CCC] leading-relaxed mb-5">
-            They&apos;re all tactical frameworks. They tell you <strong className="text-white">what questions to ask</strong> or{' '}
+            <strong className="text-white">They are all tactical frameworks.</strong>
+          </p>
+
+          <p className="text-lg text-[#CCC] leading-relaxed mb-5">
+            They tell you <strong className="text-white">what questions to ask</strong> or{' '}
             <strong className="text-white">how to position value</strong> or{' '}
             <strong className="text-white">when to push back</strong>.
           </p>
@@ -58,32 +67,33 @@ export default function WTFSalesGuidePage() {
             But they all assume the same thing:
           </p>
 
-          <div className="bg-[#FFDE59] text-black p-8 my-10 text-xl font-semibold leading-relaxed">
+          <div className="bg-[#FFDE59] text-black p-8 my-10 font-anton text-xl font-semibold leading-relaxed tracking-wider uppercase">
             The buyer already trusts you.
           </div>
 
           <p className="text-lg text-[#CCC] leading-relaxed mb-5">
-            And that&apos;s the problem.
+            That is a <strong className="text-white">HUGE</strong> problem.
           </p>
 
           <p className="text-lg text-[#CCC] leading-relaxed mb-5">
-            <strong className="text-white">SPIN doesn&apos;t work if the buyer won&apos;t answer your diagnostic questions.</strong><br />
-            <strong className="text-white">Challenger doesn&apos;t work if the buyer thinks you&apos;re just trying to close them.</strong><br />
-            <strong className="text-white">Sandler doesn&apos;t work if the buyer won&apos;t tolerate your disqualification.</strong><br />
-            <strong className="text-white">MEDDIC doesn&apos;t work if you can&apos;t get access to decision-makers.</strong><br />
-            <strong className="text-white">Gap Selling doesn&apos;t work if the buyer won&apos;t show you their gaps.</strong>
+            <strong className="text-white"><span className="text-[#FFDE59] font-bold">SPIN</span> does not work if the buyer will not answer your diagnostic questions.</strong><br />
+            <strong className="text-white"><span className="text-[#FFDE59] font-bold">Challenger</span> does not work if the buyer thinks you are just trying to close them.</strong><br />
+            <strong className="text-white"><span className="text-[#FFDE59] font-bold">Sandler</span> does not work if the buyer will not tolerate your disqualification.</strong><br />
+            <strong className="text-white"><span className="text-[#FFDE59] font-bold">MEDDIC</span> does not work if you cannot get access to decision-makers.</strong><br />
+            <strong className="text-white"><span className="text-[#FFDE59] font-bold">Gap Selling</span> does not work if the buyer will not show you their gaps.</strong>
           </p>
 
           <p className="text-lg text-[#CCC] leading-relaxed mb-5">
             None of these frameworks teach you how to build trust first.
           </p>
 
-          <p className="text-lg text-[#CCC] leading-relaxed mb-5">
-            That&apos;s what the WTF Sales Method does.
+          <p className="text-lg text-[#CCC] leading-relaxed mb-5 font-anton text-[#FFDE59] tracking-wider">
+            That is what the <span className="text-white font-bold">WTF Sales Method</span> does.
           </p>
 
           <p className="text-lg text-[#CCC] leading-relaxed">
-            It&apos;s not a replacement for your tactical framework. It&apos;s the foundation layer that makes your tactical framework actually work.
+            It is not a replacement for your tactical framework.{' '}
+            <strong className="text-[#FFDE59]">WTF Sales is the foundation that makes your tactical framework work.</strong>
           </p>
         </section>
 
@@ -94,7 +104,7 @@ export default function WTFSalesGuidePage() {
           </h2>
 
           <p className="text-lg text-[#CCC] leading-relaxed mb-10">
-            The WTF Method has three pillars. Master these and every other sales methodology becomes 10x more effective.
+            Master the 3 pillars of the <strong className="text-white font-bold">WTF Sales Method</strong> to 10x the effectiveness of any other sales methodology.
           </p>
 
           {/* Pillar 1 */}
@@ -105,27 +115,27 @@ export default function WTFSalesGuidePage() {
               <strong className="text-white">Show them you understand their world before you pitch your solution.</strong>
             </p>
             <p className="text-[#CCC] leading-relaxed mb-5">
-              This is cultural shorthand. Peer validation. The moment they think: &quot;This person gets it.&quot;
+              This is cultural shorthand. Peer validation. The moment they think: <em><strong className="text-white">&quot;This person gets it.&quot;</strong></em>
             </p>
             <p className="text-[#CCC] leading-relaxed mb-5">
-              Most reps lead with: &quot;Tell me about your business.&quot;
+              Most sales meetings start with &quot;Tell me about your business.&quot;
             </p>
             <p className="text-[#CCC] leading-relaxed mb-5">
-              That&apos;s lazy. It signals: &quot;I didn&apos;t do my homework.&quot;
+              <strong className="text-white">That is just lazy.</strong> It screams, &quot;I did not care enough about this meeting to prep.&quot;
             </p>
             <p className="text-[#CCC] leading-relaxed mb-3">
-              Instead, you lead with proof of understanding:
+              The <strong className="text-white font-bold">WTF Method</strong> seller leads with <strong className="text-white">proof of understanding:</strong>
             </p>
-            <ul className="list-none pl-6 mb-5 space-y-3">
+            <ul className="list-disc pl-8 mb-5 space-y-3">
               <li className="text-[#CCC]">&quot;Most agencies your size are struggling with X right now. Is that hitting you too?&quot;</li>
               <li className="text-[#CCC]">&quot;I saw you just launched Y. That usually means Z is about to become a problem.&quot;</li>
-              <li className="text-[#CCC]">&quot;You&apos;re probably dealing with [specific pain point]. Every agency at your stage does.&quot;</li>
+              <li className="text-[#CCC]">&quot;You are probably dealing with [specific pain point]. Every agency at your stage does.&quot;</li>
             </ul>
             <p className="text-[#CCC] leading-relaxed mb-5">
-              You&apos;re not guessing. You&apos;re demonstrating pattern recognition.
+              You are not guessing. You are demonstrating pattern recognition.
             </p>
             <p className="text-[#CCC] leading-relaxed">
-              <strong className="text-white">Why it works:</strong> Buyers pick vendors who understand their context. If you can describe their problem better than they can, they assume you can solve it.
+              <strong className="text-white">Why it works:</strong> Clients choose partners who understand their context. When you articulate their problem better than they can, you have just earned the authority to solve it.
             </p>
           </div>
 
@@ -137,21 +147,21 @@ export default function WTFSalesGuidePage() {
               <strong className="text-white">Give value before you ask for the sale.</strong>
             </p>
             <p className="text-[#CCC] leading-relaxed mb-5">
-              Not free strategy sessions. Not free consulting. But insights, connections, frameworks—things that make them smarter whether they buy or not.
+              Not free strategy sessions. Not free consulting. Give insights, connections, frameworks...the things that make them smarter whether they buy or not.
             </p>
             <p className="text-[#CCC] leading-relaxed mb-5">
-              This is the opposite of &quot;always be closing.&quot;
+              This is the opposite of <em><strong className="text-white">&quot;always be closing.&quot;</strong></em>
             </p>
             <p className="text-[#CCC] leading-relaxed mb-3">
-              This is &quot;always be teaching.&quot;
+              This is <strong className="text-[#FFDE59]">&quot;always be giving.&quot;</strong>
             </p>
-            <ul className="list-none pl-6 mb-5 space-y-3">
-              <li className="text-[#CCC]">&quot;Here&apos;s the framework we use with clients like you. Even if we don&apos;t work together, this will help.&quot;</li>
+            <ul className="list-disc pl-8 mb-5 space-y-3">
+              <li className="text-[#CCC]">&quot;Here is the framework we use with clients like you. Even if we do not work together, this will help.&quot;</li>
               <li className="text-[#CCC]">&quot;I can intro you to someone who solved this exact problem. No strings attached.&quot;</li>
-              <li className="text-[#CCC]">&quot;Let me send you our diagnostic tool. Run it yourself. You&apos;ll know within 10 minutes if we can help.&quot;</li>
+              <li className="text-[#CCC]">&quot;Let me send you our diagnostic tool. Run it yourself. You will know within 10 minutes if we can help.&quot;</li>
             </ul>
             <p className="text-[#CCC] leading-relaxed">
-              <strong className="text-white">Why it works:</strong> Generosity creates reciprocity. When you give first, buyers feel obligated to give back. Usually with their time, attention, and honesty.
+              <strong className="text-white">Why it works:</strong> Generosity creates reciprocity. When you give first, buyers feel comfortable giving back. Usually with their time, attention, and honesty.
             </p>
           </div>
 
@@ -163,23 +173,97 @@ export default function WTFSalesGuidePage() {
               <strong className="text-white">Stop pushing. Start pulling.</strong>
             </p>
             <p className="text-[#CCC] leading-relaxed mb-5">
-              Ask for permission at every stage. Remove all buyer resistance by making them co-author the sale.
+              Ask for permission at every stage. Remove all buyer resistance by making them a co-author of the sale.
             </p>
             <p className="text-[#CCC] leading-relaxed mb-5">
-              Most reps assume forward motion: &quot;Let me send you a proposal.&quot; &quot;I&apos;ll schedule a follow-up.&quot; &quot;Here&apos;s what we should do next.&quot;
+              Most sellers push forward motion: &quot;Let me send you a proposal.&quot; &quot;I will schedule a follow-up.&quot; &quot;Here is what we should do next.&quot;
             </p>
             <p className="text-[#CCC] leading-relaxed mb-3">
-              That&apos;s pressure. Even when it&apos;s subtle. Instead, you ask permission:
+              That is pressure. Even when it is subtle. Instead, ask permission:
             </p>
-            <ul className="list-none pl-6 mb-5 space-y-3">
-              <li className="text-[#CCC]">&quot;Does this make sense so far?&quot;</li>
+            <ul className="list-disc pl-8 mb-5 space-y-3">
+              <li className="text-[#CCC]">&quot;Is this all on point so far, or do we need to adjust?&quot;</li>
               <li className="text-[#CCC]">&quot;Want me to show you how this works?&quot;</li>
               <li className="text-[#CCC]">&quot;Should we keep going or do you need to think about it?&quot;</li>
               <li className="text-[#CCC]">&quot;Would it make sense to explore this further?&quot;</li>
             </ul>
             <p className="text-[#CCC] leading-relaxed">
-              <strong className="text-white">Why it works:</strong> When buyers give permission, they own the decision. They&apos;re not being sold. They&apos;re choosing to buy.
+              <strong className="text-white">Why it works:</strong> When buyers give permission, they own the decision. They are not being sold. They are choosing to buy.
             </p>
+          </div>
+        </section>
+
+        {/* How to Deploy It */}
+        <section className="mb-20">
+          <h2 className="font-anton text-[42px] text-[#E51B23] tracking-wider mb-8">
+            HOW TO DEPLOY IT
+          </h2>
+
+          <p className="text-lg text-[#CCC] leading-relaxed mb-8">
+            The <strong className="text-white font-bold">WTF Method</strong> is a progression, not a script. You do not deploy all three pillars at once. You layer them in sequence.
+          </p>
+
+          {/* Stage 1 */}
+          <div className="mb-10">
+            <h3 className="font-anton text-[24px] text-[#FFDE59] tracking-wider mb-4">
+              Stage 1: Discovery / First Call
+            </h3>
+            <p className="text-[#CCC] mb-2"><strong className="text-white">Focus:</strong> Radical Relevance + Diagnostic Generosity</p>
+            <p className="text-[#CCC] mb-4"><strong className="text-white">Goal:</strong> Prove you understand their world. Give them something valuable. Earn the right to the next conversation.</p>
+
+            <div className="bg-[#1A1A1A] border-2 border-[#333] p-6 mb-4">
+              <div className="text-[#E51B23] font-bold text-sm uppercase tracking-wider mb-3">Bad Discovery Opener</div>
+              <p className="text-[#CCC] mb-2">&quot;Thanks for taking the time. I would love to learn more about your business and see if we might be a good fit.&quot;</p>
+              <p className="text-[#999] text-sm italic">Why it fails: Generic. Lazy. Makes it a qualification rather than discovery.</p>
+            </div>
+
+            <div className="bg-[#1A1A1A] border-2 border-[#333] p-6">
+              <div className="text-green-500 font-bold text-sm uppercase tracking-wider mb-3">Good Discovery Opener</div>
+              <p className="text-[#CCC] mb-2">&quot;I looked at your site and your client roster. You are punching above your weight class—going after enterprise clients with a 12-person team. That usually means you are either nailing positioning or you are drowning in custom scopes. Which one is it?&quot;</p>
+              <p className="text-[#999] text-sm italic">Why it works: Demonstrates understanding. Shows pattern recognition. Makes them want to talk.</p>
+            </div>
+          </div>
+
+          {/* Stage 2 */}
+          <div className="mb-10">
+            <h3 className="font-anton text-[24px] text-[#FFDE59] tracking-wider mb-4">
+              Stage 2: Demo / Presentation
+            </h3>
+            <p className="text-[#CCC] mb-2"><strong className="text-white">Focus:</strong> Diagnostic Generosity + Permission-Based Progression</p>
+            <p className="text-[#CCC] mb-4"><strong className="text-white">Goal:</strong> Show them how you solve their problem. Check for understanding at every step. Make them co-author the solution.</p>
+
+            <div className="bg-[#1A1A1A] border-2 border-[#333] p-6 mb-4">
+              <div className="text-[#E51B23] font-bold text-sm uppercase tracking-wider mb-3">Bad Demo Flow</div>
+              <p className="text-[#CCC] mb-2">&quot;Let me walk you through all our features. We have X, Y, and Z. Most clients love this part. Here is how it works...&quot;</p>
+              <p className="text-[#999] text-sm italic">Why it fails: Feature dump. No permission checkpoints. They are being presented to, not engaged.</p>
+            </div>
+
+            <div className="bg-[#1A1A1A] border-2 border-[#333] p-6">
+              <div className="text-green-500 font-bold text-sm uppercase tracking-wider mb-3">Good Demo Flow</div>
+              <p className="text-[#CCC] mb-2">&quot;Based on what you told me last week, you are stuck on [specific problem]. Want to see how we solve that? [Wait for yes.] Cool. This is the framework we use. Does this map to how you are thinking about it? [Wait for confirmation.] Good. Let me show you how it works in practice...&quot;</p>
+              <p className="text-[#999] text-sm italic">Why it works: Permission at every turn. Confirms relevance. Keeps them engaged.</p>
+            </div>
+          </div>
+
+          {/* Stage 3 */}
+          <div>
+            <h3 className="font-anton text-[24px] text-[#FFDE59] tracking-wider mb-4">
+              Stage 3: Close / Negotiation
+            </h3>
+            <p className="text-[#CCC] mb-2"><strong className="text-white">Focus:</strong> All 3 Pillars</p>
+            <p className="text-[#CCC] mb-4"><strong className="text-white">Goal:</strong> Make the close feel inevitable. Remove all resistance. Let them choose to buy.</p>
+
+            <div className="bg-[#1A1A1A] border-2 border-[#333] p-6 mb-4">
+              <div className="text-[#E51B23] font-bold text-sm uppercase tracking-wider mb-3">Bad Closing Approach</div>
+              <p className="text-[#CCC] mb-2">&quot;So what do you think? Ready to move forward? I can get you started next week. Just need you to sign here.&quot;</p>
+              <p className="text-[#999] text-sm italic">Why it fails: Pressure. Assumes the close. Forces a decision.</p>
+            </div>
+
+            <div className="bg-[#1A1A1A] border-2 border-[#333] p-6">
+              <div className="text-green-500 font-bold text-sm uppercase tracking-wider mb-3">Good Closing Approach</div>
+              <p className="text-[#CCC] mb-2">&quot;So we have covered how this works, what it costs, and what your team would need to do. Does this feel like the right move for you? [Wait. Listen to their answer. Address their concerns...like a real human being.]&quot;</p>
+              <p className="text-[#999] text-sm italic">Why it works: No pressure. Opens the door for objections. Shares decision-making authority.</p>
+            </div>
           </div>
         </section>
 
@@ -194,35 +278,35 @@ export default function WTFSalesGuidePage() {
           </p>
 
           <p className="text-lg text-[#CCC] leading-relaxed mb-5">
-            <strong className="text-white">Opening (0-5 minutes):</strong> Trust starts at zero. You&apos;re a stranger. They&apos;re skeptical.
+            <strong className="text-white">Opening (0-5 minutes):</strong> Trust starts at zero. You are a stranger. They are skeptical.
           </p>
 
           <p className="text-lg text-[#CCC] leading-relaxed mb-5">
-            <strong className="text-white">Discovery (5-15 minutes):</strong> Trust builds if you demonstrate radical relevance. Drops if you&apos;re generic.
+            <strong className="text-white">Discovery (5-15 minutes):</strong> Trust builds if you demonstrate radical relevance. Drops if you are generic.
           </p>
 
           <p className="text-lg text-[#CCC] leading-relaxed mb-5">
-            <strong className="text-white">Presentation (15-30 minutes):</strong> Trust compounds if you&apos;re giving value. Drops if you&apos;re pitching too hard.
+            <strong className="text-white">Presentation (15-30 minutes):</strong> Trust compounds if you are giving value. Drops if you are pitching too hard.
           </p>
 
           <p className="text-lg text-[#CCC] leading-relaxed mb-5">
-            <strong className="text-white">Close (30+ minutes):</strong> Trust peaks if you&apos;ve earned permission. Drops if you push.
+            <strong className="text-white">Close (30+ minutes):</strong> Trust peaks if you have earned permission. Drops if you push.
           </p>
 
-          <div className="bg-[#FFDE59] text-black p-8 my-10 text-xl font-semibold leading-relaxed">
+          <div className="bg-[#FFDE59] text-black p-8 my-10 font-anton text-xl font-semibold leading-relaxed tracking-wider uppercase">
             The buyer decides whether to buy you in the first 10 minutes. They decide whether to buy your solution in the last 10 minutes.
           </div>
 
           <p className="text-lg text-[#CCC] leading-relaxed mb-5">
-            Most reps focus on the last 10 minutes. They nail the pitch. They handle objections. They ask for the sale.
+            Most sellers rush to close. They give a scripted pitch & push for a sale.
           </p>
 
           <p className="text-lg text-[#CCC] leading-relaxed mb-5">
-            And they wonder why deals don&apos;t close.
+            <strong className="text-[#FFDE59] font-bold">WTF?</strong> No wonder prospects do not close.
           </p>
 
           <p className="text-lg text-[#CCC] leading-relaxed mb-8">
-            <strong className="text-white">The truth:</strong> If you haven&apos;t built trust in the first 10 minutes, nothing you do in the last 10 minutes will matter.
+            <strong className="text-white">The truth:</strong> If you have not built trust throughout the discussion, there is never going to be an opportunity to close.
           </p>
 
           <h3 className="font-anton text-[24px] text-[#FFDE59] tracking-wider mt-10 mb-5">
@@ -232,7 +316,7 @@ export default function WTFSalesGuidePage() {
             <li className="text-[#CCC]">Generic openers (&quot;Tell me about your business&quot;)</li>
             <li className="text-[#CCC]">Feature dumps (showing everything instead of solving their problem)</li>
             <li className="text-[#CCC]">Pushy closes (assuming forward motion without permission)</li>
-            <li className="text-[#CCC]">Giving away strategy for free (free consulting kills your positioning)</li>
+            <li className="text-[#CCC]">Giving away strategy for free (free consulting diminishes the need for a decision)</li>
             <li className="text-[#CCC]">Not respecting their time (going over time, not having an agenda)</li>
           </ul>
 
@@ -247,82 +331,17 @@ export default function WTFSalesGuidePage() {
             <li className="text-[#CCC]">Making it easy to say no (removes pressure, paradoxically increases yes rate)</li>
           </ul>
         </section>
-
-        {/* Integration with Other Frameworks */}
-        <section className="mb-20">
-          <h2 className="font-anton text-[42px] text-[#E51B23] tracking-wider mb-8">
-            USING WTF WITH OTHER FRAMEWORKS
-          </h2>
-
-          <p className="text-lg text-[#CCC] leading-relaxed mb-5">
-            The WTF Method isn&apos;t a replacement. It&apos;s a foundation.
-          </p>
-
-          <p className="text-lg text-[#CCC] leading-relaxed mb-8">
-            Here&apos;s how it integrates with the frameworks you already use:
-          </p>
-
-          {[
-            {
-              title: 'WTF + SPIN Selling',
-              first: 'Build radical relevance by showing you understand their context.',
-              second: 'Deploy Situation/Problem/Implication/Need-Payoff questions.',
-              why: 'Buyers answer SPIN questions honestly when they trust you\'ve already done the homework.'
-            },
-            {
-              title: 'WTF + Challenger',
-              first: 'Establish diagnostic generosity by teaching them something they don\'t know.',
-              second: 'Challenge their assumptions with your unique insight.',
-              why: 'Buyers accept your challenge when you\'ve already given them value.'
-            },
-            {
-              title: 'WTF + Sandler',
-              first: 'Use permission-based progression to establish equal business stature.',
-              second: 'Deploy the Sandler pain funnel and disqualification tactics.',
-              why: 'Buyers tolerate Sandler\'s direct approach when you\'ve removed pressure first.'
-            },
-            {
-              title: 'WTF + MEDDIC',
-              first: 'Use radical relevance to get access to economic buyers and champions.',
-              second: 'Map Metrics, Economic Buyer, Decision Criteria, Decision Process, Identify Pain, Champion.',
-              why: 'Buyers give you access to decision-makers when you\'ve proven you won\'t waste their time.'
-            },
-            {
-              title: 'WTF + Gap Selling',
-              first: 'Build trust through diagnostic generosity so buyers feel safe showing you their gaps.',
-              second: 'Map current state vs. future state and the gap between them.',
-              why: 'Buyers reveal their problems when they trust you won\'t use it against them.'
-            }
-          ].map((framework, idx) => (
-            <div key={idx} className="mb-8">
-              <h3 className="font-anton text-[24px] text-[#FFDE59] tracking-wider mb-4">
-                {framework.title}
-              </h3>
-              <p className="text-[#CCC] leading-relaxed mb-2">
-                <strong className="text-white">WTF first:</strong> {framework.first}
-              </p>
-              <p className="text-[#CCC] leading-relaxed mb-2">
-                <strong className="text-white">{framework.title.split('+')[1].trim()} second:</strong> {framework.second}
-              </p>
-              <p className="text-[#CCC] leading-relaxed">
-                <strong className="text-white">Why it works:</strong> {framework.why}
-              </p>
-            </div>
-          ))}
-
-          <div className="bg-[#FFDE59] text-black p-8 my-10 text-xl font-semibold leading-relaxed">
-            The pattern: WTF builds the trust layer. Your tactical framework executes on top of it.
-          </div>
-        </section>
       </div>
 
-      {/* CTA Section */}
+      {/* CTA Section 1 */}
       <section className="bg-[#E51B23] py-16 px-5 text-center">
-        <h2 className="font-anton text-[clamp(32px,5vw,48px)] text-white mb-5 tracking-wider">
-          START TRACKING YOUR TRUST CURVE
+        <h2 className="font-anton text-[clamp(28px,5vw,42px)] text-white mb-5 tracking-wider">
+          STOP WONDERING &quot;WHY THE F*CK DIDN&apos;T THIS DEAL CLOSE?&quot;
         </h2>
-        <p className="text-white/90 text-lg mb-8 max-w-[600px] mx-auto">
-          Use Call Lab to see your WTF Method scores, track your patterns, and get better at selling by seeing what YOU do that actually works.
+        <p className="text-white/90 text-lg mb-8 max-w-[700px] mx-auto">
+          SalesOS Call Lab shows you how to build trust throughout your sales calls.<br />
+          SalesOS Call Lab Pro tracks your sales progress, gives you active sales coaching<br />
+          & creates radically relevant follow up emails automagically.
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <a
@@ -332,10 +351,181 @@ export default function WTFSalesGuidePage() {
             [ TRY CALL LAB FREE ]
           </a>
           <a
-            href="/call-lab-pro"
+            href="/call-lab"
             className="inline-block bg-black text-white px-12 py-5 font-anton text-lg tracking-wider hover:bg-[#333] transition-colors"
           >
-            [ UPGRADE TO PRO ]
+            [ GET CALL LAB PRO - $99/YEAR (SAVE $249) ]
+          </a>
+        </div>
+      </section>
+
+      <div className="max-w-[800px] mx-auto px-5 py-16">
+        {/* Integration with Other Frameworks */}
+        <section className="mb-20">
+          <h2 className="font-anton text-[42px] text-[#E51B23] tracking-wider mb-8">
+            USING <span className="text-[#FFDE59]">WTF</span> WITH OTHER FRAMEWORKS
+          </h2>
+
+          <p className="text-lg text-[#CCC] leading-relaxed mb-5">
+            The <strong className="text-white font-bold">WTF Method</strong> is not a replacement. It is a foundation.
+          </p>
+
+          <p className="text-lg text-[#CCC] leading-relaxed mb-8">
+            Here is how it integrates with the frameworks you already use:
+          </p>
+
+          {[
+            {
+              title: 'WTF + SPIN Selling',
+              first: 'Build radical relevance by showing you understand their context.',
+              second: 'Deploy Situation/Problem/Implication/Need-Payoff questions.',
+              why: 'Buyers answer SPIN questions honestly when they trust you have already done the homework.'
+            },
+            {
+              title: 'WTF + Challenger',
+              first: 'Establish diagnostic generosity by teaching them something they do not know.',
+              second: 'Challenge their assumptions with your unique insight.',
+              why: 'Buyers accept your challenge when you have already given them value.'
+            },
+            {
+              title: 'WTF + Sandler',
+              first: 'Use permission-based progression to establish equal business stature.',
+              second: 'Deploy the Sandler pain funnel and disqualification tactics.',
+              why: 'Buyers tolerate Sandler\'s direct approach when you have removed pressure first.'
+            },
+            {
+              title: 'WTF + MEDDIC',
+              first: 'Use radical relevance to get access to economic buyers and champions.',
+              second: 'Map Metrics, Economic Buyer, Decision Criteria, Decision Process, Identify Pain, Champion.',
+              why: 'Buyers give you access to decision-makers when you have proven you will not waste their time.'
+            },
+            {
+              title: 'WTF + Gap Selling',
+              first: 'Build trust through diagnostic generosity so buyers feel safe showing you their gaps.',
+              second: 'Map current state vs. future state and the gap between them.',
+              why: 'Buyers reveal their problems when they trust you will not use it against them.'
+            }
+          ].map((framework, idx) => (
+            <div key={idx} className="mb-8">
+              <h3 className="font-anton text-[24px] text-[#FFDE59] tracking-wider mb-4">
+                <span className="text-white">WTF</span> + <span className="text-[#FFDE59]">{framework.title.split('+')[1].trim()}</span>
+              </h3>
+              <p className="text-[#CCC] leading-relaxed mb-2">
+                <strong className="text-[#FFDE59]">WTF first:</strong> {framework.first}
+              </p>
+              <p className="text-[#CCC] leading-relaxed mb-2">
+                <strong className="text-[#FFDE59]">{framework.title.split('+')[1].trim()} second:</strong> {framework.second}
+              </p>
+              <p className="text-[#CCC] leading-relaxed">
+                <strong className="text-white">Why it works:</strong> {framework.why}
+              </p>
+            </div>
+          ))}
+
+          <div className="bg-[#FFDE59] text-black p-8 my-10 font-anton text-xl font-semibold leading-relaxed tracking-wider uppercase">
+            <span className="text-[#E51B23]">WTF Sales Method</span> builds the <strong>foundation of trust</strong> & amplifies the impact of your tactical sales framework.
+          </div>
+        </section>
+
+        {/* Track Your Progress */}
+        <section className="mb-20">
+          <h2 className="font-anton text-[42px] text-[#E51B23] tracking-wider mb-8">
+            TRACK YOUR PROGRESS
+          </h2>
+
+          <p className="text-lg text-[#CCC] leading-relaxed mb-5">
+            The <strong className="text-white font-bold">WTF Method</strong> is a skill. Like any skill, you get better by tracking your performance.
+          </p>
+
+          <p className="text-lg text-[#CCC] leading-relaxed mb-8">
+            That is where Call Lab Pro comes in.
+          </p>
+
+          <h3 className="font-anton text-[24px] text-[#FFDE59] tracking-wider mb-4">
+            What Call Lab Pro Tracks:
+          </h3>
+
+          <div className="mb-6">
+            <p className="text-[#CCC] leading-relaxed mb-2">
+              <strong className="text-white">Radical Relevance Score:</strong> Did you demonstrate understanding before you pitched?
+            </p>
+            <ul className="list-disc pl-8 space-y-1 text-[#999]">
+              <li>Pattern detection: What specific insights did you share?</li>
+              <li>Cultural shorthand: Did you speak their language?</li>
+              <li>Peer validation: Did you reference similar clients or situations?</li>
+            </ul>
+          </div>
+
+          <div className="mb-6">
+            <p className="text-[#CCC] leading-relaxed mb-2">
+              <strong className="text-white">Diagnostic Generosity Score:</strong> Did you give value before asking for the sale?
+            </p>
+            <ul className="list-disc pl-8 space-y-1 text-[#999]">
+              <li>Value delivered: What frameworks, tools, or insights did you share?</li>
+              <li>Teaching moments: When did you educate vs. pitch?</li>
+              <li>Strategic giveaways: What did you give that did not give away strategy?</li>
+            </ul>
+          </div>
+
+          <div className="mb-8">
+            <p className="text-[#CCC] leading-relaxed mb-2">
+              <strong className="text-white">Permission-Based Progression Score:</strong> Did you ask or did you push?
+            </p>
+            <ul className="list-disc pl-8 space-y-1 text-[#999]">
+              <li>Permission checkpoints: How many times did you ask &quot;Does this make sense?&quot;</li>
+              <li>Pressure points: When did you assume forward motion without asking?</li>
+              <li>Co-authoring: Did you make them part of the solution design?</li>
+            </ul>
+          </div>
+
+          <h3 className="font-anton text-[24px] text-[#FFDE59] tracking-wider mb-4">
+            Your Trust Curve (Pro Only)
+          </h3>
+
+          <p className="text-lg text-[#CCC] leading-relaxed mb-4">
+            Call Lab Pro maps your trust curve across every call. You will see:
+          </p>
+          <ul className="list-disc pl-8 mb-8 space-y-2 text-[#CCC]">
+            <li>When trust builds (what you said that worked)</li>
+            <li>When trust drops (what you said that did not)</li>
+            <li>Your trust peak (the moment they decided to buy you)</li>
+            <li>Your conversion probability (based on trust curve shape)</li>
+          </ul>
+
+          <p className="text-lg text-[#CCC] leading-relaxed mb-4">
+            After 10 calls, you will know YOUR patterns. What YOU do that works. What YOU do that kills deals.
+          </p>
+
+          <p className="text-lg text-[#CCC] leading-relaxed mb-8">
+            That is not theory. That is your actual data.
+          </p>
+
+          <div className="bg-[#FFDE59] text-black p-8 my-10 font-anton text-lg font-semibold leading-relaxed tracking-wider uppercase">
+            Tactical sales methodologies tell you what to say. The <span className="text-[#E51B23]">WTF Sales Method</span> gives you the authority & positioning to say it.<br /><br />SalesOS Call Lab Pro gives you the tracking, tools & insight to maximize your performance.
+          </div>
+        </section>
+      </div>
+
+      {/* Final CTA Section */}
+      <section className="bg-[#E51B23] py-16 px-5 text-center">
+        <h2 className="font-anton text-[clamp(32px,5vw,42px)] text-white mb-5 tracking-wider">
+          GET STARTED
+        </h2>
+        <p className="text-white/90 text-lg mb-8">
+          Amplify your sales performance with the <strong className="text-white font-bold">WTF Sales Method</strong>.
+        </p>
+        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <a
+            href="/call-lab-instant"
+            className="inline-block bg-[#FFDE59] text-black px-12 py-5 font-anton text-lg tracking-wider hover:bg-white transition-colors"
+          >
+            [ TRY CALL LAB FREE ]
+          </a>
+          <a
+            href="/call-lab"
+            className="inline-block bg-black text-white px-12 py-5 font-anton text-lg tracking-wider hover:bg-[#333] transition-colors"
+          >
+            [ 12 MONTHS OF CALL LAB PRO $49 - SAVE $299 ]
           </a>
         </div>
       </section>
@@ -348,10 +538,10 @@ export default function WTFSalesGuidePage() {
         <p className="text-sm">
           <a href="https://timkilroy.com" className="text-[#E51B23] hover:underline">timkilroy.com</a>
           {' '}&bull;{' '}
-          <a href="/agency-inner-circle" className="text-[#E51B23] hover:underline">Agency Inner Circle Newsletter</a>
+          <a href="https://www.agencyinnercircle.com" className="text-[#E51B23] hover:underline">Agency Inner Circle</a>
         </p>
         <p className="text-[#333] text-sm mt-5">
-          &copy; {new Date().getFullYear()} Tim Kilroy. All rights reserved.
+          &copy; 2025 KLRY LLC. All rights reserved.
         </p>
       </footer>
     </div>

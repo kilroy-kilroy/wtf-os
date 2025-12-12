@@ -501,6 +501,116 @@ export interface Database {
           metadata?: Json
         }
       }
+      instant_reports: {
+        Row: {
+          id: string
+          email: string | null
+          audio_url: string | null
+          transcript: string
+          duration_seconds: number | null
+          analysis: Json
+          score: number
+          scenario_type: string | null
+          viewed_at: string | null
+          view_count: number
+          cost_cents: number
+          source: string
+          user_agent: string | null
+          ip_address: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id: string
+          email?: string | null
+          audio_url?: string | null
+          transcript: string
+          duration_seconds?: number | null
+          analysis: Json
+          score: number
+          scenario_type?: string | null
+          viewed_at?: string | null
+          view_count?: number
+          cost_cents?: number
+          source?: string
+          user_agent?: string | null
+          ip_address?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          email?: string | null
+          audio_url?: string | null
+          transcript?: string
+          duration_seconds?: number | null
+          analysis?: Json
+          score?: number
+          scenario_type?: string | null
+          viewed_at?: string | null
+          view_count?: number
+          cost_cents?: number
+          source?: string
+          user_agent?: string | null
+          ip_address?: string | null
+          updated_at?: string
+        }
+      }
+      instant_leads: {
+        Row: {
+          id: string
+          email: string
+          first_name: string | null
+          source: string
+          first_report_id: string | null
+          welcome_sent_at: string | null
+          pro_pitch_sent_at: string | null
+          subscribed_to_newsletter: boolean
+          upgraded_to_pro: boolean
+          upgraded_at: string | null
+          beehiiv_subscriber_id: string | null
+          beehiiv_synced_at: string | null
+          tags: Json
+          metadata: Json
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          email: string
+          first_name?: string | null
+          source?: string
+          first_report_id?: string | null
+          welcome_sent_at?: string | null
+          pro_pitch_sent_at?: string | null
+          subscribed_to_newsletter?: boolean
+          upgraded_to_pro?: boolean
+          upgraded_at?: string | null
+          beehiiv_subscriber_id?: string | null
+          beehiiv_synced_at?: string | null
+          tags?: Json
+          metadata?: Json
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          email?: string
+          first_name?: string | null
+          source?: string
+          first_report_id?: string | null
+          welcome_sent_at?: string | null
+          pro_pitch_sent_at?: string | null
+          subscribed_to_newsletter?: boolean
+          upgraded_to_pro?: boolean
+          upgraded_at?: string | null
+          beehiiv_subscriber_id?: string | null
+          beehiiv_synced_at?: string | null
+          tags?: Json
+          metadata?: Json
+          updated_at?: string
+        }
+      }
     }
     Views: {}
     Functions: {}

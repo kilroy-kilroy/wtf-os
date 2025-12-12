@@ -17,14 +17,25 @@ export async function GET(request: NextRequest) {
     const supabase = createServerClient();
 
     // Get report
-    const report = await getInstantReportById(supabase, reportId);
+    const reportData = await getInstantReportById(supabase, reportId);
 
-    if (!report) {
+    if (!reportData) {
       return NextResponse.json(
         { error: 'Report not found' },
         { status: 404 }
       );
     }
+
+    // Type the report properly
+    const report = reportData as {
+      id: string;
+      score: number;
+      transcript: string;
+      analysis: unknown;
+      scenario_type: string | null;
+      created_at: string;
+      view_count: number;
+    };
 
     // Increment view count (fire and forget)
     incrementReportViews(supabase, reportId).catch(console.error);

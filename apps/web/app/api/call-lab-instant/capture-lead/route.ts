@@ -32,25 +32,13 @@ export async function POST(request: NextRequest) {
     const supabase = createServerClient();
 
     // Verify report exists
-    const reportData = await getInstantReportById(supabase, reportId);
-    if (!reportData) {
+    const report = await getInstantReportById(supabase, reportId);
+    if (!report) {
       return NextResponse.json(
         { error: 'Report not found' },
         { status: 404 }
       );
     }
-
-    // Type the report properly
-    const report = reportData as {
-      id: string;
-      score: number;
-      analysis: {
-        summary?: string;
-        what_worked?: string[];
-        what_to_watch?: string[];
-        one_move?: string;
-      };
-    };
 
     // Update report with email
     await updateInstantReportEmail(supabase, reportId, email);

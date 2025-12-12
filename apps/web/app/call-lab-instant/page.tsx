@@ -300,7 +300,7 @@ export default function CallLabInstantPage() {
           )}
 
           {/* Results */}
-          {recordingState === 'results' && result && (
+          {(recordingState === 'results' || recordingState === 'capturing') && result && (
             <div className="mt-8 space-y-6">
               {/* Transcript */}
               <div className="p-6 bg-white/5 border-l-4 border-[#E51B23]">

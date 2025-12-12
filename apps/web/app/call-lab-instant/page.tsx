@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 
 type Scenario = 'discovery' | 'value_prop' | 'pricing' | 'objection';
 type RecordingState = 'idle' | 'recording' | 'processing' | 'results' | 'capturing';
@@ -30,6 +30,62 @@ export default function CallLabInstantPage() {
   const audioChunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const recordingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const selectedScenarioRef = useRef<Scenario | null>(null);
+
+  // Keep ref in sync with state
+  useEffect(() => {
+    selectedScenarioRef.current = selectedScenario;
+  }, [selectedScenario]);
+
+  const stopRecording = useCallback(() => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+    }
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+    if (recordingTimeoutRef.current) {
+      clearTimeout(recordingTimeoutRef.current);
+      recordingTimeoutRef.current = null;
+    }
+  }, []);
+
+  const processAudio = useCallback(async (audioBlob: Blob) => {
+    setRecordingState('processing');
+
+    try {
+      const formData = new FormData();
+      formData.append('audio', audioBlob, 'recording.webm');
+      formData.append('duration', '30');
+      if (selectedScenarioRef.current) {
+        formData.append('scenario', selectedScenarioRef.current);
+      }
+
+      const response = await fetch('/api/call-lab-instant/analyze', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Analysis failed');
+      }
+
+      const data = await response.json();
+      setResult({
+        reportId: data.reportId,
+        transcript: data.transcript,
+        score: data.score,
+        analysis: data.analysis,
+      });
+      setRecordingState('results');
+    } catch (err) {
+      console.error('Error processing audio:', err);
+      setError(err instanceof Error ? err.message : 'Failed to analyze recording');
+      setRecordingState('idle');
+    }
+  }, []);
 
   const startRecording = useCallback(async () => {
     try {
@@ -76,57 +132,7 @@ export default function CallLabInstantPage() {
       console.error('Error accessing microphone:', err);
       setError('Microphone access denied. Please allow microphone access and try again.');
     }
-  }, []);
-
-  const stopRecording = useCallback(() => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      mediaRecorderRef.current.stop();
-    }
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
-    if (recordingTimeoutRef.current) {
-      clearTimeout(recordingTimeoutRef.current);
-      recordingTimeoutRef.current = null;
-    }
-  }, []);
-
-  const processAudio = async (audioBlob: Blob) => {
-    setRecordingState('processing');
-
-    try {
-      const formData = new FormData();
-      formData.append('audio', audioBlob, 'recording.webm');
-      formData.append('duration', '30');
-      if (selectedScenario) {
-        formData.append('scenario', selectedScenario);
-      }
-
-      const response = await fetch('/api/call-lab-instant/analyze', {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Analysis failed');
-      }
-
-      const data = await response.json();
-      setResult({
-        reportId: data.reportId,
-        transcript: data.transcript,
-        score: data.score,
-        analysis: data.analysis,
-      });
-      setRecordingState('results');
-    } catch (err) {
-      console.error('Error processing audio:', err);
-      setError(err instanceof Error ? err.message : 'Failed to analyze recording');
-      setRecordingState('idle');
-    }
-  };
+  }, [processAudio, stopRecording]);
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

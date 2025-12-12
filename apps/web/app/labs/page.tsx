@@ -3,7 +3,17 @@ import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 
-const labs = [
+interface Lab {
+  name: string;
+  description: string;
+  href: string;
+  tier: 'Free' | 'Pro';
+  icon: string;
+  color: string;
+  product: 'call-lab' | 'discovery-lab';
+}
+
+const allLabs: Lab[] = [
   {
     name: 'Call Lab',
     description: 'Analyze your sales calls and get actionable coaching feedback.',
@@ -11,6 +21,7 @@ const labs = [
     tier: 'Free',
     icon: '📞',
     color: '#E51B23',
+    product: 'call-lab',
   },
   {
     name: 'Call Lab Pro',
@@ -19,6 +30,7 @@ const labs = [
     tier: 'Pro',
     icon: '🎯',
     color: '#FFDE59',
+    product: 'call-lab',
   },
   {
     name: 'Discovery Lab',
@@ -27,6 +39,7 @@ const labs = [
     tier: 'Free',
     icon: '🔍',
     color: '#E51B23',
+    product: 'discovery-lab',
   },
   {
     name: 'Discovery Lab Pro',
@@ -35,6 +48,7 @@ const labs = [
     tier: 'Pro',
     icon: '🧠',
     color: '#FFDE59',
+    product: 'discovery-lab',
   },
 ];
 
@@ -46,6 +60,48 @@ export default async function LabsPage() {
 
   if (!user) {
     redirect('/login');
+  }
+
+  // Get user's subscription info
+  const { data: userData } = await (supabase as any)
+    .from('users')
+    .select('subscription_tier')
+    .eq('id', user.id)
+    .single();
+
+  const subscriptionTier = userData?.subscription_tier || 'free';
+
+  // Determine which products user has Pro access to
+  const hasCallLabPro = subscriptionTier === 'call_lab_pro' || subscriptionTier === 'pro' || subscriptionTier === 'all';
+  const hasDiscoveryLabPro = subscriptionTier === 'discovery_lab_pro' || subscriptionTier === 'pro' || subscriptionTier === 'all';
+
+  // Filter labs based on subscription
+  // If user has Pro for a product, show only the Pro version
+  // If user doesn't have Pro, show only the Free version
+  const filteredLabs = allLabs.filter((lab) => {
+    if (lab.product === 'call-lab') {
+      if (hasCallLabPro) {
+        return lab.tier === 'Pro';
+      } else {
+        return lab.tier === 'Free';
+      }
+    }
+    if (lab.product === 'discovery-lab') {
+      if (hasDiscoveryLabPro) {
+        return lab.tier === 'Pro';
+      } else {
+        return lab.tier === 'Free';
+      }
+    }
+    return true;
+  });
+
+  // Determine upsell recommendation
+  let upsellLab: Lab | null = null;
+  if (hasCallLabPro && !hasDiscoveryLabPro) {
+    upsellLab = allLabs.find(l => l.name === 'Discovery Lab Pro') || null;
+  } else if (hasDiscoveryLabPro && !hasCallLabPro) {
+    upsellLab = allLabs.find(l => l.name === 'Call Lab Pro') || null;
   }
 
   const userName =
@@ -86,7 +142,7 @@ export default async function LabsPage() {
 
         {/* Labs Grid */}
         <div className="grid md:grid-cols-2 gap-6">
-          {labs.map((lab) => (
+          {filteredLabs.map((lab) => (
             <Link
               key={lab.name}
               href={lab.href}
@@ -126,6 +182,34 @@ export default async function LabsPage() {
           ))}
         </div>
 
+        {/* Upsell Recommendation */}
+        {upsellLab && (
+          <div className="border border-[#FFDE59]/30 rounded-lg p-6 bg-[#FFDE59]/5">
+            <div className="text-xs text-[#FFDE59] font-anton uppercase mb-3">
+              Recommended for You
+            </div>
+            <Link
+              href={upsellLab.href.replace('/welcome', '/checkout')}
+              className="group flex items-center justify-between"
+            >
+              <div className="flex items-center gap-4">
+                <span className="text-3xl">{upsellLab.icon}</span>
+                <div>
+                  <h3 className="font-anton text-lg uppercase tracking-wide text-[#FFDE59] group-hover:text-white transition">
+                    {upsellLab.name}
+                  </h3>
+                  <p className="text-sm text-[#B3B3B3]">
+                    {upsellLab.description}
+                  </p>
+                </div>
+              </div>
+              <span className="font-anton text-sm text-[#E51B23] uppercase">
+                Upgrade →
+              </span>
+            </Link>
+          </div>
+        )}
+
         {/* Quick Links */}
         <div className="border-t border-[#333] pt-6 flex justify-center gap-6">
           <Link
@@ -134,12 +218,14 @@ export default async function LabsPage() {
           >
             View Dashboard
           </Link>
-          <Link
-            href="/call-lab-pro/checkout"
-            className="text-sm text-[#FFDE59] hover:text-white transition"
-          >
-            Upgrade to Pro
-          </Link>
+          {!hasCallLabPro && !hasDiscoveryLabPro && (
+            <Link
+              href="/call-lab-pro/checkout"
+              className="text-sm text-[#FFDE59] hover:text-white transition"
+            >
+              Upgrade to Pro
+            </Link>
+          )}
         </div>
       </div>
     </div>

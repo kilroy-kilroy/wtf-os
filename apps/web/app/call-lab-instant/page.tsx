@@ -41,7 +41,7 @@ interface AnalysisResult {
 export default function CallLabInstantPage() {
   const [recordingState, setRecordingState] = useState<RecordingState>('idle');
   const [selectedScenario, setSelectedScenario] = useState<Scenario | null>(null);
-  const [secondsLeft, setSecondsLeft] = useState(30);
+  const [secondsLeft, setSecondsLeft] = useState(90);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [email, setEmail] = useState('');
@@ -78,7 +78,7 @@ export default function CallLabInstantPage() {
     try {
       const formData = new FormData();
       formData.append('audio', audioBlob, 'recording.webm');
-      formData.append('duration', '30');
+      formData.append('duration', '90');
       if (selectedScenarioRef.current) {
         formData.append('scenario', selectedScenarioRef.current);
       }
@@ -131,7 +131,7 @@ export default function CallLabInstantPage() {
 
       mediaRecorder.start();
       setRecordingState('recording');
-      setSecondsLeft(30);
+      setSecondsLeft(90);
 
       // Countdown timer
       timerRef.current = setInterval(() => {
@@ -144,10 +144,10 @@ export default function CallLabInstantPage() {
         });
       }, 1000);
 
-      // Auto-stop after 30 seconds
+      // Auto-stop after 90 seconds
       recordingTimeoutRef.current = setTimeout(() => {
         stopRecording();
-      }, 30000);
+      }, 90000);
 
     } catch (err) {
       console.error('Error accessing microphone:', err);
@@ -191,14 +191,13 @@ export default function CallLabInstantPage() {
     setError(null);
     setEmail('');
     setEmailSuccess(false);
-    setSecondsLeft(30);
+    setSecondsLeft(90);
   };
 
   const scenarios = [
-    { id: 'discovery' as Scenario, title: 'Discovery Call Opener', desc: '"So tell me about your agency..."' },
-    { id: 'value_prop' as Scenario, title: 'Value Prop Pitch', desc: '"Here\'s how we help agencies like yours..."' },
-    { id: 'pricing' as Scenario, title: 'Pricing Presentation', desc: '"Our engagement typically runs..."' },
-    { id: 'objection' as Scenario, title: 'Objection Response', desc: '"We need to think about it..." - You say...' },
+    { id: 'value_prop' as Scenario, title: 'Give your 90-second elevator pitch', desc: 'The quick version of what you do and who you help' },
+    { id: 'pricing' as Scenario, title: 'Present your core offer', desc: 'Walk through your main service offering' },
+    { id: 'objection' as Scenario, title: 'Handle this objection: "I need to think about it"', desc: 'Show us how you respond when they hesitate' },
   ];
 
   return (
@@ -223,7 +222,7 @@ export default function CallLabInstantPage() {
             <span className="text-[#FFDE59]">RECORD</span> YOUR PITCH
           </h1>
           <p className="text-white/70 text-center mb-8 text-lg">
-            Hit the button and deliver your best 30-second sales pitch.
+            Hit the button and deliver your best 90-second sales pitch.
             We&apos;ll analyze it and show you exactly what you&apos;re missing.
           </p>
 
@@ -477,39 +476,18 @@ export default function CallLabInstantPage() {
                     We&apos;ve sent your report and the WTF Sales Guide to <strong>{email}</strong>
                   </p>
                   <p className="text-white/60 mt-4">
-                    Permanent report link:{' '}
                     <a
                       href={`/call-lab-instant/report/${result.reportId}`}
                       className="text-[#FFDE59] underline"
                     >
-                      View Report
+                      View Your Report →
                     </a>
                   </p>
                 </div>
               )}
 
-              {/* Try Again */}
-              <div className="text-center">
-                <button
-                  onClick={resetRecorder}
-                  className="text-white/60 hover:text-white underline"
-                >
-                  Record another pitch
-                </button>
-              </div>
             </div>
           )}
-        </div>
-
-        {/* Footer CTA */}
-        <div className="mt-12 text-center">
-          <p className="text-white/50 mb-4">Want to track your progress across multiple calls?</p>
-          <a
-            href="/call-lab-pro"
-            className="inline-block bg-[#E51B23] text-white px-8 py-4 font-anton text-lg tracking-wider hover:bg-[#FFDE59] hover:text-black transition-colors"
-          >
-            [ UPGRADE TO CALL LAB PRO ]
-          </a>
         </div>
       </main>
     </div>

@@ -147,14 +147,8 @@ export default function ReportPage() {
               SALES<span className="text-[#E51B23]">OS</span>
             </a>
             <span className="text-white/50">/</span>
-            <span className="text-white/70">Call Lab Report</span>
+            <span className="text-white/70">Your Report</span>
           </div>
-          <a
-            href="/call-lab-instant"
-            className="text-sm text-[#FFDE59] hover:underline"
-          >
-            Analyze Another Pitch
-          </a>
         </div>
       </header>
 
@@ -342,48 +336,20 @@ export default function ReportPage() {
           </p>
         </div>
 
-        {/* CTAs */}
-        <div className="grid md:grid-cols-2 gap-6 mb-12">
-          {/* Try Another */}
-          <a
-            href="/call-lab-instant"
-            className="block bg-white/10 border border-white/20 rounded-lg p-6 text-center hover:border-[#E51B23] transition-colors group"
-          >
-            <h3 className="font-anton text-xl text-white mb-2 group-hover:text-[#FFDE59] transition-colors">
-              ANALYZE ANOTHER PITCH
-            </h3>
-            <p className="text-white/60 text-sm">
-              Practice makes perfect. Record another 30 seconds.
-            </p>
-          </a>
-
-          {/* Upgrade */}
-          <a
-            href="/call-lab-pro"
-            className="block bg-[#E51B23] rounded-lg p-6 text-center hover:bg-[#E51B23]/80 transition-colors"
-          >
-            <h3 className="font-anton text-xl text-white mb-2">
-              UPGRADE TO PRO
-            </h3>
-            <p className="text-white/80 text-sm">
-              Track your WTF scores over time. See patterns across all your calls.
-            </p>
-          </a>
-        </div>
-
-        {/* WTF Guide CTA */}
-        <div className="bg-black border-2 border-[#FFDE59] rounded-lg p-8 text-center">
-          <h2 className="font-anton text-2xl text-[#FFDE59] mb-3 tracking-wide">
-            WANT THE FULL FRAMEWORK?
+        {/* Single CTA - Full Call Review */}
+        <div className="bg-[#E51B23] rounded-lg p-8 text-center mb-12">
+          <h2 className="font-anton text-2xl text-white mb-3 tracking-wide">
+            READY TO GET A FREE FULL CALL REVIEW?
           </h2>
-          <p className="text-white/70 mb-6 max-w-lg mx-auto">
-            Learn the WTF Sales Method - the 3-pillar trust layer that makes every other sales methodology actually work.
+          <p className="text-white/90 mb-6 max-w-lg mx-auto">
+            Paste your full call transcript and get deep-dive analysis with pattern recognition,
+            tactical rewrites, and actionable coaching feedback.
           </p>
           <a
-            href="/wtf-sales-guide"
-            className="inline-block bg-[#FFDE59] text-black px-8 py-4 font-bold uppercase tracking-wide hover:bg-white transition-colors"
+            href="/call-lab"
+            className="inline-block bg-black text-white px-8 py-4 font-anton text-lg tracking-wider hover:bg-[#FFDE59] hover:text-black transition-colors"
           >
-            Read the WTF Sales Guide
+            Analyze Your Full Call →
           </a>
         </div>
       </main>

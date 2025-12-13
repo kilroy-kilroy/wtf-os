@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useCallback, useEffect } from 'react';
+import { CallLabLogo } from '@/components/CallLabLogo';
 
 type Scenario = 'discovery' | 'value_prop' | 'pricing' | 'objection';
 type RecordingState = 'idle' | 'recording' | 'processing' | 'results' | 'capturing';
@@ -203,13 +204,9 @@ export default function CallLabInstantPage() {
   return (
     <div className="min-h-screen bg-black text-white font-poppins">
       {/* Header */}
-      <header className="px-6 py-4 border-b border-white/10">
-        <div className="flex items-center gap-2">
-          <span className="font-anton text-xl tracking-wider">
-            SALES<span className="text-[#E51B23]">OS</span>
-          </span>
-          <span className="text-white/50">/</span>
-          <span className="text-white/70">Call Lab</span>
+      <header className="px-6 py-6 border-b border-white/10">
+        <div className="max-w-4xl mx-auto">
+          <CallLabLogo variant="square" className="h-16 w-auto" />
         </div>
       </header>
 

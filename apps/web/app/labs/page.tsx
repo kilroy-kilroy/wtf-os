@@ -62,36 +62,44 @@ export default async function LabsPage() {
     redirect('/login');
   }
 
-  // Get user's subscription info - check multiple fields
+  // Get user's subscription info
   const { data: userData } = await (supabase as any)
     .from('users')
-    .select('subscription_tier, stripe_subscription_status, subscription_status')
+    .select('subscription_tier')
     .eq('id', user.id)
     .single();
 
   const subscriptionTier = (userData?.subscription_tier || '').toLowerCase();
-  const stripeStatus = (userData?.stripe_subscription_status || '').toLowerCase();
-  const subStatus = (userData?.subscription_status || '').toLowerCase();
 
-  // Debug: log the actual values (remove in production)
-  console.log('Subscription check:', { subscriptionTier, stripeStatus, subStatus, userId: user.id });
+  // Check if user has used Call Lab Pro (has full version call scores)
+  // This is a reliable indicator since Pro analysis can only be run by Pro subscribers
+  const { count: proCallCount } = await (supabase as any)
+    .from('call_scores')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', user.id)
+    .eq('version', 'full');
+
+  // Also check tool_runs for call_lab_full usage
+  const { count: proToolCount } = await (supabase as any)
+    .from('tool_runs')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', user.id)
+    .eq('tool_name', 'call_lab_full');
+
+  const hasProUsageHistory = (proCallCount && proCallCount > 0) || (proToolCount && proToolCount > 0);
 
   // Determine which products user has Pro access to
   // Check multiple conditions for Pro access:
-  // 1. Explicit tier names
+  // 1. Explicit tier names (subscriber, client = paying users)
   // 2. Tier contains 'pro'
-  // 3. Active Stripe subscription
-  // 4. Subscriber/client tiers
+  // 3. Has used Pro features (reliable indicator of subscription)
   const callLabProTiers = ['call_lab_pro', 'call-lab-pro', 'calllabpro', 'pro', 'all', 'subscriber', 'client', 'paid', 'premium'];
   const discoveryProTiers = ['discovery_lab_pro', 'discovery-lab-pro', 'discoverylabpro', 'pro', 'all'];
 
   const hasCallLabPro =
     callLabProTiers.includes(subscriptionTier) ||
     subscriptionTier.includes('pro') ||
-    subscriptionTier.includes('call') ||
-    stripeStatus === 'active' ||
-    subStatus === 'active' ||
-    subStatus === 'paid';
+    hasProUsageHistory;
 
   const hasDiscoveryLabPro =
     discoveryProTiers.includes(subscriptionTier) ||

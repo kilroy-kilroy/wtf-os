@@ -16,23 +16,43 @@ export default async function SettingsPage() {
   // Get user's profile and subscription info
   const { data: userData } = await (supabase as any)
     .from('users')
-    .select('first_name, last_name, subscription_tier, stripe_subscription_status, subscription_status')
+    .select('first_name, last_name, subscription_tier')
     .eq('id', user.id)
     .single();
 
   const firstName = userData?.first_name || '';
   const lastName = userData?.last_name || '';
-  const subscriptionTier = userData?.subscription_tier || 'free';
-  const stripeStatus = userData?.stripe_subscription_status || '';
-  const subStatus = userData?.subscription_status || '';
+  const subscriptionTier = (userData?.subscription_tier || 'free').toLowerCase();
+
+  // Check if user has used Call Lab Pro (has full version call scores)
+  // This is a reliable indicator since Pro analysis can only be run by Pro subscribers
+  const { count: proCallCount } = await (supabase as any)
+    .from('call_scores')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', user.id)
+    .eq('version', 'full');
+
+  // Also check tool_runs for call_lab_full usage
+  const { count: proToolCount } = await (supabase as any)
+    .from('tool_runs')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', user.id)
+    .eq('tool_name', 'call_lab_full');
+
+  const hasProUsageHistory = (proCallCount && proCallCount > 0) || (proToolCount && proToolCount > 0);
 
   // Determine plan display name
+  const callLabProTiers = ['call_lab_pro', 'call-lab-pro', 'calllabpro', 'pro', 'all', 'subscriber', 'client', 'paid', 'premium'];
+
   const getPlanName = () => {
-    const tier = subscriptionTier.toLowerCase();
-    if (tier.includes('pro') || tier.includes('call') || stripeStatus === 'active') {
+    if (
+      callLabProTiers.includes(subscriptionTier) ||
+      subscriptionTier.includes('pro') ||
+      hasProUsageHistory
+    ) {
       return 'Call Lab Pro';
     }
-    if (tier === 'team' || tier === 'enterprise') {
+    if (subscriptionTier === 'team' || subscriptionTier === 'enterprise') {
       return 'Team';
     }
     return 'Free';

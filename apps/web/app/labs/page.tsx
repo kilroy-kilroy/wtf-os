@@ -62,22 +62,41 @@ export default async function LabsPage() {
     redirect('/login');
   }
 
-  // Get user's subscription info
+  // Get user's subscription info - check multiple fields
   const { data: userData } = await (supabase as any)
     .from('users')
-    .select('subscription_tier')
+    .select('subscription_tier, stripe_subscription_status, subscription_status')
     .eq('id', user.id)
     .single();
 
-  const subscriptionTier = userData?.subscription_tier || 'free';
+  const subscriptionTier = (userData?.subscription_tier || '').toLowerCase();
+  const stripeStatus = (userData?.stripe_subscription_status || '').toLowerCase();
+  const subStatus = (userData?.subscription_status || '').toLowerCase();
+
+  // Debug: log the actual values (remove in production)
+  console.log('Subscription check:', { subscriptionTier, stripeStatus, subStatus, userId: user.id });
 
   // Determine which products user has Pro access to
-  // Supported tiers: 'call_lab_pro', 'discovery_lab_pro', 'pro', 'all', 'subscriber', 'client'
-  const proTiers = ['call_lab_pro', 'pro', 'all', 'subscriber', 'client'];
-  const discoveryProTiers = ['discovery_lab_pro', 'pro', 'all'];
+  // Check multiple conditions for Pro access:
+  // 1. Explicit tier names
+  // 2. Tier contains 'pro'
+  // 3. Active Stripe subscription
+  // 4. Subscriber/client tiers
+  const callLabProTiers = ['call_lab_pro', 'call-lab-pro', 'calllabpro', 'pro', 'all', 'subscriber', 'client', 'paid', 'premium'];
+  const discoveryProTiers = ['discovery_lab_pro', 'discovery-lab-pro', 'discoverylabpro', 'pro', 'all'];
 
-  const hasCallLabPro = proTiers.includes(subscriptionTier);
-  const hasDiscoveryLabPro = discoveryProTiers.includes(subscriptionTier);
+  const hasCallLabPro =
+    callLabProTiers.includes(subscriptionTier) ||
+    subscriptionTier.includes('pro') ||
+    subscriptionTier.includes('call') ||
+    stripeStatus === 'active' ||
+    subStatus === 'active' ||
+    subStatus === 'paid';
+
+  const hasDiscoveryLabPro =
+    discoveryProTiers.includes(subscriptionTier) ||
+    subscriptionTier.includes('discovery') ||
+    subscriptionTier === 'all';
 
   // Filter labs based on subscription
   // If user has Pro for a product, show only the Pro version

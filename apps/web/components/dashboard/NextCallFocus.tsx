@@ -83,7 +83,7 @@ export function NextCallFocus({
             EXAMPLE LANGUAGE
           </h3>
           <p className="text-[#FFDE59] text-base italic">
-            "{exampleLanguage}"
+            &ldquo;{exampleLanguage}&rdquo;
           </p>
         </div>
       )}

@@ -159,7 +159,7 @@ export function PatternIntelligenceGrid({
                           <div className="mb-3">
                             <span className="text-[#666] text-xs uppercase tracking-wider">Quote:</span>
                             <p className="text-[#FFDE59] text-sm italic mt-1">
-                              "{data.representativeQuote}"
+                              &ldquo;{data.representativeQuote}&rdquo;
                             </p>
                           </div>
                         )}

@@ -14,158 +14,449 @@ import {
 import {
   MACRO_PATTERNS,
   getPatternById,
-  getNegativePatterns,
   MacroPattern,
 } from "@/lib/macro-patterns";
 
-// Mock data generator for demo purposes
-// In production, this would come from the database
-function generateDashboardData(userId: string) {
-  // Simulate pattern data based on the 18 canonical patterns
+// Types for database results
+interface CallScoreRow {
+  id: string;
+  overall_score: number | null;
+  overall_grade: string | null;
+  diagnosis_summary: string | null;
+  markdown_response: string | null;
+  version: string;
+  created_at: string;
+  ingestion_items: {
+    transcript_metadata: Record<string, unknown> | null;
+    created_at: string;
+  } | null;
+}
+
+interface CallSnippetRow {
+  id: string;
+  call_score_id: string;
+  snippet_type: string;
+  transcript_quote: string;
+  rep_behavior: string | null;
+  coaching_note: string | null;
+  impact: string | null;
+}
+
+interface FollowUpRow {
+  id: string;
+  call_score_id: string;
+  template_type: string;
+  subject_line: string | null;
+  body: string;
+}
+
+// Extract patterns mentioned in markdown response
+function extractPatternsFromMarkdown(markdown: string): string[] {
+  const patterns: string[] = [];
+
+  // Look for pattern names in "The X" format
+  const patternMatches = markdown.match(/\*\*The\s+([^*]+)\*\*/g) || [];
+  patternMatches.forEach((match) => {
+    const name = match.replace(/\*\*/g, "").trim();
+    patterns.push(name);
+  });
+
+  // Also look for patterns in section headers
+  const headerMatches =
+    markdown.match(/###?\s+(?:A\.|B\.|C\.|\d\.)\s*(.+)/g) || [];
+  headerMatches.forEach((match) => {
+    const name = match.replace(/###?\s+(?:A\.|B\.|C\.|\d\.)\s*/, "").trim();
+    if (name.startsWith("The ")) {
+      patterns.push(name);
+    }
+  });
+
+  return [...new Set(patterns)];
+}
+
+// Map detected patterns to canonical macro patterns
+function mapToCanonicalPatterns(
+  detectedPatterns: string[]
+): Map<string, number> {
+  const patternCounts = new Map<string, number>();
+
+  // Initialize all patterns with 0
+  MACRO_PATTERNS.forEach((p) => patternCounts.set(p.id, 0));
+
+  // Map keywords to canonical patterns
+  const keywordMapping: Record<string, string> = {
+    cultural: "cultural_handshake",
+    handshake: "cultural_handshake",
+    peer: "peer_validation",
+    validation: "peer_validation",
+    vulnerability: "vulnerability_flip",
+    flip: "vulnerability_flip",
+    scenic: "scenic_route",
+    route: "scenic_route",
+    "small talk": "scenic_route",
+    blitzer: "business_blitzer",
+    rushed: "business_blitzer",
+    diagnostic: "diagnostic_reveal",
+    reveal: "diagnostic_reveal",
+    "self diagnosis": "self_diagnosis_pull",
+    "diagnosis pull": "self_diagnosis_pull",
+    generous: "generous_professor",
+    professor: "generous_professor",
+    avalanche: "advice_avalanche",
+    advice: "advice_avalanche",
+    surface: "surface_scanner",
+    scanner: "surface_scanner",
+    framework: "framework_drop",
+    drop: "framework_drop",
+    agenda: "agenda_abandoner",
+    abandoner: "agenda_abandoner",
+    passenger: "passenger",
+    control: "passenger",
+    premature: "premature_solution",
+    solution: "premature_solution",
+    mirror: "mirror_close",
+    close: "mirror_close",
+    permission: "permission_builder",
+    builder: "permission_builder",
+    "micro-commitment": "permission_builder",
+    "soft close": "soft_close_fade",
+    fade: "soft_close_fade",
+    "over-explain": "over_explain_loop",
+    loop: "over_explain_loop",
+  };
+
+  detectedPatterns.forEach((pattern) => {
+    const lowerPattern = pattern.toLowerCase();
+    for (const [keyword, patternId] of Object.entries(keywordMapping)) {
+      if (lowerPattern.includes(keyword)) {
+        patternCounts.set(patternId, (patternCounts.get(patternId) || 0) + 1);
+        break;
+      }
+    }
+  });
+
+  return patternCounts;
+}
+
+// Extract coaching insights from markdown
+function extractCoachingNarrative(markdown: string): string {
+  // Look for bottom line or executive summary
+  const bottomLineMatch = markdown.match(
+    /(?:BOTTOM LINE|Executive Summary)[:\s]*\n([^#]+)/i
+  );
+  if (bottomLineMatch) {
+    return bottomLineMatch[1].trim().slice(0, 500);
+  }
+
+  // Fall back to first paragraph after summary
+  const summaryMatch = markdown.match(/(?:Snap Take|Summary)[:\s]*\n([^#]+)/i);
+  if (summaryMatch) {
+    return summaryMatch[1].trim().slice(0, 500);
+  }
+
+  return "Analyze more calls to get personalized coaching insights.";
+}
+
+// Extract buyer name from markdown
+function extractBuyerInfo(markdown: string): {
+  buyerName: string;
+  companyName: string;
+} {
+  // Look for "Call: Name - Company" format
+  const callMatch = markdown.match(
+    /\*\*Call:\*\*\s*([^-\n]+)\s*-?\s*([^\n*]*)/i
+  );
+  if (callMatch) {
+    return {
+      buyerName: callMatch[1].trim(),
+      companyName: callMatch[2]?.trim() || "Unknown Company",
+    };
+  }
+
+  // Try other formats
+  const nameMatch = markdown.match(
+    /(?:with|Call with)\s+([A-Z][a-z]+\s+[A-Z][a-z]+)/
+  );
+  if (nameMatch) {
+    return {
+      buyerName: nameMatch[1],
+      companyName: "Unknown Company",
+    };
+  }
+
+  return { buyerName: "Prospect", companyName: "Unknown Company" };
+}
+
+// Determine the most prominent pattern for a call
+function getHighlightedPattern(
+  markdown: string,
+  _snippets: CallSnippetRow[]
+): { pattern: MacroPattern; isPositive: boolean } | null {
+  // Extract patterns from markdown
+  const detectedPatterns = extractPatternsFromMarkdown(markdown);
+  const patternCounts = mapToCanonicalPatterns(detectedPatterns);
+
+  // Find the most frequent positive pattern
+  let maxPositiveCount = 0;
+  let maxPositivePattern: MacroPattern | null = null;
+  let maxNegativeCount = 0;
+  let maxNegativePattern: MacroPattern | null = null;
+
+  patternCounts.forEach((count, patternId) => {
+    if (count > 0) {
+      const pattern = getPatternById(patternId);
+      if (pattern) {
+        if (pattern.polarity === "positive" && count > maxPositiveCount) {
+          maxPositiveCount = count;
+          maxPositivePattern = pattern;
+        } else if (pattern.polarity === "negative" && count > maxNegativeCount) {
+          maxNegativeCount = count;
+          maxNegativePattern = pattern;
+        }
+      }
+    }
+  });
+
+  // Prioritize showing positive patterns if present, else show negative
+  if (maxPositivePattern) {
+    return { pattern: maxPositivePattern, isPositive: true };
+  }
+  if (maxNegativePattern) {
+    return { pattern: maxNegativePattern, isPositive: false };
+  }
+
+  // Default to a generic pattern based on score
+  const defaultPattern = MACRO_PATTERNS.find(
+    (p) => p.id === "diagnostic_reveal"
+  );
+  return defaultPattern ? { pattern: defaultPattern, isPositive: true } : null;
+}
+
+// Fetch and process real dashboard data
+async function getDashboardData(
+  supabase: ReturnType<typeof createServerComponentClient>,
+  userId: string
+) {
+  // Get user's agency
+  const { data: assignment } = await (supabase as ReturnType<typeof createServerComponentClient>)
+    .from("user_agency_assignments")
+    .select("agency_id")
+    .eq("user_id", userId)
+    .single();
+
+  const agencyId = (assignment as { agency_id?: string } | null)?.agency_id;
+
+  // Fetch call scores for this user (last 30 days)
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+  // Build query based on user_id or agency_id
+  let query = supabase
+    .from("call_scores")
+    .select(
+      `
+      id,
+      overall_score,
+      overall_grade,
+      diagnosis_summary,
+      markdown_response,
+      version,
+      created_at,
+      ingestion_items (
+        transcript_metadata,
+        created_at
+      )
+    `
+    )
+    .gte("created_at", thirtyDaysAgo.toISOString())
+    .order("created_at", { ascending: false })
+    .limit(20);
+
+  // Filter by user_id or agency_id
+  if (agencyId) {
+    query = query.or(`user_id.eq.${userId},agency_id.eq.${agencyId}`);
+  } else {
+    query = query.eq("user_id", userId);
+  }
+
+  const { data: callScores, error: scoresError } = await query;
+
+  if (scoresError) {
+    console.error("Error fetching call scores:", scoresError);
+  }
+
+  const scores = (callScores || []) as unknown as CallScoreRow[];
+
+  // Fetch snippets for these calls
+  const callScoreIds = scores.map((s) => s.id);
+  let snippets: CallSnippetRow[] = [];
+
+  if (callScoreIds.length > 0) {
+    const { data: snippetData } = await supabase
+      .from("call_snippets")
+      .select("*")
+      .in("call_score_id", callScoreIds);
+
+    snippets = (snippetData || []) as unknown as CallSnippetRow[];
+  }
+
+  // Fetch follow-ups
+  let followUps: FollowUpRow[] = [];
+  if (callScoreIds.length > 0) {
+    const { data: followUpData } = await supabase
+      .from("follow_up_templates")
+      .select("*")
+      .in("call_score_id", callScoreIds);
+
+    followUps = (followUpData || []) as unknown as FollowUpRow[];
+  }
+
+  // Process pattern data from all calls
+  const allPatternCounts = new Map<string, number>();
+  MACRO_PATTERNS.forEach((p) => allPatternCounts.set(p.id, 0));
+
+  scores.forEach((score) => {
+    if (score.markdown_response) {
+      const patterns = extractPatternsFromMarkdown(score.markdown_response);
+      const counts = mapToCanonicalPatterns(patterns);
+      counts.forEach((count, patternId) => {
+        allPatternCounts.set(
+          patternId,
+          (allPatternCounts.get(patternId) || 0) + count
+        );
+      });
+    }
+  });
+
+  // Build pattern data for grid
   const patternData = MACRO_PATTERNS.map((pattern) => {
+    const frequency = allPatternCounts.get(pattern.id) || 0;
     const isNegative = pattern.polarity === "negative";
-    // Negative patterns should appear less if the rep is good
-    const baseFrequency = isNegative ? Math.floor(Math.random() * 4) : Math.floor(Math.random() * 6) + 2;
-    const trends = ["up", "down", "stable"] as const;
 
     return {
       patternId: pattern.id,
-      frequency: baseFrequency,
-      totalCalls: 8,
-      trend: trends[Math.floor(Math.random() * 3)],
-      representativeQuote: isNegative && baseFrequency > 0
-        ? "Let me walk you through everything we offer..."
-        : undefined,
-      coachingNote: baseFrequency > 3
-        ? `This pattern appeared in ${baseFrequency} of your last 8 calls.`
-        : undefined,
+      frequency,
+      totalCalls: scores.length || 1,
+      trend: "stable" as const,
+      representativeQuote:
+        isNegative && frequency > 0
+          ? snippets.find((s) => s.snippet_type === "weakness")
+              ?.transcript_quote
+          : undefined,
+      coachingNote:
+        frequency > 0
+          ? `Detected in ${frequency} of your last ${scores.length} calls.`
+          : undefined,
     };
   });
 
   // Find the most frequent negative pattern for Next Call Focus
-  const negativePatterns = getNegativePatterns();
   const negativePatternData = patternData.filter((d) => {
     const pattern = getPatternById(d.patternId);
     return pattern?.polarity === "negative" && d.frequency > 0;
   });
-
-  // Sort by frequency to find the worst offender
   negativePatternData.sort((a, b) => b.frequency - a.frequency);
+
   const worstPattern = negativePatternData[0];
-  const worstPatternInfo = worstPattern ? getPatternById(worstPattern.patternId) : negativePatterns[0];
+  const worstPatternInfo = worstPattern
+    ? getPatternById(worstPattern.patternId)
+    : null;
 
-  // Generate momentum data
-  const improvedPattern = MACRO_PATTERNS.find((p) => p.id === "diagnostic_reveal");
-  const regressedPattern = MACRO_PATTERNS.find((p) => p.id === "soft_close_fade");
+  // Build recent calls list
+  const recentCalls = scores.slice(0, 5).map((score) => {
+    const callSnippets = snippets.filter((s) => s.call_score_id === score.id);
+    const metadata = score.ingestion_items?.transcript_metadata as {
+      prospect_company?: string;
+    } | null;
 
-  // Generate follow-up items for calls with weak closes
-  const followUpItems = [
-    {
-      callId: "call-001",
-      callName: "Sarah Chen - TechCorp",
-      riskNote: "Call ended with 'I\'ll send some info' - no concrete next step committed.",
-      recommendedFollowUp: "Send a recap email with specific time options for follow-up call. Reference the pain point about Q4 deadlines.",
-    },
-  ];
+    const { buyerName, companyName } = score.markdown_response
+      ? extractBuyerInfo(score.markdown_response)
+      : {
+          buyerName: "Prospect",
+          companyName: metadata?.prospect_company || "Company",
+        };
+
+    const highlightedPattern = score.markdown_response
+      ? getHighlightedPattern(score.markdown_response, callSnippets)
+      : { pattern: MACRO_PATTERNS[0], isPositive: true };
+
+    const date = new Date(score.created_at);
+    const formattedDate = date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+
+    return {
+      id: score.id,
+      buyerName,
+      companyName,
+      date: formattedDate,
+      score: Math.round((score.overall_score || 7) * 10),
+      highlightedPattern: highlightedPattern || {
+        pattern: MACRO_PATTERNS[0],
+        isPositive: true,
+      },
+      coachingNote:
+        score.diagnosis_summary?.slice(0, 100) ||
+        "Review the full analysis for coaching notes.",
+    };
+  });
+
+  // Build follow-up items
+  const followUpItems = followUps.slice(0, 3).map((fu) => {
+    const relatedScore = scores.find((s) => s.id === fu.call_score_id);
+    const { buyerName, companyName } = relatedScore?.markdown_response
+      ? extractBuyerInfo(relatedScore.markdown_response)
+      : { buyerName: "Prospect", companyName: "Company" };
+
+    return {
+      callId: fu.call_score_id,
+      callName: `${buyerName} - ${companyName}`,
+      riskNote: fu.subject_line || "Follow-up recommended",
+      recommendedFollowUp: fu.body.slice(0, 200),
+    };
+  });
+
+  // Calculate metrics
+  const validScores = scores.filter((s) => s.overall_score !== null);
+  const avgScore =
+    validScores.length > 0
+      ? validScores.reduce((sum, s) => sum + (s.overall_score || 0), 0) /
+        validScores.length
+      : 0;
+
+  // Get coaching narrative from most recent call
+  const coachingNarrative = scores[0]?.markdown_response
+    ? extractCoachingNarrative(scores[0].markdown_response)
+    : scores.length === 0
+      ? "No calls analyzed yet. Submit a call transcript to get started with personalized coaching."
+      : "Keep analyzing calls to build your pattern profile.";
 
   return {
     patternData,
     nextCallFocus: worstPatternInfo
       ? {
           pattern: worstPatternInfo,
-          whyCostingDeals:
-            worstPatternInfo.id === "soft_close_fade"
-              ? "Ending calls without specific next steps leaves deals in limbo. Prospects lose urgency and momentum dies."
-              : worstPatternInfo.id === "advice_avalanche"
-              ? "Giving away too much consulting for free eliminates the prospect's need to hire you. They got the value without the contract."
-              : worstPatternInfo.id === "scenic_route"
-              ? "Extended small talk burns through the prospect's attention budget before you've established value."
-              : worstPatternInfo.description,
+          whyCostingDeals: worstPatternInfo.description,
           correctiveMove:
             worstPatternInfo.correctiveMove ||
             "Focus on this pattern in your next call.",
-          exampleLanguage:
-            worstPatternInfo.id === "soft_close_fade"
-              ? "Based on what we discussed, I'd recommend we schedule a 30-minute deep dive for Tuesday at 2pm. Does that work?"
-              : undefined,
+          exampleLanguage: undefined,
         }
       : null,
     momentum: {
-      mostImproved: improvedPattern
-        ? {
-            pattern: improvedPattern,
-            changeSinceLastPeriod: 15,
-            explanation:
-              "You're asking better diagnostic questions that uncover real pain points.",
-          }
-        : undefined,
-      mostRegressed: regressedPattern
-        ? {
-            pattern: regressedPattern,
-            changeSinceLastPeriod: -12,
-            explanation:
-              "Recent calls have ended with vague next steps instead of concrete commitments.",
-          }
-        : undefined,
-      hasEnoughData: true,
+      mostImproved: undefined,
+      mostRegressed: undefined,
+      hasEnoughData: scores.length >= 5,
     },
-    recentCalls: [
-      {
-        id: "call-001",
-        buyerName: "Sarah Chen",
-        companyName: "TechCorp",
-        date: "Dec 12, 2024",
-        score: 72,
-        highlightedPattern: {
-          pattern: MACRO_PATTERNS.find((p) => p.id === "diagnostic_reveal")!,
-          isPositive: true,
-        },
-        coachingNote: "Strong discovery but missed the close opportunity at 18:42.",
-      },
-      {
-        id: "call-002",
-        buyerName: "Mike Rodriguez",
-        companyName: "GrowthCo",
-        date: "Dec 11, 2024",
-        score: 65,
-        highlightedPattern: {
-          pattern: MACRO_PATTERNS.find((p) => p.id === "advice_avalanche")!,
-          isPositive: false,
-        },
-        coachingNote: "Gave away the entire strategy before establishing value.",
-      },
-      {
-        id: "call-003",
-        buyerName: "Jennifer Walsh",
-        companyName: "ScaleUp Inc",
-        date: "Dec 10, 2024",
-        score: 81,
-        highlightedPattern: {
-          pattern: MACRO_PATTERNS.find((p) => p.id === "permission_builder")!,
-          isPositive: true,
-        },
-        coachingNote: "Excellent progression through micro-commitments.",
-      },
-      {
-        id: "call-004",
-        buyerName: "David Park",
-        companyName: "Venture Labs",
-        date: "Dec 9, 2024",
-        score: 58,
-        highlightedPattern: {
-          pattern: MACRO_PATTERNS.find((p) => p.id === "passenger")!,
-          isPositive: false,
-        },
-        coachingNote: "Let the prospect drive the entire conversation.",
-      },
-    ],
+    recentCalls,
     followUpItems,
-    coachingNarrative:
-      "Recent calls show strong rapport building and solid diagnostic skills, but there's a recurring pattern of weak closes. The Soft Close Fade is appearing in 3 of your last 8 calls. Focus on building permission throughout the call so closing feels natural, not forced.",
+    coachingNarrative,
     metrics: {
-      callsInRange: 8,
-      overallScore: 71,
-      trendVsPrevious: 4,
+      callsInRange: scores.length,
+      overallScore: Math.round(avgScore * 10),
+      trendVsPrevious: 0,
     },
   };
 }
@@ -182,12 +473,10 @@ export default async function DashboardPage() {
 
   // Get user's name from metadata or email
   const userName =
-    user.user_metadata?.first_name ||
-    user.email?.split("@")[0] ||
-    "there";
+    user.user_metadata?.first_name || user.email?.split("@")[0] || "there";
 
-  // Get dashboard data
-  const data = generateDashboardData(user.id);
+  // Get dashboard data from database
+  const data = await getDashboardData(supabase, user.id);
 
   return (
     <div className="min-h-screen bg-black">
@@ -237,84 +526,106 @@ export default async function DashboardPage() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-8 space-y-8">
-        {/* ============================================
-            BLOCK 2: NEXT CALL FOCUS (Primary Command Block)
-            Purpose: Tell user what to fix on the very next call
-            Rules: Exactly one pattern, always negative, always behavioral
-            THIS BLOCK VISUALLY DOMINATES THE PAGE
-            ============================================ */}
-        {data.nextCallFocus && (
-          <NextCallFocus
-            pattern={data.nextCallFocus.pattern}
-            whyCostingDeals={data.nextCallFocus.whyCostingDeals}
-            correctiveMove={data.nextCallFocus.correctiveMove}
-            exampleLanguage={data.nextCallFocus.exampleLanguage}
-          />
+        {/* Empty State */}
+        {data.metrics.callsInRange === 0 ? (
+          <div className="border border-[#333] rounded-lg p-12 text-center">
+            <div className="text-4xl mb-4">📞</div>
+            <h2 className="font-anton text-2xl text-[#FFDE59] uppercase mb-4">
+              No Calls Analyzed Yet
+            </h2>
+            <p className="text-[#B3B3B3] mb-8 max-w-md mx-auto">
+              Submit your first call transcript to start building your pattern
+              profile and get personalized coaching insights.
+            </p>
+            <Link
+              href="/call-lab"
+              className="inline-block bg-[#E51B23] text-white px-8 py-4 font-anton text-lg uppercase tracking-wider hover:bg-[#C41820] transition-colors"
+            >
+              Analyze Your First Call
+            </Link>
+          </div>
+        ) : (
+          <>
+            {/* ============================================
+                BLOCK 2: NEXT CALL FOCUS (Primary Command Block)
+                Purpose: Tell user what to fix on the very next call
+                Rules: Exactly one pattern, always negative, always behavioral
+                THIS BLOCK VISUALLY DOMINATES THE PAGE
+                ============================================ */}
+            {data.nextCallFocus && (
+              <NextCallFocus
+                pattern={data.nextCallFocus.pattern}
+                whyCostingDeals={data.nextCallFocus.whyCostingDeals}
+                correctiveMove={data.nextCallFocus.correctiveMove}
+                exampleLanguage={data.nextCallFocus.exampleLanguage}
+              />
+            )}
+
+            {/* ============================================
+                BLOCK 3: SITUATION SNAPSHOT (Quick Context)
+                Purpose: Quick grounding without vanity metrics
+                Rules: Three numbers max, tooltips explain derivation
+                ============================================ */}
+            <SituationSnapshot
+              callsInRange={data.metrics.callsInRange}
+              overallScore={data.metrics.overallScore}
+              trendVsPrevious={data.metrics.trendVsPrevious}
+            />
+
+            {/* Main Content Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              {/* Left Column - Pattern Intelligence */}
+              <div className="lg:col-span-2 space-y-8">
+                {/* ============================================
+                    BLOCK 4: PATTERN INTELLIGENCE (Core Diagnostic)
+                    Purpose: Expose the real shape of selling behavior
+                    Rules: Only 18 canonical patterns, grouped by category
+                           Every pattern appears once and only once
+                           Patterns are facts, not judgments
+                    ============================================ */}
+                <PatternIntelligenceGrid
+                  patternData={data.patternData}
+                  totalCalls={data.metrics.callsInRange}
+                />
+              </div>
+
+              {/* Right Column */}
+              <div className="space-y-8">
+                {/* ============================================
+                    BLOCK 5: MOMENTUM SIGNALS
+                    Purpose: Show change, not totals
+                    Rules: Only shown with enough historical data
+                    ============================================ */}
+                <MomentumSignals
+                  mostImproved={data.momentum.mostImproved}
+                  mostRegressed={data.momentum.mostRegressed}
+                  hasEnoughData={data.momentum.hasEnoughData}
+                />
+
+                {/* ============================================
+                    BLOCK 8: COACHING NARRATIVE (Derived Insight)
+                    Purpose: Translate patterns into human understanding
+                    Rules: No charts, no scores, interpretation not measurement
+                    ============================================ */}
+                <CoachingNarrative narrative={data.coachingNarrative} />
+
+                {/* ============================================
+                    BLOCK 7: FOLLOW-UP INTELLIGENCE
+                    Purpose: Protect deals after the conversation ends
+                    Rules: Only appears when action is required
+                    ============================================ */}
+                <FollowUpIntelligence items={data.followUpItems} />
+              </div>
+            </div>
+
+            {/* ============================================
+                BLOCK 6: RECENT CALLS (Evidence Layer)
+                Purpose: Connect insight to reality
+                Rules: 3-5 calls, one macro pattern per call, drill-down not analytics
+                ============================================ */}
+            <RecentCallsList calls={data.recentCalls} />
+          </>
         )}
-
-        {/* ============================================
-            BLOCK 3: SITUATION SNAPSHOT (Quick Context)
-            Purpose: Quick grounding without vanity metrics
-            Rules: Three numbers max, tooltips explain derivation
-            ============================================ */}
-        <SituationSnapshot
-          callsInRange={data.metrics.callsInRange}
-          overallScore={data.metrics.overallScore}
-          trendVsPrevious={data.metrics.trendVsPrevious}
-        />
-
-        {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left Column - Pattern Intelligence */}
-          <div className="lg:col-span-2 space-y-8">
-            {/* ============================================
-                BLOCK 4: PATTERN INTELLIGENCE (Core Diagnostic)
-                Purpose: Expose the real shape of selling behavior
-                Rules: Only 18 canonical patterns, grouped by category
-                       Every pattern appears once and only once
-                       Patterns are facts, not judgments
-                ============================================ */}
-            <PatternIntelligenceGrid
-              patternData={data.patternData}
-              totalCalls={data.metrics.callsInRange}
-            />
-          </div>
-
-          {/* Right Column */}
-          <div className="space-y-8">
-            {/* ============================================
-                BLOCK 5: MOMENTUM SIGNALS
-                Purpose: Show change, not totals
-                Rules: Only shown with enough historical data
-                ============================================ */}
-            <MomentumSignals
-              mostImproved={data.momentum.mostImproved}
-              mostRegressed={data.momentum.mostRegressed}
-              hasEnoughData={data.momentum.hasEnoughData}
-            />
-
-            {/* ============================================
-                BLOCK 8: COACHING NARRATIVE (Derived Insight)
-                Purpose: Translate patterns into human understanding
-                Rules: No charts, no scores, interpretation not measurement
-                ============================================ */}
-            <CoachingNarrative narrative={data.coachingNarrative} />
-
-            {/* ============================================
-                BLOCK 7: FOLLOW-UP INTELLIGENCE
-                Purpose: Protect deals after the conversation ends
-                Rules: Only appears when action is required
-                ============================================ */}
-            <FollowUpIntelligence items={data.followUpItems} />
-          </div>
-        </div>
-
-        {/* ============================================
-            BLOCK 6: RECENT CALLS (Evidence Layer)
-            Purpose: Connect insight to reality
-            Rules: 3-5 calls, one macro pattern per call, drill-down not analytics
-            ============================================ */}
-        <RecentCallsList calls={data.recentCalls} />
 
         {/* ============================================
             BLOCK 9: FOOTER ACTIONS
@@ -338,7 +649,10 @@ export default async function DashboardPage() {
             </div>
 
             <div className="flex items-center gap-4 text-sm text-[#666]">
-              <Link href="/settings" className="hover:text-white transition-colors">
+              <Link
+                href="/settings"
+                className="hover:text-white transition-colors"
+              >
                 Settings
               </Link>
               <span>•</span>
@@ -346,7 +660,7 @@ export default async function DashboardPage() {
                 All Labs
               </Link>
               <span>•</span>
-              <span>tim@timkilroy.com</span>
+              <span>{user.email}</span>
             </div>
           </div>
         </footer>

@@ -140,72 +140,92 @@ export default async function LabsPage() {
           </div>
         </div>
 
-        {/* Labs Grid */}
-        <div className="grid md:grid-cols-2 gap-6">
-          {filteredLabs.map((lab) => (
-            <Link
-              key={lab.name}
-              href={lab.href}
-              className="group border border-[#333] rounded-lg p-6 hover:border-[#E51B23] transition-all duration-200"
-            >
-              <div className="flex items-start justify-between mb-4">
-                <span className="text-4xl">{lab.icon}</span>
-                <span
-                  className="font-anton text-xs uppercase px-2 py-1 rounded"
-                  style={{
-                    backgroundColor:
-                      lab.tier === 'Pro' ? '#FFDE59' : 'transparent',
-                    color: lab.tier === 'Pro' ? '#000' : '#666',
-                    border:
-                      lab.tier === 'Pro' ? 'none' : '1px solid #333',
-                  }}
-                >
-                  {lab.tier}
-                </span>
-              </div>
+        {/* Your Labs Section */}
+        <div>
+          <div className="flex items-center gap-3 mb-4">
+            <h2 className="font-anton text-lg text-[#FFDE59] uppercase tracking-wider">
+              Your Labs
+            </h2>
+            <div className="flex-1 border-t border-[#333]" />
+          </div>
 
-              <h3
-                className="font-anton text-xl uppercase tracking-wide mb-2 group-hover:text-[#E51B23] transition"
-                style={{ color: lab.color }}
+          <div className="grid md:grid-cols-2 gap-6">
+            {filteredLabs.map((lab) => (
+              <Link
+                key={lab.name}
+                href={lab.href}
+                className="group border border-[#333] rounded-lg p-6 hover:border-[#E51B23] transition-all duration-200"
               >
-                {lab.name}
-              </h3>
+                <div className="flex items-start justify-between mb-4">
+                  <span className="text-4xl">{lab.icon}</span>
+                  <span
+                    className="font-anton text-xs uppercase px-2 py-1 rounded"
+                    style={{
+                      backgroundColor:
+                        lab.tier === 'Pro' ? '#FFDE59' : 'transparent',
+                      color: lab.tier === 'Pro' ? '#000' : '#666',
+                      border:
+                        lab.tier === 'Pro' ? 'none' : '1px solid #333',
+                    }}
+                  >
+                    {lab.tier}
+                  </span>
+                </div>
 
-              <p className="text-sm text-[#B3B3B3] leading-relaxed">
-                {lab.description}
-              </p>
+                <h3
+                  className="font-anton text-xl uppercase tracking-wide mb-2 group-hover:text-[#E51B23] transition"
+                  style={{ color: lab.color }}
+                >
+                  {lab.name}
+                </h3>
 
-              <div className="mt-4 flex items-center text-[#E51B23] font-anton text-sm uppercase">
-                Launch →
-              </div>
-            </Link>
-          ))}
+                <p className="text-sm text-[#B3B3B3] leading-relaxed">
+                  {lab.description}
+                </p>
+
+                <div className="mt-4 flex items-center text-[#E51B23] font-anton text-sm uppercase">
+                  Launch →
+                </div>
+              </Link>
+            ))}
+          </div>
         </div>
 
-        {/* Upsell Recommendation */}
+        {/* Recommended Section */}
         {upsellLab && (
-          <div className="border border-[#FFDE59]/30 rounded-lg p-6 bg-[#FFDE59]/5">
-            <div className="text-xs text-[#FFDE59] font-anton uppercase mb-3">
-              Recommended for You
+          <div>
+            <div className="flex items-center gap-3 mb-4">
+              <h2 className="font-anton text-lg text-[#666] uppercase tracking-wider">
+                Recommended
+              </h2>
+              <div className="flex-1 border-t border-[#333]" />
             </div>
+
             <Link
-              href={upsellLab.href.replace('/welcome', '/checkout')}
-              className="group flex items-center justify-between"
+              href={upsellLab.href.replace('/welcome', '')}
+              className="group block border border-[#333] rounded-lg p-6 hover:border-[#FFDE59] transition-all duration-200 bg-[#FFDE59]/5"
             >
-              <div className="flex items-center gap-4">
-                <span className="text-3xl">{upsellLab.icon}</span>
-                <div>
-                  <h3 className="font-anton text-lg uppercase tracking-wide text-[#FFDE59] group-hover:text-white transition">
-                    {upsellLab.name}
-                  </h3>
-                  <p className="text-sm text-[#B3B3B3]">
-                    {upsellLab.description}
-                  </p>
+              <div className="flex items-start justify-between">
+                <div className="flex items-start gap-4">
+                  <span className="text-4xl">{upsellLab.icon}</span>
+                  <div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <h3 className="font-anton text-xl uppercase tracking-wide text-[#FFDE59] group-hover:text-white transition">
+                        {upsellLab.name}
+                      </h3>
+                      <span className="font-anton text-xs uppercase px-2 py-1 rounded bg-[#FFDE59] text-black">
+                        Pro
+                      </span>
+                    </div>
+                    <p className="text-sm text-[#B3B3B3] leading-relaxed max-w-lg">
+                      {upsellLab.description}
+                    </p>
+                  </div>
                 </div>
+                <span className="font-anton text-sm text-[#FFDE59] uppercase whitespace-nowrap">
+                  Learn More →
+                </span>
               </div>
-              <span className="font-anton text-sm text-[#E51B23] uppercase">
-                Upgrade →
-              </span>
             </Link>
           </div>
         )}

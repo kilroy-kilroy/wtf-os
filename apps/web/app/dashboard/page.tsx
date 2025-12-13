@@ -329,15 +329,26 @@ async function getDashboardData(
   });
 
   // Build pattern data for grid
-  const patternData = MACRO_PATTERNS.map((pattern) => {
+  const patternData: Array<{
+    patternId: string;
+    frequency: number;
+    totalCalls: number;
+    trend: "up" | "down" | "stable";
+    representativeQuote?: string;
+    coachingNote?: string;
+  }> = MACRO_PATTERNS.map((pattern) => {
     const frequency = allPatternCounts.get(pattern.id) || 0;
     const isNegative = pattern.polarity === "negative";
+
+    // TODO: Calculate actual trend from historical data when available
+    // For now, default to stable
+    const trend: "up" | "down" | "stable" = "stable";
 
     return {
       patternId: pattern.id,
       frequency,
       totalCalls: scores.length || 1,
-      trend: "stable" as const,
+      trend,
       representativeQuote:
         isNegative && frequency > 0
           ? snippets.find((s) => s.snippet_type === "weakness")
@@ -350,12 +361,49 @@ async function getDashboardData(
     };
   });
 
-  // Find the most frequent negative pattern for Next Call Focus
+  /**
+   * Next Call Focus Selection Logic
+   *
+   * Priority rules for selecting which negative pattern to feature:
+   * 1. Highest frequency negative pattern that is also regressing (trending worse)
+   * 2. If no regression, highest frequency negative pattern
+   * 3. Tie-breaker: Activation > Control > Diagnosis > Connection
+   *    (close patterns hurt more than rapport patterns)
+   */
+  const categoryPriority: Record<string, number> = {
+    activation: 4, // Highest priority - close patterns hurt most
+    control: 3,
+    diagnosis: 2,
+    connection: 1, // Lowest priority
+  };
+
   const negativePatternData = patternData.filter((d) => {
     const pattern = getPatternById(d.patternId);
     return pattern?.polarity === "negative" && d.frequency > 0;
   });
-  negativePatternData.sort((a, b) => b.frequency - a.frequency);
+
+  // Sort by: 1) regressing first, 2) frequency, 3) category priority
+  negativePatternData.sort((a, b) => {
+    const patternA = getPatternById(a.patternId);
+    const patternB = getPatternById(b.patternId);
+
+    // Priority 1: Regressing patterns first (trend = 'down' means getting worse)
+    const aRegressing = a.trend === "down" ? 1 : 0;
+    const bRegressing = b.trend === "down" ? 1 : 0;
+    if (aRegressing !== bRegressing) {
+      return bRegressing - aRegressing; // Regressing patterns first
+    }
+
+    // Priority 2: Higher frequency
+    if (a.frequency !== b.frequency) {
+      return b.frequency - a.frequency;
+    }
+
+    // Priority 3: Category tie-breaker (Activation > Control > Diagnosis > Connection)
+    const aPriority = categoryPriority[patternA?.category || "connection"] || 1;
+    const bPriority = categoryPriority[patternB?.category || "connection"] || 1;
+    return bPriority - aPriority;
+  });
 
   const worstPattern = negativePatternData[0];
   const worstPatternInfo = worstPattern

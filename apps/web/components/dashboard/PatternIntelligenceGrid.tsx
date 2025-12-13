@@ -56,10 +56,21 @@ export function PatternIntelligenceGrid({
     };
   };
 
-  // Sort patterns by frequency within each category
+  /**
+   * Sort patterns within each category:
+   * 1. Primary sort: Polarity (positives first, negatives second)
+   * 2. Secondary sort: Frequency (highest first within each polarity group)
+   *
+   * This ensures high-frequency negatives don't visually masquerade as wins.
+   */
   const getPatternsByCategory = (category: MacroCategory) => {
     const patterns = MACRO_PATTERNS.filter((p) => p.category === category);
     return patterns.sort((a, b) => {
+      // Primary sort: positives before negatives
+      if (a.polarity !== b.polarity) {
+        return a.polarity === 'positive' ? -1 : 1;
+      }
+      // Secondary sort: by frequency (highest first)
       const aData = getPatternData(a);
       const bData = getPatternData(b);
       return bData.frequency - aData.frequency;
@@ -112,21 +123,41 @@ export function PatternIntelligenceGrid({
 
             {/* Patterns List */}
             <div className="divide-y divide-[#222]">
-              {patterns.map((pattern) => {
+              {patterns.map((pattern, index) => {
                 const data = getPatternData(pattern);
                 const isExpanded = expandedPattern === pattern.id;
                 const frequencyPercent = totalCalls > 0 ? Math.round((data.frequency / totalCalls) * 100) : 0;
+                const isNegative = pattern.polarity === 'negative';
+                const hasHighFrequency = data.frequency > 0;
+
+                // Check if this is the first negative pattern (to add divider)
+                const prevPattern = index > 0 ? patterns[index - 1] : null;
+                const showDivider = isNegative && prevPattern && prevPattern.polarity === 'positive';
 
                 return (
                   <div key={pattern.id}>
+                    {/* Divider between positive and negative patterns */}
+                    {showDivider && (
+                      <div className="px-4 py-1 bg-[#111] border-y border-[#333]">
+                        <span className="text-[#666] text-xs uppercase tracking-wider">
+                          Patterns to Watch
+                        </span>
+                      </div>
+                    )}
                     {/* Pattern Row */}
                     <button
                       onClick={() => setExpandedPattern(isExpanded ? null : pattern.id)}
-                      className="w-full px-4 py-3 flex items-center justify-between hover:bg-[#111] transition-colors text-left"
+                      className={`w-full px-4 py-3 flex items-center justify-between transition-colors text-left ${
+                        isNegative && hasHighFrequency
+                          ? 'bg-[#E51B23]/5 hover:bg-[#E51B23]/10'
+                          : 'hover:bg-[#111]'
+                      }`}
                     >
                       <div className="flex items-center gap-3">
                         {getPolarityIndicator(pattern.polarity)}
-                        <span className="text-white text-sm font-medium">
+                        <span className={`text-sm font-medium ${
+                          isNegative ? 'text-[#E51B23]' : 'text-white'
+                        }`}>
                           {pattern.name}
                         </span>
                       </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import { type MacroCategory } from '@wtf/patterns';
+type MacroCategory = 'connection' | 'diagnosis' | 'control' | 'activation';
 
 interface CallCardProps {
   call: {

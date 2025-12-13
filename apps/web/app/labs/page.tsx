@@ -72,8 +72,12 @@ export default async function LabsPage() {
   const subscriptionTier = userData?.subscription_tier || 'free';
 
   // Determine which products user has Pro access to
-  const hasCallLabPro = subscriptionTier === 'call_lab_pro' || subscriptionTier === 'pro' || subscriptionTier === 'all';
-  const hasDiscoveryLabPro = subscriptionTier === 'discovery_lab_pro' || subscriptionTier === 'pro' || subscriptionTier === 'all';
+  // Supported tiers: 'call_lab_pro', 'discovery_lab_pro', 'pro', 'all', 'subscriber', 'client'
+  const proTiers = ['call_lab_pro', 'pro', 'all', 'subscriber', 'client'];
+  const discoveryProTiers = ['discovery_lab_pro', 'pro', 'all'];
+
+  const hasCallLabPro = proTiers.includes(subscriptionTier);
+  const hasDiscoveryLabPro = discoveryProTiers.includes(subscriptionTier);
 
   // Filter labs based on subscription
   // If user has Pro for a product, show only the Pro version

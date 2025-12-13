@@ -250,8 +250,12 @@ async function getDashboardData(
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-  // Build query based on user_id or agency_id
-  let query = supabase
+  // Try multiple query strategies to find the user's calls
+  let callScores: unknown[] | null = null;
+  let scoresError: Error | null = null;
+
+  // Strategy 1: Query by user_id directly
+  const { data: userCalls, error: userError } = await supabase
     .from("call_scores")
     .select(
       `
@@ -268,18 +272,81 @@ async function getDashboardData(
       )
     `
     )
+    .eq("user_id", userId)
     .gte("created_at", thirtyDaysAgo.toISOString())
     .order("created_at", { ascending: false })
     .limit(20);
 
-  // Filter by user_id or agency_id
-  if (agencyId) {
-    query = query.or(`user_id.eq.${userId},agency_id.eq.${agencyId}`);
-  } else {
-    query = query.eq("user_id", userId);
+  if (userCalls && userCalls.length > 0) {
+    callScores = userCalls;
+  } else if (agencyId) {
+    // Strategy 2: Query by agency_id if user has an agency
+    const { data: agencyCalls, error: agencyError } = await supabase
+      .from("call_scores")
+      .select(
+        `
+        id,
+        overall_score,
+        overall_grade,
+        diagnosis_summary,
+        markdown_response,
+        version,
+        created_at,
+        ingestion_items (
+          transcript_metadata,
+          created_at
+        )
+      `
+      )
+      .eq("agency_id", agencyId)
+      .gte("created_at", thirtyDaysAgo.toISOString())
+      .order("created_at", { ascending: false })
+      .limit(20);
+
+    if (agencyCalls && agencyCalls.length > 0) {
+      callScores = agencyCalls;
+    }
+    scoresError = agencyError as Error | null;
   }
 
-  const { data: callScores, error: scoresError } = await query;
+  // Fallback: If no calls found yet, try querying without filters (for admin/all access)
+  if (!callScores || callScores.length === 0) {
+    const { data: allCalls, error: allError } = await supabase
+      .from("call_scores")
+      .select(
+        `
+        id,
+        overall_score,
+        overall_grade,
+        diagnosis_summary,
+        markdown_response,
+        version,
+        created_at,
+        user_id,
+        agency_id,
+        ingestion_items (
+          transcript_metadata,
+          created_at,
+          user_id
+        )
+      `
+      )
+      .gte("created_at", thirtyDaysAgo.toISOString())
+      .order("created_at", { ascending: false })
+      .limit(20);
+
+    // Filter to calls that belong to this user or their agency
+    if (allCalls) {
+      callScores = allCalls.filter((call: any) => {
+        return (
+          call.user_id === userId ||
+          call.agency_id === agencyId ||
+          (call.ingestion_items as any)?.user_id === userId
+        );
+      });
+    }
+    scoresError = allError as Error | null;
+  }
 
   if (scoresError) {
     console.error("Error fetching call scores:", scoresError);

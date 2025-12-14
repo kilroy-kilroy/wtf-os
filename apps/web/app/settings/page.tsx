@@ -2,6 +2,7 @@ import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
+import { getSubscriptionStatus } from '@/lib/subscription';
 
 export default async function SettingsPage() {
   const supabase = createServerComponentClient({ cookies });
@@ -13,53 +14,25 @@ export default async function SettingsPage() {
     redirect('/login');
   }
 
-  // Get user's profile and subscription info
+  // Get user's profile info
   const { data: userData } = await (supabase as any)
     .from('users')
-    .select('first_name, last_name, subscription_tier')
+    .select('first_name, last_name, full_name')
     .eq('id', user.id)
     .single();
 
-  const firstName = userData?.first_name || '';
-  const lastName = userData?.last_name || '';
-  const subscriptionTier = (userData?.subscription_tier || 'free').toLowerCase();
+  const firstName = userData?.first_name || userData?.full_name?.split(' ')[0] || '';
+  const lastName = userData?.last_name || userData?.full_name?.split(' ').slice(1).join(' ') || '';
 
-  // Check if user has used Call Lab Pro (has full version call scores)
-  // This is a reliable indicator since Pro analysis can only be run by Pro subscribers
-  const { count: proCallCount } = await (supabase as any)
-    .from('call_scores')
-    .select('*', { count: 'exact', head: true })
-    .eq('user_id', user.id)
-    .eq('version', 'full');
+  // Get subscription status using centralized utility
+  const subscriptionStatus = await getSubscriptionStatus(
+    supabase as any,
+    user.id,
+    user.email || ''
+  );
 
-  // Also check tool_runs for call_lab_full usage
-  const { count: proToolCount } = await (supabase as any)
-    .from('tool_runs')
-    .select('*', { count: 'exact', head: true })
-    .eq('user_id', user.id)
-    .eq('tool_name', 'call_lab_full');
-
-  const hasProUsageHistory = (proCallCount && proCallCount > 0) || (proToolCount && proToolCount > 0);
-
-  // Determine plan display name
-  const callLabProTiers = ['call_lab_pro', 'call-lab-pro', 'calllabpro', 'pro', 'all', 'subscriber', 'client', 'paid', 'premium'];
-
-  const getPlanName = () => {
-    if (
-      callLabProTiers.includes(subscriptionTier) ||
-      subscriptionTier.includes('pro') ||
-      hasProUsageHistory
-    ) {
-      return 'Call Lab Pro';
-    }
-    if (subscriptionTier === 'team' || subscriptionTier === 'enterprise') {
-      return 'Team';
-    }
-    return 'Free';
-  };
-
-  const planName = getPlanName();
-  const isPro = planName !== 'Free';
+  const planName = subscriptionStatus.hasCallLabPro ? 'Call Lab Pro' : 'Free';
+  const isPro = subscriptionStatus.hasCallLabPro;
 
   return (
     <div className="min-h-screen bg-black py-8 px-4 text-white">

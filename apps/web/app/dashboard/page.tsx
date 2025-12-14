@@ -235,7 +235,8 @@ function getHighlightedPattern(
 // Fetch and process real dashboard data
 async function getDashboardData(
   supabase: ReturnType<typeof createServerComponentClient>,
-  userId: string
+  userId: string,
+  userEmail: string
 ) {
   // Get user's agency
   const { data: assignment } = await (supabase as ReturnType<typeof createServerComponentClient>)
@@ -268,7 +269,8 @@ async function getDashboardData(
       created_at,
       ingestion_items (
         transcript_metadata,
-        created_at
+        created_at,
+        metadata
       )
     `
     )
@@ -279,8 +281,50 @@ async function getDashboardData(
 
   if (userCalls && userCalls.length > 0) {
     callScores = userCalls;
-  } else if (agencyId) {
-    // Strategy 2: Query by agency_id if user has an agency
+  }
+
+  // Strategy 2: Query by email in ingestion_items metadata
+  // This catches calls submitted before the user account was linked
+  if (!callScores || callScores.length === 0) {
+    const { data: ingestionItems } = await supabase
+      .from("ingestion_items")
+      .select("id")
+      .or(`metadata->>email.ilike.${userEmail},metadata->>lead_email.ilike.${userEmail}`);
+
+    if (ingestionItems && ingestionItems.length > 0) {
+      const ingestionIds = ingestionItems.map((i: { id: string }) => i.id);
+      const { data: emailCalls, error: emailError } = await supabase
+        .from("call_scores")
+        .select(
+          `
+          id,
+          overall_score,
+          overall_grade,
+          diagnosis_summary,
+          markdown_response,
+          version,
+          created_at,
+          ingestion_items (
+            transcript_metadata,
+            created_at,
+            metadata
+          )
+        `
+        )
+        .in("ingestion_item_id", ingestionIds)
+        .gte("created_at", thirtyDaysAgo.toISOString())
+        .order("created_at", { ascending: false })
+        .limit(20);
+
+      if (emailCalls && emailCalls.length > 0) {
+        callScores = emailCalls;
+      }
+      scoresError = emailError as Error | null;
+    }
+  }
+
+  // Strategy 3: Query by agency_id if user has an agency
+  if ((!callScores || callScores.length === 0) && agencyId) {
     const { data: agencyCalls, error: agencyError } = await supabase
       .from("call_scores")
       .select(
@@ -294,7 +338,8 @@ async function getDashboardData(
         created_at,
         ingestion_items (
           transcript_metadata,
-          created_at
+          created_at,
+          metadata
         )
       `
       )
@@ -309,7 +354,52 @@ async function getDashboardData(
     scoresError = agencyError as Error | null;
   }
 
-  // Fallback: If no calls found yet, try querying without filters (for admin/all access)
+  // Strategy 4: Query tool_runs by email and find related call_scores
+  if (!callScores || callScores.length === 0) {
+    const { data: toolRuns } = await supabase
+      .from("tool_runs")
+      .select("ingestion_item_id")
+      .ilike("lead_email", userEmail)
+      .not("ingestion_item_id", "is", null);
+
+    if (toolRuns && toolRuns.length > 0) {
+      const ingestionIds = toolRuns
+        .map((t: { ingestion_item_id: string | null }) => t.ingestion_item_id)
+        .filter(Boolean);
+
+      if (ingestionIds.length > 0) {
+        const { data: toolRunCalls, error: toolError } = await supabase
+          .from("call_scores")
+          .select(
+            `
+            id,
+            overall_score,
+            overall_grade,
+            diagnosis_summary,
+            markdown_response,
+            version,
+            created_at,
+            ingestion_items (
+              transcript_metadata,
+              created_at,
+              metadata
+            )
+          `
+          )
+          .in("ingestion_item_id", ingestionIds)
+          .gte("created_at", thirtyDaysAgo.toISOString())
+          .order("created_at", { ascending: false })
+          .limit(20);
+
+        if (toolRunCalls && toolRunCalls.length > 0) {
+          callScores = toolRunCalls;
+        }
+        scoresError = toolError as Error | null;
+      }
+    }
+  }
+
+  // Strategy 5: Fallback - try querying all and filter client-side
   if (!callScores || callScores.length === 0) {
     const { data: allCalls, error: allError } = await supabase
       .from("call_scores")
@@ -327,21 +417,26 @@ async function getDashboardData(
         ingestion_items (
           transcript_metadata,
           created_at,
-          user_id
+          user_id,
+          metadata
         )
       `
       )
       .gte("created_at", thirtyDaysAgo.toISOString())
       .order("created_at", { ascending: false })
-      .limit(20);
+      .limit(50);
 
     // Filter to calls that belong to this user or their agency
     if (allCalls) {
       callScores = allCalls.filter((call: any) => {
+        const ingestionEmail = call.ingestion_items?.metadata?.email?.toLowerCase();
+        const ingestionLeadEmail = call.ingestion_items?.metadata?.lead_email?.toLowerCase();
         return (
           call.user_id === userId ||
           call.agency_id === agencyId ||
-          (call.ingestion_items as any)?.user_id === userId
+          (call.ingestion_items as any)?.user_id === userId ||
+          ingestionEmail === userEmail.toLowerCase() ||
+          ingestionLeadEmail === userEmail.toLowerCase()
         );
       });
     }
@@ -591,7 +686,7 @@ export default async function DashboardPage() {
     user.user_metadata?.first_name || user.email?.split("@")[0] || "there";
 
   // Get dashboard data from database
-  const data = await getDashboardData(supabase, user.id);
+  const data = await getDashboardData(supabase, user.id, user.email || '');
 
   return (
     <div className="min-h-screen bg-black">

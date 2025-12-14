@@ -2,6 +2,7 @@ import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
+import { getSubscriptionStatus } from '@/lib/subscription';
 
 interface Lab {
   name: string;
@@ -62,49 +63,15 @@ export default async function LabsPage() {
     redirect('/login');
   }
 
-  // Get user's subscription info
-  const { data: userData } = await (supabase as any)
-    .from('users')
-    .select('subscription_tier')
-    .eq('id', user.id)
-    .single();
+  // Get subscription status using centralized utility
+  const subscriptionStatus = await getSubscriptionStatus(
+    supabase as any,
+    user.id,
+    user.email || ''
+  );
 
-  const subscriptionTier = (userData?.subscription_tier || '').toLowerCase();
-
-  // Check if user has used Call Lab Pro (has full version call scores)
-  // This is a reliable indicator since Pro analysis can only be run by Pro subscribers
-  const { count: proCallCount } = await (supabase as any)
-    .from('call_scores')
-    .select('*', { count: 'exact', head: true })
-    .eq('user_id', user.id)
-    .eq('version', 'full');
-
-  // Also check tool_runs for call_lab_full usage
-  const { count: proToolCount } = await (supabase as any)
-    .from('tool_runs')
-    .select('*', { count: 'exact', head: true })
-    .eq('user_id', user.id)
-    .eq('tool_name', 'call_lab_full');
-
-  const hasProUsageHistory = (proCallCount && proCallCount > 0) || (proToolCount && proToolCount > 0);
-
-  // Determine which products user has Pro access to
-  // Check multiple conditions for Pro access:
-  // 1. Explicit tier names (subscriber, client = paying users)
-  // 2. Tier contains 'pro'
-  // 3. Has used Pro features (reliable indicator of subscription)
-  const callLabProTiers = ['call_lab_pro', 'call-lab-pro', 'calllabpro', 'pro', 'all', 'subscriber', 'client', 'paid', 'premium'];
-  const discoveryProTiers = ['discovery_lab_pro', 'discovery-lab-pro', 'discoverylabpro', 'pro', 'all'];
-
-  const hasCallLabPro =
-    callLabProTiers.includes(subscriptionTier) ||
-    subscriptionTier.includes('pro') ||
-    hasProUsageHistory;
-
-  const hasDiscoveryLabPro =
-    discoveryProTiers.includes(subscriptionTier) ||
-    subscriptionTier.includes('discovery') ||
-    subscriptionTier === 'all';
+  const hasCallLabPro = subscriptionStatus.hasCallLabPro;
+  const hasDiscoveryLabPro = subscriptionStatus.hasDiscoveryLabPro;
 
   // Filter labs based on subscription
   // If user has Pro for a product, show only the Pro version

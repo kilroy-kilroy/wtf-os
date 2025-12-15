@@ -3,63 +3,34 @@ import { SupabaseClient } from '@supabase/supabase-js';
 /**
  * Subscription Detection Utility
  *
- * CANONICAL MODEL (desired):
- *   Email → Subscription Status → Show Appropriate Labs
+ * CANONICAL MODEL:
+ *   Email → Per-Product Subscription Tiers → Show Appropriate Labs
  *
- * This utility implements the email-centric subscription model.
- * Email is the canonical identifier for all user data.
+ * Each product has its own tier column:
+ *   - call_lab_tier: 'free' | 'pro'
+ *   - discovery_lab_tier: null | 'free' | 'pro'
  *
- * CURRENT SCHEMA LIMITATION:
- *   The users.subscription_tier field is a single value that doesn't
- *   support per-product subscriptions. Until the schema is updated,
- *   we use tier values and owner emails as temporary workarounds.
- *
- * RECOMMENDED SCHEMA CHANGE:
- *   Add per-product columns to users table:
- *     call_lab_tier TEXT DEFAULT 'free'     -- 'free' | 'pro'
- *     discovery_lab_tier TEXT DEFAULT null  -- null | 'free' | 'pro'
- *
- *   Or create a subscriptions table:
- *     CREATE TABLE subscriptions (
- *       email TEXT NOT NULL,
- *       product TEXT NOT NULL,  -- 'call_lab', 'discovery_lab'
- *       tier TEXT DEFAULT 'free',
- *       UNIQUE(email, product)
- *     );
+ * The legacy subscription_tier field is kept for backwards compatibility
+ * but the per-product columns are the source of truth.
  */
-
-// Owner emails that have full access to all products
-// TEMPORARY: This should be replaced with proper database entries
-const OWNER_EMAILS = [
-  'tk@timkilroy.com',
-  'tim@timkilroy.com',
-  'admin@timkilroy.com',
-];
-
-/**
- * Tier values from users.subscription_tier that indicate Pro access
- *
- * Current valid values in schema: 'lead', 'free', 'subscriber', 'client'
- * We map 'subscriber' and 'client' to Pro access
- */
-const CALL_LAB_PRO_TIERS = ['subscriber', 'client', 'pro', 'premium', 'enterprise'];
 
 export interface SubscriptionStatus {
   // Per-product access flags
   hasCallLabPro: boolean;
   hasDiscoveryLabPro: boolean;
 
+  // Raw tier values from database
+  callLabTier: string | null;
+  discoveryLabTier: string | null;
+
   // Metadata
-  reason: string;
-  tier: string | null;
   email: string;
 }
 
 /**
- * Get subscription status for a user by email
+ * Get subscription status for a user
  *
- * The email is the canonical identifier. User ID is used only for
- * the users table lookup since that's how Supabase Auth works.
+ * Queries the per-product tier columns from the users table.
  */
 export async function getSubscriptionStatus(
   supabase: SupabaseClient,
@@ -68,36 +39,21 @@ export async function getSubscriptionStatus(
 ): Promise<SubscriptionStatus> {
   const email = userEmail.toLowerCase().trim();
 
-  // Check 1: Owner emails (full access)
-  if (OWNER_EMAILS.some((e) => e.toLowerCase() === email)) {
-    return {
-      hasCallLabPro: true,
-      hasDiscoveryLabPro: true,
-      reason: 'Owner account',
-      tier: 'owner',
-      email,
-    };
-  }
-
-  // Check 2: Query subscription tier from users table
-  // This is the source of truth for subscription status
+  // Query per-product tiers from users table
   const { data: userData } = await supabase
     .from('users')
-    .select('subscription_tier')
+    .select('call_lab_tier, discovery_lab_tier')
     .eq('id', userId)
     .single();
 
-  const tier = (userData?.subscription_tier || 'free').toLowerCase();
-
-  // Map tier to product access
-  const hasCallLabPro = CALL_LAB_PRO_TIERS.includes(tier);
-  const hasDiscoveryLabPro = tier === 'pro' || tier === 'enterprise';
+  const callLabTier = userData?.call_lab_tier || 'free';
+  const discoveryLabTier = userData?.discovery_lab_tier || null;
 
   return {
-    hasCallLabPro,
-    hasDiscoveryLabPro,
-    reason: hasCallLabPro ? `Tier: ${tier}` : 'Free tier',
-    tier,
+    hasCallLabPro: callLabTier === 'pro',
+    hasDiscoveryLabPro: discoveryLabTier === 'pro',
+    callLabTier,
+    discoveryLabTier,
     email,
   };
 }

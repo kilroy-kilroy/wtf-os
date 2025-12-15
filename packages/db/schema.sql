@@ -14,7 +14,13 @@ CREATE TABLE users (
   first_name TEXT,
   last_name TEXT,
   auth_method TEXT DEFAULT 'magic_link', -- 'magic_link', 'password', 'google'
-  subscription_tier TEXT DEFAULT 'lead', -- 'lead', 'free', 'subscriber', 'client'
+  subscription_tier TEXT DEFAULT 'lead', -- 'lead', 'free', 'subscriber', 'client' (legacy)
+
+  -- Per-product subscription tiers
+  -- Values: 'free' | 'pro' (null means never accessed)
+  call_lab_tier TEXT DEFAULT 'free',
+  discovery_lab_tier TEXT,
+
   tags JSONB DEFAULT '[]',
   preferences JSONB DEFAULT '{}',
   created_at TIMESTAMPTZ DEFAULT NOW(),

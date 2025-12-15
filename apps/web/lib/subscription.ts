@@ -6,12 +6,12 @@ import { SupabaseClient } from '@supabase/supabase-js';
  * CANONICAL MODEL:
  *   Email → Per-Product Subscription Tiers → Show Appropriate Labs
  *
- * Each product has its own tier column:
- *   - call_lab_tier: 'free' | 'pro'
- *   - discovery_lab_tier: null | 'free' | 'pro'
+ * Access is granted if EITHER:
+ *   1. User has personal pro tier (users.call_lab_tier = 'pro')
+ *   2. User belongs to an agency with pro tier (agencies.call_lab_tier = 'pro')
  *
- * The legacy subscription_tier field is kept for backwards compatibility
- * but the per-product columns are the source of truth.
+ * Team subscriptions: When an agency has pro, all members get pro access
+ * (up to max_seats limit, enforced at invite time)
  */
 
 export interface SubscriptionStatus {
@@ -19,7 +19,11 @@ export interface SubscriptionStatus {
   hasCallLabPro: boolean;
   hasDiscoveryLabPro: boolean;
 
-  // Raw tier values from database
+  // Source of access
+  source: 'personal' | 'team' | 'none';
+  agencyName?: string;
+
+  // Raw tier values
   callLabTier: string | null;
   discoveryLabTier: string | null;
 
@@ -30,7 +34,7 @@ export interface SubscriptionStatus {
 /**
  * Get subscription status for a user
  *
- * Queries the per-product tier columns from the users table.
+ * Checks both personal tiers and agency (team) tiers.
  */
 export async function getSubscriptionStatus(
   supabase: SupabaseClient,
@@ -39,21 +43,76 @@ export async function getSubscriptionStatus(
 ): Promise<SubscriptionStatus> {
   const email = userEmail.toLowerCase().trim();
 
-  // Query per-product tiers from users table
+  // Query user's personal tiers
   const { data: userData } = await supabase
     .from('users')
     .select('call_lab_tier, discovery_lab_tier')
     .eq('id', userId)
     .single();
 
-  const callLabTier = userData?.call_lab_tier || 'free';
-  const discoveryLabTier = userData?.discovery_lab_tier || null;
+  const personalCallLabTier = userData?.call_lab_tier || 'free';
+  const personalDiscoveryLabTier = userData?.discovery_lab_tier || null;
 
+  // Check personal access first
+  if (personalCallLabTier === 'pro' || personalDiscoveryLabTier === 'pro') {
+    return {
+      hasCallLabPro: personalCallLabTier === 'pro',
+      hasDiscoveryLabPro: personalDiscoveryLabTier === 'pro',
+      source: 'personal',
+      callLabTier: personalCallLabTier,
+      discoveryLabTier: personalDiscoveryLabTier,
+      email,
+    };
+  }
+
+  // Check agency (team) access
+  const { data: assignmentData } = await supabase
+    .from('user_agency_assignments')
+    .select('agency_id')
+    .eq('user_id', userId)
+    .limit(1)
+    .single();
+
+  let agency: {
+    name: string;
+    call_lab_tier: string | null;
+    discovery_lab_tier: string | null;
+  } | null = null;
+
+  if (assignmentData?.agency_id) {
+    const { data: agencyData } = await supabase
+      .from('agencies')
+      .select('name, call_lab_tier, discovery_lab_tier')
+      .eq('id', assignmentData.agency_id)
+      .single();
+
+    agency = agencyData;
+  }
+
+  if (agency) {
+    const agencyCallLabTier = agency.call_lab_tier || 'free';
+    const agencyDiscoveryLabTier = agency.discovery_lab_tier || null;
+
+    if (agencyCallLabTier === 'pro' || agencyDiscoveryLabTier === 'pro') {
+      return {
+        hasCallLabPro: agencyCallLabTier === 'pro',
+        hasDiscoveryLabPro: agencyDiscoveryLabTier === 'pro',
+        source: 'team',
+        agencyName: agency.name,
+        callLabTier: agencyCallLabTier,
+        discoveryLabTier: agencyDiscoveryLabTier,
+        email,
+      };
+    }
+  }
+
+  // No pro access
   return {
-    hasCallLabPro: callLabTier === 'pro',
-    hasDiscoveryLabPro: discoveryLabTier === 'pro',
-    callLabTier,
-    discoveryLabTier,
+    hasCallLabPro: false,
+    hasDiscoveryLabPro: false,
+    source: 'none',
+    callLabTier: personalCallLabTier,
+    discoveryLabTier: personalDiscoveryLabTier,
     email,
   };
 }

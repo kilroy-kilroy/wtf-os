@@ -3,172 +3,107 @@ import { SupabaseClient } from '@supabase/supabase-js';
 /**
  * Subscription Detection Utility
  *
- * Checks multiple signals to determine if a user has Pro access:
- * 1. Explicit subscription_tier in users table
- * 2. Pro usage history (call_scores with version='full')
- * 3. Known Pro user emails (owner accounts)
- * 4. Active Stripe subscription status
+ * CANONICAL MODEL (desired):
+ *   Email → Subscription Status → Show Appropriate Labs
+ *
+ * This utility implements the email-centric subscription model.
+ * Email is the canonical identifier for all user data.
+ *
+ * CURRENT SCHEMA LIMITATION:
+ *   The users.subscription_tier field is a single value that doesn't
+ *   support per-product subscriptions. Until the schema is updated,
+ *   we use tier values and owner emails as temporary workarounds.
+ *
+ * RECOMMENDED SCHEMA CHANGE:
+ *   Add per-product columns to users table:
+ *     call_lab_tier TEXT DEFAULT 'free'     -- 'free' | 'pro'
+ *     discovery_lab_tier TEXT DEFAULT null  -- null | 'free' | 'pro'
+ *
+ *   Or create a subscriptions table:
+ *     CREATE TABLE subscriptions (
+ *       email TEXT NOT NULL,
+ *       product TEXT NOT NULL,  -- 'call_lab', 'discovery_lab'
+ *       tier TEXT DEFAULT 'free',
+ *       UNIQUE(email, product)
+ *     );
  */
 
-// Known Pro user emails (owner/admin accounts)
-// These users always have full Pro access
-const KNOWN_PRO_EMAILS = [
+// Owner emails that have full access to all products
+// TEMPORARY: This should be replaced with proper database entries
+const OWNER_EMAILS = [
   'tk@timkilroy.com',
   'tim@timkilroy.com',
   'admin@timkilroy.com',
 ];
 
-// Subscription tier values that indicate Pro access
-const PRO_TIER_VALUES = [
-  'call_lab_pro',
-  'call-lab-pro',
-  'calllabpro',
-  'pro',
-  'all',
-  'subscriber',
-  'client',
-  'paid',
-  'premium',
-  'team',
-  'enterprise',
-];
+/**
+ * Tier values from users.subscription_tier that indicate Pro access
+ *
+ * Current valid values in schema: 'lead', 'free', 'subscriber', 'client'
+ * We map 'subscriber' and 'client' to Pro access
+ */
+const CALL_LAB_PRO_TIERS = ['subscriber', 'client', 'pro', 'premium', 'enterprise'];
 
 export interface SubscriptionStatus {
+  // Per-product access flags
   hasCallLabPro: boolean;
   hasDiscoveryLabPro: boolean;
+
+  // Metadata
   reason: string;
   tier: string | null;
-  debugInfo: {
-    email: string;
-    userId: string;
-    subscriptionTier: string | null;
-    isKnownProEmail: boolean;
-    hasProUsageHistory: boolean;
-    proCallCount: number;
-    proToolCount: number;
-  };
+  email: string;
 }
 
+/**
+ * Get subscription status for a user by email
+ *
+ * The email is the canonical identifier. User ID is used only for
+ * the users table lookup since that's how Supabase Auth works.
+ */
 export async function getSubscriptionStatus(
   supabase: SupabaseClient,
   userId: string,
   userEmail: string
 ): Promise<SubscriptionStatus> {
-  const email = userEmail.toLowerCase();
+  const email = userEmail.toLowerCase().trim();
 
-  // Check 1: Known Pro emails (owner accounts)
-  const isKnownProEmail = KNOWN_PRO_EMAILS.some(
-    (proEmail) => proEmail.toLowerCase() === email
-  );
-
-  if (isKnownProEmail) {
+  // Check 1: Owner emails (full access)
+  if (OWNER_EMAILS.some((e) => e.toLowerCase() === email)) {
     return {
       hasCallLabPro: true,
       hasDiscoveryLabPro: true,
-      reason: 'Known Pro email',
+      reason: 'Owner account',
       tier: 'owner',
-      debugInfo: {
-        email,
-        userId,
-        subscriptionTier: 'owner',
-        isKnownProEmail: true,
-        hasProUsageHistory: false,
-        proCallCount: 0,
-        proToolCount: 0,
-      },
+      email,
     };
   }
 
-  // Check 2: Subscription tier from users table
+  // Check 2: Query subscription tier from users table
+  // This is the source of truth for subscription status
   const { data: userData } = await supabase
     .from('users')
     .select('subscription_tier')
     .eq('id', userId)
     .single();
 
-  const subscriptionTier = (userData?.subscription_tier || '').toLowerCase();
-  const tierIndicatesPro =
-    PRO_TIER_VALUES.includes(subscriptionTier) ||
-    subscriptionTier.includes('pro');
+  const tier = (userData?.subscription_tier || 'free').toLowerCase();
 
-  // Check 3: Pro usage history - by user_id
-  const { count: proCallCountById } = await supabase
-    .from('call_scores')
-    .select('*', { count: 'exact', head: true })
-    .eq('user_id', userId)
-    .eq('version', 'full');
-
-  // Check 4: Pro usage history - by matching email in ingestion_items
-  // This catches cases where calls were submitted before user account was created
-  const { data: ingestionItems } = await supabase
-    .from('ingestion_items')
-    .select('id')
-    .ilike('metadata->>email', email);
-
-  let proCallCountByEmail = 0;
-  if (ingestionItems && ingestionItems.length > 0) {
-    const ingestionIds = ingestionItems.map((i: { id: string }) => i.id);
-    const { count } = await supabase
-      .from('call_scores')
-      .select('*', { count: 'exact', head: true })
-      .in('ingestion_item_id', ingestionIds)
-      .eq('version', 'full');
-    proCallCountByEmail = count || 0;
-  }
-
-  // Check 5: Tool runs by user_id
-  const { count: proToolCount } = await supabase
-    .from('tool_runs')
-    .select('*', { count: 'exact', head: true })
-    .eq('user_id', userId)
-    .eq('tool_name', 'call_lab_full');
-
-  // Check 6: Tool runs by email
-  const { count: proToolCountByEmail } = await supabase
-    .from('tool_runs')
-    .select('*', { count: 'exact', head: true })
-    .ilike('lead_email', email)
-    .eq('tool_name', 'call_lab_full');
-
-  const totalProCallCount = (proCallCountById || 0) + proCallCountByEmail;
-  const totalProToolCount = (proToolCount || 0) + (proToolCountByEmail || 0);
-  const hasProUsageHistory = totalProCallCount > 0 || totalProToolCount > 0;
-
-  // Determine final status
-  const hasCallLabPro = tierIndicatesPro || hasProUsageHistory;
-  const hasDiscoveryLabPro =
-    subscriptionTier.includes('discovery') ||
-    subscriptionTier === 'all' ||
-    subscriptionTier === 'pro';
-
-  // Determine reason
-  let reason = 'No Pro access detected';
-  if (tierIndicatesPro) {
-    reason = `Subscription tier: ${subscriptionTier}`;
-  } else if (hasProUsageHistory) {
-    reason = `Pro usage history: ${totalProCallCount} calls, ${totalProToolCount} tool runs`;
-  }
+  // Map tier to product access
+  const hasCallLabPro = CALL_LAB_PRO_TIERS.includes(tier);
+  const hasDiscoveryLabPro = tier === 'pro' || tier === 'enterprise';
 
   return {
     hasCallLabPro,
     hasDiscoveryLabPro,
-    reason,
-    tier: subscriptionTier || null,
-    debugInfo: {
-      email,
-      userId,
-      subscriptionTier: subscriptionTier || null,
-      isKnownProEmail,
-      hasProUsageHistory,
-      proCallCount: totalProCallCount,
-      proToolCount: totalProToolCount,
-    },
+    reason: hasCallLabPro ? `Tier: ${tier}` : 'Free tier',
+    tier,
+    email,
   };
 }
 
 /**
- * Quick check if user has Call Lab Pro access
- * Use this for simple boolean checks
+ * Quick check for Call Lab Pro access
  */
 export async function hasCallLabProAccess(
   supabase: SupabaseClient,
@@ -177,4 +112,16 @@ export async function hasCallLabProAccess(
 ): Promise<boolean> {
   const status = await getSubscriptionStatus(supabase, userId, userEmail);
   return status.hasCallLabPro;
+}
+
+/**
+ * Quick check for Discovery Lab Pro access
+ */
+export async function hasDiscoveryLabProAccess(
+  supabase: SupabaseClient,
+  userId: string,
+  userEmail: string
+): Promise<boolean> {
+  const status = await getSubscriptionStatus(supabase, userId, userEmail);
+  return status.hasDiscoveryLabPro;
 }

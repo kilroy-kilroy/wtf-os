@@ -84,45 +84,63 @@ function mapToCanonicalPatterns(
   MACRO_PATTERNS.forEach((p) => patternCounts.set(p.id, 0));
 
   // Map keywords to canonical patterns
+  // IMPORTANT: Pattern IDs must match exactly those defined in lib/macro-patterns.ts
   const keywordMapping: Record<string, string> = {
+    // CONNECTION & RAPPORT
+    "cultural handshake": "cultural_handshake",
     cultural: "cultural_handshake",
     handshake: "cultural_handshake",
-    peer: "peer_validation",
-    validation: "peer_validation",
+    "peer validation": "peer_validation_engine",
+    peer: "peer_validation_engine",
+    "validation engine": "peer_validation_engine",
+    "vulnerability flip": "vulnerability_flip",
     vulnerability: "vulnerability_flip",
     flip: "vulnerability_flip",
+    "scenic route": "scenic_route",
     scenic: "scenic_route",
-    route: "scenic_route",
     "small talk": "scenic_route",
+    "business blitzer": "business_blitzer",
     blitzer: "business_blitzer",
     rushed: "business_blitzer",
+
+    // DIAGNOSIS & DISCOVERY
+    "diagnostic reveal": "diagnostic_reveal",
     diagnostic: "diagnostic_reveal",
-    reveal: "diagnostic_reveal",
     "self diagnosis": "self_diagnosis_pull",
     "diagnosis pull": "self_diagnosis_pull",
+    "generous professor": "generous_professor",
     generous: "generous_professor",
     professor: "generous_professor",
+    "advice avalanche": "advice_avalanche",
     avalanche: "advice_avalanche",
-    advice: "advice_avalanche",
+    "surface scanner": "surface_scanner",
     surface: "surface_scanner",
     scanner: "surface_scanner",
+
+    // CONTROL & AGENDA
+    "framework drop": "framework_drop",
     framework: "framework_drop",
-    drop: "framework_drop",
-    agenda: "agenda_abandoner",
+    "agenda abandoner": "agenda_abandoner",
     abandoner: "agenda_abandoner",
     passenger: "passenger",
-    control: "passenger",
+    "premature solution": "premature_solution",
     premature: "premature_solution",
-    solution: "premature_solution",
+    "pitched too early": "premature_solution",
+
+    // ACTIVATION & CLOSE
+    "mirror close": "mirror_close",
     mirror: "mirror_close",
-    close: "mirror_close",
+    "permission builder": "permission_builder",
     permission: "permission_builder",
-    builder: "permission_builder",
     "micro-commitment": "permission_builder",
     "soft close": "soft_close_fade",
+    "soft close fade": "soft_close_fade",
     fade: "soft_close_fade",
+    "let me know": "soft_close_fade",
     "over-explain": "over_explain_loop",
+    "over explain": "over_explain_loop",
     loop: "over_explain_loop",
+    "talking past": "over_explain_loop",
   };
 
   detectedPatterns.forEach((pattern) => {

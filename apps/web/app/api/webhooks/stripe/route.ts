@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getStripe } from '@/lib/stripe'
 import { createClient } from '@supabase/supabase-js'
 import Stripe from 'stripe'
+import { onProUpgrade, onSubscriptionCancelled } from '@/lib/loops'
 
 export const runtime = 'nodejs'
 
@@ -95,6 +96,14 @@ export async function POST(request: NextRequest) {
             console.error('Error saving subscription:', error)
           } else {
             console.log('Subscription saved successfully')
+
+            // Fire Loops event for Pro upgrade
+            if (session.customer_email) {
+              const planType = (session.metadata?.priceType === 'team' ? 'team' : 'solo') as 'solo' | 'team';
+              await onProUpgrade(session.customer_email, planType).catch(err => {
+                console.error('Failed to send Loops Pro upgrade event:', err);
+              });
+            }
           }
         } catch (err) {
           console.error('Error processing checkout:', err)
@@ -141,7 +150,7 @@ export async function POST(request: NextRequest) {
       })
 
       // Mark subscription as cancelled
-      const { error } = await supabase
+      const { error, data: cancelledSub } = await supabase
         .from('subscriptions')
         .update({
           status: 'canceled',
@@ -149,9 +158,16 @@ export async function POST(request: NextRequest) {
           updated_at: new Date().toISOString(),
         })
         .eq('stripe_subscription_id', subscription.id)
+        .select('customer_email')
+        .single()
 
       if (error) {
         console.error('Error cancelling subscription:', error)
+      } else if (cancelledSub?.customer_email) {
+        // Fire Loops event for subscription cancellation
+        await onSubscriptionCancelled(cancelledSub.customer_email).catch(err => {
+          console.error('Failed to send Loops cancellation event:', err);
+        });
       }
       break
     }

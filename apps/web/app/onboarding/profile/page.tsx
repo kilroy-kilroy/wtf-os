@@ -204,6 +204,22 @@ export default function ProfileSetupPage() {
 
       if (userError) throw userError;
 
+      // Add contact to Loops for email nurturing (non-blocking)
+      const nameParts = formData.fullName.split(' ');
+      fetch('/api/loops/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          firstName: nameParts[0] || '',
+          lastName: nameParts.slice(1).join(' ') || '',
+          companyName: formData.companyName,
+          role: formData.role,
+          salesTeamSize: formData.salesTeamSize,
+        }),
+      }).catch(() => {
+        // Silently ignore - email marketing is non-critical
+      });
+
       // Redirect to next steps with mode
       router.push(`/onboarding/next-steps?mode=${mode}`);
     } catch (err: any) {

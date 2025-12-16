@@ -70,10 +70,10 @@ function WelcomeContent() {
         {/* CTA Buttons */}
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <a
-            href="/discovery-lab"
+            href="/discovery-lab-pro/create"
             className="inline-block bg-[#E51B23] text-white px-8 py-4 font-anton text-lg tracking-wide hover:bg-[#FFDE59] hover:text-black transition-colors no-underline"
           >
-            [ START YOUR FIRST BLUEPRINT ]
+            [ START YOUR FIRST PLAYBOOK ]
           </a>
           <a
             href="/dashboard"

@@ -53,21 +53,15 @@ interface FollowUpRow {
 // Extract patterns mentioned in markdown response
 function extractPatternsFromMarkdown(markdown: string): string[] {
   const patterns: string[] = [];
+  const lowerMarkdown = markdown.toLowerCase();
 
-  // Look for pattern names in "The X" format
-  const patternMatches = markdown.match(/\*\*The\s+([^*]+)\*\*/g) || [];
-  patternMatches.forEach((match) => {
-    const name = match.replace(/\*\*/g, "").trim();
-    patterns.push(name);
-  });
-
-  // Also look for patterns in section headers
-  const headerMatches =
-    markdown.match(/###?\s+(?:A\.|B\.|C\.|\d\.)\s*(.+)/g) || [];
-  headerMatches.forEach((match) => {
-    const name = match.replace(/###?\s+(?:A\.|B\.|C\.|\d\.)\s*/, "").trim();
-    if (name.startsWith("The ")) {
-      patterns.push(name);
+  // Search for each canonical pattern name directly in the markdown
+  // This is the most reliable approach - just look for pattern names
+  MACRO_PATTERNS.forEach((pattern) => {
+    const patternNameLower = pattern.name.toLowerCase();
+    // Check if pattern name appears in markdown
+    if (lowerMarkdown.includes(patternNameLower)) {
+      patterns.push(pattern.name);
     }
   });
 
@@ -156,8 +150,62 @@ function mapToCanonicalPatterns(
   return patternCounts;
 }
 
-// Extract coaching insights from markdown
-function extractCoachingNarrative(markdown: string): string {
+// Synthesize coaching narrative from pattern frequency data
+function synthesizeCoachingNarrative(
+  patternData: Array<{ patternId: string; frequency: number; totalCalls: number }>,
+  patterns: typeof MACRO_PATTERNS
+): string {
+  // Find the most frequent negative pattern (the biggest issue)
+  const negativePatterns = patternData
+    .filter((d) => {
+      const pattern = patterns.find((p) => p.id === d.patternId);
+      return pattern?.polarity === "negative" && d.frequency > 0;
+    })
+    .sort((a, b) => b.frequency - a.frequency);
+
+  // Find the most frequent positive pattern (what they're doing well)
+  const positivePatterns = patternData
+    .filter((d) => {
+      const pattern = patterns.find((p) => p.id === d.patternId);
+      return pattern?.polarity === "positive" && d.frequency > 0;
+    })
+    .sort((a, b) => b.frequency - a.frequency);
+
+  const worstPattern = negativePatterns[0];
+  const bestPattern = positivePatterns[0];
+
+  if (!worstPattern && !bestPattern) {
+    return "Keep analyzing calls to build your pattern profile and get personalized coaching insights.";
+  }
+
+  let narrative = "";
+
+  // Lead with the problem pattern
+  if (worstPattern) {
+    const pattern = patterns.find((p) => p.id === worstPattern.patternId);
+    if (pattern) {
+      narrative += `You're using **${pattern.name}** in ${worstPattern.frequency}/${worstPattern.totalCalls} calls. `;
+      narrative += `${pattern.description.slice(0, 100)}... `;
+
+      // Suggest the corrective move
+      if (pattern.correctiveMove) {
+        narrative += `Try: ${pattern.correctiveMove.slice(0, 100)}`;
+      }
+    }
+  } else if (bestPattern) {
+    // If no negative patterns, highlight what's working
+    const pattern = patterns.find((p) => p.id === bestPattern.patternId);
+    if (pattern) {
+      narrative += `Strong use of **${pattern.name}** in ${bestPattern.frequency}/${bestPattern.totalCalls} calls. `;
+      narrative += `Keep building on this strength.`;
+    }
+  }
+
+  return narrative || "Keep analyzing calls to build your pattern profile.";
+}
+
+// Extract coaching insights from markdown (legacy fallback)
+function extractCoachingNarrativeFromMarkdown(markdown: string): string {
   // Look for bottom line or executive summary
   const bottomLineMatch = markdown.match(
     /(?:BOTTOM LINE|Executive Summary)[:\s]*\n([^#]+)/i
@@ -175,8 +223,55 @@ function extractCoachingNarrative(markdown: string): string {
   return "Analyze more calls to get personalized coaching insights.";
 }
 
-// Extract buyer name from markdown
-function extractBuyerInfo(markdown: string): {
+// Extract buyer info from transcript metadata (Fireflies participants data)
+function extractBuyerInfoFromMetadata(
+  transcriptMetadata: Record<string, unknown> | null
+): { buyerName: string; companyName: string } | null {
+  if (!transcriptMetadata) return null;
+
+  // Fireflies data structure: participants array with name and email
+  const participants = transcriptMetadata.participants as Array<{
+    name?: string;
+    email?: string;
+    displayName?: string;
+  }> | undefined;
+
+  if (participants && participants.length > 0) {
+    // Find the first participant that isn't the rep (often the first non-host)
+    // Fireflies typically puts external participants after the host
+    const prospect = participants.length > 1 ? participants[1] : participants[0];
+    const prospectName = prospect?.displayName || prospect?.name || "Prospect";
+
+    // Try to extract company from email domain if available
+    let companyName = "Unknown Company";
+    if (prospect?.email) {
+      const domain = prospect.email.split("@")[1];
+      if (domain && !domain.includes("gmail") && !domain.includes("yahoo") && !domain.includes("hotmail")) {
+        // Capitalize first letter of domain name (before .com)
+        const domainName = domain.split(".")[0];
+        companyName = domainName.charAt(0).toUpperCase() + domainName.slice(1);
+      }
+    }
+
+    return { buyerName: prospectName, companyName };
+  }
+
+  // Check for prospect_company field directly in metadata
+  const prospectCompany = transcriptMetadata.prospect_company as string | undefined;
+  const title = transcriptMetadata.title as string | undefined;
+
+  if (prospectCompany || title) {
+    return {
+      buyerName: title?.split(" - ")[0]?.trim() || "Prospect",
+      companyName: prospectCompany || "Unknown Company",
+    };
+  }
+
+  return null;
+}
+
+// Extract buyer name from markdown (fallback)
+function extractBuyerInfoFromMarkdown(markdown: string): {
   buyerName: string;
   companyName: string;
 } {
@@ -378,6 +473,11 @@ async function getDashboardData(
     }
   });
 
+  // Window size for pattern frequency display (e.g., "X out of last 8 calls")
+  // This matches the user's expectation of tracking patterns across a rolling window
+  const PATTERN_WINDOW_SIZE = 8;
+  const windowSize = Math.min(PATTERN_WINDOW_SIZE, scores.length) || 1;
+
   // Build pattern data for grid
   const patternData: Array<{
     patternId: string;
@@ -397,7 +497,7 @@ async function getDashboardData(
     return {
       patternId: pattern.id,
       frequency,
-      totalCalls: scores.length || 1,
+      totalCalls: windowSize,
       trend,
       representativeQuote:
         isNegative && frequency > 0
@@ -406,7 +506,7 @@ async function getDashboardData(
           : undefined,
       coachingNote:
         frequency > 0
-          ? `Detected in ${frequency} of your last ${scores.length} calls.`
+          ? `Detected in ${frequency} of your last ${windowSize} calls.`
           : undefined,
     };
   });
@@ -463,16 +563,18 @@ async function getDashboardData(
   // Build recent calls list
   const recentCalls = scores.slice(0, 5).map((score) => {
     const callSnippets = snippets.filter((s) => s.call_score_id === score.id);
-    const metadata = score.ingestion_items?.transcript_metadata as {
-      prospect_company?: string;
-    } | null;
+    const transcriptMetadata = score.ingestion_items?.transcript_metadata as Record<string, unknown> | null;
 
-    const { buyerName, companyName } = score.markdown_response
-      ? extractBuyerInfo(score.markdown_response)
-      : {
-          buyerName: "Prospect",
-          companyName: metadata?.prospect_company || "Company",
-        };
+    // Priority: 1) transcript_metadata.participants, 2) markdown parsing, 3) defaults
+    const metadataInfo = extractBuyerInfoFromMetadata(transcriptMetadata);
+    const markdownInfo = score.markdown_response
+      ? extractBuyerInfoFromMarkdown(score.markdown_response)
+      : null;
+
+    const { buyerName, companyName } = metadataInfo || markdownInfo || {
+      buyerName: "Prospect",
+      companyName: "Unknown Company",
+    };
 
     const highlightedPattern = score.markdown_response
       ? getHighlightedPattern(score.markdown_response, callSnippets)
@@ -504,9 +606,15 @@ async function getDashboardData(
   // Build follow-up items
   const followUpItems = followUps.slice(0, 3).map((fu) => {
     const relatedScore = scores.find((s) => s.id === fu.call_score_id);
-    const { buyerName, companyName } = relatedScore?.markdown_response
-      ? extractBuyerInfo(relatedScore.markdown_response)
-      : { buyerName: "Prospect", companyName: "Company" };
+    const fuTranscriptMetadata = relatedScore?.ingestion_items?.transcript_metadata as Record<string, unknown> | null;
+    const fuMetadataInfo = extractBuyerInfoFromMetadata(fuTranscriptMetadata);
+    const fuMarkdownInfo = relatedScore?.markdown_response
+      ? extractBuyerInfoFromMarkdown(relatedScore.markdown_response)
+      : null;
+    const { buyerName, companyName } = fuMetadataInfo || fuMarkdownInfo || {
+      buyerName: "Prospect",
+      companyName: "Unknown Company",
+    };
 
     return {
       callId: fu.call_score_id,
@@ -524,12 +632,11 @@ async function getDashboardData(
         validScores.length
       : 0;
 
-  // Get coaching narrative from most recent call
-  const coachingNarrative = scores[0]?.markdown_response
-    ? extractCoachingNarrative(scores[0].markdown_response)
-    : scores.length === 0
-      ? "No calls analyzed yet. Submit a call transcript to get started with personalized coaching."
-      : "Keep analyzing calls to build your pattern profile.";
+  // Synthesize coaching narrative from pattern frequency data
+  // This provides actionable insight based on the user's actual pattern distribution
+  const coachingNarrative = scores.length === 0
+    ? "No calls analyzed yet. Submit a call transcript to get started with personalized coaching."
+    : synthesizeCoachingNarrative(patternData, MACRO_PATTERNS);
 
   return {
     patternData,

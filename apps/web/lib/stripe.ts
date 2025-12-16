@@ -9,7 +9,7 @@ export function getStripe(): Stripe | null {
   }
   if (!stripeInstance) {
     stripeInstance = new Stripe(process.env.STRIPE_SECRET_KEY, {
-      apiVersion: '2025-02-24.acacia',
+      apiVersion: '2023-10-16',
       typescript: true,
     })
   }
@@ -19,7 +19,7 @@ export function getStripe(): Stripe | null {
 // For backwards compatibility with existing code
 export const stripe = typeof window === 'undefined' && process.env.STRIPE_SECRET_KEY
   ? new Stripe(process.env.STRIPE_SECRET_KEY, {
-      apiVersion: '2025-02-24.acacia',
+      apiVersion: '2023-10-16',
       typescript: true,
     })
   : null

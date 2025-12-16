@@ -83,7 +83,7 @@ export default function ExampleInstantReportPage() {
       {/* Header */}
       <header className="px-6 py-4 border-b border-white/10">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <Link href="/examples" className="flex items-center gap-2">
+          <Link href="/call-lab-examples" className="flex items-center gap-2">
             <span className="font-anton text-xl tracking-wider hover:opacity-80 transition-opacity">
               SALES<span className="text-[#E51B23]">OS</span>
             </span>
@@ -310,10 +310,10 @@ export default function ExampleInstantReportPage() {
       <footer className="border-t border-white/10 py-8 px-6">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <Link
-            href="/examples"
+            href="/call-lab-examples"
             className="text-white/50 text-sm hover:text-white transition-colors"
           >
-            ← Back to Examples
+            ← Back to Call Lab Examples
           </Link>
           <span className="text-white/40 text-sm">Example data • Not a real report</span>
         </div>

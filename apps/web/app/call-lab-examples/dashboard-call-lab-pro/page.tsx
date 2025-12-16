@@ -192,7 +192,7 @@ export default function ExampleDashboardPage() {
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-6">
             {/* Logo */}
-            <Link href="/examples">
+            <Link href="/call-lab-examples">
               <div className="font-anton text-2xl tracking-wide uppercase">
                 <span className="text-white">SALES</span>
                 <span className="text-[#E51B23]">OS</span>
@@ -292,10 +292,10 @@ export default function ExampleDashboardPage() {
                 Try Call Lab Pro Today
               </Link>
               <Link
-                href="/examples"
+                href="/call-lab-examples"
                 className="text-[#B3B3B3] text-sm hover:text-white transition-colors"
               >
-                ← Back to Examples
+                ← Back to Call Lab Examples
               </Link>
             </div>
 

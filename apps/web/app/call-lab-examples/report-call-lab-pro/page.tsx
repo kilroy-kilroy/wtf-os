@@ -253,7 +253,7 @@ export default function ExampleProReportPage() {
       {/* Header */}
       <header className="border-b border-[#333] px-4 py-4">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
-          <Link href="/examples" className="flex items-center gap-3">
+          <Link href="/call-lab-examples" className="flex items-center gap-3">
             <div>
               <div className="font-anton text-xl tracking-wide">
                 <span className="text-white">CALL</span>
@@ -541,10 +541,10 @@ export default function ExampleProReportPage() {
         <footer className="border-t border-[#333] pt-8 mt-8">
           <div className="flex items-center justify-between">
             <Link
-              href="/examples"
+              href="/call-lab-examples"
               className="text-[#B3B3B3] text-sm hover:text-white transition-colors"
             >
-              ← Back to Examples
+              ← Back to Call Lab Examples
             </Link>
             <span className="text-[#666] text-sm">Example data • Not a real report</span>
           </div>

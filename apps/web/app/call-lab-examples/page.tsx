@@ -1,38 +1,38 @@
 import Link from 'next/link';
 
 /**
- * Examples Landing Page
+ * Call Lab Examples Landing Page
  *
  * Public showcase page for potential customers to see what they'd get.
  * All data is synthetic - no auth required.
  */
-export default function ExamplesPage() {
+export default function CallLabExamplesPage() {
   const examples = [
     {
       title: 'Call Lab Pro Dashboard',
       description: 'See how Pro users track patterns, momentum, and coaching insights across all their calls.',
-      href: '/examples/dashboard',
+      href: '/call-lab-examples/dashboard-call-lab-pro',
       tier: 'Pro',
       icon: '📊',
     },
     {
-      title: 'Pro Call Report',
+      title: 'Call Lab Pro Report',
       description: 'Deep-dive analysis with pattern recognition, framework scores, and tactical rewrites.',
-      href: '/examples/report-pro',
+      href: '/call-lab-examples/report-call-lab-pro',
       tier: 'Pro',
       icon: '🎯',
     },
     {
-      title: 'Lite Call Report',
+      title: 'Call Lab Report',
       description: 'Free analysis with core scores, strengths, and one actionable coaching move.',
-      href: '/examples/report-lite',
+      href: '/call-lab-examples/report-call-lab',
       tier: 'Free',
       icon: '📞',
     },
     {
-      title: 'Instant Report',
+      title: 'Call Lab Instant Report',
       description: 'Quick pitch analysis with WTF Method scoring and immediate feedback.',
-      href: '/examples/report-instant',
+      href: '/call-lab-examples/report-call-lab-instant',
       tier: 'Free',
       icon: '⚡',
     },
@@ -51,7 +51,7 @@ export default function ExamplesPage() {
             See What You Get
           </h1>
           <p className="text-[#B3B3B3] text-lg max-w-xl mx-auto">
-            Preview our call analysis tools with sample data. Every report you see here
+            Preview Call Lab with sample data. Every report you see here
             is what you&apos;ll get when you analyze your own calls.
           </p>
         </div>
@@ -99,20 +99,20 @@ export default function ExamplesPage() {
             Ready to analyze your own calls?
           </h2>
           <p className="text-[#B3B3B3] mb-6 max-w-md mx-auto">
-            Start with a free call analysis or upgrade to Pro for pattern tracking and coaching reports.
+            Start with a free Call Lab analysis or upgrade to Call Lab Pro for pattern tracking and coaching reports.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link
               href="/call-lab?utm_source=example"
               className="bg-[#E51B23] text-white px-6 py-3 font-anton text-sm uppercase tracking-wider hover:bg-[#C41820] transition-colors"
             >
-              Try Free Analysis
+              Try Call Lab Free
             </Link>
             <Link
               href="/call-lab-pro?utm_source=example"
               className="border border-[#FFDE59] text-[#FFDE59] px-6 py-3 font-anton text-sm uppercase tracking-wider hover:bg-[#FFDE59] hover:text-black transition-colors"
             >
-              See Pro Plans
+              See Call Lab Pro
             </Link>
           </div>
         </div>

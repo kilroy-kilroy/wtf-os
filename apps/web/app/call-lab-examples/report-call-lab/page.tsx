@@ -3,9 +3,9 @@
 import Link from 'next/link';
 
 /**
- * Example Lite Report Page
+ * Example Call Lab Report Page
  *
- * Public showcase of a Lite call analysis with synthetic data.
+ * Public showcase of a Call Lab (free) analysis with synthetic data.
  * No auth required - all data is hardcoded.
  */
 
@@ -90,11 +90,10 @@ export default function ExampleLiteReportPage() {
       {/* Header */}
       <header className="border-b border-[#333] px-4 py-4">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <Link href="/examples" className="flex items-center gap-3">
+          <Link href="/call-lab-examples" className="flex items-center gap-3">
             <div className="font-anton text-xl tracking-wide">
               <span className="text-white">CALL</span>
               <span className="text-[#E51B23]">LAB</span>
-              <span className="border border-[#333] text-[#666] text-xs px-2 py-0.5 ml-2">LITE</span>
             </div>
           </Link>
           <Link
@@ -110,7 +109,7 @@ export default function ExampleLiteReportPage() {
         {/* Report Header */}
         <div className="mb-8">
           <h1 className="font-anton text-3xl text-[#FFDE59] uppercase tracking-wide mb-2">
-            Call Lab Lite - Diagnostic Snapshot
+            Call Lab - Diagnostic Snapshot
           </h1>
           <p className="text-[#666] text-sm">
             Sarah Chen — TechCorp • Discovery Call • Dec 12, 2024
@@ -303,7 +302,7 @@ export default function ExampleLiteReportPage() {
         <div className="bg-[#111] border-2 border-[#E51B23] rounded-lg p-8 mb-8">
           <div className="text-center mb-6">
             <h2 className="font-anton text-2xl text-[#FFDE59] uppercase tracking-wide mb-2">
-              Call Lab Lite showed you what happened.
+              Call Lab showed you what happened.
             </h2>
             <h3 className="font-anton text-xl text-white uppercase tracking-wide">
               Call Lab Pro shows you the system.
@@ -339,7 +338,7 @@ export default function ExampleLiteReportPage() {
             Ready to analyze your own calls?
           </h2>
           <p className="text-white/90 mb-6 max-w-lg mx-auto">
-            Call Lab Lite is completely free. Paste your transcript and get your analysis in under 60 seconds.
+            Call Lab is completely free. Paste your transcript and get your analysis in under 60 seconds.
           </p>
           <Link
             href="/call-lab?utm_source=example"
@@ -353,10 +352,10 @@ export default function ExampleLiteReportPage() {
         <footer className="border-t border-[#333] pt-8">
           <div className="flex items-center justify-between">
             <Link
-              href="/examples"
+              href="/call-lab-examples"
               className="text-[#B3B3B3] text-sm hover:text-white transition-colors"
             >
-              ← Back to Examples
+              ← Back to Call Lab Examples
             </Link>
             <span className="text-[#666] text-sm">Example data • Not a real report</span>
           </div>

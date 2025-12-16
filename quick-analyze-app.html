@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quick Analyze - Call Lab</title>
+    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --red: #E51B23;
+            --black: #000000;
+            --yellow: #FFDE59;
+            --white: #FFFFFF;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: var(--black);
+            color: var(--white);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            padding: 1.5rem 2rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .logo {
+            font-family: 'Anton', sans-serif;
+            font-size: 1.5rem;
+            color: var(--white);
+        }
+
+        .logo span {
+            color: var(--red);
+        }
+
+        .container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem;
+            max-width: 900px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid rgba(229, 27, 35, 0.3);
+            border-radius: 12px;
+            padding: 3rem 2rem;
+            width: 100%;
+            text-align: center;
+        }
+
+        h1 {
+            font-family: 'Anton', sans-serif;
+            font-size: clamp(2rem, 5vw, 3rem);
+            color: var(--white);
+            text-transform: uppercase;
+            margin-bottom: 1rem;
+        }
+
+        h1 .yellow {
+            color: var(--yellow);
+        }
+
+        .instruction {
+            font-size: 1.1rem;
+            color: rgba(255, 255, 255, 0.8);
+            margin-bottom: 2rem;
+            line-height: 1.6;
+        }
+
+        .recorder-section {
+            margin: 2rem 0;
+        }
+
+        .record-button {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            background: var(--red);
+            border: none;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 32px rgba(229, 27, 35, 0.4);
+        }
+
+        .record-button:hover:not(:disabled) {
+            transform: scale(1.05);
+            box-shadow: 0 12px 48px rgba(229, 27, 35, 0.6);
+        }
+
+        .record-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .record-button.recording {
+            background: var(--yellow);
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .record-icon {
+            width: 60px;
+            height: 60px;
+            background: var(--white);
+            border-radius: 50%;
+            margin: 0 auto;
+        }
+
+        .record-button.recording .record-icon {
+            background: var(--red);
+            border-radius: 8px;
+            width: 50px;
+            height: 50px;
+        }
+
+        .timer {
+            font-family: 'Anton', sans-serif;
+            font-size: 3rem;
+            color: var(--yellow);
+            margin-top: 1.5rem;
+            min-height: 4rem;
+        }
+
+        .status {
+            font-size: 1.2rem;
+            color: var(--white);
+            margin-top: 1rem;
+            min-height: 2rem;
+        }
+
+        .prompt {
+            margin: 2rem 0;
+            padding: 1.5rem;
+            background: rgba(255, 222, 89, 0.1);
+            border-left: 4px solid var(--yellow);
+            text-align: left;
+        }
+
+        .prompt-title {
+            font-weight: 700;
+            color: var(--yellow);
+            margin-bottom: 0.5rem;
+        }
+
+        .prompt-text {
+            color: rgba(255, 255, 255, 0.9);
+            line-height: 1.6;
+        }
+
+        .results {
+            display: none;
+            margin-top: 2rem;
+            text-align: left;
+        }
+
+        .results.show {
+            display: block;
+        }
+
+        .result-section {
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            background: rgba(255, 255, 255, 0.03);
+            border-left: 4px solid var(--red);
+        }
+
+        .result-title {
+            font-family: 'Anton', sans-serif;
+            font-size: 1.5rem;
+            color: var(--yellow);
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+        }
+
+        .result-content {
+            color: rgba(255, 255, 255, 0.9);
+            line-height: 1.8;
+        }
+
+        .score {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            background: var(--red);
+            color: var(--white);
+            border-radius: 4px;
+            font-weight: 700;
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+        }
+
+        .cta-box {
+            margin-top: 3rem;
+            padding: 2rem;
+            background: var(--red);
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .cta-box h3 {
+            font-family: 'Anton', sans-serif;
+            font-size: 1.8rem;
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+        }
+
+        .cta-box p {
+            margin-bottom: 1.5rem;
+            font-size: 1.1rem;
+        }
+
+        .email-form {
+            display: flex;
+            gap: 1rem;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        .email-input {
+            flex: 1;
+            padding: 1rem;
+            font-size: 1rem;
+            border: none;
+            border-radius: 4px;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        .submit-btn {
+            padding: 1rem 2rem;
+            background: var(--black);
+            color: var(--white);
+            border: none;
+            border-radius: 4px;
+            font-family: 'Poppins', sans-serif;
+            font-weight: 700;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: all 0.3s ease;
+        }
+
+        .submit-btn:hover {
+            background: var(--yellow);
+            color: var(--black);
+        }
+
+        .error {
+            color: var(--red);
+            background: rgba(229, 27, 35, 0.1);
+            padding: 1rem;
+            border-radius: 4px;
+            margin-top: 1rem;
+        }
+
+        @media (max-width: 768px) {
+            .card {
+                padding: 2rem 1rem;
+            }
+
+            .email-form {
+                flex-direction: column;
+            }
+
+            .record-button {
+                width: 120px;
+                height: 120px;
+            }
+
+            .record-icon {
+                width: 50px;
+                height: 50px;
+            }
+
+            .record-button.recording .record-icon {
+                width: 40px;
+                height: 40px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="logo">SALES<span>OS</span> / Call Lab</div>
+    </div>
+
+    <div class="container">
+        <div class="card">
+            <h1><span class="yellow">Record</span> Your Pitch</h1>
+            <p class="instruction">
+                Hit the button and deliver your best 30-second sales pitch. 
+                We'll analyze it and show you exactly what you're missing.
+            </p>
+
+            <div class="prompt">
+                <div class="prompt-title">Pick A Scenario:</div>
+                <div class="prompt-text">
+                    <strong>• Discovery Call Opener:</strong> "So tell me about your agency..."<br><br>
+                    <strong>• Value Prop Pitch:</strong> "Here's how we help agencies like yours..."<br><br>
+                    <strong>• Pricing Presentation:</strong> "Our engagement typically runs..."<br><br>
+                    <strong>• Objection Response:</strong> "We need to think about it..." → You say...<br><br>
+                    <em>Record whichever one you struggle with most.</em>
+                </div>
+            </div>
+
+            <div class="recorder-section">
+                <button id="recordBtn" class="record-button">
+                    <div class="record-icon"></div>
+                </button>
+                <div id="timer" class="timer"></div>
+                <div id="status" class="status"></div>
+            </div>
+
+            <div id="results" class="results">
+                <div class="result-section">
+                    <div class="result-title">Your Transcript</div>
+                    <div id="transcript" class="result-content"></div>
+                </div>
+
+                <div class="result-section">
+                    <div class="result-title">Call Lab Analysis</div>
+                    <div class="score">Score: <span id="score">--</span>/10</div>
+                    <div id="analysis" class="result-content"></div>
+                </div>
+
+                <div class="cta-box">
+                    <h3>Get This Report + Our WTF Sales Guide</h3>
+                    <p>We'll email you the full analysis plus our 3-pillar framework for trust-based selling (the layer every other sales methodology skips).</p>
+                    <form id="emailForm" class="email-form">
+                        <input 
+                            type="email" 
+                            id="emailInput" 
+                            class="email-input" 
+                            placeholder="your@email.com" 
+                            required
+                        >
+                        <button type="submit" class="submit-btn">Get My Report + Guide</button>
+                    </form>
+                </div>
+            </div>
+
+            <div id="error" class="error" style="display: none;"></div>
+        </div>
+    </div>
+
+    <script>
+        const recordBtn = document.getElementById('recordBtn');
+        const timer = document.getElementById('timer');
+        const status = document.getElementById('status');
+        const results = document.getElementById('results');
+        const transcript = document.getElementById('transcript');
+        const analysis = document.getElementById('analysis');
+        const score = document.getElementById('score');
+        const errorDiv = document.getElementById('error');
+        const emailForm = document.getElementById('emailForm');
+
+        let mediaRecorder;
+        let audioChunks = [];
+        let recordingTimeout;
+        let countdownInterval;
+        let secondsLeft = 30;
+
+        recordBtn.addEventListener('click', async () => {
+            if (!mediaRecorder || mediaRecorder.state === 'inactive') {
+                await startRecording();
+            } else {
+                stopRecording();
+            }
+        });
+
+        async function startRecording() {
+            try {
+                errorDiv.style.display = 'none';
+                results.classList.remove('show');
+                
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+                audioChunks = [];
+
+                mediaRecorder.ondataavailable = (event) => {
+                    audioChunks.push(event.data);
+                };
+
+                mediaRecorder.onstop = async () => {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                    await processAudio(audioBlob);
+                };
+
+                mediaRecorder.start();
+                recordBtn.classList.add('recording');
+                recordBtn.disabled = false;
+                status.textContent = 'Recording... Click to stop early';
+                
+                secondsLeft = 30;
+                updateTimer();
+                countdownInterval = setInterval(updateTimer, 1000);
+
+                // Auto-stop after 30 seconds
+                recordingTimeout = setTimeout(() => {
+                    stopRecording();
+                }, 30000);
+
+            } catch (err) {
+                showError('Microphone access denied. Please allow microphone access and try again.');
+                console.error('Error accessing microphone:', err);
+            }
+        }
+
+        function stopRecording() {
+            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                mediaRecorder.stop();
+                mediaRecorder.stream.getTracks().forEach(track => track.stop());
+                recordBtn.classList.remove('recording');
+                clearInterval(countdownInterval);
+                clearTimeout(recordingTimeout);
+                status.textContent = 'Analyzing your pitch...';
+                recordBtn.disabled = true;
+            }
+        }
+
+        function updateTimer() {
+            timer.textContent = `${secondsLeft}s`;
+            secondsLeft--;
+            
+            if (secondsLeft < 0) {
+                clearInterval(countdownInterval);
+            }
+        }
+
+        async function processAudio(audioBlob) {
+            try {
+                // Create FormData to send audio file
+                const formData = new FormData();
+                formData.append('audio', audioBlob, 'recording.webm');
+
+                // TODO: Replace with your actual backend endpoint
+                // This endpoint should:
+                // 1. Receive the audio file
+                // 2. Send to OpenAI Whisper for transcription
+                // 3. Send transcript to your existing Call Lab analysis
+                // 4. Return { transcript, analysis, score }
+                
+                const response = await fetch('/api/analyze-quick', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    throw new Error('Analysis failed');
+                }
+
+                const data = await response.json();
+                
+                // Display results
+                transcript.textContent = data.transcript;
+                analysis.innerHTML = data.analysis;
+                score.textContent = data.score;
+                
+                results.classList.add('show');
+                status.textContent = '';
+                recordBtn.disabled = false;
+                timer.textContent = '';
+
+            } catch (err) {
+                showError('Failed to analyze your recording. Please try again.');
+                console.error('Error processing audio:', err);
+                recordBtn.disabled = false;
+                status.textContent = '';
+            }
+        }
+
+        function showError(message) {
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+
+        emailForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('emailInput').value;
+            
+            try {
+                // TODO: Replace with your actual email capture endpoint
+                const response = await fetch('/api/capture-lead', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        email,
+                        source: 'quick-analyze',
+                        transcript: transcript.textContent,
+                        score: score.textContent
+                    })
+                });
+
+                if (response.ok) {
+                    // Redirect to Call Lab Pro signup or thank you page
+                    window.location.href = '/call-lab-pro';
+                }
+            } catch (err) {
+                showError('Failed to save your email. Please try again.');
+                console.error('Error capturing email:', err);
+            }
+        });
+    </script>
+</body>
+</html>

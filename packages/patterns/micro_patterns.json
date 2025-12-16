@@ -1,0 +1,948 @@
+{
+  "micros": [
+    {
+      "id": "early_humor_landing",
+      "name": "Early Humor Landing",
+      "description": "Light humor lands early and the buyer joins in, creating fast comfort.",
+      "category": "warmth_rapport_trust",
+      "polarity": "positive",
+      "macro_id": "cultural_handshake"
+    },
+    {
+      "id": "buyer_mirrors_tone",
+      "name": "Buyer Mirrors Tone",
+      "description": "Buyer adopts your energy or style, signaling alignment and safety.",
+      "category": "warmth_rapport_trust",
+      "polarity": "positive",
+      "macro_id": "cultural_handshake"
+    },
+    {
+      "id": "shared_frame_formation",
+      "name": "Shared Frame Formation",
+      "description": "You and the buyer start speaking from the same mental model.",
+      "category": "warmth_rapport_trust",
+      "polarity": "positive",
+      "macro_id": "cultural_handshake"
+    },
+    {
+      "id": "smooth_energy_matching",
+      "name": "Smooth Energy Matching",
+      "description": "Your pace and tone fit the buyer's pace and tone naturally.",
+      "category": "warmth_rapport_trust",
+      "polarity": "positive",
+      "macro_id": "cultural_handshake"
+    },
+    {
+      "id": "psychological_safety_signal",
+      "name": "Psychological Safety Signal",
+      "description": "Buyer speaks openly and corrects you without hesitation.",
+      "category": "warmth_rapport_trust",
+      "polarity": "positive",
+      "macro_id": "cultural_handshake"
+    },
+    {
+      "id": "natural_back_and_forth_rhythm",
+      "name": "Natural Back and Forth Rhythm",
+      "description": "The conversation flows like a real dialogue rather than an interview.",
+      "category": "warmth_rapport_trust",
+      "polarity": "positive",
+      "macro_id": "cultural_handshake"
+    },
+    {
+      "id": "shared_context_snap",
+      "name": "Shared Context Snap",
+      "description": "You reference a shared experience or cultural touchpoint that creates instant connection.",
+      "category": "warmth_rapport_trust",
+      "polarity": "positive",
+      "macro_id": "cultural_handshake"
+    },
+    {
+      "id": "authority_framing_by_buyer",
+      "name": "Authority Framing by Buyer",
+      "description": "Buyer signals that you are already seen as an advisor or expert.",
+      "category": "discovery_depth",
+      "polarity": "positive",
+      "macro_id": "peer_validation_engine"
+    },
+    {
+      "id": "buyer_language_adoption",
+      "name": "Buyer Language Adoption",
+      "description": "You use the buyer's own words to reinforce clarity and connection.",
+      "category": "narrative_excellence",
+      "polarity": "positive",
+      "macro_id": "peer_validation_engine"
+    },
+    {
+      "id": "buyer_narrative_expansion",
+      "name": "Buyer Narrative Expansion",
+      "description": "Buyer gives longer, more detailed answers because they feel heard.",
+      "category": "warmth_rapport_trust",
+      "polarity": "positive",
+      "macro_id": "peer_validation_engine"
+    },
+    {
+      "id": "expertise_mirror",
+      "name": "Expertise Mirror",
+      "description": "Buyer reflects back your expertise or credibility signals.",
+      "category": "warmth_rapport_trust",
+      "polarity": "positive",
+      "macro_id": "peer_validation_engine"
+    },
+    {
+      "id": "vocabulary_handoff",
+      "name": "Vocabulary Handoff",
+      "description": "Buyer starts using your frameworks, terms, or language patterns.",
+      "category": "narrative_excellence",
+      "polarity": "positive",
+      "macro_id": "peer_validation_engine"
+    },
+    {
+      "id": "newsletter_pre_sale",
+      "name": "Newsletter Pre-Sale",
+      "description": "Buyer mentions they've read your content or already know your approach.",
+      "category": "discovery_depth",
+      "polarity": "positive",
+      "macro_id": "peer_validation_engine"
+    },
+    {
+      "id": "buyer_voluntary_vulnerability",
+      "name": "Buyer Voluntary Vulnerability",
+      "description": "Buyer reveals something sensitive without being pushed.",
+      "category": "warmth_rapport_trust",
+      "polarity": "positive",
+      "macro_id": "vulnerability_flip"
+    },
+    {
+      "id": "empathy_reflection",
+      "name": "Empathy Reflection",
+      "description": "You capture and reflect the buyer's emotional tone accurately.",
+      "category": "warmth_rapport_trust",
+      "polarity": "positive",
+      "macro_id": "vulnerability_flip"
+    },
+    {
+      "id": "buyer_motivator_identification",
+      "name": "Buyer Motivator Identification",
+      "description": "You uncover the personal stakes behind the business issue.",
+      "category": "emotional_relational",
+      "polarity": "positive",
+      "macro_id": "vulnerability_flip"
+    },
+    {
+      "id": "loss_aversion_confirmation",
+      "name": "Loss Aversion Confirmation",
+      "description": "You identify what the buyer fears losing if things stay the same.",
+      "category": "emotional_relational",
+      "polarity": "positive",
+      "macro_id": "vulnerability_flip"
+    },
+    {
+      "id": "desire_framing",
+      "name": "Desire Framing",
+      "description": "You capture what the buyer is hoping to gain or feel.",
+      "category": "emotional_relational",
+      "polarity": "positive",
+      "macro_id": "vulnerability_flip"
+    },
+    {
+      "id": "emotional_weight_acknowledgement",
+      "name": "Emotional Weight Acknowledgement",
+      "description": "You validate that the issue has real emotional weight for the buyer.",
+      "category": "emotional_relational",
+      "polarity": "positive",
+      "macro_id": "vulnerability_flip"
+    },
+    {
+      "id": "topic_hopping",
+      "name": "Topic Hopping",
+      "description": "You bounce across issues with no cohesion or thread.",
+      "category": "control_structure_failures",
+      "polarity": "negative",
+      "macro_id": "scenic_route"
+    },
+    {
+      "id": "meandering_structure",
+      "name": "Meandering Structure",
+      "description": "The call feels scattered, circular, or without clear direction.",
+      "category": "control_structure_failures",
+      "polarity": "negative",
+      "macro_id": "scenic_route"
+    },
+    {
+      "id": "talking_through_buyer",
+      "name": "Talking Through Buyer",
+      "description": "You jump in too early or cut the buyer off mid-thought.",
+      "category": "rapport_safety_failures",
+      "polarity": "negative",
+      "macro_id": "scenic_route"
+    },
+    {
+      "id": "letting_buyer_drift_unchecked",
+      "name": "Letting Buyer Drift Unchecked",
+      "description": "You let the buyer wander for minutes without steering back.",
+      "category": "control_structure_failures",
+      "polarity": "negative",
+      "macro_id": "scenic_route"
+    },
+    {
+      "id": "forced_warmth",
+      "name": "Forced Warmth",
+      "description": "Your attempts at friendliness feel unnatural or try-hard.",
+      "category": "rapport_safety_failures",
+      "polarity": "negative",
+      "macro_id": "scenic_route"
+    },
+    {
+      "id": "over_eagerness",
+      "name": "Over Eagerness",
+      "description": "You sound too hungry or excited, creating buyer pressure.",
+      "category": "rapport_safety_failures",
+      "polarity": "negative",
+      "macro_id": "scenic_route"
+    },
+    {
+      "id": "ignoring_buyer_tone",
+      "name": "Ignoring Buyer Tone",
+      "description": "You miss cues about buyer mood, comfort level, or engagement.",
+      "category": "rapport_safety_failures",
+      "polarity": "negative",
+      "macro_id": "scenic_route"
+    },
+    {
+      "id": "energy_mismatch",
+      "name": "Energy Mismatch",
+      "description": "Your energy is too high or too low for the buyer's comfort zone.",
+      "category": "rapport_safety_failures",
+      "polarity": "negative",
+      "macro_id": "scenic_route"
+    },
+    {
+      "id": "business_first_jump",
+      "name": "Business First Jump",
+      "description": "You skip rapport and jump directly into business talk.",
+      "category": "rapport_safety_failures",
+      "polarity": "negative",
+      "macro_id": "business_blitzer"
+    },
+    {
+      "id": "abrupt_agenda_start",
+      "name": "Abrupt Agenda Start",
+      "description": "You launch into the agenda without any warm-up or calibration.",
+      "category": "rapport_safety_failures",
+      "polarity": "negative",
+      "macro_id": "business_blitzer"
+    },
+    {
+      "id": "ignoring_emotional_cues",
+      "name": "Ignoring Emotional Cues",
+      "description": "You push forward on business without reading buyer emotional state.",
+      "category": "rapport_safety_failures",
+      "polarity": "negative",
+      "macro_id": "business_blitzer"
+    },
+    {
+      "id": "no_rapport_stage",
+      "name": "No Rapport Stage",
+      "description": "You eliminate or rush through the rapport-building phase entirely.",
+      "category": "rapport_safety_failures",
+      "polarity": "negative",
+      "macro_id": "business_blitzer"
+    },
+    {
+      "id": "clean_problem_summary",
+      "name": "Clean Problem Summary",
+      "description": "You restate the problem in a way that feels exact and clarifying to the buyer.",
+      "category": "narrative_excellence",
+      "polarity": "positive",
+      "macro_id": "diagnostic_reveal"
+    },
+    {
+      "id": "problem_excavation",
+      "name": "Problem Excavation",
+      "description": "You dig past symptoms into the real operational or strategic problem.",
+      "category": "discovery_depth",
+      "polarity": "positive",
+      "macro_id": "diagnostic_reveal"
+    },
+    {
+      "id": "impact_excavation",
+      "name": "Impact Excavation",
+      "description": "You uncover the business or emotional cost behind the problem.",
+      "category": "discovery_depth",
+      "polarity": "positive",
+      "macro_id": "diagnostic_reveal"
+    },
+    {
+      "id": "strategic_depth_link",
+      "name": "Strategic Depth Link",
+      "description": "You connect daily pain to larger strategic goals or company priorities.",
+      "category": "discovery_depth",
+      "polarity": "positive",
+      "macro_id": "diagnostic_reveal"
+    },
+    {
+      "id": "context_mapping",
+      "name": "Context Mapping",
+      "description": "You learn the surrounding environment, constraints, or dynamics shaping the problem.",
+      "category": "discovery_depth",
+      "polarity": "positive",
+      "macro_id": "diagnostic_reveal"
+    },
+    {
+      "id": "clear_outcome_reframe",
+      "name": "Clear Outcome Reframe",
+      "description": "You help the buyer see a new possibility or framing they hadn't considered.",
+      "category": "narrative_excellence",
+      "polarity": "positive",
+      "macro_id": "diagnostic_reveal"
+    },
+    {
+      "id": "signal_based_relevance_delivery",
+      "name": "Signal Based Relevance Delivery",
+      "description": "You tailor your message or question based on something the buyer just revealed.",
+      "category": "narrative_excellence",
+      "polarity": "positive",
+      "macro_id": "diagnostic_reveal"
+    },
+    {
+      "id": "story_to_strategy_bridge",
+      "name": "Story to Strategy Bridge",
+      "description": "You connect a buyer's anecdote or story to a strategic implication.",
+      "category": "narrative_excellence",
+      "polarity": "positive",
+      "macro_id": "diagnostic_reveal"
+    },
+    {
+      "id": "pricing_intervention",
+      "name": "Pricing Intervention",
+      "description": "You diagnose and call out underpricing or value misalignment directly.",
+      "category": "discovery_depth",
+      "polarity": "positive",
+      "macro_id": "diagnostic_reveal"
+    },
+    {
+      "id": "future_state_painting",
+      "name": "Future State Painting",
+      "description": "You help the buyer envision a better outcome or future state clearly.",
+      "category": "discovery_depth",
+      "polarity": "positive",
+      "macro_id": "self_diagnosis_pull"
+    },
+    {
+      "id": "criteria_surfacing",
+      "name": "Criteria Surfacing",
+      "description": "Buyer explains how they will judge or evaluate possible solutions.",
+      "category": "discovery_depth",
+      "polarity": "positive",
+      "macro_id": "self_diagnosis_pull"
+    },
+    {
+      "id": "decision_journey_discovery",
+      "name": "Decision Journey Discovery",
+      "description": "You identify who decides, how they decide, what the timeline is.",
+      "category": "discovery_depth",
+      "polarity": "positive",
+      "macro_id": "self_diagnosis_pull"
+    },
+    {
+      "id": "budget_realism_probe",
+      "name": "Budget Realism Probe",
+      "description": "You test whether budget expectations match reality and surface constraints.",
+      "category": "discovery_depth",
+      "polarity": "positive",
+      "macro_id": "self_diagnosis_pull"
+    },
+    {
+      "id": "buyer_connects_dots_unprompted",
+      "name": "Buyer Connects Dots Unprompted",
+      "description": "Buyer makes their own connections or realizations without you leading them.",
+      "category": "discovery_depth",
+      "polarity": "positive",
+      "macro_id": "self_diagnosis_pull"
+    },
+    {
+      "id": "conceptual_over_explanation",
+      "name": "Conceptual Over Explanation",
+      "description": "You turn simple ideas into complicated lectures or abstract frameworks.",
+      "category": "language_framing_breaks",
+      "polarity": "negative",
+      "macro_id": "generous_professor"
+    },
+    {
+      "id": "feature_drowning",
+      "name": "Feature Drowning",
+      "description": "You overwhelm the buyer with information, features, or details they didn't ask for.",
+      "category": "narrative_failures",
+      "polarity": "negative",
+      "macro_id": "generous_professor"
+    },
+    {
+      "id": "misaligned_story_choice",
+      "name": "Misaligned Story Choice",
+      "description": "You tell a story or example that doesn't fit the buyer's world or problem.",
+      "category": "narrative_failures",
+      "polarity": "negative",
+      "macro_id": "generous_professor"
+    },
+    {
+      "id": "premature_pitch",
+      "name": "Premature Pitch",
+      "description": "You talk about your solution before understanding the buyer's problem.",
+      "category": "narrative_failures",
+      "polarity": "negative",
+      "macro_id": "generous_professor"
+    },
+    {
+      "id": "non_listening_question",
+      "name": "Non-Listening Question",
+      "description": "You ask a question that shows you weren't listening to the buyer's last answer.",
+      "category": "rapport_safety_failures",
+      "polarity": "negative",
+      "macro_id": "generous_professor"
+    },
+    {
+      "id": "over_customization_without_buy_in",
+      "name": "Over Customization Without Buy-In",
+      "description": "You start designing custom solutions before the buyer has agreed to the core approach.",
+      "category": "scope_offer_breakdowns",
+      "polarity": "negative",
+      "macro_id": "generous_professor"
+    },
+    {
+      "id": "over_solutioning",
+      "name": "Over Solutioning",
+      "description": "You solve problems the buyer hasn't prioritized or doesn't care about.",
+      "category": "scope_offer_breakdowns",
+      "polarity": "negative",
+      "macro_id": "generous_professor"
+    },
+    {
+      "id": "generosity_trap",
+      "name": "Generosity Trap",
+      "description": "You give so much free value that the buyer doesn't need to buy.",
+      "category": "scope_offer_breakdowns",
+      "polarity": "negative",
+      "macro_id": "generous_professor"
+    },
+    {
+      "id": "advice_avalanche",
+      "name": "Advice Avalanche",
+      "description": "You deliver full step-by-step solutions during the discovery call.",
+      "category": "scope_offer_breakdowns",
+      "polarity": "negative",
+      "macro_id": "advice_avalanche"
+    },
+    {
+      "id": "giving_full_roadmap",
+      "name": "Giving Full Roadmap",
+      "description": "You lay out the entire execution plan before the buyer has committed.",
+      "category": "scope_offer_breakdowns",
+      "polarity": "negative",
+      "macro_id": "advice_avalanche"
+    },
+    {
+      "id": "pretend_strategy_session",
+      "name": "Pretend Strategy Session",
+      "description": "You conduct what feels like a paid strategy session for free.",
+      "category": "scope_offer_breakdowns",
+      "polarity": "negative",
+      "macro_id": "advice_avalanche"
+    },
+    {
+      "id": "step_by_step_teaching",
+      "name": "Step by Step Teaching",
+      "description": "You walk the buyer through how to solve their problem without you.",
+      "category": "scope_offer_breakdowns",
+      "polarity": "negative",
+      "macro_id": "advice_avalanche"
+    },
+    {
+      "id": "surface_pain_looping",
+      "name": "Surface Pain Looping",
+      "description": "You repeat the surface-level problem without digging deeper.",
+      "category": "shallow_discovery",
+      "polarity": "negative",
+      "macro_id": "surface_scanner"
+    },
+    {
+      "id": "no_impact_excavation",
+      "name": "No Impact Excavation",
+      "description": "You never uncover business or emotional consequences of the problem.",
+      "category": "shallow_discovery",
+      "polarity": "negative",
+      "macro_id": "surface_scanner"
+    },
+    {
+      "id": "no_strategic_depth",
+      "name": "No Strategic Depth",
+      "description": "You fail to connect pain to broader company goals or priorities.",
+      "category": "shallow_discovery",
+      "polarity": "negative",
+      "macro_id": "surface_scanner"
+    },
+    {
+      "id": "no_criteria_discovery",
+      "name": "No Criteria Discovery",
+      "description": "You have no idea how the buyer will choose a solution or what matters to them.",
+      "category": "shallow_discovery",
+      "polarity": "negative",
+      "macro_id": "surface_scanner"
+    },
+    {
+      "id": "detached_question_sequencing",
+      "name": "Detached Question Sequencing",
+      "description": "Your questions feel random, scripted, or disconnected from buyer responses.",
+      "category": "shallow_discovery",
+      "polarity": "negative",
+      "macro_id": "surface_scanner"
+    },
+    {
+      "id": "problem_switching_without_closure",
+      "name": "Problem Switching Without Closure",
+      "description": "You jump to new problems without resolving or understanding the previous one.",
+      "category": "shallow_discovery",
+      "polarity": "negative",
+      "macro_id": "surface_scanner"
+    },
+    {
+      "id": "premature_diagnosis",
+      "name": "Premature Diagnosis",
+      "description": "You assume you know the problem before hearing enough from the buyer.",
+      "category": "shallow_discovery",
+      "polarity": "negative",
+      "macro_id": "surface_scanner"
+    },
+    {
+      "id": "evaluation_fog",
+      "name": "Evaluation Fog",
+      "description": "You don't understand how the buyer will evaluate options or make decisions.",
+      "category": "shallow_discovery",
+      "polarity": "negative",
+      "macro_id": "surface_scanner"
+    },
+    {
+      "id": "risk_profile_unexplored",
+      "name": "Risk Profile Unexplored",
+      "description": "You don't understand what risks the buyer is willing or unwilling to take.",
+      "category": "shallow_discovery",
+      "polarity": "negative",
+      "macro_id": "surface_scanner"
+    },
+    {
+      "id": "clear_framing",
+      "name": "Clear Framing",
+      "description": "You explain why a question, direction, or topic matters before exploring it.",
+      "category": "control_structure_leadership",
+      "polarity": "positive",
+      "macro_id": "framework_drop"
+    },
+    {
+      "id": "story_deployment",
+      "name": "Story Deployment",
+      "description": "You use a simple, relevant story that makes the value or concept tangible.",
+      "category": "narrative_excellence",
+      "polarity": "positive",
+      "macro_id": "framework_drop"
+    },
+    {
+      "id": "controlled_feature_use",
+      "name": "Controlled Feature Use",
+      "description": "You only mention features that directly serve the current problem or conversation.",
+      "category": "narrative_excellence",
+      "polarity": "positive",
+      "macro_id": "framework_drop"
+    },
+    {
+      "id": "one_problem_one_promise",
+      "name": "One Problem One Promise",
+      "description": "You keep the narrative focused on one key pain point and one clear outcome.",
+      "category": "narrative_excellence",
+      "polarity": "positive",
+      "macro_id": "framework_drop"
+    },
+    {
+      "id": "team_visibility_engine",
+      "name": "Team Visibility Engine",
+      "description": "You create transparency that makes the buyer's work or progress visible to their team.",
+      "category": "narrative_excellence",
+      "polarity": "positive",
+      "macro_id": "framework_drop"
+    },
+    {
+      "id": "expansion_slide",
+      "name": "Expansion Slide",
+      "description": "You plant seeds for future expansion or upsell naturally in the conversation.",
+      "category": "narrative_excellence",
+      "polarity": "positive",
+      "macro_id": "framework_drop"
+    },
+    {
+      "id": "agenda_abandonment",
+      "name": "Agenda Abandonment",
+      "description": "You start with structure then let the call drift away from the plan.",
+      "category": "control_structure_failures",
+      "polarity": "negative",
+      "macro_id": "agenda_abandoner"
+    },
+    {
+      "id": "time_mismanagement",
+      "name": "Time Mismanagement",
+      "description": "You run out of time for the most important part of the call.",
+      "category": "control_structure_failures",
+      "polarity": "negative",
+      "macro_id": "agenda_abandoner"
+    },
+    {
+      "id": "priority_landscape_ignored",
+      "name": "Priority Landscape Ignored",
+      "description": "You don't understand what the buyer cares about most or what's urgent.",
+      "category": "shallow_discovery",
+      "polarity": "negative",
+      "macro_id": "agenda_abandoner"
+    },
+    {
+      "id": "buying_process_ignored",
+      "name": "Buying Process Ignored",
+      "description": "You don't explore how the buyer actually makes purchasing decisions.",
+      "category": "shallow_discovery",
+      "polarity": "negative",
+      "macro_id": "agenda_abandoner"
+    },
+    {
+      "id": "no_timeline_mapping",
+      "name": "No Timeline Mapping",
+      "description": "You don't establish when the buyer needs to solve this or make a decision.",
+      "category": "shallow_discovery",
+      "polarity": "negative",
+      "macro_id": "agenda_abandoner"
+    },
+    {
+      "id": "no_permission_asking",
+      "name": "No Permission Asking",
+      "description": "You shift topics or go deeper without checking in with the buyer.",
+      "category": "control_structure_failures",
+      "polarity": "negative",
+      "macro_id": "passenger"
+    },
+    {
+      "id": "undefined_ownership",
+      "name": "Undefined Ownership",
+      "description": "It's unclear who is responsible for next steps or decisions.",
+      "category": "momentum_killers",
+      "polarity": "negative",
+      "macro_id": "passenger"
+    },
+    {
+      "id": "hidden_decider_missed",
+      "name": "Hidden Decider Missed",
+      "description": "You don't identify or involve the actual decision-maker.",
+      "category": "shallow_discovery",
+      "polarity": "negative",
+      "macro_id": "passenger"
+    },
+    {
+      "id": "buyer_led_sequencing",
+      "name": "Buyer Led Sequencing",
+      "description": "The buyer controls the order and flow of topics while you follow.",
+      "category": "control_structure_failures",
+      "polarity": "negative",
+      "macro_id": "passenger"
+    },
+    {
+      "id": "no_conversation_reset",
+      "name": "No Conversation Reset",
+      "description": "You let the conversation go off track without steering it back.",
+      "category": "control_structure_failures",
+      "polarity": "negative",
+      "macro_id": "passenger"
+    },
+    {
+      "id": "premature_solution",
+      "name": "Premature Solution",
+      "description": "You jump to solution mode before discovery is complete.",
+      "category": "scope_offer_breakdowns",
+      "polarity": "negative",
+      "macro_id": "premature_solution"
+    },
+    {
+      "id": "early_feature_talk",
+      "name": "Early Feature Talk",
+      "description": "You start describing features or capabilities too early in the conversation.",
+      "category": "narrative_failures",
+      "polarity": "negative",
+      "macro_id": "premature_solution"
+    },
+    {
+      "id": "assumption_based_prescribing",
+      "name": "Assumption Based Prescribing",
+      "description": "You prescribe solutions based on assumptions rather than discovery.",
+      "category": "scope_offer_breakdowns",
+      "polarity": "negative",
+      "macro_id": "premature_solution"
+    },
+    {
+      "id": "solving_before_stakeholder_clarity",
+      "name": "Solving Before Stakeholder Clarity",
+      "description": "You propose solutions before understanding who's involved in the decision.",
+      "category": "scope_offer_breakdowns",
+      "polarity": "negative",
+      "macro_id": "premature_solution"
+    },
+    {
+      "id": "offer_drift",
+      "name": "Offer Drift",
+      "description": "Your offer or solution changes multiple times during the conversation.",
+      "category": "scope_offer_breakdowns",
+      "polarity": "negative",
+      "macro_id": "premature_solution"
+    },
+    {
+      "id": "promise_stack",
+      "name": "Promise Stack",
+      "description": "You keep adding promises or deliverables without clarifying the core offer.",
+      "category": "scope_offer_breakdowns",
+      "polarity": "negative",
+      "macro_id": "premature_solution"
+    },
+    {
+      "id": "misaligned_promise",
+      "name": "Misaligned Promise",
+      "description": "What you promise doesn't match what the buyer actually needs or asked for.",
+      "category": "scope_offer_breakdowns",
+      "polarity": "negative",
+      "macro_id": "premature_solution"
+    },
+    {
+      "id": "price_framing_before_value",
+      "name": "Price Framing Before Value",
+      "description": "You introduce pricing before establishing clear value or differentiation.",
+      "category": "scope_offer_breakdowns",
+      "polarity": "negative",
+      "macro_id": "premature_solution"
+    },
+    {
+      "id": "permission_asking",
+      "name": "Permission Asking",
+      "description": "You check in before shifting topics or exploring sensitive areas.",
+      "category": "control_structure_leadership",
+      "polarity": "positive",
+      "macro_id": "permission_builder"
+    },
+    {
+      "id": "permission_pattern",
+      "name": "Permission Pattern",
+      "description": "You consistently ask for permission to proceed at key moments.",
+      "category": "control_structure_leadership",
+      "polarity": "positive",
+      "macro_id": "permission_builder"
+    },
+    {
+      "id": "controlled_parking_of_topics",
+      "name": "Controlled Parking of Topics",
+      "description": "You defer off-track ideas gracefully without losing control.",
+      "category": "control_structure_leadership",
+      "polarity": "positive",
+      "macro_id": "permission_builder"
+    },
+    {
+      "id": "risk_reduction_language",
+      "name": "Risk Reduction Language",
+      "description": "You explicitly reduce perceived risk with language like 'you can cancel anytime.'",
+      "category": "emotional_relational",
+      "polarity": "positive",
+      "macro_id": "permission_builder"
+    },
+    {
+      "id": "buyer_pulling_forward",
+      "name": "Buyer Pulling Forward",
+      "description": "Buyer asks about next steps or shows eagerness on their own initiative.",
+      "category": "momentum_conversion",
+      "polarity": "positive",
+      "macro_id": "mirror_close"
+    },
+    {
+      "id": "clear_timeline_alignment",
+      "name": "Clear Timeline Alignment",
+      "description": "You and the buyer share a realistic sense of timing and urgency.",
+      "category": "momentum_conversion",
+      "polarity": "positive",
+      "macro_id": "mirror_close"
+    },
+    {
+      "id": "agreement_on_success_criteria",
+      "name": "Agreement on Success Criteria",
+      "description": "You get explicit alignment on what success looks like.",
+      "category": "momentum_conversion",
+      "polarity": "positive",
+      "macro_id": "mirror_close"
+    },
+    {
+      "id": "micro_commitment_capture",
+      "name": "Micro Commitment Capture",
+      "description": "You secure small yeses that keep the conversation progressing.",
+      "category": "momentum_conversion",
+      "polarity": "positive",
+      "macro_id": "mirror_close"
+    },
+    {
+      "id": "next_step_precision",
+      "name": "Next Step Precision",
+      "description": "You define exactly what happens next, who owns it, and when.",
+      "category": "momentum_conversion",
+      "polarity": "positive",
+      "macro_id": "mirror_close"
+    },
+    {
+      "id": "clean_decision_reflection",
+      "name": "Clean Decision Reflection",
+      "description": "You reflect the buyer's own criteria and stakes back to them clearly.",
+      "category": "momentum_conversion",
+      "polarity": "positive",
+      "macro_id": "mirror_close"
+    },
+    {
+      "id": "no_clear_next_step",
+      "name": "No Clear Next Step",
+      "description": "The call ends with no assigned responsibility or timing for what happens next.",
+      "category": "momentum_killers",
+      "polarity": "negative",
+      "macro_id": "soft_close_fade"
+    },
+    {
+      "id": "weak_close",
+      "name": "Weak Close",
+      "description": "You don't confidently guide toward a decision path or commitment.",
+      "category": "momentum_killers",
+      "polarity": "negative",
+      "macro_id": "soft_close_fade"
+    },
+    {
+      "id": "action_ambiguity",
+      "name": "Action Ambiguity",
+      "description": "Next steps are unclear, vague, or left undefined.",
+      "category": "momentum_killers",
+      "polarity": "negative",
+      "macro_id": "soft_close_fade"
+    },
+    {
+      "id": "no_confirmation_of_interest",
+      "name": "No Confirmation of Interest",
+      "description": "You never explicitly test if the buyer is actually interested in moving forward.",
+      "category": "momentum_killers",
+      "polarity": "negative",
+      "macro_id": "soft_close_fade"
+    },
+    {
+      "id": "late_bill_drop",
+      "name": "Late Bill Drop",
+      "description": "You mention price or terms at the very end without context or framing.",
+      "category": "scope_offer_breakdowns",
+      "polarity": "negative",
+      "macro_id": "soft_close_fade"
+    },
+    {
+      "id": "defensive_response",
+      "name": "Defensive Response",
+      "description": "You react poorly to buyer skepticism or objections.",
+      "category": "trust_safety_breaks",
+      "polarity": "negative",
+      "macro_id": "over_explain_loop"
+    },
+    {
+      "id": "over_reassurance",
+      "name": "Over Reassurance",
+      "description": "You try too hard to comfort the buyer and lose credibility in the process.",
+      "category": "trust_safety_breaks",
+      "polarity": "negative",
+      "macro_id": "over_explain_loop"
+    },
+    {
+      "id": "pressure_spike",
+      "name": "Pressure Spike",
+      "description": "Something you say increases buyer tension or creates resistance.",
+      "category": "trust_safety_breaks",
+      "polarity": "negative",
+      "macro_id": "over_explain_loop"
+    },
+    {
+      "id": "expertise_overcompensation",
+      "name": "Expertise Overcompensation",
+      "description": "You brag, name-drop, or posture to seem credible or smart.",
+      "category": "trust_safety_breaks",
+      "polarity": "negative",
+      "macro_id": "over_explain_loop"
+    },
+    {
+      "id": "credibility_erosion",
+      "name": "Credibility Erosion",
+      "description": "Your authority or trustworthiness decreases during the conversation.",
+      "category": "trust_safety_breaks",
+      "polarity": "negative",
+      "macro_id": "over_explain_loop"
+    },
+    {
+      "id": "hesitation_cascade",
+      "name": "Hesitation Cascade",
+      "description": "Your uncertainty grows and becomes contagious to the buyer.",
+      "category": "confidence_tone_failures",
+      "polarity": "negative",
+      "macro_id": "over_explain_loop"
+    },
+    {
+      "id": "apology_overuse",
+      "name": "Apology Overuse",
+      "description": "You apologize too often and weaken your authority or position.",
+      "category": "confidence_tone_failures",
+      "polarity": "negative",
+      "macro_id": "over_explain_loop"
+    },
+    {
+      "id": "uncertain_framing",
+      "name": "Uncertain Framing",
+      "description": "You present ideas as guesses or possibilities rather than confident leadership.",
+      "category": "confidence_tone_failures",
+      "polarity": "negative",
+      "macro_id": "over_explain_loop"
+    },
+    {
+      "id": "outcome_undersell",
+      "name": "Outcome Undersell",
+      "description": "You downplay your value, results, or impact.",
+      "category": "confidence_tone_failures",
+      "polarity": "negative",
+      "macro_id": "over_explain_loop"
+    },
+    {
+      "id": "confidence_overcompensation",
+      "name": "Confidence Overcompensation",
+      "description": "You try too hard to sound confident and lose trust in the process.",
+      "category": "confidence_tone_failures",
+      "polarity": "negative",
+      "macro_id": "over_explain_loop"
+    },
+    {
+      "id": "buyer_language_miss",
+      "name": "Buyer Language Miss",
+      "description": "You fail to adopt or mirror the buyer's terminology and phrasing.",
+      "category": "language_framing_breaks",
+      "polarity": "negative",
+      "macro_id": "peer_validation_engine"
+    },
+    {
+      "id": "acronym_dumping",
+      "name": "Acronym Dumping",
+      "description": "You use jargon or acronyms the buyer doesn't understand.",
+      "category": "language_framing_breaks",
+      "polarity": "negative",
+      "macro_id": "business_blitzer"
+    },
+    {
+      "id": "industry_flex",
+      "name": "Industry Flex",
+      "description": "You show off industry knowledge in a way that creates distance.",
+      "category": "trust_safety_breaks",
+      "polarity": "negative",
+      "macro_id": "business_blitzer"
+    }
+  ]
+}

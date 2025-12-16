@@ -2,11 +2,12 @@ import { redirect } from 'next/navigation'
 import { stripe, PRICES, PlanType } from '@/lib/stripe'
 
 interface CheckoutPageProps {
-  searchParams: { plan?: string }
+  searchParams: Promise<{ plan?: string }>
 }
 
 export default async function CheckoutPage({ searchParams }: CheckoutPageProps) {
-  const plan = searchParams.plan as PlanType | undefined
+  const params = await searchParams
+  const plan = params.plan as PlanType | undefined
   const selectedPlan: PlanType = plan && plan in PRICES ? plan : 'solo'
   const priceId = PRICES[selectedPlan]
 

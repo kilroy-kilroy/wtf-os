@@ -1,0 +1,54 @@
+{
+  "counters": {
+    "scenic_route": {
+      "counter_id": "framework_drop",
+      "counter_name": "The Framework Drop",
+      "rationale": "When rapport drifts into tangents, a clear framework brings structure and control back to the conversation."
+    },
+    "business_blitzer": {
+      "counter_id": "cultural_handshake",
+      "counter_name": "The Cultural Handshake",
+      "rationale": "When you rush into business, cultural connection and shared context builds the trust foundation you skipped."
+    },
+    "generous_professor": {
+      "counter_id": "diagnostic_reveal",
+      "counter_name": "The Diagnostic Reveal",
+      "rationale": "When you teach too much, focus on diagnosing and articulating their specific problem instead."
+    },
+    "advice_avalanche": {
+      "counter_id": "self_diagnosis_pull",
+      "counter_name": "The Self Diagnosis Pull",
+      "rationale": "When you give away solutions, use questions to help the buyer discover their own truth instead."
+    },
+    "surface_scanner": {
+      "counter_id": "diagnostic_reveal",
+      "counter_name": "The Diagnostic Reveal",
+      "rationale": "When discovery stays shallow, dig deeper to articulate the real problem and its impact."
+    },
+    "agenda_abandoner": {
+      "counter_id": "framework_drop",
+      "counter_name": "The Framework Drop",
+      "rationale": "When you lose the agenda, a clear framework creates structure and keeps the call on track."
+    },
+    "passenger": {
+      "counter_id": "framework_drop",
+      "counter_name": "The Framework Drop",
+      "rationale": "When the buyer leads and you follow, a clear framework establishes your authority and control."
+    },
+    "premature_solution": {
+      "counter_id": "self_diagnosis_pull",
+      "counter_name": "The Self Diagnosis Pull",
+      "rationale": "When you jump to solutions too early, help the buyer discover their own needs through questions first."
+    },
+    "soft_close_fade": {
+      "counter_id": "mirror_close",
+      "counter_name": "The Mirror Close",
+      "rationale": "When the close loses energy, reflect the buyer's own desires and stakes back to them clearly."
+    },
+    "over_explain_loop": {
+      "counter_id": "permission_builder",
+      "counter_name": "The Permission Builder",
+      "rationale": "When you over-explain, create safety and reduce pressure instead of adding more words."
+    }
+  }
+}

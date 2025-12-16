@@ -1,0 +1,24 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/coaching-weekly",
+      "schedule": "59 23 * * 0"
+    },
+    {
+      "path": "/api/cron/coaching-monthly",
+      "schedule": "1 0 1 * *"
+    },
+    {
+      "path": "/api/cron/coaching-quarterly",
+      "schedule": "1 0 1 1,4,7,10 *"
+    },
+    {
+      "path": "/api/cron/coaching-emails",
+      "schedule": "0 6,12,18 * * *"
+    },
+    {
+      "path": "/api/cron/outcome-nudge",
+      "schedule": "0 10 * * *"
+    }
+  ]
+}

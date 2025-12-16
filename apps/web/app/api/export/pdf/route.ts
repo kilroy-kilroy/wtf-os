@@ -5,6 +5,12 @@ import {
   MarkdownReport,
   parseCallLabLiteMarkdown,
   generateCallLabLiteHTML,
+  parseDiscoveryLabMarkdown,
+  generateDiscoveryLabHTML,
+  parseDiscoveryLabProMarkdown,
+  generateDiscoveryLabProHTML,
+  isDiscoveryLabMarkdown,
+  isDiscoveryLabProMarkdown,
   htmlToPdf,
 } from '@repo/pdf';
 import React from 'react';
@@ -24,17 +30,40 @@ export async function POST(request: NextRequest) {
     // Detect if result is markdown (string) or JSON (object with structured data)
     const isMarkdown = typeof result === 'string';
 
+    // Detect product type from metadata or content
+    const product = metadata?.product || 'call-lab';
+    const tier = metadata?.tier || 'lite';
+
     // Generate PDF with appropriate method
     let pdfBuffer: Buffer;
+    let filename: string;
 
     if (isMarkdown && useHtmlPdf) {
-      // NEW: Use HTML/CSS approach for markdown reports
       try {
-        // Parse markdown to extract structured data
-        const reportData = parseCallLabLiteMarkdown(result);
+        let html: string;
 
-        // Generate HTML from template
-        const html = generateCallLabLiteHTML(reportData);
+        // Check if this is a Discovery Lab report
+        if (product === 'discovery-lab' || isDiscoveryLabMarkdown(result)) {
+          // Check if it's Pro version
+          if (tier === 'pro' || isDiscoveryLabProMarkdown(result)) {
+            // Discovery Lab Pro
+            const reportData = parseDiscoveryLabProMarkdown(result);
+            reportData.date = metadata?.date || reportData.date;
+            html = generateDiscoveryLabProHTML(reportData);
+            filename = `discovery-lab-pro-${metadata?.prospectCompany?.replace(/\s+/g, '-').toLowerCase() || 'playbook'}-${Date.now()}.pdf`;
+          } else {
+            // Discovery Lab Lite
+            const reportData = parseDiscoveryLabMarkdown(result);
+            reportData.date = metadata?.date || reportData.date;
+            html = generateDiscoveryLabHTML(reportData);
+            filename = `discovery-lab-${metadata?.prospectCompany?.replace(/\s+/g, '-').toLowerCase() || 'guide'}-${Date.now()}.pdf`;
+          }
+        } else {
+          // Call Lab - use existing logic
+          const reportData = parseCallLabLiteMarkdown(result);
+          html = generateCallLabLiteHTML(reportData);
+          filename = `call-lab-${tier}-${Date.now()}.pdf`;
+        }
 
         // Convert HTML to PDF
         pdfBuffer = await htmlToPdf(html);
@@ -45,21 +74,23 @@ export async function POST(request: NextRequest) {
         pdfBuffer = await renderToBuffer(
           React.createElement(MarkdownReport, { markdown: result, metadata }) as any
         );
+        filename = `${product}-${tier}-${Date.now()}.pdf`;
       }
     } else if (isMarkdown) {
       // Legacy: Use React PDF for markdown
       pdfBuffer = await renderToBuffer(
         React.createElement(MarkdownReport, { markdown: result, metadata }) as any
       );
+      filename = `${product}-${tier}-${Date.now()}.pdf`;
     } else {
       // Legacy: Use React PDF for JSON results
       pdfBuffer = await renderToBuffer(
         React.createElement(CallLabReport, { result, metadata }) as any
       );
+      filename = `call-lab-${tier}-${Date.now()}.pdf`;
     }
 
     // Return PDF as download
-    const filename = `call-lab-${metadata?.tier || 'report'}-${Date.now()}.pdf`;
     return new NextResponse(pdfBuffer as any, {
       status: 200,
       headers: {

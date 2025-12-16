@@ -1,5 +1,7 @@
 'use client';
 
+import Link from 'next/link';
+
 interface FollowUpItem {
   callId: string;
   callName: string;
@@ -44,7 +46,15 @@ export function FollowUpIntelligence({ items }: FollowUpIntelligenceProps) {
       <div className="divide-y divide-[#222]">
         {items.map((item) => (
           <div key={item.callId} className="p-4">
-            <h3 className="text-white font-medium mb-2">{item.callName}</h3>
+            <div className="flex items-start justify-between mb-2">
+              <h3 className="text-white font-medium">{item.callName}</h3>
+              <Link
+                href={`/call-lab/report/${item.callId}`}
+                className="text-[#FFDE59] text-sm hover:text-white transition-colors"
+              >
+                View Call →
+              </Link>
+            </div>
 
             <div className="mb-3">
               <span className="text-[#666] text-xs uppercase tracking-wider">Risk:</span>

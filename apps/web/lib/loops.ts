@@ -265,14 +265,16 @@ export async function onReportGenerated(
 
 /**
  * Fire when a Discovery Lab report is generated
- * Sends transactional email with prospect intelligence summary
+ * Triggers email sequences with link to report
  */
 export async function onDiscoveryReportGenerated(
   email: string,
   reportType: 'lite' | 'pro' = 'lite',
   targetCompany: string,
   targetContact?: string,
-  targetContactTitle?: string
+  targetContactTitle?: string,
+  reportId?: string,
+  reportUrl?: string
 ): Promise<{ success: boolean; error?: string }> {
   return sendEvent({
     email,
@@ -282,6 +284,8 @@ export async function onDiscoveryReportGenerated(
       targetCompany,
       targetContact: targetContact || '',
       targetContactTitle: targetContactTitle || '',
+      reportId: reportId || '',
+      reportUrl: reportUrl || '',
     },
   });
 }

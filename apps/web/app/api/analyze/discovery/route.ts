@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
     // Parse metadata from response
     const metadata = parseDiscoveryMetadata(markdownResponse, version as 'lite' | 'pro');
 
-    // Log usage for tracking (could store in database later)
+    // Log usage for tracking
     const duration = Date.now() - startTime;
     console.log('Discovery Lab analysis completed:', {
       version,
@@ -114,13 +114,50 @@ export async function POST(request: NextRequest) {
       target_company,
     });
 
+    // Store report in database
+    const supabase = createServerClient();
+    const { data: insertedReport, error: insertError } = await supabase
+      .from('discovery_briefs')
+      .insert({
+        lead_email: requestor_email,
+        lead_name: requestor_name,
+        lead_company: requestor_company || null,
+        version: version,
+        what_you_sell: service_offered,
+        target_company: target_company,
+        target_contact_name: target_contact_name || null,
+        target_contact_title: target_contact_title || null,
+        target_company_url: target_website || null,
+        markdown_response: markdownResponse,
+        metadata: {
+          ...metadata,
+          model: modelUsed,
+          tokens: usage,
+          duration_ms: duration,
+          competitors: competitors || null,
+        },
+      })
+      .select('id')
+      .single();
+
+    if (insertError) {
+      console.error('Failed to save discovery brief:', insertError);
+      // Continue anyway - don't fail the request just because we couldn't save
+    }
+
+    const reportId = insertedReport?.id;
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.timkilroy.com';
+    const reportUrl = reportId ? `${appUrl}/discovery-lab/report/${reportId}` : undefined;
+
     // Fire Loops event for email sequences/analytics (fire-and-forget)
     onDiscoveryReportGenerated(
       requestor_email,
       version as 'lite' | 'pro',
       target_company,
       target_contact_name,
-      target_contact_title
+      target_contact_title,
+      reportId,
+      reportUrl
     ).catch((err) => console.error('Loops event failed:', err));
 
     // Return the result
@@ -130,6 +167,8 @@ export async function POST(request: NextRequest) {
         result: {
           markdown: markdownResponse,
           metadata,
+          reportId,
+          reportUrl,
         },
         usage: {
           model: modelUsed,

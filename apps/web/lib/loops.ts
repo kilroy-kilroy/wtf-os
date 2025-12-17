@@ -235,3 +235,30 @@ export async function onSubscriptionCancelled(
     eventName: 'subscription_cancelled',
   });
 }
+
+/**
+ * Fire when a Call Lab report is generated
+ * Sends transactional email with link to the report
+ */
+export async function onReportGenerated(
+  email: string,
+  reportId: string,
+  reportType: 'lite' | 'pro' = 'lite',
+  prospectName?: string,
+  companyName?: string
+): Promise<{ success: boolean; error?: string }> {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.timkilroy.com';
+  const reportUrl = `${appUrl}/call-lab/report/${reportId}`;
+
+  return sendEvent({
+    email,
+    eventName: 'report_generated',
+    eventProperties: {
+      reportId,
+      reportUrl,
+      reportType,
+      prospectName: prospectName || '',
+      companyName: companyName || '',
+    },
+  });
+}

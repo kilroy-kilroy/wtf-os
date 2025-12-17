@@ -14,6 +14,7 @@ function UpgradeContent() {
       try {
         const coupon = searchParams.get('coupon');
         const plan = searchParams.get('plan') || 'solo';
+        const product = searchParams.get('product') || 'call-lab-pro';
 
         // Get user email if logged in
         const supabase = createClientComponentClient();
@@ -29,6 +30,7 @@ function UpgradeContent() {
             priceType: plan,
             email: user?.email,
             coupon: coupon || undefined,
+            product,
           }),
         });
 

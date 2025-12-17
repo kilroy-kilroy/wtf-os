@@ -15,21 +15,39 @@ function getStripe() {
 
 export async function POST(request: NextRequest) {
   try {
-    const { priceType, email, coupon } = await request.json();
+    const { priceType, email, coupon, product = 'call-lab-pro' } = await request.json();
 
-    // Get the appropriate price ID based on plan type
-    const priceId = priceType === 'team'
-      ? process.env.STRIPE_PRICE_TEAM
-      : process.env.STRIPE_PRICE_SOLO;
+    // Get the appropriate price ID based on product and plan type
+    let priceId: string | undefined;
+    let successUrl: string;
+    let cancelUrl: string;
+
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.timkilroy.com';
+
+    switch (product) {
+      case 'discovery-lab-pro':
+        priceId = priceType === 'team'
+          ? process.env.STRIPE_PRICE_DISCOVERY_TEAM
+          : process.env.STRIPE_PRICE_DISCOVERY_SOLO;
+        successUrl = `${appUrl}/discovery-lab-pro/welcome?session_id={CHECKOUT_SESSION_ID}`;
+        cancelUrl = `${appUrl}/discovery-lab-pro?checkout=cancelled`;
+        break;
+      case 'call-lab-pro':
+      default:
+        priceId = priceType === 'team'
+          ? process.env.STRIPE_PRICE_TEAM
+          : process.env.STRIPE_PRICE_SOLO;
+        successUrl = `${appUrl}/call-lab-pro/welcome?session_id={CHECKOUT_SESSION_ID}`;
+        cancelUrl = `${appUrl}/call-lab-pro?checkout=cancelled`;
+        break;
+    }
 
     if (!priceId) {
       return NextResponse.json(
-        { error: 'Price ID not configured' },
+        { error: `Price ID not configured for ${product}` },
         { status: 500 }
       );
     }
-
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.timkilroy.com';
 
     // Build checkout session options
     const sessionOptions: Stripe.Checkout.SessionCreateParams = {
@@ -42,10 +60,11 @@ export async function POST(request: NextRequest) {
         },
       ],
       customer_email: email || undefined,
-      success_url: `${appUrl}/call-lab-pro/welcome?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${appUrl}/call-lab-pro?checkout=cancelled`,
+      success_url: successUrl,
+      cancel_url: cancelUrl,
       metadata: {
         priceType,
+        product,
       },
     };
 

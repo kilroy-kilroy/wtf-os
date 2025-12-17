@@ -15,7 +15,7 @@ function getStripe() {
 
 export async function POST(request: NextRequest) {
   try {
-    const { priceType, email } = await request.json();
+    const { priceType, email, coupon } = await request.json();
 
     // Get the appropriate price ID based on plan type
     const priceId = priceType === 'team'
@@ -31,8 +31,8 @@ export async function POST(request: NextRequest) {
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.timkilroy.com';
 
-    // Create Stripe Checkout Session
-    const session = await getStripe().checkout.sessions.create({
+    // Build checkout session options
+    const sessionOptions: Stripe.Checkout.SessionCreateParams = {
       mode: 'subscription',
       payment_method_types: ['card'],
       line_items: [
@@ -47,7 +47,15 @@ export async function POST(request: NextRequest) {
       metadata: {
         priceType,
       },
-    });
+    };
+
+    // Apply coupon if provided
+    if (coupon) {
+      sessionOptions.discounts = [{ coupon }];
+    }
+
+    // Create Stripe Checkout Session
+    const session = await getStripe().checkout.sessions.create(sessionOptions);
 
     return NextResponse.json({ url: session.url });
   } catch (error) {

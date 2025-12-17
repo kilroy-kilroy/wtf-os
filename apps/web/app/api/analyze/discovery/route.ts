@@ -114,9 +114,9 @@ export async function POST(request: NextRequest) {
       target_company,
     });
 
-    // Store report in database
+    // Store report in database (cast to any since discovery_briefs not in generated types)
     const supabase = createServerClient();
-    const { data: insertedReport, error: insertError } = await supabase
+    const { data: insertedReport, error: insertError } = await (supabase as any)
       .from('discovery_briefs')
       .insert({
         lead_email: requestor_email,

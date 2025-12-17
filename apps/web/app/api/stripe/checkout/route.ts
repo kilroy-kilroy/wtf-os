@@ -32,6 +32,13 @@ export async function POST(request: NextRequest) {
         successUrl = `${appUrl}/discovery-lab-pro/welcome?session_id={CHECKOUT_SESSION_ID}`;
         cancelUrl = `${appUrl}/discovery-lab-pro?checkout=cancelled`;
         break;
+      case 'bundle':
+        priceId = priceType === 'team'
+          ? process.env.STRIPE_PRICE_BUNDLE_TEAM
+          : process.env.STRIPE_PRICE_BUNDLE_SOLO;
+        successUrl = `${appUrl}/pro/welcome?session_id={CHECKOUT_SESSION_ID}`;
+        cancelUrl = `${appUrl}/pricing?checkout=cancelled`;
+        break;
       case 'call-lab-pro':
       default:
         priceId = priceType === 'team'

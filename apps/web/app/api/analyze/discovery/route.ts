@@ -9,6 +9,7 @@ import {
   parseDiscoveryMetadata,
   type DiscoveryLabPromptParams,
 } from '@repo/prompts';
+import { onDiscoveryReportGenerated } from '@/lib/loops';
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
@@ -112,6 +113,15 @@ export async function POST(request: NextRequest) {
       requestor_email,
       target_company,
     });
+
+    // Fire Loops event for email sequences/analytics (fire-and-forget)
+    onDiscoveryReportGenerated(
+      requestor_email,
+      version as 'lite' | 'pro',
+      target_company,
+      target_contact_name,
+      target_contact_title
+    ).catch((err) => console.error('Loops event failed:', err));
 
     // Return the result
     return NextResponse.json(

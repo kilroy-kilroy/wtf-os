@@ -262,3 +262,26 @@ export async function onReportGenerated(
     },
   });
 }
+
+/**
+ * Fire when a Discovery Lab report is generated
+ * Sends transactional email with prospect intelligence summary
+ */
+export async function onDiscoveryReportGenerated(
+  email: string,
+  reportType: 'lite' | 'pro' = 'lite',
+  targetCompany: string,
+  targetContact?: string,
+  targetContactTitle?: string
+): Promise<{ success: boolean; error?: string }> {
+  return sendEvent({
+    email,
+    eventName: 'discovery_report_generated',
+    eventProperties: {
+      reportType,
+      targetCompany,
+      targetContact: targetContact || '',
+      targetContactTitle: targetContactTitle || '',
+    },
+  });
+}

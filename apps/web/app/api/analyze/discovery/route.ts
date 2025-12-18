@@ -16,6 +16,7 @@ import {
   type DiscoveryLabPromptParams,
 } from '@repo/prompts';
 import { onDiscoveryReportGenerated } from '@/lib/loops';
+import { addDiscoveryLabSubscriber } from '@/lib/beehiiv';
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
@@ -241,6 +242,13 @@ export async function POST(request: NextRequest) {
       reportId,
       reportUrl
     ).catch((err) => console.error('Loops event failed:', err));
+
+    // Add to Beehiiv newsletter (fire-and-forget)
+    addDiscoveryLabSubscriber(
+      requestor_email,
+      requestor_name,
+      requestor_company
+    ).catch((err) => console.error('Beehiiv subscriber add failed:', err));
 
     // Return the result
     return NextResponse.json(

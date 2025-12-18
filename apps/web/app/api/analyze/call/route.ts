@@ -29,8 +29,9 @@ import {
   CALL_LAB_PRO_JSON_SCHEMA,
 } from '@repo/prompts';
 import { onReportGenerated } from '@/lib/loops';
+import { addCallLabSubscriber } from '@/lib/beehiiv';
 
-// Helper to send report generated email via Loops
+// Helper to send report generated email via Loops and add to Beehiiv
 async function sendReportEmail(
   supabase: any,
   userId: string | null | undefined,
@@ -42,14 +43,15 @@ async function sendReportEmail(
   if (!userId) return;
 
   try {
-    // Look up user's email
+    // Look up user's email and name
     const { data: user } = await supabase
       .from('users')
-      .select('email')
+      .select('email, first_name, last_name')
       .eq('id', userId)
       .single();
 
     if (user?.email) {
+      // Send Loops event
       await onReportGenerated(
         user.email,
         reportId,
@@ -59,9 +61,15 @@ async function sendReportEmail(
       ).catch(err => {
         console.error('Failed to send Loops report email:', err);
       });
+
+      // Add to Beehiiv newsletter
+      const fullName = [user.first_name, user.last_name].filter(Boolean).join(' ');
+      await addCallLabSubscriber(user.email, fullName || undefined).catch(err => {
+        console.error('Failed to add Beehiiv subscriber:', err);
+      });
     }
   } catch (err) {
-    console.error('Error looking up user for Loops:', err);
+    console.error('Error looking up user for email notifications:', err);
   }
 }
 

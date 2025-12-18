@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { createOrUpdateContact, onCallLabSignup } from '@/lib/loops';
+import { addAppSignupSubscriber } from '@/lib/beehiiv';
 
 export async function POST(request: NextRequest) {
   try {
@@ -41,6 +42,11 @@ export async function POST(request: NextRequest) {
     if (!eventResult.success) {
       console.error('Failed to send Loops signup event:', eventResult.error);
     }
+
+    // Add to Beehiiv newsletter (fire-and-forget)
+    addAppSignupSubscriber(user.email!, firstName, lastName, companyName).catch((err) =>
+      console.error('Beehiiv subscriber add failed:', err)
+    );
 
     return NextResponse.json({ success: true });
   } catch (error) {

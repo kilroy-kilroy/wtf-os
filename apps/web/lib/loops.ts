@@ -293,3 +293,39 @@ export async function onDiscoveryReportGenerated(
     },
   });
 }
+
+/**
+ * Fire when a coaching report is ready (weekly, monthly, quarterly)
+ * Triggers email with link to coaching report
+ */
+export async function onCoachingReportReady(
+  email: string,
+  reportType: 'weekly' | 'monthly' | 'quarterly',
+  reportId: string,
+  periodStart: string,
+  periodEnd: string,
+  firstName?: string
+): Promise<{ success: boolean; error?: string }> {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.timkilroy.com';
+  const reportUrl = `${appUrl}/dashboard/coaching/${reportId}`;
+
+  // Format period for display
+  const reportTypeLabel = reportType === 'weekly'
+    ? 'Weekly'
+    : reportType === 'monthly'
+    ? 'Monthly'
+    : 'Quarterly';
+
+  return sendEvent({
+    email,
+    eventName: 'coaching_report_ready',
+    eventProperties: {
+      reportType: reportTypeLabel,
+      reportId,
+      reportUrl,
+      periodStart,
+      periodEnd,
+      firstName: firstName || '',
+    },
+  });
+}

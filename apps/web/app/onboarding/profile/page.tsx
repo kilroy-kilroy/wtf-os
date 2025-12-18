@@ -142,7 +142,7 @@ export default function ProfileSetupPage() {
         const { data: newOrg, error: orgError } = await supabase
           .from('orgs')
           .insert({
-            name: formData.companyName || domain,
+            name: formData.companyName,
             primary_domain: domain,
             company_size: formData.companySize,
             sales_team_size: formData.salesTeamSize,
@@ -174,7 +174,7 @@ export default function ProfileSetupPage() {
         const { data: personalOrg, error: orgError } = await supabase
           .from('orgs')
           .insert({
-            name: formData.companyName || `${formData.fullName}'s Workspace`,
+            name: formData.companyName,
             company_size: formData.companySize,
             sales_team_size: formData.salesTeamSize,
             crm: formData.crm,

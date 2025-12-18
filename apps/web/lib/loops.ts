@@ -276,11 +276,15 @@ export async function onDiscoveryReportGenerated(
   reportId?: string,
   reportUrl?: string
 ): Promise<{ success: boolean; error?: string }> {
+  const reportTypeLabel = reportType === 'pro'
+    ? 'SalesOS Discovery Lab Pro'
+    : 'SalesOS Discovery Lab';
+
   return sendEvent({
     email,
     eventName: 'discovery_report_generated',
     eventProperties: {
-      reportType,
+      reportType: reportTypeLabel,
       targetCompany,
       targetContact: targetContact || '',
       targetContactTitle: targetContactTitle || '',

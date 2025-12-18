@@ -509,6 +509,302 @@ export async function runDiscoveryResearch(
 }
 
 // ============================================================================
+// APOLLO API - Company & Contact Enrichment
+// ============================================================================
+
+export interface ApolloCompanyData {
+  name: string;
+  domain: string;
+  industry: string;
+  employee_count: string;
+  estimated_num_employees: number;
+  founded_year: number;
+  linkedin_url: string;
+  description: string;
+  short_description: string;
+  annual_revenue: string;
+  total_funding: string;
+  latest_funding_round_type: string;
+  latest_funding_round_amount: number;
+  latest_funding_round_date: string;
+  headquarters: {
+    city: string;
+    state: string;
+    country: string;
+  };
+  technologies: string[];
+  keywords: string[];
+  raw_data: Record<string, unknown>;
+}
+
+export interface ApolloContactData {
+  first_name: string;
+  last_name: string;
+  name: string;
+  title: string;
+  email: string;
+  linkedin_url: string;
+  headline: string;
+  employment_history: Array<{
+    title: string;
+    organization_name: string;
+    start_date: string;
+    end_date: string | null;
+    current: boolean;
+  }>;
+  seniority: string;
+  departments: string[];
+  raw_data: Record<string, unknown>;
+}
+
+/**
+ * Enrich company data using Apollo API
+ */
+export async function enrichCompanyWithApollo(
+  domain: string
+): Promise<ApolloCompanyData | null> {
+  const apiKey = process.env.APOLLO_API_KEY;
+  if (!apiKey) {
+    console.warn('APOLLO_API_KEY not set, skipping Apollo enrichment');
+    return null;
+  }
+
+  try {
+    const response = await fetch('https://api.apollo.io/api/v1/organizations/enrich', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache',
+        'x-api-key': apiKey,
+      },
+      body: JSON.stringify({ domain }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`Apollo API error: ${response.status} - ${errorText}`);
+      return null;
+    }
+
+    const data = await response.json();
+    const org = data.organization;
+
+    if (!org) {
+      return null;
+    }
+
+    return {
+      name: org.name || '',
+      domain: org.primary_domain || domain,
+      industry: org.industry || '',
+      employee_count: org.estimated_num_employees
+        ? formatEmployeeCount(org.estimated_num_employees)
+        : '',
+      estimated_num_employees: org.estimated_num_employees || 0,
+      founded_year: org.founded_year || 0,
+      linkedin_url: org.linkedin_url || '',
+      description: org.description || '',
+      short_description: org.short_description || '',
+      annual_revenue: org.annual_revenue_printed || '',
+      total_funding: org.total_funding_printed || '',
+      latest_funding_round_type: org.latest_funding_round_type || '',
+      latest_funding_round_amount: org.latest_funding_round_amount || 0,
+      latest_funding_round_date: org.latest_funding_round_date || '',
+      headquarters: {
+        city: org.city || '',
+        state: org.state || '',
+        country: org.country || '',
+      },
+      technologies: org.technologies || [],
+      keywords: org.keywords || [],
+      raw_data: org,
+    };
+  } catch (error) {
+    console.error('Apollo company enrichment error:', error);
+    return null;
+  }
+}
+
+/**
+ * Search and enrich contact using Apollo API
+ */
+export async function enrichContactWithApollo(
+  contactName: string,
+  companyDomain: string
+): Promise<ApolloContactData | null> {
+  const apiKey = process.env.APOLLO_API_KEY;
+  if (!apiKey) {
+    console.warn('APOLLO_API_KEY not set, skipping Apollo contact enrichment');
+    return null;
+  }
+
+  try {
+    // Split name into first/last
+    const nameParts = contactName.trim().split(/\s+/);
+    const firstName = nameParts[0] || '';
+    const lastName = nameParts.slice(1).join(' ') || '';
+
+    const searchResponse = await fetch('https://api.apollo.io/api/v1/people/match', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache',
+        'x-api-key': apiKey,
+      },
+      body: JSON.stringify({
+        first_name: firstName,
+        last_name: lastName,
+        organization_domain: companyDomain,
+      }),
+    });
+
+    if (!searchResponse.ok) {
+      const errorText = await searchResponse.text();
+      console.error(`Apollo people match error: ${searchResponse.status} - ${errorText}`);
+      return null;
+    }
+
+    const searchData = await searchResponse.json();
+    const person = searchData.person;
+
+    if (!person) {
+      return null;
+    }
+
+    return formatApolloContact(person);
+  } catch (error) {
+    console.error('Apollo contact enrichment error:', error);
+    return null;
+  }
+}
+
+function formatApolloContact(person: any): ApolloContactData {
+  return {
+    first_name: person.first_name || '',
+    last_name: person.last_name || '',
+    name: person.name || `${person.first_name} ${person.last_name}`,
+    title: person.title || '',
+    email: person.email || '',
+    linkedin_url: person.linkedin_url || '',
+    headline: person.headline || person.title || '',
+    employment_history: (person.employment_history || []).map((job: any) => ({
+      title: job.title || '',
+      organization_name: job.organization_name || '',
+      start_date: job.start_date || '',
+      end_date: job.end_date || null,
+      current: job.current || false,
+    })),
+    seniority: person.seniority || '',
+    departments: person.departments || [],
+    raw_data: person,
+  };
+}
+
+function formatEmployeeCount(count: number): string {
+  if (count < 10) return '1-10 employees';
+  if (count < 50) return '10-50 employees';
+  if (count < 200) return '50-200 employees';
+  if (count < 500) return '200-500 employees';
+  if (count < 1000) return '500-1000 employees';
+  if (count < 5000) return '1000-5000 employees';
+  return '5000+ employees';
+}
+
+/**
+ * Fetch recent news and funding using Perplexity (real-time search)
+ */
+export async function fetchCompanyNews(
+  companyName: string,
+  domain?: string
+): Promise<{
+  recent_news: Array<{ title: string; date: string; summary: string }>;
+  funding_info: { round: string; amount: string; date: string; investors: string } | null;
+  raw_response: string;
+}> {
+  const systemPrompt = `You are a business news researcher. Provide factual, recent news about companies. Always include dates and be specific. If you can't find recent news, say so.`;
+
+  const userQuery = `Find the most recent news about ${companyName}${domain ? ` (${domain})` : ''} from the last 6 months.
+
+I need:
+1. RECENT NEWS - Up to 3 most significant recent news items (product launches, partnerships, leadership changes, awards)
+2. FUNDING - Any funding rounds in the last 12 months (round type, amount, date, lead investors)
+
+Format each news item as:
+- Title | Date | One-sentence summary
+
+For funding, format as:
+- Round Type | Amount | Date | Lead Investors
+
+If no recent news or funding found, explicitly say "No recent news found" or "No recent funding found".`;
+
+  try {
+    const response = await queryPerplexity(systemPrompt, userQuery, {
+      maxTokens: 1500,
+    });
+
+    // Parse news items
+    const newsSection = extractSection(response, 'RECENT NEWS', 'FUNDING');
+    const newsItems = parseNewsItems(newsSection);
+
+    // Parse funding
+    const fundingSection = extractSection(response, 'FUNDING', '');
+    const fundingInfo = parseFundingInfo(fundingSection);
+
+    return {
+      recent_news: newsItems,
+      funding_info: fundingInfo,
+      raw_response: response,
+    };
+  } catch (error) {
+    console.error('Company news fetch error:', error);
+    return {
+      recent_news: [],
+      funding_info: null,
+      raw_response: '',
+    };
+  }
+}
+
+function parseNewsItems(text: string): Array<{ title: string; date: string; summary: string }> {
+  const items: Array<{ title: string; date: string; summary: string }> = [];
+  const lines = text.split('\n').filter(line => line.trim().startsWith('-') || line.trim().match(/^\d+\./));
+
+  for (const line of lines) {
+    const parts = line.replace(/^[-\d.]\s*/, '').split('|').map(p => p.trim());
+    if (parts.length >= 2) {
+      items.push({
+        title: parts[0] || '',
+        date: parts[1] || '',
+        summary: parts[2] || parts[0] || '',
+      });
+    }
+  }
+
+  return items.slice(0, 3);
+}
+
+function parseFundingInfo(text: string): { round: string; amount: string; date: string; investors: string } | null {
+  if (text.toLowerCase().includes('no recent funding') || text.toLowerCase().includes('not found') || !text.trim()) {
+    return null;
+  }
+
+  const lines = text.split('\n').filter(line => line.trim().startsWith('-') || line.includes('|'));
+  for (const line of lines) {
+    const parts = line.replace(/^[-\d.]\s*/, '').split('|').map(p => p.trim());
+    if (parts.length >= 2) {
+      return {
+        round: parts[0] || '',
+        amount: parts[1] || '',
+        date: parts[2] || '',
+        investors: parts[3] || '',
+      };
+    }
+  }
+
+  return null;
+}
+
+// ============================================================================
 // HELPER FUNCTIONS
 // ============================================================================
 

@@ -295,6 +295,64 @@ export interface DiscoveryLabPromptParams {
   target_contact_title?: string;
   // Context
   competitors?: string;
+  // Enriched data (from Apollo/Perplexity)
+  enriched_company?: {
+    industry?: string;
+    employee_count?: string;
+    founded_year?: number;
+    headquarters?: string;
+    description?: string;
+    annual_revenue?: string;
+    total_funding?: string;
+    latest_funding_round?: string;
+    technologies?: string[];
+  };
+  enriched_contact?: {
+    title?: string;
+    linkedin_url?: string;
+    seniority?: string;
+    employment_history?: string;
+  };
+  recent_news?: Array<{ title: string; date: string; summary: string }>;
+  funding_info?: { round: string; amount: string; date: string; investors: string };
+}
+
+// Helper to format enriched data sections
+function formatEnrichedCompany(data: DiscoveryLabPromptParams['enriched_company']): string {
+  if (!data) return '';
+  const parts: string[] = [];
+  if (data.industry) parts.push(`Industry: ${data.industry}`);
+  if (data.employee_count) parts.push(`Size: ${data.employee_count}`);
+  if (data.founded_year) parts.push(`Founded: ${data.founded_year}`);
+  if (data.headquarters) parts.push(`HQ: ${data.headquarters}`);
+  if (data.annual_revenue) parts.push(`Revenue: ${data.annual_revenue}`);
+  if (data.total_funding) parts.push(`Total Funding: ${data.total_funding}`);
+  if (data.latest_funding_round) parts.push(`Latest Round: ${data.latest_funding_round}`);
+  if (data.description) parts.push(`About: ${data.description}`);
+  if (data.technologies?.length) parts.push(`Tech Stack: ${data.technologies.slice(0, 5).join(', ')}`);
+  return parts.length > 0 ? `\nCOMPANY INTELLIGENCE (VERIFIED DATA):\n${parts.join('\n')}` : '';
+}
+
+function formatRecentNews(news: DiscoveryLabPromptParams['recent_news'], funding: DiscoveryLabPromptParams['funding_info']): string {
+  const parts: string[] = [];
+  if (news?.length) {
+    parts.push('RECENT NEWS:');
+    news.forEach(n => parts.push(`- ${n.title} (${n.date}): ${n.summary}`));
+  }
+  if (funding) {
+    parts.push(`\nFUNDING: ${funding.round} - ${funding.amount} (${funding.date})${funding.investors ? ` led by ${funding.investors}` : ''}`);
+  }
+  return parts.length > 0 ? '\n' + parts.join('\n') : '';
+}
+
+function formatEnrichedContact(data: DiscoveryLabPromptParams['enriched_contact']): string {
+  if (!data) return '';
+  const parts: string[] = [];
+  if (data.title) parts.push(`Current Role: ${data.title}`);
+  if (data.seniority) parts.push(`Seniority: ${data.seniority}`);
+  if (data.employment_history) parts.push(`Background: ${data.employment_history}`);
+  if (data.linkedin_url) parts.push(`LinkedIn: ${data.linkedin_url}`);
+  return parts.length > 0 ? `\nCONTACT INTELLIGENCE:\n${parts.join('\n')}` : '';
 }
 
 export const DISCOVERY_LAB_LITE_USER = (params: DiscoveryLabPromptParams) => `
@@ -313,6 +371,7 @@ Company: ${params.target_company}
 ${params.target_website ? `Website: ${params.target_website}` : ''}
 ${params.target_contact_name ? `Contact: ${params.target_contact_name}` : ''}
 ${params.target_contact_title ? `Title: ${params.target_contact_title}` : ''}
+${formatEnrichedCompany(params.enriched_company)}${formatRecentNews(params.recent_news, params.funding_info)}${formatEnrichedContact(params.enriched_contact)}
 
 ${params.competitors ? `KNOWN COMPETITORS:\n${params.competitors}` : 'COMPETITORS: Not provided - please infer likely competitors based on service type.'}
 `;
@@ -333,10 +392,11 @@ Company: ${params.target_company}
 ${params.target_website ? `Website: ${params.target_website}` : ''}
 ${params.target_contact_name ? `Contact: ${params.target_contact_name}` : ''}
 ${params.target_contact_title ? `Title: ${params.target_contact_title}` : ''}
+${formatEnrichedCompany(params.enriched_company)}${formatRecentNews(params.recent_news, params.funding_info)}${formatEnrichedContact(params.enriched_contact)}
 
 ${params.competitors ? `KNOWN COMPETITORS:\n${params.competitors}` : 'COMPETITORS: Not provided - please infer likely competitors based on service type and target company.'}
 
-Provide the complete Discovery Lab Pro Call Playbook with all sections.
+Provide the complete Discovery Lab Pro Call Playbook with all sections. Use the verified company/contact intelligence above to make your insights specific and accurate.
 `;
 
 // Type for discovery response metadata

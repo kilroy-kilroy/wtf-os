@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@repo/db/client';
-import { runModel, retryWithBackoff } from '@repo/utils';
+import {
+  runModel,
+  retryWithBackoff,
+  enrichCompanyWithApollo,
+  enrichContactWithApollo,
+  fetchCompanyNews,
+} from '@repo/utils';
 import {
   DISCOVERY_LAB_LITE_SYSTEM,
   DISCOVERY_LAB_LITE_USER,
@@ -40,7 +46,50 @@ export async function POST(request: NextRequest) {
       version = 'lite', // 'lite' or 'pro'
     } = body;
 
-    // Prepare prompt parameters
+    // Extract domain from website URL for API enrichment
+    let domain: string | undefined;
+    if (target_website) {
+      try {
+        const url = new URL(target_website.startsWith('http') ? target_website : `https://${target_website}`);
+        domain = url.hostname.replace('www.', '');
+      } catch {
+        domain = target_website.replace('www.', '').split('/')[0];
+      }
+    }
+
+    // Fetch enriched data in parallel (non-blocking - continue even if some fail)
+    console.log('Fetching enriched data for:', { target_company, domain, target_contact_name });
+
+    const [apolloCompany, apolloContact, newsData] = await Promise.all([
+      // Company data from Apollo
+      domain
+        ? enrichCompanyWithApollo(domain).catch((e) => {
+            console.warn('Apollo company enrichment failed:', e.message);
+            return null;
+          })
+        : Promise.resolve(null),
+      // Contact data from Apollo
+      domain && target_contact_name
+        ? enrichContactWithApollo(target_contact_name, domain).catch((e) => {
+            console.warn('Apollo contact enrichment failed:', e.message);
+            return null;
+          })
+        : Promise.resolve(null),
+      // News/funding from Perplexity
+      fetchCompanyNews(target_company, domain).catch((e) => {
+        console.warn('Perplexity news fetch failed:', e.message);
+        return { recent_news: [], funding_info: null, raw_response: '' };
+      }),
+    ]);
+
+    console.log('Enrichment results:', {
+      hasApolloCompany: !!apolloCompany,
+      hasApolloContact: !!apolloContact,
+      newsCount: newsData.recent_news.length,
+      hasFunding: !!newsData.funding_info,
+    });
+
+    // Prepare prompt parameters with enriched data
     const promptParams: DiscoveryLabPromptParams = {
       requestor_name,
       requestor_email,
@@ -51,6 +100,39 @@ export async function POST(request: NextRequest) {
       target_contact_name,
       target_contact_title,
       competitors,
+      // Add enriched company data
+      enriched_company: apolloCompany
+        ? {
+            industry: apolloCompany.industry,
+            employee_count: apolloCompany.employee_count,
+            founded_year: apolloCompany.founded_year,
+            headquarters: apolloCompany.headquarters
+              ? `${apolloCompany.headquarters.city}, ${apolloCompany.headquarters.state || apolloCompany.headquarters.country}`
+              : undefined,
+            description: apolloCompany.short_description || apolloCompany.description?.slice(0, 300),
+            annual_revenue: apolloCompany.annual_revenue,
+            total_funding: apolloCompany.total_funding,
+            latest_funding_round: apolloCompany.latest_funding_round_type
+              ? `${apolloCompany.latest_funding_round_type}${apolloCompany.latest_funding_round_date ? ` (${apolloCompany.latest_funding_round_date})` : ''}`
+              : undefined,
+            technologies: apolloCompany.technologies,
+          }
+        : undefined,
+      // Add enriched contact data
+      enriched_contact: apolloContact
+        ? {
+            title: apolloContact.title,
+            linkedin_url: apolloContact.linkedin_url,
+            seniority: apolloContact.seniority,
+            employment_history: apolloContact.employment_history
+              ?.slice(0, 3)
+              .map((j) => `${j.title} at ${j.organization_name}`)
+              .join(' → '),
+          }
+        : undefined,
+      // Add news and funding
+      recent_news: newsData.recent_news.length > 0 ? newsData.recent_news : undefined,
+      funding_info: newsData.funding_info || undefined,
     };
 
     let usage: { input: number; output: number };

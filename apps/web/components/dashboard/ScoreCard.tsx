@@ -1,94 +1,74 @@
 'use client';
 
-// ============================================
-// TYPES
-// ============================================
-
 type Grade = 'Strong' | 'Developing' | 'Needs Work';
 
 interface ScoreGrade {
-  label: Grade;
+  grade: Grade;
   icon: string;
   className: string;
 }
-
-// ============================================
-// HELPERS
-// ============================================
 
 function getScoreGrade(value: number, max: number): ScoreGrade {
   const percentage = (value / max) * 100;
 
   if (percentage >= 80) {
     return {
-      label: 'Strong',
+      grade: 'Strong',
       icon: '⚡',
       className: 'bg-[#FFDE59] text-black',
     };
   }
   if (percentage >= 60) {
     return {
-      label: 'Developing',
+      grade: 'Developing',
       icon: '◆',
-      className: 'bg-[#4A90E2] text-white',
+      className: 'bg-[#333] text-white border border-[#666]',
     };
   }
   return {
-    label: 'Needs Work',
+    grade: 'Needs Work',
     icon: '⚠️',
     className: 'bg-[#E51B23] text-white',
   };
 }
 
-// ============================================
-// SCORE CARD
-// ============================================
-
 interface ScoreCardProps {
-  label: string;
-  subtitle: string;
+  dimension: string;
   value: number;
-  maxValue?: number;
+  max?: number;
+  description?: string;
 }
 
 export function ScoreCard({
-  label,
-  subtitle,
+  dimension,
   value,
-  maxValue = 100,
+  max = 100,
+  description,
 }: ScoreCardProps) {
-  const { label: gradeLabel, icon, className } = getScoreGrade(value, maxValue);
+  const { grade, icon, className } = getScoreGrade(value, max);
 
   return (
-    <div className="bg-[#1A1A1A] border-2 border-[#333] p-6">
-      {/* Header */}
-      <div className="mb-5">
-        <div className="text-[10px] font-bold tracking-wider text-[#999] mb-1">
-          {label}
-        </div>
-        <div className="text-[11px] text-[#666] tracking-wide">{subtitle}</div>
-      </div>
-
-      {/* Value & Badge */}
-      <div className="flex flex-col gap-3">
-        <div className="flex items-baseline gap-1">
-          <span className="font-anton text-[56px] leading-none text-white">
-            {value}
-          </span>
-          <span className="text-[28px] text-[#666]">/{maxValue}</span>
-        </div>
-        <div className={`inline-block px-3.5 py-1.5 text-[10px] font-bold tracking-wide ${className}`}>
-          {icon} {gradeLabel}
-        </div>
+    <div className="bg-black border border-[#333] rounded-lg p-4">
+      <label className="text-[#B3B3B3] text-xs font-semibold uppercase">
+        {dimension}
+      </label>
+      {description && (
+        <p className="text-[#666] text-xs mt-0.5">{description}</p>
+      )}
+      <div className="flex justify-between items-center mt-2">
+        <span className="text-white text-2xl font-bold">
+          {value}
+          <span className="text-[#666] text-lg">/{max}</span>
+        </span>
+        <span className={`text-xs px-2 py-1 rounded font-semibold ${className}`}>
+          {icon} {grade}
+        </span>
       </div>
     </div>
   );
 }
 
-// ============================================
-// MULTI SCORE CARD
-// ============================================
-
+// Multi-score variant for displaying multiple dimensions
 interface MultiScoreCardProps {
   title: string;
   scores: Array<{
@@ -100,12 +80,12 @@ interface MultiScoreCardProps {
 
 export function MultiScoreCard({ title, scores }: MultiScoreCardProps) {
   return (
-    <div className="bg-[#1A1A1A] border-2 border-[#333] p-6">
-      <h3 className="text-white font-bold text-sm mb-4">{title}</h3>
+    <div className="bg-black border border-[#333] rounded-lg p-4">
+      <h3 className="text-white font-bold text-sm mb-3">{title}</h3>
       <div className="space-y-3">
         {scores.map((score) => {
           const max = score.max ?? 100;
-          const { icon, className } = getScoreGrade(score.value, max);
+          const { grade, icon, className } = getScoreGrade(score.value, max);
 
           return (
             <div key={score.dimension} className="flex justify-between items-center">
@@ -114,7 +94,9 @@ export function MultiScoreCard({ title, scores }: MultiScoreCardProps) {
                 <span className="text-white font-mono">
                   {score.value}/{max}
                 </span>
-                <span className={`text-[10px] px-2 py-0.5 font-semibold ${className}`}>
+                <span
+                  className={`text-[10px] px-1.5 py-0.5 rounded font-semibold ${className}`}
+                >
                   {icon}
                 </span>
               </div>

@@ -501,104 +501,112 @@ export interface Database {
           metadata?: Json
         }
       }
-      discovery_briefs: {
+      instant_reports: {
         Row: {
           id: string
-          user_id: string | null
-          agency_id: string
-          version: string
-          // Input fields
-          what_you_sell: string
-          market_concerns: string | null
-          target_company: string
-          target_contact_name: string | null
-          target_contact_title: string | null
-          // Pro-only input fields
-          target_company_url: string | null
-          target_linkedin_url: string | null
-          product_strengths: string | null
-          deal_context: Json
-          // Output fields
-          markdown_response: string | null
-          questions: Json
-          meeting_frames: Json
-          // Pro-only output fields
-          market_intel: Json
-          company_intel: Json
-          prospect_intel: Json
-          opening_script: string | null
-          authority_questions: Json
-          depth_questions: Json
-          guidance_questions: Json
-          permission_gates: Json
-          google_radar: Json
-          meeting_agenda: string | null
-          decision_tree: Json
-          // Metadata
+          email: string | null
+          audio_url: string | null
+          transcript: string
+          duration_seconds: number | null
+          analysis: Json
+          score: number
+          scenario_type: string | null
+          viewed_at: string | null
+          view_count: number
+          cost_cents: number
+          source: string
+          user_agent: string | null
+          ip_address: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id: string
+          email?: string | null
+          audio_url?: string | null
+          transcript: string
+          duration_seconds?: number | null
+          analysis: Json
+          score: number
+          scenario_type?: string | null
+          viewed_at?: string | null
+          view_count?: number
+          cost_cents?: number
+          source?: string
+          user_agent?: string | null
+          ip_address?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          email?: string | null
+          audio_url?: string | null
+          transcript?: string
+          duration_seconds?: number | null
+          analysis?: Json
+          score?: number
+          scenario_type?: string | null
+          viewed_at?: string | null
+          view_count?: number
+          cost_cents?: number
+          source?: string
+          user_agent?: string | null
+          ip_address?: string | null
+          updated_at?: string
+        }
+      }
+      instant_leads: {
+        Row: {
+          id: string
+          email: string
+          first_name: string | null
+          source: string
+          first_report_id: string | null
+          welcome_sent_at: string | null
+          pro_pitch_sent_at: string | null
+          subscribed_to_newsletter: boolean
+          upgraded_to_pro: boolean
+          upgraded_at: string | null
+          beehiiv_subscriber_id: string | null
+          beehiiv_synced_at: string | null
+          tags: Json
           metadata: Json
           created_at: string
           updated_at: string
         }
         Insert: {
           id?: string
-          user_id?: string | null
-          agency_id: string
-          version?: string
-          what_you_sell: string
-          market_concerns?: string | null
-          target_company: string
-          target_contact_name?: string | null
-          target_contact_title?: string | null
-          target_company_url?: string | null
-          target_linkedin_url?: string | null
-          product_strengths?: string | null
-          deal_context?: Json
-          markdown_response?: string | null
-          questions?: Json
-          meeting_frames?: Json
-          market_intel?: Json
-          company_intel?: Json
-          prospect_intel?: Json
-          opening_script?: string | null
-          authority_questions?: Json
-          depth_questions?: Json
-          guidance_questions?: Json
-          permission_gates?: Json
-          google_radar?: Json
-          meeting_agenda?: string | null
-          decision_tree?: Json
+          email: string
+          first_name?: string | null
+          source?: string
+          first_report_id?: string | null
+          welcome_sent_at?: string | null
+          pro_pitch_sent_at?: string | null
+          subscribed_to_newsletter?: boolean
+          upgraded_to_pro?: boolean
+          upgraded_at?: string | null
+          beehiiv_subscriber_id?: string | null
+          beehiiv_synced_at?: string | null
+          tags?: Json
           metadata?: Json
           created_at?: string
           updated_at?: string
         }
         Update: {
           id?: string
-          user_id?: string | null
-          agency_id?: string
-          version?: string
-          what_you_sell?: string
-          market_concerns?: string | null
-          target_company?: string
-          target_contact_name?: string | null
-          target_contact_title?: string | null
-          target_company_url?: string | null
-          target_linkedin_url?: string | null
-          product_strengths?: string | null
-          deal_context?: Json
-          markdown_response?: string | null
-          questions?: Json
-          meeting_frames?: Json
-          market_intel?: Json
-          company_intel?: Json
-          prospect_intel?: Json
-          opening_script?: string | null
-          authority_questions?: Json
-          depth_questions?: Json
-          guidance_questions?: Json
-          permission_gates?: Json
-          google_radar?: Json
-          meeting_agenda?: string | null
-          decision_tree?: Json
+          email?: string
+          first_name?: string | null
+          source?: string
+          first_report_id?: string | null
+          welcome_sent_at?: string | null
+          pro_pitch_sent_at?: string | null
+          subscribed_to_newsletter?: boolean
+          upgraded_to_pro?: boolean
+          upgraded_at?: string | null
+          beehiiv_subscriber_id?: string | null
+          beehiiv_synced_at?: string | null
+          tags?: Json
           metadata?: Json
           updated_at?: string
         }

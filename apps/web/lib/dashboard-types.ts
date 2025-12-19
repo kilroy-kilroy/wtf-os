@@ -75,26 +75,9 @@ export type CoachingReport = {
   created_at: string;
 };
 
-// Detected pattern from call analysis
-export type DetectedPattern = {
-  id: string;
-  name: string;
-  category: "connection" | "diagnosis" | "control" | "activation";
-  polarity: "positive" | "negative";
-  frequency: number;
-  percentage: number;
-  call_examples?: Array<{
-    call_id: string;
-    buyer_name: string;
-    company: string;
-    timestamp: string;
-  }>;
-};
-
 export type DashboardData = {
   metrics: DashboardMetrics;
   patternRadar: PatternRadarData;
-  detectedPatterns: DetectedPattern[];  // Aggregated patterns from calls
   recentCalls: RecentCall[];
   quickInsights: QuickInsights;
   followUps: FollowUpTask[];

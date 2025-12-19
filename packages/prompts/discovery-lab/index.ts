@@ -136,7 +136,7 @@ CONSTRAINTS:
 
 REQUIRED OUTPUT STRUCTURE:
 
-1. DISCOVERY LAB PRO - COMPLETE CALL PLAYBOOK
+1. PRO CALL PLAYBOOK
 
 Include: Prospect company name, contact name/title, your service category, estimated company context.
 
@@ -182,14 +182,15 @@ Questions that position you as the advisor, not the vendor:
 - Each designed to steer toward your strengths
 - Include strategic purpose in parentheses
 
-5. COMPETITOR POSITIONING
+5. TARGET'S COMPETITIVE LANDSCAPE
+
+Analyze the TARGET COMPANY'S competitors (companies competing with THEM in their market, NOT your competitors as a seller). This helps frame discovery questions around their market position.
 
 For each competitor (provided or inferred, minimum 3):
 - **[Competitor Name]**
-- What they're good at (one sentence, honest)
-- Where they fall short (one sentence, specific)
-- How to position against them (one sentence, tactical)
-- The question to ask (specific language that highlights your advantage)
+- What they do (one sentence)
+- How the target company differentiates (one sentence)
+- Discovery angle (how to use this in conversation to understand their competitive pressure)
 
 6. MARKET & COMPETITOR HOOKS
 
@@ -269,12 +270,14 @@ TONE REQUIREMENTS:
 CRITICAL REMINDERS:
 
 - State psychological reads as fact, not guess
-- Competitor analysis is honest - acknowledge their strengths
+- Competitor analysis focuses on the TARGET'S market competitors, not the seller's competitors
 - Scripts are steal-worthy - write exactly what they should say
 - Decision tree handles real scenarios, not edge cases
 - This is a tactical playbook, not a research report
 - If information is limited, make smart inferences and state them confidently
 - The prospect should feel like you've had 100 calls with people just like them
+- AVOID questions that are too personal or presumptuous for an intro call. Do NOT ask about exit strategy, succession planning, or deeply personal future plans unless the context specifically warrants it (like M&A advisory). These questions haven't been earned in a first meeting.
+- When citing news or recent events, include the source where possible
 
 INPUT:
 
@@ -313,7 +316,7 @@ export interface DiscoveryLabPromptParams {
     seniority?: string;
     employment_history?: string;
   };
-  recent_news?: Array<{ title: string; date: string; summary: string }>;
+  recent_news?: Array<{ title: string; date: string; summary: string; source?: string }>;
   funding_info?: { round: string; amount: string; date: string; investors: string };
 }
 
@@ -336,8 +339,11 @@ function formatEnrichedCompany(data: DiscoveryLabPromptParams['enriched_company'
 function formatRecentNews(news: DiscoveryLabPromptParams['recent_news'], funding: DiscoveryLabPromptParams['funding_info']): string {
   const parts: string[] = [];
   if (news?.length) {
-    parts.push('RECENT NEWS:');
-    news.forEach(n => parts.push(`- ${n.title} (${n.date}): ${n.summary}`));
+    parts.push('RECENT NEWS (cite these sources when referencing in the playbook):');
+    news.forEach(n => {
+      const source = (n as any).source ? ` [Source: ${(n as any).source}]` : '';
+      parts.push(`- ${n.title} (${n.date}): ${n.summary}${source}`);
+    });
   }
   if (funding) {
     parts.push(`\nFUNDING: ${funding.round} - ${funding.amount} (${funding.date})${funding.investors ? ` led by ${funding.investors}` : ''}`);
@@ -394,9 +400,9 @@ ${params.target_contact_name ? `Contact: ${params.target_contact_name}` : ''}
 ${params.target_contact_title ? `Title: ${params.target_contact_title}` : ''}
 ${formatEnrichedCompany(params.enriched_company)}${formatRecentNews(params.recent_news, params.funding_info)}${formatEnrichedContact(params.enriched_contact)}
 
-${params.competitors ? `KNOWN COMPETITORS:\n${params.competitors}` : 'COMPETITORS: Not provided - please infer likely competitors based on service type and target company.'}
+${params.competitors ? `TARGET'S COMPETITORS (companies competing with the target in their market):\n${params.competitors}` : 'TARGET COMPETITORS: Not provided - please infer likely competitors that the TARGET COMPANY competes against in their market.'}
 
-Provide the complete Discovery Lab Pro Call Playbook with all sections. Use the verified company/contact intelligence above to make your insights specific and accurate.
+Provide the complete Discovery Lab Pro Call Playbook with all sections. Use the verified company/contact intelligence above to make your insights specific and accurate. Remember: competitor analysis is about the TARGET's market competitors, not your competitors as a seller.
 `;
 
 // Type for discovery response metadata

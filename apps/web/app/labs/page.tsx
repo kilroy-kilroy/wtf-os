@@ -45,7 +45,7 @@ const allLabs: Lab[] = [
   {
     name: 'Discovery Lab Pro',
     description: 'Full research layer: market intel, company analysis, contact research, and conversation playbooks.',
-    href: '/discovery-lab-pro/welcome',
+    href: '/discovery-lab-pro/create',
     tier: 'Pro',
     icon: '🧠',
     color: '#FFDE59',

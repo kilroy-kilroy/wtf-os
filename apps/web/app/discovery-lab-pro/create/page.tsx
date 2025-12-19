@@ -20,12 +20,24 @@ interface DiscoveryResult {
   };
 }
 
+// Loading messages to cycle through
+const LOADING_MESSAGES = [
+  'Researching company background...',
+  'Analyzing market position...',
+  'Building prospect psychology profile...',
+  'Crafting discovery questions...',
+  'Developing conversation strategy...',
+  'Compiling competitive intelligence...',
+  'Generating your playbook...',
+];
+
 export default function DiscoveryLabProCreatePage() {
   const [formData, setFormData] = useState({
     // Requestor info
     requestor_name: '',
     requestor_email: '',
     requestor_company: '',
+    requestor_url: '',
     service_offered: '',
     // Target info
     target_company: '',
@@ -38,6 +50,7 @@ export default function DiscoveryLabProCreatePage() {
   });
 
   const [loading, setLoading] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState('');
   const [result, setResult] = useState<DiscoveryResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
@@ -47,6 +60,14 @@ export default function DiscoveryLabProCreatePage() {
     setLoading(true);
     setError(null);
     setResult(null);
+
+    // Start cycling through loading messages
+    let messageIndex = 0;
+    setLoadingMessage(LOADING_MESSAGES[0]);
+    const messageInterval = setInterval(() => {
+      messageIndex = (messageIndex + 1) % LOADING_MESSAGES.length;
+      setLoadingMessage(LOADING_MESSAGES[messageIndex]);
+    }, 3000);
 
     try {
       const response = await fetch('/api/analyze/discovery', {
@@ -68,7 +89,9 @@ export default function DiscoveryLabProCreatePage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
+      clearInterval(messageInterval);
       setLoading(false);
+      setLoadingMessage('');
     }
   };
 
@@ -113,6 +136,40 @@ export default function DiscoveryLabProCreatePage() {
     }
   };
 
+  const renderLoadingState = () => (
+    <ConsolePanel>
+      <div className="flex flex-col items-center justify-center py-20 space-y-8">
+        {/* Animated spinner */}
+        <div className="relative w-24 h-24">
+          <div className="absolute inset-0 border-4 border-[#333] rounded-full"></div>
+          <div className="absolute inset-0 border-4 border-transparent border-t-[#E51B23] rounded-full animate-spin"></div>
+          <div className="absolute inset-2 border-4 border-transparent border-t-[#FFDE59] rounded-full animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }}></div>
+        </div>
+
+        {/* Loading message */}
+        <div className="text-center space-y-2">
+          <p className="text-[#FFDE59] font-anton text-xl tracking-wide animate-pulse">
+            {loadingMessage}
+          </p>
+          <p className="text-[#666] text-sm font-poppins">
+            This typically takes 30-60 seconds
+          </p>
+        </div>
+
+        {/* Progress dots */}
+        <div className="flex gap-2">
+          {[0, 1, 2, 3, 4].map((i) => (
+            <div
+              key={i}
+              className="w-2 h-2 bg-[#E51B23] rounded-full animate-bounce"
+              style={{ animationDelay: `${i * 0.15}s` }}
+            />
+          ))}
+        </div>
+      </div>
+    </ConsolePanel>
+  );
+
   const renderResult = () => (
     <div className="space-y-6">
       {/* Action Buttons */}
@@ -131,22 +188,7 @@ export default function DiscoveryLabProCreatePage() {
 
       {/* Report Content */}
       <ConsolePanel>
-        <ConsoleHeading level={1} variant="yellow" className="mb-6">
-          YOUR DISCOVERY LAB PRO PLAYBOOK
-        </ConsoleHeading>
         <ConsoleMarkdownRenderer content={result!.markdown} />
-      </ConsolePanel>
-
-      {/* Pro Badge */}
-      <ConsolePanel variant="default">
-        <div className="text-center space-y-2">
-          <div className="text-[#FFDE59] font-anton text-lg tracking-wide">
-            DISCOVERY LAB PRO
-          </div>
-          <div className="text-[#666] font-poppins text-sm">
-            Full playbook generated with company research, prospect psychology, and complete conversation strategy.
-          </div>
-        </div>
       </ConsolePanel>
     </div>
   );
@@ -160,7 +202,9 @@ export default function DiscoveryLabProCreatePage() {
           productVariant="PRO"
         />
 
-        {!result ? (
+        {loading ? (
+          renderLoadingState()
+        ) : !result ? (
           /* Input Form */
           <ConsolePanel>
             <div className="space-y-8">
@@ -173,7 +217,6 @@ export default function DiscoveryLabProCreatePage() {
                 </ConsoleHeading>
                 <p className="text-[#B3B3B3] font-poppins text-lg">
                   Full company research. Prospect psychology. Complete conversation strategy.
-                  The unfair advantage you paid for.
                 </p>
               </div>
 
@@ -211,18 +254,33 @@ export default function DiscoveryLabProCreatePage() {
                       }
                     />
                   </div>
-                  <ConsoleInput
-                    type="text"
-                    placeholder="Acme Agency"
-                    label="YOUR COMPANY"
-                    value={formData.requestor_company}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        requestor_company: (e.target as HTMLInputElement).value,
-                      })
-                    }
-                  />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <ConsoleInput
+                      type="text"
+                      placeholder="Acme Agency"
+                      label="YOUR COMPANY *"
+                      required
+                      value={formData.requestor_company}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          requestor_company: (e.target as HTMLInputElement).value,
+                        })
+                      }
+                    />
+                    <ConsoleInput
+                      type="url"
+                      placeholder="https://youragency.com"
+                      label="YOUR WEBSITE"
+                      value={formData.requestor_url}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          requestor_url: (e.target as HTMLInputElement).value,
+                        })
+                      }
+                    />
+                  </div>
                 </div>
 
                 {/* What You Sell */}
@@ -230,20 +288,25 @@ export default function DiscoveryLabProCreatePage() {
                   <ConsoleHeading level={3} variant="yellow">
                     WHAT YOU SELL
                   </ConsoleHeading>
-                  <ConsoleInput
-                    multiline
-                    rows={3}
-                    placeholder="Paid media management for ecommerce brands that want to scale profitably without wasting ad spend on the wrong audiences..."
-                    label="DESCRIBE YOUR SERVICE (BE SPECIFIC) *"
-                    required
-                    value={formData.service_offered}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        service_offered: (e.target as HTMLTextAreaElement).value,
-                      })
-                    }
-                  />
+                  <div>
+                    <ConsoleInput
+                      multiline
+                      rows={3}
+                      placeholder=""
+                      label="DESCRIBE YOUR SERVICE (BE SPECIFIC) *"
+                      required
+                      value={formData.service_offered}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          service_offered: (e.target as HTMLTextAreaElement).value,
+                        })
+                      }
+                    />
+                    <p className="text-[#666] text-sm font-poppins mt-2">
+                      <span className="italic">Example: Paid media management for ecommerce brands that want to scale profitably without wasting ad spend on the wrong audiences...</span>
+                    </p>
+                  </div>
                 </div>
 
                 {/* Target Prospect */}
@@ -268,7 +331,8 @@ export default function DiscoveryLabProCreatePage() {
                     <ConsoleInput
                       type="url"
                       placeholder="https://acmecorp.com"
-                      label="COMPANY WEBSITE"
+                      label="COMPANY WEBSITE *"
+                      required
                       value={formData.target_website}
                       onChange={(e) =>
                         setFormData({
@@ -282,7 +346,8 @@ export default function DiscoveryLabProCreatePage() {
                     <ConsoleInput
                       type="text"
                       placeholder="Sarah Johnson"
-                      label="CONTACT NAME"
+                      label="CONTACT NAME *"
+                      required
                       value={formData.target_contact_name}
                       onChange={(e) =>
                         setFormData({
@@ -307,7 +372,7 @@ export default function DiscoveryLabProCreatePage() {
                   <ConsoleInput
                     type="url"
                     placeholder="https://linkedin.com/in/sarahjohnson"
-                    label="LINKEDIN PROFILE (PRO FEATURE)"
+                    label="LINKEDIN PROFILE"
                     value={formData.target_linkedin}
                     onChange={(e) =>
                       setFormData({
@@ -318,27 +383,29 @@ export default function DiscoveryLabProCreatePage() {
                   />
                 </div>
 
-                {/* Competitors */}
+                {/* Target's Competitors */}
                 <div className="space-y-4">
                   <ConsoleHeading level={3} variant="yellow">
-                    COMPETITORS
+                    TARGET&apos;S COMPETITIVE LANDSCAPE
                   </ConsoleHeading>
-                  <ConsoleInput
-                    multiline
-                    rows={2}
-                    placeholder="Competitor A, Competitor B, Competitor C"
-                    label="WHO ELSE MIGHT THEY BE TALKING TO?"
-                    value={formData.competitors}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        competitors: (e.target as HTMLTextAreaElement).value,
-                      })
-                    }
-                  />
-                  <p className="text-[#666] text-sm font-poppins">
-                    Comma-separated. Pro will provide detailed positioning against each competitor.
-                  </p>
+                  <div>
+                    <ConsoleInput
+                      multiline
+                      rows={2}
+                      placeholder=""
+                      label="WHO ARE THEIR COMPETITORS?"
+                      value={formData.competitors}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          competitors: (e.target as HTMLTextAreaElement).value,
+                        })
+                      }
+                    />
+                    <p className="text-[#666] text-sm font-poppins mt-2">
+                      <span className="italic">Example: List the target company&apos;s competitors (not yours). This helps frame discovery questions around their market position.</span>
+                    </p>
+                  </div>
                 </div>
 
                 {/* Error Message */}
@@ -350,13 +417,8 @@ export default function DiscoveryLabProCreatePage() {
 
                 {/* Submit Button */}
                 <ConsoleButton type="submit" fullWidth disabled={loading}>
-                  {loading ? '⟳ GENERATING PRO PLAYBOOK...' : '▶ GENERATE PRO PLAYBOOK'}
+                  ▶ GENERATE PRO PLAYBOOK
                 </ConsoleButton>
-
-                {/* Pro indicator */}
-                <div className="text-center text-[#666] text-sm font-poppins">
-                  <span className="text-[#E51B23]">●</span> PRO generates 2000-2500 word comprehensive playbooks with 15 questions, competitor analysis, and full conversation strategy
-                </div>
               </form>
             </div>
           </ConsolePanel>

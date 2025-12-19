@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import {
   ConsolePanel,
   ConsoleHeading,
@@ -20,6 +21,20 @@ interface DiscoveryResult {
   };
 }
 
+interface UserProfile {
+  email: string;
+  first_name?: string;
+  last_name?: string;
+  full_name?: string;
+  preferences?: {
+    service_offered?: string;
+    website?: string;
+  };
+  org?: {
+    name?: string;
+  };
+}
+
 // Loading messages to cycle through
 const LOADING_MESSAGES = [
   'Researching company background...',
@@ -32,12 +47,13 @@ const LOADING_MESSAGES = [
 ];
 
 export default function DiscoveryLabProCreatePage() {
+  const supabase = createClientComponentClient();
+
   const [formData, setFormData] = useState({
-    // Requestor info
+    // Requestor info (pre-filled from profile)
     requestor_name: '',
     requestor_email: '',
     requestor_company: '',
-    requestor_url: '',
     service_offered: '',
     // Target info
     target_company: '',
@@ -54,12 +70,96 @@ export default function DiscoveryLabProCreatePage() {
   const [result, setResult] = useState<DiscoveryResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
+  const [profileLoaded, setProfileLoaded] = useState(false);
+  const [serviceEdited, setServiceEdited] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
+
+  // Load user profile on mount
+  useEffect(() => {
+    async function loadUserProfile() {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          setProfileLoaded(true);
+          return;
+        }
+
+        // Fetch user with org
+        const { data: userData } = await supabase
+          .from('users')
+          .select(`
+            email,
+            first_name,
+            last_name,
+            full_name,
+            preferences,
+            orgs:org_id (name)
+          `)
+          .eq('id', user.id)
+          .single();
+
+        if (userData) {
+          const profile = userData as unknown as UserProfile;
+          const fullName = profile.full_name ||
+            [profile.first_name, profile.last_name].filter(Boolean).join(' ') ||
+            '';
+          const companyName = (profile.org as any)?.name || '';
+          const savedService = profile.preferences?.service_offered || '';
+
+          setFormData(prev => ({
+            ...prev,
+            requestor_name: fullName,
+            requestor_email: profile.email || user.email || '',
+            requestor_company: companyName,
+            service_offered: savedService,
+          }));
+        }
+      } catch (err) {
+        console.error('Error loading profile:', err);
+      } finally {
+        setProfileLoaded(true);
+      }
+    }
+    loadUserProfile();
+  }, [supabase]);
+
+  // Save service_offered when it changes (debounced)
+  useEffect(() => {
+    if (!serviceEdited || !formData.service_offered) return;
+
+    const saveTimeout = setTimeout(async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const { data: userData } = await supabase
+          .from('users')
+          .select('preferences')
+          .eq('id', user.id)
+          .single();
+
+        const currentPrefs = userData?.preferences || {};
+
+        await supabase
+          .from('users')
+          .update({
+            preferences: { ...currentPrefs, service_offered: formData.service_offered },
+          })
+          .eq('id', user.id);
+      } catch (err) {
+        console.error('Error saving service_offered:', err);
+      }
+    }, 1000);
+
+    return () => clearTimeout(saveTimeout);
+  }, [formData.service_offered, serviceEdited, supabase]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
     setResult(null);
+    setEmailSent(false);
 
     // Start cycling through loading messages
     let messageIndex = 0;
@@ -75,7 +175,8 @@ export default function DiscoveryLabProCreatePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...formData,
-          version: 'pro', // Key difference: Pro version
+          version: 'pro',
+          send_email: true, // Request email delivery
         }),
       });
 
@@ -86,6 +187,7 @@ export default function DiscoveryLabProCreatePage() {
 
       const data = await response.json();
       setResult(data.result);
+      setEmailSent(data.emailSent || false);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
@@ -172,26 +274,60 @@ export default function DiscoveryLabProCreatePage() {
 
   const renderResult = () => (
     <div className="space-y-6">
-      {/* Action Buttons */}
-      <div className="flex gap-4 justify-end">
-        <ConsoleButton
-          onClick={handleDownloadPdf}
-          disabled={downloadingPdf}
-          variant="secondary"
-        >
-          {downloadingPdf ? 'GENERATING PDF...' : '↓ DOWNLOAD PDF'}
-        </ConsoleButton>
-        <ConsoleButton onClick={() => setResult(null)} variant="primary">
-          ← NEW PLAYBOOK
-        </ConsoleButton>
+      {/* Sticky Action Bar */}
+      <div className="sticky top-0 z-10 bg-black py-4 border-b border-[#333]">
+        <div className="flex gap-4 justify-between items-center">
+          <div className="flex items-center gap-4">
+            <ConsoleButton onClick={() => setResult(null)} variant="secondary">
+              ← NEW PLAYBOOK
+            </ConsoleButton>
+            {emailSent && (
+              <span className="text-[#FFDE59] text-sm font-poppins flex items-center gap-2">
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+                Report emailed to you
+              </span>
+            )}
+          </div>
+          <ConsoleButton
+            onClick={handleDownloadPdf}
+            disabled={downloadingPdf}
+            variant="primary"
+          >
+            {downloadingPdf ? 'GENERATING PDF...' : '↓ DOWNLOAD PDF'}
+          </ConsoleButton>
+        </div>
       </div>
 
       {/* Report Content */}
       <ConsolePanel>
         <ConsoleMarkdownRenderer content={result!.markdown} />
       </ConsolePanel>
+
+      {/* Bottom Action Bar (for long reports) */}
+      <div className="flex gap-4 justify-center py-4">
+        <ConsoleButton
+          onClick={handleDownloadPdf}
+          disabled={downloadingPdf}
+          variant="primary"
+        >
+          {downloadingPdf ? 'GENERATING PDF...' : '↓ DOWNLOAD PDF'}
+        </ConsoleButton>
+        <ConsoleButton onClick={() => setResult(null)} variant="secondary">
+          ← NEW PLAYBOOK
+        </ConsoleButton>
+      </div>
     </div>
   );
+
+  if (!profileLoaded) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="text-white font-anton text-xl">Loading...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-black py-12 px-4">
@@ -221,69 +357,28 @@ export default function DiscoveryLabProCreatePage() {
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-8">
-                {/* Your Info */}
+                {/* Your Info - Pre-filled and read-only for name/email/company */}
                 <div className="space-y-4">
                   <ConsoleHeading level={3} variant="yellow">
                     YOUR INFO
                   </ConsoleHeading>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <ConsoleInput
-                      type="text"
-                      placeholder="John Smith"
-                      label="YOUR NAME *"
-                      required
-                      value={formData.requestor_name}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          requestor_name: (e.target as HTMLInputElement).value,
-                        })
-                      }
-                    />
-                    <ConsoleInput
-                      type="email"
-                      placeholder="you@company.com"
-                      label="EMAIL *"
-                      required
-                      value={formData.requestor_email}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          requestor_email: (e.target as HTMLInputElement).value,
-                        })
-                      }
-                    />
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <ConsoleInput
-                      type="text"
-                      placeholder="Acme Agency"
-                      label="YOUR COMPANY *"
-                      required
-                      value={formData.requestor_company}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          requestor_company: (e.target as HTMLInputElement).value,
-                        })
-                      }
-                    />
-                    <ConsoleInput
-                      type="url"
-                      placeholder="https://youragency.com"
-                      label="YOUR WEBSITE"
-                      value={formData.requestor_url}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          requestor_url: (e.target as HTMLInputElement).value,
-                        })
-                      }
-                    />
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="bg-[#1a1a1a] border border-[#333] px-4 py-3">
+                      <div className="text-[#666] text-xs font-poppins mb-1">NAME</div>
+                      <div className="text-white font-poppins">{formData.requestor_name || 'Not set'}</div>
+                    </div>
+                    <div className="bg-[#1a1a1a] border border-[#333] px-4 py-3">
+                      <div className="text-[#666] text-xs font-poppins mb-1">EMAIL</div>
+                      <div className="text-white font-poppins truncate">{formData.requestor_email || 'Not set'}</div>
+                    </div>
+                    <div className="bg-[#1a1a1a] border border-[#333] px-4 py-3">
+                      <div className="text-[#666] text-xs font-poppins mb-1">COMPANY</div>
+                      <div className="text-white font-poppins">{formData.requestor_company || 'Not set'}</div>
+                    </div>
                   </div>
                 </div>
 
-                {/* What You Sell */}
+                {/* What You Sell - Editable but pre-filled */}
                 <div className="space-y-4">
                   <ConsoleHeading level={3} variant="yellow">
                     WHAT YOU SELL
@@ -296,15 +391,19 @@ export default function DiscoveryLabProCreatePage() {
                       label="DESCRIBE YOUR SERVICE (BE SPECIFIC) *"
                       required
                       value={formData.service_offered}
-                      onChange={(e) =>
+                      onChange={(e) => {
+                        setServiceEdited(true);
                         setFormData({
                           ...formData,
                           service_offered: (e.target as HTMLTextAreaElement).value,
-                        })
-                      }
+                        });
+                      }}
                     />
                     <p className="text-[#666] text-sm font-poppins mt-2">
                       <span className="italic">Example: Paid media management for ecommerce brands that want to scale profitably without wasting ad spend on the wrong audiences...</span>
+                      {formData.service_offered && (
+                        <span className="block mt-1 text-[#FFDE59]">✓ This will be saved for your next playbook</span>
+                      )}
                     </p>
                   </div>
                 </div>

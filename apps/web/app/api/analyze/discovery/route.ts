@@ -17,6 +17,7 @@ import {
 } from '@repo/prompts';
 import { onDiscoveryReportGenerated } from '@/lib/loops';
 import { addDiscoveryLabSubscriber } from '@/lib/beehiiv';
+import { sendDiscoveryLabReportEmail } from '@/lib/resend';
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
@@ -45,6 +46,7 @@ export async function POST(request: NextRequest) {
       target_contact_title,
       competitors,
       version = 'lite', // 'lite' or 'pro'
+      send_email = false, // Whether to email the report to the user
     } = body;
 
     // Extract domain from website URL for API enrichment
@@ -250,6 +252,23 @@ export async function POST(request: NextRequest) {
       requestor_company
     ).catch((err) => console.error('Beehiiv subscriber add failed:', err));
 
+    // Send report email if requested
+    let emailSent = false;
+    if (send_email && version === 'pro') {
+      const emailResult = await sendDiscoveryLabReportEmail(
+        requestor_email,
+        requestor_name,
+        target_company,
+        target_contact_name,
+        markdownResponse,
+        reportUrl
+      );
+      emailSent = emailResult.success;
+      if (!emailResult.success) {
+        console.error('Failed to send report email:', emailResult.error);
+      }
+    }
+
     // Return the result
     return NextResponse.json(
       {
@@ -260,6 +279,7 @@ export async function POST(request: NextRequest) {
           reportId,
           reportUrl,
         },
+        emailSent,
         usage: {
           model: modelUsed,
           tokens: usage,

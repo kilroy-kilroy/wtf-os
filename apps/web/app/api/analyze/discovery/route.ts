@@ -17,7 +17,6 @@ import {
 } from '@repo/prompts';
 import { onDiscoveryReportGenerated } from '@/lib/loops';
 import { addDiscoveryLabSubscriber } from '@/lib/beehiiv';
-import { sendDiscoveryLabReportEmail } from '@/lib/resend';
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
@@ -234,16 +233,35 @@ export async function POST(request: NextRequest) {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.timkilroy.com';
     const reportUrl = reportId ? `${appUrl}/discovery-lab/report/${reportId}` : undefined;
 
-    // Fire Loops event for email sequences/analytics (fire-and-forget)
-    onDiscoveryReportGenerated(
-      requestor_email,
-      version as 'lite' | 'pro',
-      target_company,
-      target_contact_name,
-      target_contact_title,
-      reportId,
-      reportUrl
-    ).catch((err) => console.error('Loops event failed:', err));
+    // Fire Loops event for email delivery and analytics
+    // For Pro reports, this triggers the email with report link
+    let emailSent = false;
+    if (version === 'pro') {
+      const loopsResult = await onDiscoveryReportGenerated(
+        requestor_email,
+        version as 'lite' | 'pro',
+        target_company,
+        target_contact_name,
+        target_contact_title,
+        reportId,
+        reportUrl
+      );
+      emailSent = loopsResult.success;
+      if (!loopsResult.success) {
+        console.error('Loops event failed:', loopsResult.error);
+      }
+    } else {
+      // Fire-and-forget for lite version
+      onDiscoveryReportGenerated(
+        requestor_email,
+        version as 'lite' | 'pro',
+        target_company,
+        target_contact_name,
+        target_contact_title,
+        reportId,
+        reportUrl
+      ).catch((err) => console.error('Loops event failed:', err));
+    }
 
     // Add to Beehiiv newsletter (fire-and-forget)
     addDiscoveryLabSubscriber(
@@ -251,23 +269,6 @@ export async function POST(request: NextRequest) {
       requestor_name,
       requestor_company
     ).catch((err) => console.error('Beehiiv subscriber add failed:', err));
-
-    // Send report email if requested
-    let emailSent = false;
-    if (send_email && version === 'pro') {
-      const emailResult = await sendDiscoveryLabReportEmail(
-        requestor_email,
-        requestor_name,
-        target_company,
-        target_contact_name,
-        markdownResponse,
-        reportUrl
-      );
-      emailSent = emailResult.success;
-      if (!emailResult.success) {
-        console.error('Failed to send report email:', emailResult.error);
-      }
-    }
 
     // Return the result
     return NextResponse.json(

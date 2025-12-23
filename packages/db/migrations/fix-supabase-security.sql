@@ -15,13 +15,9 @@ DROP VIEW IF EXISTS public.instant_report_stats;
 -- 2. ENABLE RLS ON TABLES MISSING IT
 -- ============================================
 
--- team_members
+-- team_members (service role only - schema may vary)
 ALTER TABLE public.team_members ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Users read own team members" ON public.team_members
-  FOR SELECT USING (
-    org_id IN (SELECT org_id FROM users WHERE id = (select auth.uid()))
-  );
-CREATE POLICY "Service role full access" ON public.team_members
+CREATE POLICY "Service role full access team_members" ON public.team_members
   FOR ALL USING (
     (select auth.role()) = 'service_role'
   );

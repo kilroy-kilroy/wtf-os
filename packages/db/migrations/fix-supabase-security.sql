@@ -4,30 +4,12 @@
 -- ============================================
 
 -- ============================================
--- 1. FIX SECURITY DEFINER VIEWS
--- Change from SECURITY DEFINER to SECURITY INVOKER
+-- 1. DROP SECURITY DEFINER VIEWS (if they exist)
+-- These views referenced columns that don't exist
 -- ============================================
 
--- Drop and recreate instant_scenario_stats without SECURITY DEFINER
 DROP VIEW IF EXISTS public.instant_scenario_stats;
-CREATE VIEW public.instant_scenario_stats AS
-SELECT
-  scenario,
-  COUNT(*) as total_runs,
-  AVG(score) as avg_score
-FROM public.call_scores
-GROUP BY scenario
-WITH LOCAL CHECK OPTION;
-
--- Drop and recreate instant_report_stats without SECURITY DEFINER
 DROP VIEW IF EXISTS public.instant_report_stats;
-CREATE VIEW public.instant_report_stats AS
-SELECT
-  DATE_TRUNC('day', created_at) as day,
-  COUNT(*) as reports_generated
-FROM public.call_scores
-GROUP BY DATE_TRUNC('day', created_at)
-WITH LOCAL CHECK OPTION;
 
 -- ============================================
 -- 2. ENABLE RLS ON TABLES MISSING IT
@@ -272,12 +254,6 @@ CREATE POLICY "Users read own follow ups" ON public.follow_up_templates
   FOR SELECT USING (
     user_id = (select auth.uid())
   );
-
--- ============================================
--- 5. GRANT VIEW PERMISSIONS
--- ============================================
-GRANT SELECT ON public.instant_scenario_stats TO authenticated;
-GRANT SELECT ON public.instant_report_stats TO authenticated;
 
 -- ============================================
 -- DONE!

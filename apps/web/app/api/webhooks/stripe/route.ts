@@ -112,11 +112,13 @@ export async function POST(request: NextRequest) {
         customerId: subscription.customer,
       })
 
-      // Get period dates from subscription or fall back to first item
-      const periodStart = subscription.current_period_start
-        ?? subscription.items?.data?.[0]?.current_period_start
-      const periodEnd = subscription.current_period_end
-        ?? subscription.items?.data?.[0]?.current_period_end
+      // Get period dates from subscription (items may have period in some API versions)
+      const firstItem = subscription.items?.data?.[0] as Stripe.SubscriptionItem & {
+        current_period_start?: number
+        current_period_end?: number
+      }
+      const periodStart = subscription.current_period_start ?? firstItem?.current_period_start
+      const periodEnd = subscription.current_period_end ?? firstItem?.current_period_end
 
       // First, check if the subscription exists
       const { data: existing } = await supabase

@@ -112,22 +112,94 @@ export async function POST(request: NextRequest) {
         customerId: subscription.customer,
       })
 
-      // Update subscription in database
-      const { error } = await supabase
-        .from('subscriptions')
-        .update({
-          status: subscription.status,
-          current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
-          current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
-          canceled_at: subscription.canceled_at
-            ? new Date(subscription.canceled_at * 1000).toISOString()
-            : null,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('stripe_subscription_id', subscription.id)
+      // Get period dates from subscription or fall back to first item
+      const periodStart = subscription.current_period_start
+        ?? subscription.items?.data?.[0]?.current_period_start
+      const periodEnd = subscription.current_period_end
+        ?? subscription.items?.data?.[0]?.current_period_end
 
-      if (error) {
-        console.error('Error updating subscription:', error)
+      // First, check if the subscription exists
+      const { data: existing } = await supabase
+        .from('subscriptions')
+        .select('id')
+        .eq('stripe_subscription_id', subscription.id)
+        .single()
+
+      if (existing) {
+        // Update existing subscription
+        const { error } = await supabase
+          .from('subscriptions')
+          .update({
+            status: subscription.status,
+            current_period_start: periodStart
+              ? new Date(periodStart * 1000).toISOString()
+              : undefined,
+            current_period_end: periodEnd
+              ? new Date(periodEnd * 1000).toISOString()
+              : undefined,
+            canceled_at: subscription.canceled_at
+              ? new Date(subscription.canceled_at * 1000).toISOString()
+              : null,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('stripe_subscription_id', subscription.id)
+
+        if (error) {
+          console.error('Error updating subscription:', error)
+          return NextResponse.json({ error: 'Database update failed' }, { status: 500 })
+        }
+      } else {
+        // Subscription doesn't exist yet - create it
+        // This handles race condition where update arrives before checkout.session.completed
+        console.log('Subscription not found, creating new record')
+
+        // Fetch customer email from Stripe
+        let customerEmail = ''
+        try {
+          const customer = await stripe.customers.retrieve(subscription.customer as string)
+          if (customer && !customer.deleted) {
+            customerEmail = customer.email || ''
+          }
+        } catch (err) {
+          console.error('Error fetching customer:', err)
+        }
+
+        // Try to find existing user by email
+        let userId = null
+        if (customerEmail) {
+          const { data: user } = await supabase
+            .from('users')
+            .select('id')
+            .eq('email', customerEmail)
+            .single()
+          userId = user?.id || null
+        }
+
+        const { error } = await supabase
+          .from('subscriptions')
+          .insert({
+            stripe_customer_id: subscription.customer as string,
+            stripe_subscription_id: subscription.id,
+            user_id: userId,
+            customer_email: customerEmail,
+            plan_type: 'solo', // Default, will be updated if checkout.session.completed arrives later
+            status: subscription.status,
+            current_period_start: periodStart
+              ? new Date(periodStart * 1000).toISOString()
+              : new Date().toISOString(),
+            current_period_end: periodEnd
+              ? new Date(periodEnd * 1000).toISOString()
+              : new Date().toISOString(),
+            canceled_at: subscription.canceled_at
+              ? new Date(subscription.canceled_at * 1000).toISOString()
+              : null,
+            updated_at: new Date().toISOString(),
+          })
+
+        if (error) {
+          console.error('Error creating subscription:', error)
+          return NextResponse.json({ error: 'Database insert failed' }, { status: 500 })
+        }
       }
       break
     }

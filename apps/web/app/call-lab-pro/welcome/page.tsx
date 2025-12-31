@@ -1,5 +1,6 @@
 import { getStripe } from '@/lib/stripe'
 import Link from 'next/link'
+import { PurchaseTracker } from './PurchaseTracker'
 
 interface WelcomePageProps {
   searchParams: Promise<{ session_id?: string }>
@@ -10,6 +11,8 @@ export default async function WelcomePage({ searchParams }: WelcomePageProps) {
   const sessionId = params.session_id
   let customerEmail: string | null = null
   let plan: string | null = null
+  let amountTotal: number | null = null
+  let currency: string | null = null
 
   const stripe = getStripe()
   if (sessionId && stripe) {
@@ -17,6 +20,8 @@ export default async function WelcomePage({ searchParams }: WelcomePageProps) {
       const session = await stripe.checkout.sessions.retrieve(sessionId)
       customerEmail = session.customer_email || (session.customer_details?.email ?? null)
       plan = session.metadata?.priceType || null
+      amountTotal = session.amount_total ? session.amount_total / 100 : null // Convert cents to dollars
+      currency = session.currency?.toUpperCase() || 'USD'
     } catch (error) {
       console.error('Error retrieving session:', error)
     }
@@ -24,6 +29,16 @@ export default async function WelcomePage({ searchParams }: WelcomePageProps) {
 
   return (
     <div className="min-h-screen bg-black">
+      {/* Track purchase in Google Analytics via GTM */}
+      {sessionId && amountTotal && (
+        <PurchaseTracker
+          transactionId={sessionId}
+          value={amountTotal}
+          currency={currency || 'USD'}
+          planType={plan || 'solo'}
+        />
+      )}
+
       {/* Header */}
       <div className="border-b border-[#333] py-4">
         <div className="max-w-4xl mx-auto px-4">

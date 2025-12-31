@@ -1,14 +1,42 @@
-'use client';
+import { getStripe } from '@/lib/stripe'
+import { PurchaseTracker, createPurchaseItem } from '@/components/analytics/PurchaseTracker'
+import Link from 'next/link'
 
-import { useSearchParams } from 'next/navigation';
-import { Suspense } from 'react';
+interface WelcomePageProps {
+  searchParams: Promise<{ session_id?: string }>
+}
 
-function WelcomeContent() {
-  const searchParams = useSearchParams();
-  const sessionId = searchParams.get('session_id');
+export default async function WelcomePage({ searchParams }: WelcomePageProps) {
+  const params = await searchParams
+  const sessionId = params.session_id
+  let amountTotal: number | null = null
+  let currency: string | null = null
+  let plan: string | null = null
+
+  const stripe = getStripe()
+  if (sessionId && stripe) {
+    try {
+      const session = await stripe.checkout.sessions.retrieve(sessionId)
+      amountTotal = session.amount_total ? session.amount_total / 100 : null
+      currency = session.currency?.toUpperCase() || 'USD'
+      plan = session.metadata?.plan || 'solo'
+    } catch (error) {
+      console.error('Error retrieving session:', error)
+    }
+  }
 
   return (
     <div className="min-h-screen bg-black flex items-center justify-center p-4">
+      {/* Track purchase in Google Analytics via GTM */}
+      {sessionId && amountTotal && (
+        <PurchaseTracker
+          transactionId={sessionId}
+          value={amountTotal}
+          currency={currency || 'USD'}
+          items={[createPurchaseItem('discovery-lab-pro', (plan as 'solo' | 'team') || 'solo', amountTotal)]}
+        />
+      )}
+
       <div className="max-w-2xl mx-auto text-center">
         {/* Success Icon */}
         <div className="w-24 h-24 mx-auto mb-8 rounded-full bg-[#E51B23] flex items-center justify-center">
@@ -69,18 +97,18 @@ function WelcomeContent() {
 
         {/* CTA Buttons */}
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <a
+          <Link
             href="/discovery-lab"
             className="inline-block bg-[#E51B23] text-white px-8 py-4 font-anton text-lg tracking-wide hover:bg-[#FFDE59] hover:text-black transition-colors no-underline"
           >
             [ START YOUR FIRST BLUEPRINT ]
-          </a>
-          <a
+          </Link>
+          <Link
             href="/dashboard"
             className="inline-block bg-[#333] text-white px-8 py-4 font-anton text-lg tracking-wide hover:bg-[#444] transition-colors no-underline"
           >
             [ GO TO DASHBOARD ]
-          </a>
+          </Link>
         </div>
 
         {/* Session ID for debugging */}
@@ -99,19 +127,5 @@ function WelcomeContent() {
         </p>
       </div>
     </div>
-  );
-}
-
-export default function WelcomePage() {
-  return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen bg-black flex items-center justify-center">
-          <div className="text-white font-anton text-2xl">Loading...</div>
-        </div>
-      }
-    >
-      <WelcomeContent />
-    </Suspense>
-  );
+  )
 }

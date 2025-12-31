@@ -1,6 +1,6 @@
 import { getStripe } from '@/lib/stripe'
 import Link from 'next/link'
-import { PurchaseTracker } from './PurchaseTracker'
+import { PurchaseTracker, createPurchaseItem } from '@/components/analytics/PurchaseTracker'
 
 interface WelcomePageProps {
   searchParams: Promise<{ session_id?: string }>
@@ -35,7 +35,7 @@ export default async function WelcomePage({ searchParams }: WelcomePageProps) {
           transactionId={sessionId}
           value={amountTotal}
           currency={currency || 'USD'}
-          planType={plan || 'solo'}
+          items={[createPurchaseItem('call-lab-pro', (plan as 'solo' | 'team') || 'solo', amountTotal)]}
         />
       )}
 

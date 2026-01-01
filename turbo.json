@@ -11,12 +11,24 @@
         "SUPABASE_SERVICE_ROLE_KEY",
         "ANTHROPIC_API_KEY",
         "OPENAI_API_KEY",
+        "OPEN_AI_KEY",
         "NEXT_PUBLIC_APP_URL",
         "NODE_ENV",
         "STRIPE_SECRET_KEY",
         "STRIPE_PRICE_SOLO",
         "STRIPE_PRICE_TEAM",
-        "STRIPE_WEBHOOK_SECRET"
+        "STRIPE_PRICE_DISCOVERY_SOLO",
+        "STRIPE_PRICE_DISCOVERY_TEAM",
+        "STRIPE_PRICE_BUNDLE_SOLO",
+        "STRIPE_PRICE_BUNDLE_TEAM",
+        "STRIPE_WEBHOOK_SECRET",
+        "RESEND_API_KEY",
+        "PERPLEXITY_API_KEY",
+        "APIFY_API_KEY",
+        "LOOPS_API_KEY",
+        "APOLLO_API_KEY",
+        "BEEHIIV_API_KEY",
+        "BEEHIIV_PUBLICATION_ID"
       ]
     },
     "dev": {

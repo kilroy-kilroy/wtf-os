@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { Resend } from 'resend';
+import { addLeadToLoops, triggerLoopsEvent } from '@/lib/loops';
 
 export async function POST(request: NextRequest) {
   try {
@@ -39,9 +39,11 @@ export async function POST(request: NextRequest) {
       auth: { persistSession: false }
     });
 
+    const normalizedEmail = email.toLowerCase().trim();
+
     // Store lead in database
     const leadData = {
-      email: email.toLowerCase().trim(),
+      email: normalizedEmail,
       source: source || 'quick-analyze',
       transcript: transcript || null,
       score: typeof score === 'number' ? score : null,
@@ -72,55 +74,25 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true, stored: false });
     }
 
-    // Send welcome email via Resend
-    const resendApiKey = process.env.RESEND_API_KEY;
-    const fromEmail = process.env.FROM_EMAIL || 'tim@timkilroy.com';
-
-    if (resendApiKey) {
-      try {
-        const resend = new Resend(resendApiKey);
-
-        await resend.emails.send({
-          from: fromEmail,
-          to: email.toLowerCase().trim(),
-          subject: 'Your Call Lab Instant Results + What\'s Next',
-          html: `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-              <h1 style="color: #E51B23;">Thanks for trying Call Lab Instant!</h1>
-
-              <p>You scored <strong>${score || 'N/A'}/10</strong> on your pitch analysis.</p>
-
-              <p>Here's the thing: a 30-second pitch is just the tip of the iceberg. Real sales calls have:</p>
-              <ul>
-                <li>Discovery phases where deals are won or lost</li>
-                <li>Objection handling moments that reveal your instincts</li>
-                <li>Close attempts that show your confidence level</li>
-                <li>Pattern behaviors you can't see in yourself</li>
-              </ul>
-
-              <p><strong>Call Lab Pro</strong> analyzes your full sales calls and shows you exactly where deals slip away - and how to fix it.</p>
-
-              <p style="margin: 30px 0;">
-                <a href="https://app.timkilroy.com/call-lab-pro"
-                   style="background: #E51B23; color: white; padding: 15px 30px; text-decoration: none; font-weight: bold;">
-                  See What Call Lab Pro Reveals
-                </a>
-              </p>
-
-              <p style="color: #666; font-size: 14px;">
-                - Tim Kilroy<br>
-                <em>Founder, WTF Method</em>
-              </p>
-            </div>
-          `,
-        });
-      } catch (resendError) {
-        // Don't fail if email fails
-        console.error('Resend email error:', resendError);
+    // Add lead to Loops and trigger welcome event
+    const loopsResult = await addLeadToLoops(
+      normalizedEmail,
+      source || 'call-lab-instant',
+      {
+        callLabScore: score || 0,
       }
+    );
+
+    if (loopsResult.success) {
+      // Trigger a welcome event for email automation
+      await triggerLoopsEvent(normalizedEmail, 'call_lab_instant_signup', {
+        score: score || 0,
+      });
+    } else {
+      console.warn('Failed to add lead to Loops:', loopsResult.error);
     }
 
-    return NextResponse.json({ success: true, stored: true });
+    return NextResponse.json({ success: true, stored: true, loopsSync: loopsResult.success });
   } catch (error) {
     console.error('Capture lead error:', error);
     return NextResponse.json(

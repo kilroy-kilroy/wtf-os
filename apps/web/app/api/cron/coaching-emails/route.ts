@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { Resend } from 'resend';
+import { sendEmail } from '@/lib/loops';
 import { format } from 'date-fns';
 
 // Lazy-load clients to avoid build-time errors
@@ -9,12 +9,9 @@ const getSupabase = () => createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-const getResend = () => new Resend(process.env.RESEND_API_KEY);
-
 export async function GET(request: NextRequest) {
   const CRON_SECRET = process.env.CRON_SECRET;
   const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://app.timkilroy.com';
-  const FROM_EMAIL = process.env.FROM_EMAIL || 'coaching@timkilroy.com';
 
   try {
     // Verify cron secret
@@ -24,7 +21,6 @@ export async function GET(request: NextRequest) {
     }
 
     const supabase = getSupabase();
-    const resend = getResend();
 
     // Get pending emails
     const { data: pendingReports, error: fetchError } = await supabase
@@ -140,16 +136,11 @@ The trajectory matters more than any single call.
             continue;
         }
 
-        // Send email via Resend
-        const { error: emailError } = await resend.emails.send({
-          from: `WTF Sales Coach <${FROM_EMAIL}>`,
-          to: user.email,
-          subject,
-          text: body,
-        });
+        // Send email via Loops
+        const emailResult = await sendEmail(user.email, subject, body);
 
-        if (emailError) {
-          throw new Error(emailError.message);
+        if (!emailResult.success) {
+          throw new Error(emailResult.error || 'Failed to send email');
         }
 
         // Update status

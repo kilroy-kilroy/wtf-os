@@ -1,15 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { Resend } from 'resend';
 import { getStripe } from '@/lib/stripe';
+import { addLeadToLoops, sendEmail, updateContactSubscription } from '@/lib/loops';
 import { format, subDays, startOfDay, endOfDay } from 'date-fns';
 
 const getSupabase = () => createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
-
-const getResend = () => new Resend(process.env.RESEND_API_KEY);
 
 interface LeadStats {
   total: number;
@@ -19,8 +17,7 @@ interface LeadStats {
 
 export async function GET(request: NextRequest) {
   const CRON_SECRET = process.env.CRON_SECRET;
-  const REPORT_EMAIL = process.env.DAILY_REPORT_EMAIL || process.env.FROM_EMAIL || 'tim@timkilroy.com';
-  const FROM_EMAIL = process.env.FROM_EMAIL || 'reports@timkilroy.com';
+  const REPORT_EMAIL = process.env.DAILY_REPORT_EMAIL || 'tim@timkilroy.com';
 
   try {
     // Verify cron secret
@@ -30,7 +27,6 @@ export async function GET(request: NextRequest) {
     }
 
     const supabase = getSupabase();
-    const resend = getResend();
 
     // Get yesterday's date range
     const yesterday = subDays(new Date(), 1);
@@ -44,6 +40,13 @@ export async function GET(request: NextRequest) {
       new_users: { total: 0, bySource: {}, emails: [] },
       new_subscriptions: { total: 0, bySource: {}, emails: [] },
       tool_runs_leads: { total: 0, bySource: {}, emails: [] },
+    };
+
+    // Track Loops sync results
+    const loopsSyncResults = {
+      synced: 0,
+      failed: 0,
+      errors: [] as string[],
     };
 
     // 1. Quick Analyze Leads (Call Lab Instant)
@@ -60,12 +63,23 @@ export async function GET(request: NextRequest) {
         const src = lead.source || 'unknown';
         stats.quick_analyze_leads.bySource[src] = (stats.quick_analyze_leads.bySource[src] || 0) + 1;
       });
+
+      // Sync to Loops
+      for (const lead of quickLeads) {
+        const result = await addLeadToLoops(lead.email, lead.source || 'call-lab-instant');
+        if (result.success) {
+          loopsSyncResults.synced++;
+        } else {
+          loopsSyncResults.failed++;
+          loopsSyncResults.errors.push(`${lead.email}: ${result.error}`);
+        }
+      }
     }
 
     // 2. New User Registrations
     const { data: newUsers } = await supabase
       .from('users')
-      .select('email, subscription_tier')
+      .select('email, subscription_tier, first_name')
       .gte('created_at', startDate)
       .lte('created_at', endDate);
 
@@ -76,6 +90,20 @@ export async function GET(request: NextRequest) {
         const tier = user.subscription_tier || 'lead';
         stats.new_users.bySource[tier] = (stats.new_users.bySource[tier] || 0) + 1;
       });
+
+      // Sync to Loops
+      for (const user of newUsers) {
+        const result = await addLeadToLoops(user.email, 'registered-user', {
+          firstName: user.first_name || '',
+          subscriptionTier: user.subscription_tier || 'lead',
+        });
+        if (result.success) {
+          loopsSyncResults.synced++;
+        } else {
+          loopsSyncResults.failed++;
+          loopsSyncResults.errors.push(`${user.email}: ${result.error}`);
+        }
+      }
     }
 
     // 3. New Subscriptions - Fetch directly from Stripe API (more reliable than DB)
@@ -103,6 +131,19 @@ export async function GET(request: NextRequest) {
               plan: planType,
               status: sub.status,
             });
+
+            // Update contact in Loops with subscriber status
+            const result = await updateContactSubscription(
+              customer.email,
+              'subscriber',
+              planType as 'solo' | 'team'
+            );
+            if (result.success) {
+              loopsSyncResults.synced++;
+            } else {
+              loopsSyncResults.failed++;
+              loopsSyncResults.errors.push(`${customer.email}: ${result.error}`);
+            }
           }
         }
 
@@ -149,6 +190,21 @@ export async function GET(request: NextRequest) {
         const tool = lead.tool_name || 'unknown';
         stats.tool_runs_leads.bySource[tool] = (stats.tool_runs_leads.bySource[tool] || 0) + 1;
       });
+
+      // Sync unique leads to Loops
+      const seenEmails = new Set<string>();
+      for (const lead of toolLeads) {
+        if (lead.lead_email && !seenEmails.has(lead.lead_email)) {
+          seenEmails.add(lead.lead_email);
+          const result = await addLeadToLoops(lead.lead_email, lead.tool_name || 'tool-run');
+          if (result.success) {
+            loopsSyncResults.synced++;
+          } else {
+            loopsSyncResults.failed++;
+            loopsSyncResults.errors.push(`${lead.lead_email}: ${result.error}`);
+          }
+        }
+      }
     }
 
     // 5. Get ALL active Stripe subscribers (for complete picture)
@@ -203,6 +259,12 @@ Total Unique New Emails: ${allEmails.size}
 
 💰 TOTAL ACTIVE PAYING CUSTOMERS: ${totalActiveSubscribers}
 
+LOOPS SYNC RESULTS
+------------------
+✅ Synced to Loops: ${loopsSyncResults.synced}
+❌ Failed: ${loopsSyncResults.failed}
+${loopsSyncResults.errors.length > 0 ? `Errors:\n${loopsSyncResults.errors.slice(0, 5).join('\n')}` : ''}
+
 YESTERDAY'S BREAKDOWN BY SOURCE
 -------------------------------
 
@@ -229,22 +291,21 @@ ${allActiveSubscribers.map(s => `${s.email} - ${s.plan} (since ${s.started})`).j
 
 ---
 This is an automated daily report from WTF Growth OS.
-Data fetched directly from Stripe API for accuracy.
+Data fetched directly from Stripe API and synced to Loops.
     `.trim();
 
-    // Send email
-    const { error: emailError } = await resend.emails.send({
-      from: `WTF Reports <${FROM_EMAIL}>`,
-      to: REPORT_EMAIL,
-      subject: `📈 Daily Leads Report: ${totalNewLeads} leads, ${totalNewSubscriptions} subs (${format(yesterday, 'MMM d')})`,
-      text: emailBody,
-    });
+    // Send email via Loops
+    const emailResult = await sendEmail(
+      REPORT_EMAIL,
+      `📈 Daily Leads Report: ${totalNewLeads} leads, ${totalNewSubscriptions} subs (${format(yesterday, 'MMM d')})`,
+      emailBody
+    );
 
-    if (emailError) {
-      console.error('Failed to send daily report:', emailError);
+    if (!emailResult.success) {
+      console.error('Failed to send daily report via Loops:', emailResult.error);
       return NextResponse.json({
         error: 'Failed to send email',
-        details: emailError.message
+        details: emailResult.error
       }, { status: 500 });
     }
 
@@ -263,6 +324,7 @@ Data fetched directly from Stripe API for accuracy.
           toolRunLeads: stats.tool_runs_leads.total,
         },
         allActiveSubscribers,
+        loopsSync: loopsSyncResults,
       },
       emailSentTo: REPORT_EMAIL,
     });

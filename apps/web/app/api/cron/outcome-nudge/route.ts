@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { Resend } from 'resend';
+import { sendEmail } from '@/lib/loops';
 import { subDays, format } from 'date-fns';
 
 // Lazy-load clients to avoid build-time errors
@@ -9,8 +9,6 @@ const getSupabase = () => createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-const getResend = () => new Resend(process.env.RESEND_API_KEY);
-
 // Nudge calls that are 3-7 days old without an outcome
 const NUDGE_AFTER_DAYS = 3;
 const STOP_NUDGING_AFTER_DAYS = 14;
@@ -18,7 +16,6 @@ const STOP_NUDGING_AFTER_DAYS = 14;
 export async function GET(request: NextRequest) {
   const CRON_SECRET = process.env.CRON_SECRET;
   const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://app.timkilroy.com';
-  const FROM_EMAIL = process.env.FROM_EMAIL || 'coaching@timkilroy.com';
 
   try {
     // Verify cron secret
@@ -28,7 +25,6 @@ export async function GET(request: NextRequest) {
     }
 
     const supabase = getSupabase();
-    const resend = getResend();
 
     const now = new Date();
     const nudgeStart = subDays(now, STOP_NUDGING_AFTER_DAYS).toISOString();
@@ -114,16 +110,11 @@ If you'd rather skip this one, no worries -- I'll stop asking after a couple wee
 - Your WTF Coach
         `.trim();
 
-        // Send email
-        const { error: emailError } = await resend.emails.send({
-          from: `WTF Sales Coach <${FROM_EMAIL}>`,
-          to: user.email,
-          subject,
-          text: body,
-        });
+        // Send email via Loops
+        const emailResult = await sendEmail(user.email, subject, body);
 
-        if (emailError) {
-          throw new Error(emailError.message);
+        if (!emailResult.success) {
+          throw new Error(emailResult.error || 'Failed to send email');
         }
 
         // Update last_nudge_at

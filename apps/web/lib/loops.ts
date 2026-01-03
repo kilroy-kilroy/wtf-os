@@ -27,6 +27,7 @@ interface LoopsTransactionalOptions {
   transactionalId: string;
   addToAudience?: boolean;
   dataVariables?: Record<string, string | number>;
+  [key: string]: string | boolean | Record<string, string | number> | undefined;
 }
 
 interface LoopsResponse {

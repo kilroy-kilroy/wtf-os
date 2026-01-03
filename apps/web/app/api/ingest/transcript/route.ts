@@ -8,6 +8,7 @@ import {
   createToolRun,
 } from '@repo/db';
 import { normalizeTranscript, getTranscriptStats } from '@repo/utils';
+import { addLeadToLoops, triggerLoopsEvent } from '@/lib/loops';
 
 export async function POST(request: NextRequest) {
   try {
@@ -93,6 +94,20 @@ export async function POST(request: NextRequest) {
         deal_size_tier,
       },
     });
+
+    // Sync lead to Loops for nurture sequence
+    if (email) {
+      await addLeadToLoops(email, 'call-lab', {
+        firstName: first_name || '',
+        lastName: last_name || '',
+        company: agency_name || '',
+      });
+
+      // Trigger event for automation
+      await triggerLoopsEvent(email, 'call_lab_started', {
+        callStage: call_stage || 'unknown',
+      });
+    }
 
     return NextResponse.json(
       {

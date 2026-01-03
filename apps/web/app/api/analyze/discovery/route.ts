@@ -18,6 +18,7 @@ import {
   parseDiscoveryLabMetadata,
   type DiscoveryLabPromptParams,
 } from '@repo/prompts';
+import { addLeadToLoops, triggerLoopsEvent } from '@/lib/loops';
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
@@ -328,6 +329,22 @@ ${research.contact.talking_points.map((p, i) => `${i + 1}. ${p}`).join('\n')}
         model_used: modelUsed,
         tokens_used: usage,
       });
+
+      // Sync lead to Loops for nurture sequence
+      if (requestor_email) {
+        const loopSource = version === 'pro' ? 'discovery-lab-pro' : 'discovery-lab';
+        await addLeadToLoops(requestor_email, loopSource, {
+          firstName: requestor_name?.split(' ')[0] || '',
+          lastName: requestor_name?.split(' ').slice(1).join(' ') || '',
+          company: requestor_company || '',
+        });
+
+        // Trigger event for automation
+        await triggerLoopsEvent(requestor_email, 'discovery_lab_completed', {
+          version: version,
+          targetCompany: target_company,
+        });
+      }
 
       // Return response
       return NextResponse.json(

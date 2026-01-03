@@ -9,13 +9,6 @@ import Link from 'next/link';
 export default function CallLabExamplesPage() {
   const examples = [
     {
-      title: 'Call Lab Pro Dashboard',
-      description: 'See how Pro users track patterns, momentum, and coaching insights across all their calls.',
-      href: '/call-lab-examples/dashboard-call-lab-pro',
-      tier: 'Pro',
-      icon: '📊',
-    },
-    {
       title: 'Call Lab Pro Report',
       description: 'Deep-dive analysis with pattern recognition, framework scores, and tactical rewrites.',
       href: '/call-lab-examples/report-call-lab-pro',

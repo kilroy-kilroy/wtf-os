@@ -64,7 +64,8 @@ export async function POST(request: NextRequest) {
             session.subscription as string
           )
 
-          const planType = session.metadata?.priceType || 'solo'
+          const planType = session.metadata?.priceType || session.metadata?.plan || 'solo'
+          const product = session.metadata?.product || 'unknown'
           const customerEmail = session.customer_email || ''
 
           // Try to find existing user by email
@@ -106,6 +107,7 @@ export async function POST(request: NextRequest) {
             // Add/update contact in Loops with subscriber status
             await addLeadToLoops(customerEmail, 'stripe-checkout', {
               subscriptionTier: 'subscriber',
+              product: product,
               planType: planType,
               stripeCustomerId: session.customer as string,
             })
@@ -119,6 +121,7 @@ export async function POST(request: NextRequest) {
 
             // Trigger subscription_started event for automations
             await triggerLoopsEvent(customerEmail, 'subscription_started', {
+              product: product,
               planType: planType,
               amount: subscription.items.data[0]?.price?.unit_amount
                 ? subscription.items.data[0].price.unit_amount / 100

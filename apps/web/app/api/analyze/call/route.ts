@@ -193,11 +193,11 @@ export async function POST(request: NextRequest) {
         // Trigger Loops event for email automation
         if (ingestionItem.user_id) {
           // Get user email
-          const { data: user } = await supabase
+          const { data: user } = (await supabase
             .from('users')
             .select('email')
             .eq('id', ingestionItem.user_id)
-            .single();
+            .single()) as { data: { email: string } | null };
 
           if (user?.email) {
             const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://app.timkilroy.com';
@@ -343,11 +343,11 @@ ${ingestionItem.raw_content}`;
 
           // Trigger Loops event for email automation
           if (ingestionItem.user_id) {
-            const { data: user } = await supabase
+            const { data: user } = (await supabase
               .from('users')
               .select('email')
               .eq('id', ingestionItem.user_id)
-              .single();
+              .single()) as { data: { email: string } | null };
 
             if (user?.email) {
               const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://app.timkilroy.com';

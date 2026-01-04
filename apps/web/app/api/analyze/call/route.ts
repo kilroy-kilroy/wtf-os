@@ -28,6 +28,7 @@ import {
   CALL_LAB_PRO_SYSTEM_PROMPT,
   CALL_LAB_PRO_JSON_SCHEMA,
 } from '@repo/prompts';
+import { triggerLoopsEvent } from '@/lib/loops';
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
@@ -189,6 +190,29 @@ export async function POST(request: NextRequest) {
           tokens_used: usage,
         });
 
+        // Trigger Loops event for email automation
+        if (ingestionItem.user_id) {
+          // Get user email
+          const { data: user } = await supabase
+            .from('users')
+            .select('email')
+            .eq('id', ingestionItem.user_id)
+            .single();
+
+          if (user?.email) {
+            const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://app.timkilroy.com';
+            const reportUrl = `${APP_URL}/calls/${callScore.id}`;
+
+            await triggerLoopsEvent(user.email, 'call_lab_completed', {
+              reportType: version === 'pro' ? 'call-lab-pro' : 'call-lab',
+              targetCompany: prospect_company || metadata.prospect_company || '',
+              targetContact: prospect_name || '',
+              targetContactTitle: metadata.prospect_role || '',
+              reportUrl: reportUrl,
+            });
+          }
+        }
+
         // Return markdown response
         return NextResponse.json(
           {
@@ -316,6 +340,28 @@ ${ingestionItem.raw_content}`;
             model_used: modelUsed,
             tokens_used: usage,
           });
+
+          // Trigger Loops event for email automation
+          if (ingestionItem.user_id) {
+            const { data: user } = await supabase
+              .from('users')
+              .select('email')
+              .eq('id', ingestionItem.user_id)
+              .single();
+
+            if (user?.email) {
+              const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://app.timkilroy.com';
+              const reportUrl = `${APP_URL}/calls/${callScore.id}`;
+
+              await triggerLoopsEvent(user.email, 'call_lab_completed', {
+                reportType: 'call-lab-pro',
+                targetCompany: prospect_company || metadata.prospect_company || '',
+                targetContact: prospect_name || metadata.prospect_name || '',
+                targetContactTitle: metadata.prospect_role || '',
+                reportUrl: reportUrl,
+              });
+            }
+          }
 
           // Return Pro JSON result
           return NextResponse.json(

@@ -333,16 +333,22 @@ ${research.contact.talking_points.map((p, i) => `${i + 1}. ${p}`).join('\n')}
       // Sync lead to Loops for nurture sequence
       if (requestor_email) {
         const loopSource = version === 'pro' ? 'discovery-lab-pro' : 'discovery-lab';
+        const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://app.timkilroy.com';
+        const reportUrl = `${APP_URL}/discovery/${discoveryBrief.id}`;
+
         await addLeadToLoops(requestor_email, loopSource, {
           firstName: requestor_name?.split(' ')[0] || '',
           lastName: requestor_name?.split(' ').slice(1).join(' ') || '',
           company: requestor_company || '',
         });
 
-        // Trigger event for automation
+        // Trigger event for automation with full personalization data
         await triggerLoopsEvent(requestor_email, 'discovery_lab_completed', {
-          version: version,
-          targetCompany: target_company,
+          reportType: version === 'pro' ? 'discovery-pro' : 'discovery',
+          targetCompany: target_company || '',
+          targetContact: target_contact_name || '',
+          targetContactTitle: target_contact_title || '',
+          reportUrl: reportUrl,
         });
       }
 

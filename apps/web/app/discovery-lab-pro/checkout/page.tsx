@@ -1,18 +1,19 @@
 import { redirect } from 'next/navigation';
-import { stripe, PRICES, PlanType } from '@/lib/stripe';
+import { stripe, DISCOVERY_PRICES, PlanType } from '@/lib/stripe';
 
 interface CheckoutPageProps {
-  searchParams: Promise<{ plan?: string }>;
+  searchParams: Promise<{ plan?: string; coupon?: string }>;
 }
 
 export default async function CheckoutPage({ searchParams }: CheckoutPageProps) {
   const params = await searchParams;
   const plan = params.plan as PlanType | undefined;
-  const selectedPlan: PlanType = plan && plan in PRICES ? plan : 'solo';
-  const priceId = PRICES[selectedPlan];
+  const coupon = params.coupon;
+  const selectedPlan: PlanType = plan && plan in DISCOVERY_PRICES ? plan : 'solo';
+  const priceId = DISCOVERY_PRICES[selectedPlan];
 
   // Check if Stripe is configured
-  if (!stripe || priceId.includes('placeholder')) {
+  if (!stripe || !priceId) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center p-4">
         <div className="bg-[#1a1a1a] border border-[#333] p-8 max-w-md text-center">
@@ -40,6 +41,7 @@ export default async function CheckoutPage({ searchParams }: CheckoutPageProps) 
     success_url: `${baseUrl}/discovery-lab-pro/welcome?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${baseUrl}/discovery-lab-pro`,
     metadata: { plan: selectedPlan, product: 'discovery-lab-pro' },
+    ...(coupon && { discounts: [{ coupon }] }),
   });
 
   if (session.url) {

@@ -29,4 +29,9 @@ export const PRICES = {
   team: process.env.STRIPE_PRICE_TEAM || '',
 } as const
 
+export const DISCOVERY_PRICES = {
+  solo: process.env.STRIPE_PRICE_DISCOVERY_SOLO || '',
+  team: process.env.STRIPE_PRICE_DISCOVERY_TEAM || '',
+} as const
+
 export type PlanType = keyof typeof PRICES

@@ -204,7 +204,7 @@ export async function POST(request: NextRequest) {
             const reportUrl = `${APP_URL}/calls/${callScore.id}`;
 
             await triggerLoopsEvent(user.email, 'call_lab_completed', {
-              reportType: version === 'pro' ? 'call-lab-pro' : 'call-lab',
+              reportType: call_type || metadata.call_stage || 'discovery',
               targetCompany: prospect_company || metadata.prospect_company || '',
               targetContact: prospect_name || '',
               targetContactTitle: metadata.prospect_role || '',
@@ -354,7 +354,7 @@ ${ingestionItem.raw_content}`;
               const reportUrl = `${APP_URL}/calls/${callScore.id}`;
 
               await triggerLoopsEvent(user.email, 'call_lab_completed', {
-                reportType: 'call-lab-pro',
+                reportType: call_type || metadata.call_stage || 'discovery',
                 targetCompany: prospect_company || metadata.prospect_company || '',
                 targetContact: prospect_name || metadata.prospect_name || '',
                 targetContactTitle: metadata.prospect_role || '',

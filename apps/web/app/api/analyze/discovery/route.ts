@@ -344,7 +344,7 @@ ${research.contact.talking_points.map((p, i) => `${i + 1}. ${p}`).join('\n')}
 
         // Trigger event for automation with full personalization data
         await triggerLoopsEvent(requestor_email, 'discovery_lab_completed', {
-          reportType: version === 'pro' ? 'discovery-pro' : 'discovery',
+          reportType: 'discovery',
           targetCompany: target_company || '',
           targetContact: target_contact_name || '',
           targetContactTitle: target_contact_title || '',

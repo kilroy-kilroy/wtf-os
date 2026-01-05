@@ -4,7 +4,7 @@ import { useState, useRef } from 'react';
 
 export default function QuickAnalyzePage() {
   const [isRecording, setIsRecording] = useState(false);
-  const [secondsLeft, setSecondsLeft] = useState(30);
+  const [secondsLeft, setSecondsLeft] = useState(90);
   const [status, setStatus] = useState('');
   const [error, setError] = useState('');
   const [results, setResults] = useState<{
@@ -42,7 +42,7 @@ export default function QuickAnalyzePage() {
       setIsRecording(true);
       setStatus('Recording... Click to stop early');
 
-      let seconds = 30;
+      let seconds = 90;
       setSecondsLeft(seconds);
 
       countdownRef.current = setInterval(() => {
@@ -55,7 +55,7 @@ export default function QuickAnalyzePage() {
 
       timerRef.current = setTimeout(() => {
         stopRecording();
-      }, 30000);
+      }, 90000);
     } catch (err) {
       setError('Microphone access denied. Please allow microphone access and try again.');
       console.error('Error accessing microphone:', err);
@@ -96,7 +96,7 @@ export default function QuickAnalyzePage() {
         score: data.score,
       });
       setStatus('');
-      setSecondsLeft(30);
+      setSecondsLeft(90);
     } catch (err) {
       setError('Failed to analyze your recording. Please try again.');
       console.error('Error processing audio:', err);
@@ -153,7 +153,7 @@ export default function QuickAnalyzePage() {
             <span className="text-[#FFDE59]">Record</span> Your Pitch
           </h1>
           <p className="text-lg text-white/80 mb-8 leading-relaxed">
-            Hit the button and deliver your best 30-second sales pitch. We&apos;ll analyze it and
+            Hit the button and deliver your best 90-second sales pitch. We&apos;ll analyze it and
             show you exactly what you&apos;re missing.
           </p>
 

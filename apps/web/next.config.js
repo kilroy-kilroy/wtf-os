@@ -6,7 +6,16 @@ const nextConfig = {
     serverActions: {
       allowedOrigins: ['localhost:3000']
     }
-  }
+  },
+  async redirects() {
+    return [
+      {
+        source: '/quick-analyze',
+        destination: '/call-lab-instant',
+        permanent: true,
+      },
+    ]
+  },
 }
 
 module.exports = nextConfig

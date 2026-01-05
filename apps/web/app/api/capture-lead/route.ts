@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { sendEvent } from '@/lib/loops';
 
 export async function POST(request: NextRequest) {
   try {
@@ -72,31 +73,17 @@ export async function POST(request: NextRequest) {
     }
 
     // Send event to Loops to trigger email sequence
-    const loopsApiKey = process.env.LOOPS_API_KEY;
-
-    if (loopsApiKey) {
-      try {
-        await fetch('https://app.loops.so/api/v1/events/send', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${loopsApiKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            email: email.toLowerCase().trim(),
-            eventName: 'quick_analyze_lead_captured',
-            eventProperties: {
-              score: score ?? null,
-              source: source || 'quick-analyze',
-              hasTranscript: !!transcript,
-            },
-          }),
-        });
-      } catch (loopsError) {
-        // Don't fail if Loops fails
-        console.error('Loops event error:', loopsError);
-      }
-    }
+    await sendEvent({
+      email: email.toLowerCase().trim(),
+      eventName: 'quick_analyze_lead_captured',
+      eventProperties: {
+        score: score ?? 0,
+        source: source || 'quick-analyze',
+        hasTranscript: !!transcript,
+      },
+    }).catch(err => {
+      console.error('Loops event error:', err);
+    });
 
     return NextResponse.json({ success: true, stored: true });
   } catch (error) {

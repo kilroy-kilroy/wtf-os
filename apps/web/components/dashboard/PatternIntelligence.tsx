@@ -1,196 +1,202 @@
 'use client';
 
-import Link from 'next/link';
-
-// ============================================
-// PATTERN VALIDATION
-// ============================================
-
-const VALID_PATTERNS = [
-  "The Cultural Handshake",
-  "The Peer Validation Engine",
-  "The Vulnerability Flip",
-  "The Diagnostic Reveal",
-  "The Self Diagnosis Pull",
-  "The Framework Drop",
-  "The Permission Builder",
-  "The Mirror Close",
-  "The Scenic Route",
-  "The Business Blitzer",
-  "The Generous Professor",
-  "The Advice Avalanche",
-  "The Surface Scanner",
-  "The Agenda Abandoner",
-  "The Passenger",
-  "The Premature Solution",
-  "The Soft Close Fade",
-  "The Over Explain Loop"
-];
-
-export function isValidPattern(name: string): boolean {
-  return VALID_PATTERNS.includes(name);
-}
-
-// ============================================
-// TYPES
-// ============================================
-
-export interface DetectedPattern {
-  id: string;
-  name: string;
-  category: "connection" | "diagnosis" | "control" | "activation";
-  polarity: "positive" | "negative";
-  frequency: number;
-  percentage: number;
+interface PatternFrequency {
+  macro_id: string;
+  macro_name: string;
+  count: number;
 }
 
 interface PatternIntelligenceProps {
-  positivePatterns: DetectedPattern[];
-  negativePatterns: DetectedPattern[];
+  positivePatterns: PatternFrequency[];
+  negativePatterns: PatternFrequency[];
   totalCalls: number;
-  onPatternClick?: (pattern: DetectedPattern) => void;
 }
 
-// ============================================
-// COMPONENT
-// ============================================
-
+/**
+ * PatternIntelligence Component
+ *
+ * IMPORTANT: This component correctly separates positive and negative patterns.
+ * The old (broken) logic would show the same pattern in both strengths AND weaknesses
+ * because it just sorted by frequency without considering polarity.
+ *
+ * The FIX: We receive pre-separated positive and negative patterns from the data layer,
+ * ensuring no pattern ever appears in both columns.
+ */
 export function PatternIntelligence({
   positivePatterns,
   negativePatterns,
   totalCalls,
-  onPatternClick,
 }: PatternIntelligenceProps) {
-  // Show patterns - validation is optional since dashboard may show skill names
-  // Only log warnings but don't filter out data
   const topStrengths = positivePatterns.slice(0, 3);
   const topWeaknesses = negativePatterns.slice(0, 3);
 
   const mostConsistentWin = positivePatterns[0];
   const mostFrequentFriction = negativePatterns[0];
 
-  // Empty state
-  if (topStrengths.length === 0 && topWeaknesses.length === 0) {
-    return (
-      <div className="bg-[#1A1A1A] border-2 border-[#333] p-6">
-        <h2 className="font-anton text-xl tracking-wide text-white mb-5">
-          PATTERN INTELLIGENCE
-        </h2>
-        <div className="text-center py-10">
-          <p className="text-[#666] mb-5">No patterns detected yet.</p>
-          <Link
-            href="/call-lab"
-            className="bg-[#E51B23] border-2 border-[#E51B23] text-white py-3.5 px-6 font-anton text-[12px] tracking-wider hover:bg-[#FF2930] hover:border-[#FF2930] transition-all inline-block no-underline"
-          >
-            ANALYZE YOUR FIRST CALL
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="bg-[#1A1A1A] border-2 border-[#333] p-6">
-      <h2 className="font-anton text-xl tracking-wide text-white mb-5">
+    <div className="bg-black border border-[#E51B23] rounded-lg p-6">
+      <h2 className="font-anton text-lg uppercase tracking-wide text-[#FFDE59] mb-4">
         PATTERN INTELLIGENCE
       </h2>
 
-      {/* Pattern Columns */}
-      <div className="grid grid-cols-2 gap-6 pb-6 mb-6 border-b-2 border-[#333]">
+      <div className="grid grid-cols-2 gap-6">
         {/* Top Strengths */}
         <div>
-          <h3 className="text-[10px] font-bold tracking-wider text-[#FFDE59] mb-3.5">
-            ✓ TOP STRENGTHS
+          <h3 className="text-green-400 font-semibold text-sm mb-3">
+            TOP STRENGTHS
           </h3>
-          {topStrengths.length === 0 ? (
-            <p className="text-[11px] text-[#666] italic">No data yet</p>
-          ) : (
-            topStrengths.map((pattern) => (
-              <button
-                key={pattern.id}
-                onClick={() => onPatternClick?.(pattern)}
-                className="flex justify-between items-baseline w-full py-2 text-left bg-transparent border-none cursor-pointer hover:text-[#FFDE59] transition-colors"
-              >
-                <span className="text-white text-[12px] font-medium hover:text-[#FFDE59]">
-                  {pattern.name}
-                </span>
-                <span className="text-[#666] text-[11px]">
-                  ({pattern.frequency})
-                </span>
-              </button>
-            ))
-          )}
+          <div className="space-y-2">
+            {topStrengths.length > 0 ? (
+              topStrengths.map((pattern) => (
+                <div
+                  key={pattern.macro_id}
+                  className="flex justify-between items-center"
+                >
+                  <span className="text-[#B3B3B3] text-sm">
+                    {pattern.macro_name}
+                  </span>
+                  <span className="text-[#FFDE59] text-sm font-mono">
+                    ({pattern.count})
+                  </span>
+                </div>
+              ))
+            ) : (
+              <p className="text-[#666] text-sm">No data yet</p>
+            )}
+          </div>
         </div>
 
         {/* Top Weaknesses */}
         <div>
-          <h3 className="text-[10px] font-bold tracking-wider text-[#E51B23] mb-3.5">
-            ! TOP WEAKNESSES
+          <h3 className="text-[#E51B23] font-semibold text-sm mb-3">
+            TOP WEAKNESSES
           </h3>
-          {topWeaknesses.length === 0 ? (
-            <p className="text-[11px] text-[#666] italic">No data yet</p>
-          ) : (
-            topWeaknesses.map((pattern) => (
-              <button
-                key={pattern.id}
-                onClick={() => onPatternClick?.(pattern)}
-                className="flex justify-between items-baseline w-full py-2 text-left bg-transparent border-none cursor-pointer hover:text-[#FFDE59] transition-colors"
-              >
-                <span className="text-white text-[12px] font-medium hover:text-[#FFDE59]">
-                  {pattern.name}
-                </span>
-                <span className="text-[#666] text-[11px]">
-                  ({pattern.frequency})
-                </span>
-              </button>
-            ))
-          )}
+          <div className="space-y-2">
+            {topWeaknesses.length > 0 ? (
+              topWeaknesses.map((pattern) => (
+                <div
+                  key={pattern.macro_id}
+                  className="flex justify-between items-center"
+                >
+                  <span className="text-[#B3B3B3] text-sm">
+                    {pattern.macro_name}
+                  </span>
+                  <span className="text-[#E51B23] text-sm font-mono">
+                    ({pattern.count})
+                  </span>
+                </div>
+              ))
+            ) : (
+              <p className="text-[#666] text-sm">No data yet</p>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Most Consistent / Most Frequent */}
-      <div className="space-y-5">
-        {mostConsistentWin && (
-          <div className="flex flex-col gap-1.5">
-            <span className="text-[9px] font-bold tracking-wider text-[#666]">
-              MOST CONSISTENT WIN
-            </span>
-            <span className="text-[#FFDE59] font-bold text-[14px]">
-              {mostConsistentWin.name}
-            </span>
-            <span className="text-[#999] text-[11px]">
-              {mostConsistentWin.frequency} calls ({Math.round(mostConsistentWin.percentage)}%)
-            </span>
-          </div>
-        )}
-
-        {mostFrequentFriction && (
-          <div className="flex flex-col gap-1.5">
-            <span className="text-[9px] font-bold tracking-wider text-[#666]">
-              MOST FREQUENT FRICTION
-            </span>
-            <span className="text-[#E51B23] font-bold text-[14px]">
-              {mostFrequentFriction.name}
-            </span>
-            <span className="text-[#999] text-[11px]">
-              {mostFrequentFriction.frequency} calls ({Math.round(mostFrequentFriction.percentage)}%)
-            </span>
-          </div>
-        )}
-      </div>
-
-      {/* Coaching Insight */}
-      {topStrengths.length > 0 && topWeaknesses.length > 0 && (
-        <div className="mt-6 pt-6 border-t-2 border-[#333] flex items-start gap-3">
-          <div className="text-2xl leading-none">💡</div>
-          <div className="flex-1 text-[12px] leading-relaxed text-white">
-            You&apos;re crushing <strong className="text-[#FFDE59]">{topStrengths[0].name}</strong> but{' '}
-            <strong className="text-[#E51B23]">{topWeaknesses[0].name}</strong> is costing you deals.
-          </div>
+      {/* Summary Stats */}
+      {(mostConsistentWin || mostFrequentFriction) && (
+        <div className="border-t border-[#333] mt-4 pt-4 grid grid-cols-2 gap-4">
+          {mostConsistentWin && (
+            <div>
+              <span className="text-[#666] text-xs">MOST CONSISTENT WIN</span>
+              <p className="text-[#FFDE59] font-medium">
+                {mostConsistentWin.macro_name}
+              </p>
+              <p className="text-[#B3B3B3] text-xs">
+                {mostConsistentWin.count}/{totalCalls} calls (
+                {Math.round((mostConsistentWin.count / totalCalls) * 100)}%)
+              </p>
+            </div>
+          )}
+          {mostFrequentFriction && (
+            <div>
+              <span className="text-[#666] text-xs">
+                MOST FREQUENT FRICTION
+              </span>
+              <p className="text-[#E51B23] font-medium">
+                {mostFrequentFriction.macro_name}
+              </p>
+              <p className="text-[#B3B3B3] text-xs">
+                {mostFrequentFriction.count}/{totalCalls} calls (
+                {Math.round((mostFrequentFriction.count / totalCalls) * 100)}%)
+              </p>
+            </div>
+          )}
         </div>
       )}
     </div>
   );
+}
+
+/**
+ * Helper function to aggregate patterns from call data
+ *
+ * This is the CORRECT implementation that separates positive and negative patterns.
+ * It should be used in the data layer before passing to PatternIntelligence.
+ */
+export interface CallPatternData {
+  detected_positive_patterns: Array<{ macro_id: string; macro_name: string }>;
+  detected_negative_patterns: Array<{ macro_id: string; macro_name: string }>;
+}
+
+export function aggregatePatternIntelligence(calls: CallPatternData[]): {
+  positivePatterns: PatternFrequency[];
+  negativePatterns: PatternFrequency[];
+  totalCalls: number;
+} {
+  const positiveMap = new Map<string, { name: string; count: number }>();
+  const negativeMap = new Map<string, { name: string; count: number }>();
+
+  for (const call of calls) {
+    // Aggregate positive patterns
+    for (const pattern of call.detected_positive_patterns) {
+      const existing = positiveMap.get(pattern.macro_id);
+      if (existing) {
+        existing.count++;
+      } else {
+        positiveMap.set(pattern.macro_id, {
+          name: pattern.macro_name,
+          count: 1,
+        });
+      }
+    }
+
+    // Aggregate negative patterns (completely separate)
+    for (const pattern of call.detected_negative_patterns) {
+      const existing = negativeMap.get(pattern.macro_id);
+      if (existing) {
+        existing.count++;
+      } else {
+        negativeMap.set(pattern.macro_id, {
+          name: pattern.macro_name,
+          count: 1,
+        });
+      }
+    }
+  }
+
+  // Convert to sorted arrays
+  const positivePatterns: PatternFrequency[] = Array.from(positiveMap.entries())
+    .map(([id, data]) => ({
+      macro_id: id,
+      macro_name: data.name,
+      count: data.count,
+    }))
+    .sort((a, b) => b.count - a.count);
+
+  const negativePatterns: PatternFrequency[] = Array.from(negativeMap.entries())
+    .map(([id, data]) => ({
+      macro_id: id,
+      macro_name: data.name,
+      count: data.count,
+    }))
+    .sort((a, b) => b.count - a.count);
+
+  return {
+    positivePatterns,
+    negativePatterns,
+    totalCalls: calls.length,
+  };
 }
 
 export default PatternIntelligence;

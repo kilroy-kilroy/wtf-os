@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { Resend } from 'resend';
-import { format } from 'date-fns';
+import { onCoachingReportReady } from '@/lib/loops';
 
 // Lazy-load clients to avoid build-time errors
 const getSupabase = () => createClient(
@@ -9,12 +8,8 @@ const getSupabase = () => createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-const getResend = () => new Resend(process.env.RESEND_API_KEY);
-
 export async function GET(request: NextRequest) {
   const CRON_SECRET = process.env.CRON_SECRET;
-  const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://app.timkilroy.com';
-  const FROM_EMAIL = process.env.FROM_EMAIL || 'coaching@timkilroy.com';
 
   try {
     // Verify cron secret
@@ -24,7 +19,6 @@ export async function GET(request: NextRequest) {
     }
 
     const supabase = getSupabase();
-    const resend = getResend();
 
     // Get pending emails
     const { data: pendingReports, error: fetchError } = await supabase
@@ -69,87 +63,18 @@ export async function GET(request: NextRequest) {
           continue;
         }
 
-        const viewUrl = `${APP_URL}/dashboard/coaching/${report.id}`;
+        // Send via Loops event (email template managed in Loops dashboard)
+        const loopsResult = await onCoachingReportReady(
+          user.email,
+          report.report_type as 'weekly' | 'monthly' | 'quarterly',
+          report.id,
+          report.period_start,
+          report.period_end,
+          user.first_name
+        );
 
-        let subject: string;
-        let body: string;
-
-        const startDate = format(new Date(report.period_start), 'MMM d');
-        const endDate = format(new Date(report.period_end), 'MMM d, yyyy');
-
-        switch (report.report_type) {
-          case 'weekly':
-            subject = 'Your Weekly Sales Coaching is Ready';
-            body = `
-Hi ${user.first_name || 'there'},
-
-Your coaching session for last week is ready.
-
-I pulled your calls, spotted the patterns, and turned them into a plan.
-
-View Your Coaching for ${startDate} - ${endDate}:
-${viewUrl}
-
-Go get better this week.
-
-- Your WTF Coach
-            `.trim();
-            break;
-
-          case 'monthly':
-            const month = format(new Date(report.period_start), 'MMMM yyyy');
-            subject = `${month} Sales Performance - Your Monthly Coaching Summary`;
-            body = `
-Hi ${user.first_name || 'there'},
-
-Your monthly coaching report is live.
-
-It pulls together your weekly cycles to show the bigger picture.
-Strengths. Drifts. Patterns that matter.
-
-Read Your ${month} Report:
-${viewUrl}
-
-Take a few minutes with this one.
-
-- Your WTF Coach
-            `.trim();
-            break;
-
-          case 'quarterly':
-            const quarter = `Q${Math.ceil((new Date(report.period_start).getMonth() + 1) / 3)} ${format(new Date(report.period_start), 'yyyy')}`;
-            subject = `${quarter} Sales Performance - Time for the Big View`;
-            body = `
-Hi ${user.first_name || 'there'},
-
-Quarterly coaching is ready.
-
-This is the long-view narrative of where you're improving and where you need to dig in.
-Take a moment with it.
-
-View Your ${quarter} Report:
-${viewUrl}
-
-The trajectory matters more than any single call.
-
-- Your WTF Coach
-            `.trim();
-            break;
-
-          default:
-            continue;
-        }
-
-        // Send email via Resend
-        const { error: emailError } = await resend.emails.send({
-          from: `WTF Sales Coach <${FROM_EMAIL}>`,
-          to: user.email,
-          subject,
-          text: body,
-        });
-
-        if (emailError) {
-          throw new Error(emailError.message);
+        if (!loopsResult.success) {
+          throw new Error(loopsResult.error || 'Loops event failed');
         }
 
         // Update status

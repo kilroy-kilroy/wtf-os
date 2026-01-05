@@ -28,6 +28,50 @@ import {
   CALL_LAB_PRO_SYSTEM_PROMPT,
   CALL_LAB_PRO_JSON_SCHEMA,
 } from '@repo/prompts';
+import { onReportGenerated } from '@/lib/loops';
+import { addCallLabSubscriber } from '@/lib/beehiiv';
+
+// Helper to send report generated email via Loops and add to Beehiiv
+async function sendReportEmail(
+  supabase: any,
+  userId: string | null | undefined,
+  reportId: string,
+  reportType: 'lite' | 'pro',
+  prospectName?: string,
+  companyName?: string
+) {
+  if (!userId) return;
+
+  try {
+    // Look up user's email and name
+    const { data: user } = await supabase
+      .from('users')
+      .select('email, first_name, last_name')
+      .eq('id', userId)
+      .single();
+
+    if (user?.email) {
+      // Send Loops event
+      await onReportGenerated(
+        user.email,
+        reportId,
+        reportType,
+        prospectName,
+        companyName
+      ).catch(err => {
+        console.error('Failed to send Loops report email:', err);
+      });
+
+      // Add to Beehiiv newsletter
+      const fullName = [user.first_name, user.last_name].filter(Boolean).join(' ');
+      await addCallLabSubscriber(user.email, fullName || undefined).catch(err => {
+        console.error('Failed to add Beehiiv subscriber:', err);
+      });
+    }
+  } catch (err) {
+    console.error('Error looking up user for email notifications:', err);
+  }
+}
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
@@ -189,6 +233,16 @@ export async function POST(request: NextRequest) {
           tokens_used: usage,
         });
 
+        // Send report email via Loops (non-blocking)
+        sendReportEmail(
+          supabase,
+          ingestionItem.user_id,
+          callScore.id,
+          version === 'pro' ? 'pro' : 'lite',
+          metadata.prospect_name,
+          metadata.prospect_company
+        );
+
         // Return markdown response
         return NextResponse.json(
           {
@@ -316,6 +370,16 @@ ${ingestionItem.raw_content}`;
             model_used: modelUsed,
             tokens_used: usage,
           });
+
+          // Send report email via Loops (non-blocking)
+          sendReportEmail(
+            supabase,
+            ingestionItem.user_id,
+            callScore.id,
+            'pro',
+            prospect_name || metadata.prospect_name,
+            prospect_company || metadata.prospect_company
+          );
 
           // Return Pro JSON result
           return NextResponse.json(
@@ -489,6 +553,16 @@ ${ingestionItem.raw_content}`;
           model_used: modelUsed,
           tokens_used: usage,
         });
+
+        // Send report email via Loops (non-blocking)
+        sendReportEmail(
+          supabase,
+          ingestionItem.user_id,
+          callScore.id,
+          'lite',
+          metadata.prospect_name,
+          metadata.prospect_company
+        );
 
         // Return results
         return NextResponse.json(

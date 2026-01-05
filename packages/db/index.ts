@@ -8,4 +8,4 @@ export * from './queries/agencies';
 export * from './queries/ingestion';
 export * from './queries/call-scores';
 export * from './queries/tool-runs';
-export * from './queries/discovery-briefs';
+export * from './queries/instant-reports';

@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
         score: report.score || 0,
         reportId,
         reportUrl,
-        scenario: report.scenario || '',
+        scenario: report.scenario_type || '',
         isNewLead: isNew,
       },
     }).then(() => {

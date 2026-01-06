@@ -9,6 +9,19 @@ interface ContentSource {
   author_id: string | null
 }
 
+interface OrgMember {
+  user_id: string
+  users: {
+    id: string
+    email: string
+    first_name: string | null
+  }
+}
+
+interface NotificationPref {
+  user_id: string
+}
+
 /**
  * POST /api/content-engine/notifications/new-content
  * Send new content alert to team members
@@ -44,7 +57,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get org members who want new content alerts
-    const { data: membersToNotify, error: membersError } = await supabase
+    const { data: membersData, error: membersError } = await supabase
       .from('content_org_members')
       .select(`
         user_id,
@@ -52,53 +65,62 @@ export async function POST(request: NextRequest) {
       `)
       .eq('org_id', body.org_id)
       .not('accepted_at', 'is', null)
-      .neq('user_id', source.author_id) // Don't notify the author
+
+    const membersToNotify = (membersData as unknown as OrgMember[] | null) || []
 
     if (membersError) {
       throw new Error(`Failed to fetch members: ${membersError.message}`)
     }
 
-    // Filter to only those with new_content_alerts enabled
-    const userIds = membersToNotify?.map(m => m.user_id) || []
+    // Filter out the author
+    const filteredMembers = source.author_id
+      ? membersToNotify.filter(m => m.user_id !== source.author_id)
+      : membersToNotify
 
-    const { data: prefs, error: prefsError } = await supabase
+    // Filter to only those with new_content_alerts enabled
+    const userIds = filteredMembers.map(m => m.user_id)
+
+    if (userIds.length === 0) {
+      return NextResponse.json({
+        success: true,
+        notified: 0,
+        sourceId: source.id,
+      }, { status: 200 })
+    }
+
+    const { data: prefsData, error: prefsError } = await supabase
       .from('content_notification_prefs')
       .select('user_id')
       .in('user_id', userIds)
       .eq('new_content_alerts', true)
 
+    const prefs = (prefsData as unknown as NotificationPref[] | null) || []
+
     if (prefsError) {
       throw new Error(`Failed to fetch prefs: ${prefsError.message}`)
     }
 
-    const prefsUserIds = new Set(prefs?.map(p => p.user_id) || [])
+    const prefsUserIds = new Set(prefs.map(p => p.user_id))
 
-    // Include users with no prefs (defaults to enabled)
-    const usersWithPrefs = new Set((await supabase
+    // Get all users who have any prefs set
+    const { data: allPrefsData } = await supabase
       .from('content_notification_prefs')
       .select('user_id')
-      .in('user_id', userIds)).data?.map(p => p.user_id) || [])
+      .in('user_id', userIds)
 
-    const membersToAlert = membersToNotify?.filter(m =>
+    const allPrefs = (allPrefsData as unknown as NotificationPref[] | null) || []
+    const usersWithPrefs = new Set(allPrefs.map(p => p.user_id))
+
+    // Include users with no prefs (defaults to enabled) or those with alerts enabled
+    const membersToAlert = filteredMembers.filter(m =>
       prefsUserIds.has(m.user_id) || !usersWithPrefs.has(m.user_id)
-    ) || []
-
-    // Get author name for the notification
-    const { data: author } = await supabase
-      .from('users')
-      .select('first_name, last_name')
-      .eq('id', source.author_id)
-      .single()
-
-    const authorName = author
-      ? [author.first_name, author.last_name].filter(Boolean).join(' ') || 'Someone'
-      : 'Someone'
+    )
 
     // Send notifications
     const notified: string[] = []
 
     for (const member of membersToAlert) {
-      const memberUser = (member as any).users
+      const memberUser = member.users
       if (!memberUser?.email) continue
 
       try {
@@ -107,7 +129,7 @@ export async function POST(request: NextRequest) {
         notified.push(memberUser.email)
 
         // Log notification
-        await supabase.from('content_notifications').insert({
+        await (supabase as any).from('content_notifications').insert({
           org_id: body.org_id,
           user_id: member.user_id,
           notification_type: 'new_content',

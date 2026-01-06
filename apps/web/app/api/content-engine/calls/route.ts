@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { cookies } from 'next/headers'
 import { createServerClient } from '@repo/db/client'
 import {
   getOrgCallImports,
@@ -14,7 +16,7 @@ import {
  */
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createServerClient()
+    const supabase = createRouteHandlerClient({ cookies })
 
     // Get authenticated user
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -22,6 +24,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const serviceClient = createServerClient()
     const { searchParams } = new URL(request.url)
     const orgId = searchParams.get('org_id')
     const limit = parseInt(searchParams.get('limit') || '20', 10)
@@ -29,7 +32,7 @@ export async function GET(request: NextRequest) {
     // If no org_id provided, use first org user belongs to
     let targetOrgId = orgId
     if (!targetOrgId) {
-      const orgs = await getUserOrgs(supabase, user.id)
+      const orgs = await getUserOrgs(serviceClient, user.id)
       if (orgs.length === 0) {
         return NextResponse.json({ error: 'No organizations found' }, { status: 404 })
       }
@@ -37,12 +40,12 @@ export async function GET(request: NextRequest) {
     }
 
     // Check membership
-    const membership = await getUserMembership(supabase, targetOrgId, user.id)
+    const membership = await getUserMembership(serviceClient, targetOrgId, user.id)
     if (!membership || !membership.accepted_at) {
       return NextResponse.json({ error: 'Not a member of this organization' }, { status: 403 })
     }
 
-    const calls = await getOrgCallImports(supabase, targetOrgId, limit)
+    const calls = await getOrgCallImports(serviceClient, targetOrgId, limit)
 
     return NextResponse.json({ calls }, { status: 200 })
   } catch (error) {

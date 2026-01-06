@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { cookies } from 'next/headers'
 import { createServerClient } from '@repo/db/client'
 import {
   getContentOrgBySlug,
@@ -18,7 +20,7 @@ interface RouteParams {
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     const { slug } = await params
-    const supabase = createServerClient()
+    const supabase = createRouteHandlerClient({ cookies })
 
     // Get authenticated user
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -26,20 +28,22 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const serviceClient = createServerClient()
+
     // Get org
-    const org = await getContentOrgBySlug(supabase, slug)
+    const org = await getContentOrgBySlug(serviceClient, slug)
     if (!org) {
       return NextResponse.json({ error: 'Organization not found' }, { status: 404 })
     }
 
     // Check membership
-    const membership = await getUserMembership(supabase, org.id, user.id)
+    const membership = await getUserMembership(serviceClient, org.id, user.id)
     if (!membership || !membership.accepted_at) {
       return NextResponse.json({ error: 'Not a member of this organization' }, { status: 403 })
     }
 
     // Get members
-    const members = await getOrgMembers(supabase, org.id)
+    const members = await getOrgMembers(serviceClient, org.id)
 
     return NextResponse.json({
       org,
@@ -62,7 +66,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
     const { slug } = await params
-    const supabase = createServerClient()
+    const supabase = createRouteHandlerClient({ cookies })
 
     // Get authenticated user
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -70,8 +74,10 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const serviceClient = createServerClient()
+
     // Get org
-    const org = await getContentOrgBySlug(supabase, slug)
+    const org = await getContentOrgBySlug(serviceClient, slug)
     if (!org) {
       return NextResponse.json({ error: 'Organization not found' }, { status: 404 })
     }
@@ -96,7 +102,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'No valid updates provided' }, { status: 400 })
     }
 
-    const updatedOrg = await updateContentOrg(supabase, org.id, updates)
+    const updatedOrg = await updateContentOrg(serviceClient, org.id, updates)
 
     return NextResponse.json({ org: updatedOrg }, { status: 200 })
   } catch (error) {

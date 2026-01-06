@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { cookies } from 'next/headers'
 import { createServerClient } from '@repo/db/client'
 import {
   createContentSource,
@@ -20,7 +22,7 @@ import type { Theme4E, SourceType } from '@repo/db/types/content-engine'
  */
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createServerClient()
+    const supabase = createRouteHandlerClient({ cookies })
 
     // Get authenticated user
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -28,6 +30,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const serviceClient = createServerClient()
     const { searchParams } = new URL(request.url)
     const orgId = searchParams.get('org_id')
     const query = searchParams.get('q') || undefined
@@ -40,7 +43,7 @@ export async function GET(request: NextRequest) {
     // If no org_id provided, use first org user belongs to
     let targetOrgId = orgId
     if (!targetOrgId) {
-      const orgs = await getUserOrgs(supabase, user.id)
+      const orgs = await getUserOrgs(serviceClient, user.id)
       if (orgs.length === 0) {
         return NextResponse.json({ error: 'No organizations found' }, { status: 404 })
       }
@@ -48,12 +51,12 @@ export async function GET(request: NextRequest) {
     }
 
     // Check membership
-    const membership = await getUserMembership(supabase, targetOrgId, user.id)
+    const membership = await getUserMembership(serviceClient, targetOrgId, user.id)
     if (!membership || !membership.accepted_at) {
       return NextResponse.json({ error: 'Not a member of this organization' }, { status: 403 })
     }
 
-    const { sources, total } = await searchContentSources(supabase, targetOrgId, {
+    const { sources, total } = await searchContentSources(serviceClient, targetOrgId, {
       query,
       theme4e: theme4e || undefined,
       sourceType: sourceType || undefined,
@@ -83,7 +86,7 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createServerClient()
+    const supabase = createRouteHandlerClient({ cookies })
 
     // Get authenticated user
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -91,6 +94,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const serviceClient = createServerClient()
     const body = await request.json()
 
     // Validate org_id
@@ -99,7 +103,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check membership and role
-    const membership = await getUserMembership(supabase, body.org_id, user.id)
+    const membership = await getUserMembership(serviceClient, body.org_id, user.id)
     if (!membership || !membership.accepted_at) {
       return NextResponse.json({ error: 'Not a member of this organization' }, { status: 403 })
     }
@@ -150,7 +154,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const source = await createContentSource(supabase, {
+    const source = await createContentSource(serviceClient, {
       org_id: body.org_id,
       author_id: user.id,
       title: body.title || undefined,

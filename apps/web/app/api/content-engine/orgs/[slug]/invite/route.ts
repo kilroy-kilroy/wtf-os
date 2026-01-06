@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { cookies } from 'next/headers'
 import { createServerClient } from '@repo/db/client'
 import {
   getContentOrgBySlug,
@@ -20,7 +22,7 @@ interface RouteParams {
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     const { slug } = await params
-    const supabase = createServerClient()
+    const supabase = createRouteHandlerClient({ cookies })
 
     // Get authenticated user
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -28,19 +30,21 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const serviceClient = createServerClient()
+
     // Get org
-    const org = await getContentOrgBySlug(supabase, slug)
+    const org = await getContentOrgBySlug(serviceClient, slug)
     if (!org) {
       return NextResponse.json({ error: 'Organization not found' }, { status: 404 })
     }
 
     // Check if user is owner or brand_official
-    const membership = await getUserMembership(supabase, org.id, user.id)
+    const membership = await getUserMembership(serviceClient, org.id, user.id)
     if (!membership || !['owner', 'brand_official'].includes(membership.role)) {
       return NextResponse.json({ error: 'Not authorized to view invites' }, { status: 403 })
     }
 
-    const invites = await getOrgInvites(supabase, org.id)
+    const invites = await getOrgInvites(serviceClient, org.id)
 
     return NextResponse.json({ invites }, { status: 200 })
   } catch (error) {
@@ -59,7 +63,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
     const { slug } = await params
-    const supabase = createServerClient()
+    const supabase = createRouteHandlerClient({ cookies })
 
     // Get authenticated user
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -67,14 +71,16 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const serviceClient = createServerClient()
+
     // Get org
-    const org = await getContentOrgBySlug(supabase, slug)
+    const org = await getContentOrgBySlug(serviceClient, slug)
     if (!org) {
       return NextResponse.json({ error: 'Organization not found' }, { status: 404 })
     }
 
     // Check if user is owner or brand_official
-    const membership = await getUserMembership(supabase, org.id, user.id)
+    const membership = await getUserMembership(serviceClient, org.id, user.id)
     if (!membership || !['owner', 'brand_official'].includes(membership.role)) {
       return NextResponse.json({ error: 'Not authorized to invite members' }, { status: 403 })
     }
@@ -98,7 +104,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     const expiresAt = new Date()
     expiresAt.setDate(expiresAt.getDate() + 7) // 7 days
 
-    const invite = await createInvite(supabase, {
+    const invite = await createInvite(serviceClient, {
       org_id: org.id,
       email: body.email.toLowerCase().trim(),
       role,

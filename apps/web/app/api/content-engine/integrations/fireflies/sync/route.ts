@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { cookies } from 'next/headers'
 import { createServerClient } from '@repo/db/client'
 import {
   getUserMembership,
@@ -37,7 +39,7 @@ async function firefliesQuery(apiKey: string, query: string, variables?: Record<
  */
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createServerClient()
+    const supabase = createRouteHandlerClient({ cookies })
 
     // Get authenticated user
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -45,8 +47,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const serviceClient = createServerClient()
+
     // Get user's org
-    const orgs = await getUserOrgs(supabase, user.id)
+    const orgs = await getUserOrgs(serviceClient, user.id)
     if (orgs.length === 0) {
       return NextResponse.json({ error: 'No organization found' }, { status: 404 })
     }
@@ -60,7 +64,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check membership
-    const membership = await getUserMembership(supabase, org.id, user.id)
+    const membership = await getUserMembership(serviceClient, org.id, user.id)
     if (!membership || !membership.accepted_at) {
       return NextResponse.json({ error: 'Not authorized' }, { status: 403 })
     }
@@ -111,7 +115,7 @@ export async function POST(request: NextRequest) {
 
     for (const t of transcripts) {
       // Check if already imported
-      const { data: existing } = await supabase
+      const { data: existing } = await (serviceClient as any)
         .from('content_call_imports')
         .select('id')
         .eq('org_id', org.id)
@@ -130,7 +134,7 @@ export async function POST(request: NextRequest) {
         .join('\n') || ''
 
       // Create call import
-      const callImport = await createCallImport(supabase, {
+      const callImport = await createCallImport(serviceClient, {
         org_id: org.id,
         user_id: user.id,
         provider: 'fireflies',

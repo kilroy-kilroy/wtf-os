@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { cookies } from 'next/headers'
 import { createServerClient } from '@repo/db/client'
 import {
   getVoiceProfile,
@@ -11,7 +13,7 @@ import {
  */
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createServerClient()
+    const supabase = createRouteHandlerClient({ cookies })
 
     // Get authenticated user
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -19,7 +21,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const voiceProfile = await getVoiceProfile(supabase, user.id)
+    const serviceClient = createServerClient()
+    const voiceProfile = await getVoiceProfile(serviceClient, user.id)
 
     return NextResponse.json({ voiceProfile }, { status: 200 })
   } catch (error) {
@@ -37,7 +40,7 @@ export async function GET(request: NextRequest) {
  */
 export async function PUT(request: NextRequest) {
   try {
-    const supabase = createServerClient()
+    const supabase = createRouteHandlerClient({ cookies })
 
     // Get authenticated user
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -45,6 +48,7 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const serviceClient = createServerClient()
     const body = await request.json()
 
     // Validate examples
@@ -52,7 +56,7 @@ export async function PUT(request: NextRequest) {
       ? body.examples.filter((e: unknown) => typeof e === 'string' && e.trim().length > 0)
       : undefined
 
-    const voiceProfile = await upsertVoiceProfile(supabase, user.id, {
+    const voiceProfile = await upsertVoiceProfile(serviceClient, user.id, {
       examples,
       description: typeof body.description === 'string' ? body.description : undefined,
     })

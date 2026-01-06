@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { cookies } from 'next/headers'
 import { createServerClient } from '@repo/db/client'
 import {
   getContentSourceById,
@@ -20,7 +22,7 @@ import type { Platform } from '@repo/db/types/content-engine'
  */
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createServerClient()
+    const supabase = createRouteHandlerClient({ cookies })
 
     // Get authenticated user
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -28,6 +30,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const serviceClient = createServerClient()
     const body = await request.json()
 
     // Validate source_id
@@ -36,13 +39,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Get source
-    const source = await getContentSourceById(supabase, body.source_id)
+    const source = await getContentSourceById(serviceClient, body.source_id)
     if (!source) {
       return NextResponse.json({ error: 'Content source not found' }, { status: 404 })
     }
 
     // Check membership
-    const membership = await getUserMembership(supabase, source.org_id, user.id)
+    const membership = await getUserMembership(serviceClient, source.org_id, user.id)
     if (!membership || !membership.accepted_at) {
       return NextResponse.json({ error: 'Not a member of this organization' }, { status: 403 })
     }
@@ -60,13 +63,13 @@ export async function POST(request: NextRequest) {
     // Get voice profile
     let voiceDna = undefined
     if (body.voice_profile_id) {
-      const voiceProfile = await getVoiceProfileById(supabase, body.voice_profile_id)
+      const voiceProfile = await getVoiceProfileById(serviceClient, body.voice_profile_id)
       if (voiceProfile?.extracted_dna) {
         voiceDna = voiceProfile.extracted_dna
       }
     } else {
       // Use user's own voice profile if available
-      const userVoiceProfile = await getVoiceProfile(supabase, user.id)
+      const userVoiceProfile = await getVoiceProfile(serviceClient, user.id)
       if (userVoiceProfile?.extracted_dna) {
         voiceDna = userVoiceProfile.extracted_dna
       }
@@ -110,7 +113,7 @@ export async function POST(request: NextRequest) {
           }
 
           // Save the repurpose
-          const repurpose = await createRepurpose(supabase, {
+          const repurpose = await createRepurpose(serviceClient, {
             source_id: source.id,
             user_id: user.id,
             platform,

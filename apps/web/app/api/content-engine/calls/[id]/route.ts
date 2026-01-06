@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { cookies } from 'next/headers'
 import { createServerClient } from '@repo/db/client'
 import {
   getCallImportById,
@@ -25,7 +27,7 @@ interface RouteParams {
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params
-    const supabase = createServerClient()
+    const supabase = createRouteHandlerClient({ cookies })
 
     // Get authenticated user
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -33,13 +35,15 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const call = await getCallImportById(supabase, id)
+    const serviceClient = createServerClient()
+
+    const call = await getCallImportById(serviceClient, id)
     if (!call) {
       return NextResponse.json({ error: 'Call not found' }, { status: 404 })
     }
 
     // Check membership
-    const membership = await getUserMembership(supabase, call.org_id, user.id)
+    const membership = await getUserMembership(serviceClient, call.org_id, user.id)
     if (!membership || !membership.accepted_at) {
       return NextResponse.json({ error: 'Not authorized to view this call' }, { status: 403 })
     }
@@ -61,7 +65,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params
-    const supabase = createServerClient()
+    const supabase = createRouteHandlerClient({ cookies })
 
     // Get authenticated user
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -69,19 +73,21 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const call = await getCallImportById(supabase, id)
+    const serviceClient = createServerClient()
+
+    const call = await getCallImportById(serviceClient, id)
     if (!call) {
       return NextResponse.json({ error: 'Call not found' }, { status: 404 })
     }
 
     // Check membership
-    const membership = await getUserMembership(supabase, call.org_id, user.id)
+    const membership = await getUserMembership(serviceClient, call.org_id, user.id)
     if (!membership || !membership.accepted_at) {
       return NextResponse.json({ error: 'Not authorized' }, { status: 403 })
     }
 
     // Update status to processing
-    await updateCallImport(supabase, id, { processing_status: 'processing' })
+    await updateCallImport(serviceClient, id, { processing_status: 'processing' })
 
     // Run moment detection
     try {
@@ -101,7 +107,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       const moments = parseModelJSON<ContentMoment[]>(response.content)
 
       // Update call with extracted moments
-      const updatedCall = await updateCallImport(supabase, id, {
+      const updatedCall = await updateCallImport(serviceClient, id, {
         processing_status: 'completed',
         extracted_moments: moments,
       })
@@ -113,7 +119,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     } catch (extractionError) {
       console.error('Moment extraction failed:', extractionError)
 
-      await updateCallImport(supabase, id, { processing_status: 'failed' })
+      await updateCallImport(serviceClient, id, { processing_status: 'failed' })
 
       return NextResponse.json(
         { error: 'Failed to extract moments', details: extractionError instanceof Error ? extractionError.message : 'Unknown error' },

@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { cookies } from 'next/headers'
 import { createServerClient } from '@repo/db/client'
 import {
   getNotificationPrefs,
@@ -12,7 +14,7 @@ import type { DigestDay } from '@repo/db/types/content-engine'
  */
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createServerClient()
+    const supabase = createRouteHandlerClient({ cookies })
 
     // Get authenticated user
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -20,7 +22,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const prefs = await getNotificationPrefs(supabase, user.id)
+    const serviceClient = createServerClient()
+    const prefs = await getNotificationPrefs(serviceClient, user.id)
 
     // Return defaults if no prefs set
     return NextResponse.json({
@@ -46,7 +49,7 @@ export async function GET(request: NextRequest) {
  */
 export async function PUT(request: NextRequest) {
   try {
-    const supabase = createServerClient()
+    const supabase = createRouteHandlerClient({ cookies })
 
     // Get authenticated user
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -54,13 +57,14 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const serviceClient = createServerClient()
     const body = await request.json()
 
     // Validate digest day
     const validDays: DigestDay[] = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday']
     const digestDay = validDays.includes(body.digest_day) ? body.digest_day : undefined
 
-    const prefs = await upsertNotificationPrefs(supabase, user.id, {
+    const prefs = await upsertNotificationPrefs(serviceClient, user.id, {
       new_content_alerts: typeof body.new_content_alerts === 'boolean' ? body.new_content_alerts : undefined,
       call_gold_alerts: typeof body.call_gold_alerts === 'boolean' ? body.call_gold_alerts : undefined,
       weekly_digest: typeof body.weekly_digest === 'boolean' ? body.weekly_digest : undefined,

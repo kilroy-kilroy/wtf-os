@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { cookies } from 'next/headers'
 import { createServerClient } from '@repo/db/client'
 import {
   getUserMembership,
@@ -12,7 +14,7 @@ import {
  */
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createServerClient()
+    const supabase = createRouteHandlerClient({ cookies })
 
     // Get authenticated user
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -20,6 +22,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const serviceClient = createServerClient()
     const body = await request.json()
 
     if (!body.api_key || typeof body.api_key !== 'string') {
@@ -27,7 +30,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get user's org
-    const orgs = await getUserOrgs(supabase, user.id)
+    const orgs = await getUserOrgs(serviceClient, user.id)
     if (orgs.length === 0) {
       return NextResponse.json({ error: 'No organization found' }, { status: 404 })
     }
@@ -35,14 +38,14 @@ export async function POST(request: NextRequest) {
     const org = orgs[0]
 
     // Check if user is owner or brand_official
-    const membership = await getUserMembership(supabase, org.id, user.id)
+    const membership = await getUserMembership(serviceClient, org.id, user.id)
     if (!membership || !['owner', 'brand_official'].includes(membership.role)) {
       return NextResponse.json({ error: 'Not authorized to manage integrations' }, { status: 403 })
     }
 
     // Store API key in org settings (encrypted in production)
     // For now, we'll store it in the settings JSONB field
-    const { error: updateError } = await (supabase as any)
+    const { error: updateError } = await (serviceClient as any)
       .from('content_orgs')
       .update({
         settings: {
@@ -79,7 +82,7 @@ export async function POST(request: NextRequest) {
  */
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createServerClient()
+    const supabase = createRouteHandlerClient({ cookies })
 
     // Get authenticated user
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -87,8 +90,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const serviceClient = createServerClient()
+
     // Get user's org
-    const orgs = await getUserOrgs(supabase, user.id)
+    const orgs = await getUserOrgs(serviceClient, user.id)
     if (orgs.length === 0) {
       return NextResponse.json({ error: 'No organization found' }, { status: 404 })
     }

@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { cookies } from 'next/headers'
 import { createServerClient } from '@repo/db/client'
 import {
   getCallImportById,
@@ -19,7 +21,7 @@ interface RouteParams {
 export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
     const { id, momentId } = await params
-    const supabase = createServerClient()
+    const supabase = createRouteHandlerClient({ cookies })
 
     // Get authenticated user
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -27,13 +29,15 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const call = await getCallImportById(supabase, id)
+    const serviceClient = createServerClient()
+
+    const call = await getCallImportById(serviceClient, id)
     if (!call) {
       return NextResponse.json({ error: 'Call not found' }, { status: 404 })
     }
 
     // Check membership
-    const membership = await getUserMembership(supabase, call.org_id, user.id)
+    const membership = await getUserMembership(serviceClient, call.org_id, user.id)
     if (!membership || !membership.accepted_at) {
       return NextResponse.json({ error: 'Not authorized' }, { status: 403 })
     }
@@ -58,7 +62,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     const body = await request.json()
 
     // Create content source from moment
-    const source = await createContentSource(supabase, {
+    const source = await createContentSource(serviceClient, {
       org_id: call.org_id,
       author_id: user.id,
       title: body.title || `From: ${call.title || 'Call'}`,
@@ -75,7 +79,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         : m
     )
 
-    await updateCallImport(supabase, id, {
+    await updateCallImport(serviceClient, id, {
       extracted_moments: updatedMoments,
     })
 

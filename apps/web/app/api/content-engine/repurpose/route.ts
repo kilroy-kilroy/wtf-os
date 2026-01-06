@@ -8,6 +8,7 @@ import {
   getVoiceProfile,
   getVoiceProfileById,
   createRepurpose,
+  updateContentSource,
 } from '@repo/db/queries/content-engine'
 import { runModel, retryWithBackoff } from '@repo/utils'
 import {
@@ -143,6 +144,14 @@ export async function POST(request: NextRequest) {
     )
 
     const successCount = results.filter(r => r.success).length
+
+    // Increment repurpose_count on the source
+    if (successCount > 0) {
+      const currentCount = source.repurpose_count || 0
+      await updateContentSource(serviceClient, source.id, {
+        repurpose_count: currentCount + successCount,
+      })
+    }
 
     return NextResponse.json({
       outputs: results,

@@ -4,6 +4,9 @@ import { createServerClient } from '@repo/db/client'
 import { cookies } from 'next/headers'
 import Link from 'next/link'
 
+// Force dynamic rendering to always show fresh data
+export const dynamic = 'force-dynamic'
+
 async function getContentData() {
   const supabase = createServerComponentClient({ cookies })
 
@@ -147,7 +150,10 @@ export default async function ContentHubDashboard() {
               href="/content-hub/repository"
               className="inline-flex items-center gap-2 px-4 py-2 bg-[#c45a3b] text-white rounded-lg text-sm font-medium hover:bg-[#b04a2d] transition-colors"
             >
-              Add Content
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              Add your first piece
             </Link>
           </div>
         ) : (

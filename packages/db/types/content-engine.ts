@@ -234,6 +234,7 @@ export interface ContentSourceUpdate {
   theme_4e?: Theme4E | null
   vvv_tags?: string[]
   visibility?: ContentVisibility
+  repurpose_count?: number
 }
 
 // Repurposes

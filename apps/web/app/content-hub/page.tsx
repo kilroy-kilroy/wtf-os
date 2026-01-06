@@ -8,7 +8,7 @@ async function getContentData() {
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {
-    redirect('/login')
+    redirect('/content-hub/login')
   }
 
   // Check if user has a content profile

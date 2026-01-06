@@ -1,6 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@repo/db/client'
 
+interface NotificationPref {
+  user_id: string
+}
+
+interface OrgMembership {
+  user_id: string
+  org_id: string
+}
+
+interface ContentItem {
+  id: string
+  org_id: string
+  title: string | null
+  synopsis: string | null
+  theme_4e: string | null
+  created_at: string
+}
+
+interface User {
+  id: string
+  email: string
+  first_name: string | null
+}
+
 /**
  * POST /api/cron/content-digest
  * Send weekly content digest emails
@@ -23,17 +47,19 @@ export async function POST(request: NextRequest) {
     const dayOfWeek = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][today.getDay()]
 
     // Get users who want digest today
-    const { data: prefsToNotify, error: prefsError } = await supabase
+    const { data: prefsData, error: prefsError } = await supabase
       .from('content_notification_prefs')
       .select('user_id')
       .eq('weekly_digest', true)
       .eq('digest_day', dayOfWeek)
 
+    const prefsToNotify = (prefsData as unknown as NotificationPref[] | null) || []
+
     if (prefsError) {
       throw new Error(`Failed to fetch notification prefs: ${prefsError.message}`)
     }
 
-    if (!prefsToNotify || prefsToNotify.length === 0) {
+    if (prefsToNotify.length === 0) {
       return NextResponse.json({
         success: true,
         message: `No users to notify on ${dayOfWeek}`,
@@ -44,11 +70,13 @@ export async function POST(request: NextRequest) {
     const userIds = prefsToNotify.map(p => p.user_id)
 
     // Get users with their org memberships
-    const { data: memberships, error: membershipsError } = await supabase
+    const { data: membershipsData, error: membershipsError } = await supabase
       .from('content_org_members')
       .select('user_id, org_id')
       .in('user_id', userIds)
       .not('accepted_at', 'is', null)
+
+    const memberships = (membershipsData as unknown as OrgMembership[] | null) || []
 
     if (membershipsError) {
       throw new Error(`Failed to fetch memberships: ${membershipsError.message}`)
@@ -58,9 +86,17 @@ export async function POST(request: NextRequest) {
     const oneWeekAgo = new Date()
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7)
 
-    const orgIds = [...new Set(memberships?.map(m => m.org_id) || [])]
+    const orgIds = [...new Set(memberships.map(m => m.org_id))]
 
-    const { data: newContent, error: contentError } = await supabase
+    if (orgIds.length === 0) {
+      return NextResponse.json({
+        success: true,
+        message: 'No org memberships found for users',
+        sent: 0,
+      }, { status: 200 })
+    }
+
+    const { data: contentData, error: contentError } = await supabase
       .from('content_sources')
       .select('id, org_id, title, synopsis, theme_4e, created_at')
       .in('org_id', orgIds)
@@ -68,13 +104,15 @@ export async function POST(request: NextRequest) {
       .gte('created_at', oneWeekAgo.toISOString())
       .order('created_at', { ascending: false })
 
+    const newContent = (contentData as unknown as ContentItem[] | null) || []
+
     if (contentError) {
       throw new Error(`Failed to fetch content: ${contentError.message}`)
     }
 
     // Group content by org
-    const contentByOrg: Record<string, typeof newContent> = {}
-    for (const content of newContent || []) {
+    const contentByOrg: Record<string, ContentItem[]> = {}
+    for (const content of newContent) {
       if (!contentByOrg[content.org_id]) {
         contentByOrg[content.org_id] = []
       }
@@ -82,10 +120,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Get user emails
-    const { data: users, error: usersError } = await supabase
+    const { data: usersData, error: usersError } = await supabase
       .from('users')
       .select('id, email, first_name')
       .in('id', userIds)
+
+    const users = (usersData as unknown as User[] | null) || []
 
     if (usersError) {
       throw new Error(`Failed to fetch users: ${usersError.message}`)
@@ -95,8 +135,8 @@ export async function POST(request: NextRequest) {
     const sentTo: string[] = []
     const errors: string[] = []
 
-    for (const user of users || []) {
-      const userMemberships = memberships?.filter(m => m.user_id === user.id) || []
+    for (const user of users) {
+      const userMemberships = memberships.filter(m => m.user_id === user.id)
       if (userMemberships.length === 0) continue
 
       // Get content for user's orgs
@@ -145,7 +185,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-function buildDigestEmail(firstName: string, content: any[]): string {
+function buildDigestEmail(firstName: string, content: ContentItem[]): string {
   const contentItems = content.slice(0, 10).map(c => `
     <tr>
       <td style="padding: 16px; border-bottom: 1px solid #e8e0d5;">
@@ -153,10 +193,10 @@ function buildDigestEmail(firstName: string, content: any[]): string {
           ${c.theme_4e || 'Content'}
         </div>
         <div style="font-size: 16px; color: #2d2a26; margin-bottom: 8px;">
-          ${c.title || c.synopsis?.slice(0, 60) + '...' || 'Untitled'}
+          ${c.title || (c.synopsis ? c.synopsis.slice(0, 60) + '...' : 'Untitled')}
         </div>
         <div style="font-size: 14px; color: #8a8078;">
-          ${c.synopsis?.slice(0, 120) || ''}${c.synopsis?.length > 120 ? '...' : ''}
+          ${c.synopsis ? c.synopsis.slice(0, 120) : ''}${c.synopsis && c.synopsis.length > 120 ? '...' : ''}
         </div>
       </td>
     </tr>

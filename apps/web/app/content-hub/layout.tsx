@@ -2,6 +2,7 @@
 
 import { ReactNode } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 
@@ -32,25 +33,16 @@ export default function ContentHubLayout({ children }: ContentHubLayoutProps) {
       <header className="bg-white sticky top-0 z-50 border-b-[3px] border-[#E51B23]">
         <div className="max-w-[1200px] mx-auto px-8 h-16 flex items-center justify-between">
           {/* Logo */}
-          <div className="flex items-center gap-3">
-            <Link href="/content-hub" className="flex items-center gap-3">
-              {/* Red square with CH */}
-              <div className="w-9 h-9 bg-[#E51B23] rounded flex items-center justify-center">
-                <span
-                  className="text-white text-lg tracking-tight"
-                  style={{ fontFamily: "'Anton', sans-serif" }}
-                >
-                  CH
-                </span>
-              </div>
-              <span
-                className="text-[22px] text-black tracking-[0.5px]"
-                style={{ fontFamily: "'Anton', sans-serif" }}
-              >
-                CONTENT HUB
-              </span>
-            </Link>
-          </div>
+          <Link href="/content-hub" className="flex items-center">
+            <Image
+              src="/logos/Content Hub Horizontal Red Black- Transparent.png"
+              alt="Content Hub"
+              width={140}
+              height={48}
+              className="h-10 w-auto"
+              priority
+            />
+          </Link>
 
           {/* Nav Items */}
           <nav className="hidden md:flex items-center gap-2">

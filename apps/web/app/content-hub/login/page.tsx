@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 
 export default function ContentHubLoginPage() {
   const [email, setEmail] = useState('')
@@ -56,23 +57,16 @@ export default function ContentHubLoginPage() {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-10">
-          <div className="flex justify-center items-center gap-4 mb-4">
-            {/* Red square with CH */}
-            <div className="w-16 h-16 bg-[#E51B23] rounded-lg flex items-center justify-center">
-              <span
-                className="text-white text-3xl tracking-tight"
-                style={{ fontFamily: "'Anton', sans-serif" }}
-              >
-                CH
-              </span>
-            </div>
+          <div className="flex justify-center mb-6">
+            <Image
+              src="/logos/Content Hub SQ Red Black - Transparent.png"
+              alt="Content Hub"
+              width={120}
+              height={120}
+              className="h-24 w-auto"
+              priority
+            />
           </div>
-          <h1
-            className="text-3xl text-black tracking-[1px] mb-2"
-            style={{ fontFamily: "'Anton', sans-serif" }}
-          >
-            CONTENT HUB
-          </h1>
           <p className="text-[#666666] text-sm">
             {mode === 'login' ? 'Sign in to access your content' : 'Create your account'}
           </p>

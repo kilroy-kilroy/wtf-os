@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { cookies } from 'next/headers'
 import { createServerClient } from '@repo/db/client'
 import {
   getVoiceProfile,
@@ -17,7 +19,7 @@ import {
  */
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createServerClient()
+    const supabase = createRouteHandlerClient({ cookies })
 
     // Get authenticated user
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -25,6 +27,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const serviceClient = createServerClient()
     const body = await request.json()
 
     // Validate examples
@@ -56,7 +59,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if voice profile is locked (Brand Official)
-    const existingProfile = await getVoiceProfile(supabase, user.id)
+    const existingProfile = await getVoiceProfile(serviceClient, user.id)
     if (existingProfile?.is_locked) {
       return NextResponse.json(
         { error: 'Your voice profile is locked (Brand Official). Contact an admin to unlock.' },
@@ -92,7 +95,7 @@ export async function POST(request: NextRequest) {
     const currentVersion = existingProfile?.calibration_version || 0
 
     // Save the voice profile with extracted DNA
-    const voiceProfile = await upsertVoiceProfile(supabase, user.id, {
+    const voiceProfile = await upsertVoiceProfile(serviceClient, user.id, {
       examples,
       description,
       extracted_dna: voiceDna,

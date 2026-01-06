@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { cookies } from 'next/headers'
 import { createServerClient } from '@repo/db/client'
 import {
   getContentProfile,
@@ -12,7 +14,7 @@ import type { Platform, ComfortLevel } from '@repo/db/types/content-engine'
  */
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createServerClient()
+    const supabase = createRouteHandlerClient({ cookies })
 
     // Get authenticated user
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -20,7 +22,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const profile = await getContentProfile(supabase, user.id)
+    const serviceClient = createServerClient()
+    const profile = await getContentProfile(serviceClient, user.id)
 
     return NextResponse.json({ profile }, { status: 200 })
   } catch (error) {
@@ -38,7 +41,7 @@ export async function GET(request: NextRequest) {
  */
 export async function PUT(request: NextRequest) {
   try {
-    const supabase = createServerClient()
+    const supabase = createRouteHandlerClient({ cookies })
 
     // Get authenticated user
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -46,6 +49,7 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const serviceClient = createServerClient()
     const body = await request.json()
 
     // Validate platforms
@@ -60,7 +64,7 @@ export async function PUT(request: NextRequest) {
       ? body.comfort_level
       : undefined
 
-    const profile = await upsertContentProfile(supabase, user.id, {
+    const profile = await upsertContentProfile(serviceClient, user.id, {
       title: body.title,
       department: body.department,
       platforms,

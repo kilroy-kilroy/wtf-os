@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { cookies } from 'next/headers'
 import { createServerClient } from '@repo/db/client'
 import {
   createContentOrg,
@@ -13,7 +15,7 @@ import { nanoid } from 'nanoid'
  */
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createServerClient()
+    const supabase = createRouteHandlerClient({ cookies })
 
     // Get authenticated user
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -21,7 +23,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const orgs = await getUserOrgs(supabase, user.id)
+    // Use service client for queries (bypasses RLS)
+    const serviceClient = createServerClient()
+    const orgs = await getUserOrgs(serviceClient, user.id)
 
     return NextResponse.json({ orgs }, { status: 200 })
   } catch (error) {
@@ -39,13 +43,16 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createServerClient()
+    const supabase = createRouteHandlerClient({ cookies })
 
     // Get authenticated user
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    // Use service client for mutations (bypasses RLS)
+    const serviceClient = createServerClient()
 
     const body = await request.json()
 
@@ -71,7 +78,7 @@ export async function POST(request: NextRequest) {
     const slug = `${baseSlug}-${nanoid(6)}`
 
     // Create the organization
-    const org = await createContentOrg(supabase, {
+    const org = await createContentOrg(serviceClient, {
       name,
       slug,
       owner_id: user.id,
@@ -79,7 +86,7 @@ export async function POST(request: NextRequest) {
     })
 
     // Add owner as member with 'owner' role
-    const membership = await addOrgMember(supabase, {
+    const membership = await addOrgMember(serviceClient, {
       org_id: org.id,
       user_id: user.id,
       role: 'owner',

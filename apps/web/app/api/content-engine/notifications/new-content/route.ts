@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@repo/db/client'
 
+interface ContentSource {
+  id: string
+  title: string | null
+  synopsis: string | null
+  theme_4e: string | null
+  author_id: string | null
+}
+
 /**
  * POST /api/content-engine/notifications/new-content
  * Send new content alert to team members
@@ -23,11 +31,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Get the source content
-    const { data: source, error: sourceError } = await supabase
+    const { data: sourceData, error: sourceError } = await supabase
       .from('content_sources')
       .select('id, title, synopsis, theme_4e, author_id')
       .eq('id', body.source_id)
       .single()
+
+    const source = sourceData as ContentSource | null
 
     if (sourceError || !source) {
       return NextResponse.json({ error: 'Source not found' }, { status: 404 })

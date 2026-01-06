@@ -93,7 +93,7 @@ export default function DiscoveryLabProCreatePage() {
             last_name,
             full_name,
             preferences,
-            orgs:org_id (name)
+            org:org_id (name)
           `)
           .eq('id', user.id)
           .single();

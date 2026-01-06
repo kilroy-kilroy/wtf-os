@@ -11,23 +11,55 @@ function WelcomeContent() {
   const sessionId = searchParams.get('session_id');
   const supabase = createClientComponentClient();
 
+  const [fullName, setFullName] = useState('');
+  const [companyName, setCompanyName] = useState('');
   const [website, setWebsite] = useState('');
   const [saving, setSaving] = useState(false);
   const [userLoaded, setUserLoaded] = useState(false);
+  const [needsProfileSetup, setNeedsProfileSetup] = useState(false);
+  const [userEmail, setUserEmail] = useState('');
 
   useEffect(() => {
-    // Load existing website from user preferences
+    // Load existing profile data
     async function loadUser() {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
+        setUserEmail(user.email || '');
+
         const { data: userData } = await supabase
           .from('users')
-          .select('preferences')
+          .select(`
+            full_name,
+            first_name,
+            last_name,
+            preferences,
+            org:org_id (name)
+          `)
           .eq('id', user.id)
           .single();
 
-        if (userData?.preferences?.website) {
-          setWebsite(userData.preferences.website);
+        if (userData) {
+          // Check if name is set
+          const existingName = userData.full_name ||
+            [userData.first_name, userData.last_name].filter(Boolean).join(' ') || '';
+          const existingCompany = (userData.org as any)?.name || '';
+
+          setFullName(existingName);
+          setCompanyName(existingCompany);
+
+          if (userData.preferences?.website) {
+            setWebsite(userData.preferences.website);
+          }
+
+          // Show profile setup if name or company is missing
+          setNeedsProfileSetup(!existingName || !existingCompany);
+        } else {
+          // No user record exists - need full profile setup
+          setNeedsProfileSetup(true);
+          // Pre-fill name from auth metadata if available
+          if (user.user_metadata?.full_name) {
+            setFullName(user.user_metadata.full_name);
+          }
         }
       }
       setUserLoaded(true);
@@ -39,26 +71,88 @@ function WelcomeContent() {
     setSaving(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (user && website) {
-        // Get current preferences and merge
-        const { data: userData } = await supabase
-          .from('users')
-          .select('preferences')
-          .eq('id', user.id)
-          .single();
+      if (!user) {
+        router.push('/discovery-lab-pro/create');
+        return;
+      }
 
-        const currentPrefs = userData?.preferences || {};
+      // Get current user data
+      const { data: userData } = await supabase
+        .from('users')
+        .select('id, preferences, org_id')
+        .eq('id', user.id)
+        .single();
+
+      const currentPrefs = userData?.preferences || {};
+      const updatedPrefs = website ? { ...currentPrefs, website } : currentPrefs;
+
+      if (userData) {
+        // User exists - update their profile
+        const updates: Record<string, any> = {
+          preferences: updatedPrefs,
+        };
+
+        // Update name if provided and was missing
+        if (fullName && needsProfileSetup) {
+          updates.full_name = fullName;
+        }
 
         await supabase
           .from('users')
-          .update({
-            preferences: { ...currentPrefs, website },
-          })
+          .update(updates)
           .eq('id', user.id);
+
+        // Create/update org if company name provided and user has no org
+        if (companyName && !userData.org_id) {
+          const { data: newOrg } = await supabase
+            .from('orgs')
+            .insert({
+              name: companyName,
+              personal: true,
+              created_by_user_id: user.id,
+            })
+            .select('id')
+            .single();
+
+          if (newOrg) {
+            await supabase
+              .from('users')
+              .update({ org_id: newOrg.id })
+              .eq('id', user.id);
+          }
+        }
+      } else {
+        // User doesn't exist - create user record
+        // First create org if company name provided
+        let orgId = null;
+        if (companyName) {
+          const { data: newOrg } = await supabase
+            .from('orgs')
+            .insert({
+              name: companyName,
+              personal: true,
+              created_by_user_id: user.id,
+            })
+            .select('id')
+            .single();
+          orgId = newOrg?.id || null;
+        }
+
+        // Create user record
+        await supabase
+          .from('users')
+          .insert({
+            id: user.id,
+            email: user.email,
+            full_name: fullName,
+            org_id: orgId,
+            preferences: updatedPrefs,
+          });
       }
+
       router.push('/discovery-lab-pro/create');
     } catch (err) {
-      console.error('Error saving website:', err);
+      console.error('Error saving profile:', err);
       router.push('/discovery-lab-pro/create');
     }
   };
@@ -100,30 +194,82 @@ function WelcomeContent() {
           <h2 className="font-anton text-2xl text-[#E51B23] mb-6 tracking-wide">
             QUICK SETUP
           </h2>
-          <p className="text-[#B3B3B3] mb-4 font-poppins">
-            One thing we need to personalize your playbooks:
+          <p className="text-[#B3B3B3] mb-6 font-poppins">
+            {needsProfileSetup
+              ? "Let's set up your profile to personalize your playbooks:"
+              : "One thing we need to personalize your playbooks:"}
           </p>
-          <div className="space-y-2">
-            <label className="block text-[#FFDE59] font-anton text-sm tracking-wide">
-              YOUR COMPANY WEBSITE
-            </label>
-            <input
-              type="url"
-              placeholder="https://yourcompany.com"
-              value={website}
-              onChange={(e) => setWebsite(e.target.value)}
-              className="w-full bg-black border border-[#333] text-white px-4 py-3 font-poppins focus:border-[#E51B23] focus:outline-none"
-            />
-            <p className="text-[#666] text-sm font-poppins">
-              We&apos;ll use this to help the AI understand your business better.
-            </p>
+
+          <div className="space-y-6">
+            {/* Name field */}
+            {needsProfileSetup ? (
+              <div className="space-y-2">
+                <label className="block text-[#FFDE59] font-anton text-sm tracking-wide">
+                  YOUR NAME *
+                </label>
+                <input
+                  type="text"
+                  placeholder="Your full name"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  className="w-full bg-black border border-[#333] text-white px-4 py-3 font-poppins focus:border-[#E51B23] focus:outline-none"
+                />
+              </div>
+            ) : fullName ? (
+              <div className="space-y-2">
+                <label className="block text-[#666] font-anton text-sm tracking-wide">
+                  YOUR NAME
+                </label>
+                <div className="text-white font-poppins">{fullName}</div>
+              </div>
+            ) : null}
+
+            {/* Company field */}
+            {needsProfileSetup ? (
+              <div className="space-y-2">
+                <label className="block text-[#FFDE59] font-anton text-sm tracking-wide">
+                  YOUR COMPANY *
+                </label>
+                <input
+                  type="text"
+                  placeholder="Your company name"
+                  value={companyName}
+                  onChange={(e) => setCompanyName(e.target.value)}
+                  className="w-full bg-black border border-[#333] text-white px-4 py-3 font-poppins focus:border-[#E51B23] focus:outline-none"
+                />
+              </div>
+            ) : companyName ? (
+              <div className="space-y-2">
+                <label className="block text-[#666] font-anton text-sm tracking-wide">
+                  YOUR COMPANY
+                </label>
+                <div className="text-white font-poppins">{companyName}</div>
+              </div>
+            ) : null}
+
+            {/* Website field - always shown */}
+            <div className="space-y-2">
+              <label className="block text-[#FFDE59] font-anton text-sm tracking-wide">
+                YOUR COMPANY WEBSITE
+              </label>
+              <input
+                type="url"
+                placeholder="https://yourcompany.com"
+                value={website}
+                onChange={(e) => setWebsite(e.target.value)}
+                className="w-full bg-black border border-[#333] text-white px-4 py-3 font-poppins focus:border-[#E51B23] focus:outline-none"
+              />
+              <p className="text-[#666] text-sm font-poppins">
+                We&apos;ll use this to help the AI understand your business better.
+              </p>
+            </div>
           </div>
         </div>
 
         {/* CTA Button */}
         <button
           onClick={handleContinue}
-          disabled={saving || !userLoaded}
+          disabled={saving || !userLoaded || (needsProfileSetup && (!fullName || !companyName))}
           className="inline-block bg-[#E51B23] text-white px-8 py-4 font-anton text-lg tracking-wide hover:bg-[#FFDE59] hover:text-black transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {saving ? 'SAVING...' : '[ START YOUR FIRST PLAYBOOK ]'}

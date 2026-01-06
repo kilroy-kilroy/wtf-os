@@ -65,6 +65,8 @@ export default function ContentSourcePage() {
   const [activePlatform, setActivePlatform] = useState('linkedin')
   const [generating, setGenerating] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [selectedRepurpose, setSelectedRepurpose] = useState<SavedRepurpose | null>(null)
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
 
   // Get repurposes for the active platform, sorted by most recent first
   const platformRepurposes = savedRepurposes.filter(r => r.platform === activePlatform)
@@ -106,6 +108,16 @@ export default function ContentSourcePage() {
   useEffect(() => {
     async function loadData() {
       setLoading(true)
+      // Fetch current user ID
+      try {
+        const profileRes = await fetch('/api/content-engine/profile')
+        const profileData = await profileRes.json()
+        if (profileData.profile?.id) {
+          setCurrentUserId(profileData.profile.id)
+        }
+      } catch (err) {
+        console.error('Failed to fetch profile:', err)
+      }
       await Promise.all([fetchSource(), fetchRepurposes()])
       setLoading(false)
     }
@@ -145,12 +157,28 @@ export default function ContentSourcePage() {
     }
   }
 
-  async function handleCopy() {
-    if (!latestRepurpose?.output_content) return
+  async function handleCopy(content?: string) {
+    const textToCopy = content || latestRepurpose?.output_content
+    if (!textToCopy) return
 
-    await navigator.clipboard.writeText(latestRepurpose.output_content)
+    await navigator.clipboard.writeText(textToCopy)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
+  }
+
+  // Check if a repurpose belongs to the current user
+  function isOwnRepurpose(repurpose: SavedRepurpose): boolean {
+    return repurpose.user?.id === currentUserId
+  }
+
+  // Handle viewing a previous version in the modal
+  function handleViewVersion(repurpose: SavedRepurpose) {
+    setSelectedRepurpose(repurpose)
+  }
+
+  // Close the version modal
+  function handleCloseModal() {
+    setSelectedRepurpose(null)
   }
 
   function formatDate(dateString: string) {
@@ -328,16 +356,27 @@ export default function ContentSourcePage() {
               </div>
 
               {/* Actions */}
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between flex-wrap gap-3">
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => handleGenerate([activePlatform])}
+                    disabled={generating}
+                    className="px-5 py-2.5 bg-white border-2 border-black text-black rounded text-sm font-semibold hover:bg-[#F8F8F8] disabled:opacity-50 transition-colors"
+                  >
+                    {generating ? 'Generating...' : 'Generate New Version'}
+                  </button>
+                  {latestRepurpose && !isOwnRepurpose(latestRepurpose) && (
+                    <button
+                      onClick={() => handleGenerate([activePlatform])}
+                      disabled={generating}
+                      className="px-5 py-2.5 bg-[#FFDE59] text-black border-2 border-black rounded text-sm font-semibold hover:bg-[#F5D64D] disabled:opacity-50 transition-colors"
+                    >
+                      {generating ? 'Generating...' : 'Regenerate in My Voice'}
+                    </button>
+                  )}
+                </div>
                 <button
-                  onClick={() => handleGenerate([activePlatform])}
-                  disabled={generating}
-                  className="px-5 py-2.5 bg-white border-2 border-black text-black rounded text-sm font-semibold hover:bg-[#F8F8F8] disabled:opacity-50 transition-colors"
-                >
-                  {generating ? 'Generating...' : 'Generate New Version'}
-                </button>
-                <button
-                  onClick={handleCopy}
+                  onClick={() => handleCopy()}
                   className={`px-6 py-2.5 rounded text-sm font-semibold transition-colors ${
                     copied
                       ? 'bg-[#22C55E] text-white'
@@ -354,21 +393,28 @@ export default function ContentSourcePage() {
                   <h3 className="text-sm font-semibold text-[#666666] mb-3">Previous Versions</h3>
                   <div className="space-y-3">
                     {platformRepurposes.slice(1).map((repurpose) => (
-                      <div
+                      <button
                         key={repurpose.id}
-                        className="p-4 bg-white border border-[#E5E5E5] rounded-lg"
+                        onClick={() => handleViewVersion(repurpose)}
+                        className="w-full text-left p-4 bg-white border border-[#E5E5E5] rounded-lg hover:border-[#E51B23] hover:shadow-sm transition-all cursor-pointer"
                       >
-                        <div className="flex items-center gap-2 text-xs text-[#999999] mb-2">
-                          <span>
-                            {repurpose.user?.full_name || repurpose.user?.title || 'Team member'}
-                          </span>
-                          <span>·</span>
-                          <span>{formatDate(repurpose.created_at)}</span>
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2 text-xs text-[#999999]">
+                            <span className="w-5 h-5 rounded-full bg-[#E5E5E5] text-[#666666] flex items-center justify-center text-[10px] font-bold">
+                              {repurpose.user?.full_name?.[0] || repurpose.user?.title?.[0] || 'U'}
+                            </span>
+                            <span>
+                              {repurpose.user?.full_name || repurpose.user?.title || 'Team member'}
+                            </span>
+                            <span>·</span>
+                            <span>{formatDate(repurpose.created_at)}</span>
+                          </div>
+                          <span className="text-xs text-[#E51B23] font-medium">View full →</span>
                         </div>
-                        <p className="text-sm text-[#666666] line-clamp-3">
+                        <p className="text-sm text-[#666666] line-clamp-2">
                           {repurpose.output_content}
                         </p>
-                      </div>
+                      </button>
                     ))}
                   </div>
                 </div>
@@ -394,6 +440,83 @@ export default function ContentSourcePage() {
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
           <p className="text-red-700 text-sm">{error}</p>
+        </div>
+      )}
+
+      {/* Version Detail Modal */}
+      {selectedRepurpose && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl overflow-hidden w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-lg">
+            {/* Red accent bar */}
+            <div className="h-1 bg-[#E51B23]" />
+
+            <div className="p-6">
+              {/* Header */}
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2
+                    className="text-2xl text-black tracking-[0.5px]"
+                    style={{ fontFamily: "'Anton', sans-serif" }}
+                  >
+                    {platformTabs.find(t => t.id === selectedRepurpose.platform)?.label?.toUpperCase() || 'CONTENT'}
+                  </h2>
+                  <div className="flex items-center gap-2 text-sm text-[#666666] mt-1">
+                    <span className="w-6 h-6 rounded-full bg-[#E51B23] text-white flex items-center justify-center text-xs font-bold">
+                      {selectedRepurpose.user?.full_name?.[0] || selectedRepurpose.user?.title?.[0] || 'U'}
+                    </span>
+                    <span>
+                      {selectedRepurpose.user?.full_name || selectedRepurpose.user?.title || 'Team member'}
+                    </span>
+                    <span className="text-[#999999]">·</span>
+                    <span className="text-[#999999]">{formatDate(selectedRepurpose.created_at)}</span>
+                  </div>
+                </div>
+                <button
+                  onClick={handleCloseModal}
+                  className="text-[#999999] hover:text-black transition-colors"
+                >
+                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              {/* Content */}
+              <div className="bg-[#F8F8F8] rounded-lg p-6 mb-6">
+                <p className="text-black whitespace-pre-wrap leading-relaxed">
+                  {selectedRepurpose.output_content}
+                </p>
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center justify-between flex-wrap gap-3">
+                <div className="flex items-center gap-3">
+                  {!isOwnRepurpose(selectedRepurpose) && (
+                    <button
+                      onClick={() => {
+                        handleCloseModal()
+                        handleGenerate([selectedRepurpose.platform])
+                      }}
+                      disabled={generating}
+                      className="px-5 py-2.5 bg-[#FFDE59] text-black border-2 border-black rounded text-sm font-semibold hover:bg-[#F5D64D] disabled:opacity-50 transition-colors"
+                    >
+                      {generating ? 'Generating...' : 'Regenerate in My Voice'}
+                    </button>
+                  )}
+                </div>
+                <button
+                  onClick={() => handleCopy(selectedRepurpose.output_content)}
+                  className={`px-6 py-2.5 rounded text-sm font-semibold transition-colors ${
+                    copied
+                      ? 'bg-[#22C55E] text-white'
+                      : 'bg-[#E51B23] text-white hover:bg-[#CC171F]'
+                  }`}
+                >
+                  {copied ? 'Copied!' : 'Copy to Clipboard'}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

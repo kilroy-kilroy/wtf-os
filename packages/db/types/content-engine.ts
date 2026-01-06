@@ -159,6 +159,7 @@ export interface VoiceProfileInsert {
   description?: string | null
   extracted_dna?: VoiceDNA | null
   is_locked?: boolean
+  calibration_version?: number
 }
 
 export interface VoiceProfileUpdate {

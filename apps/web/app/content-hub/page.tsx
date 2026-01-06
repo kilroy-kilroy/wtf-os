@@ -54,12 +54,12 @@ async function getContentData() {
 
   const stats = {
     totalSources: sources?.length || 0,
-    totalRepurposes: sources?.reduce((acc, s) => acc + (s.repurpose_count || 0), 0) || 0,
+    totalRepurposes: sources?.reduce((acc: number, s: any) => acc + (s.repurpose_count || 0), 0) || 0,
     byTheme: {
-      evidence: sources?.filter(s => s.theme_4e === 'evidence').length || 0,
-      education: sources?.filter(s => s.theme_4e === 'education').length || 0,
-      entertainment: sources?.filter(s => s.theme_4e === 'entertainment').length || 0,
-      envision: sources?.filter(s => s.theme_4e === 'envision').length || 0,
+      evidence: sources?.filter((s: any) => s.theme_4e === 'evidence').length || 0,
+      education: sources?.filter((s: any) => s.theme_4e === 'education').length || 0,
+      entertainment: sources?.filter((s: any) => s.theme_4e === 'entertainment').length || 0,
+      envision: sources?.filter((s: any) => s.theme_4e === 'envision').length || 0,
     },
   }
 

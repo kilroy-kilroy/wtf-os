@@ -483,13 +483,15 @@ export async function getOrgContentStats(
   supabase: SupabaseClient,
   orgId: string
 ): Promise<{ totalSources: number; totalRepurposes: number; byTheme: Record<Theme4E, number> }> {
-  const { data: sources, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('content_sources')
     .select('theme_4e, repurpose_count')
     .eq('org_id', orgId)
     .eq('visibility', 'team')
 
   if (error) throw new Error(`Failed to get stats: ${error.message}`)
+
+  const sources = data as { theme_4e: Theme4E | null; repurpose_count: number | null }[] | null
 
   const byTheme: Record<Theme4E, number> = {
     evidence: 0,

@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createServerClient } from '@repo/db/client'
 import { cookies } from 'next/headers'
 import Link from 'next/link'
 
@@ -11,15 +12,18 @@ async function getContentData() {
     redirect('/content-hub/login')
   }
 
+  // Use service client for queries (bypasses RLS)
+  const serviceClient = createServerClient()
+
   // Check if user has a content profile
-  const { data: profile } = await supabase
+  const { data: profile } = await (serviceClient as any)
     .from('content_profiles')
     .select('*')
     .eq('user_id', user.id)
     .single()
 
   // Check if user belongs to any org
-  const { data: memberships } = await supabase
+  const { data: memberships } = await (serviceClient as any)
     .from('content_org_members')
     .select('*, org:content_orgs(*)')
     .eq('user_id', user.id)
@@ -33,14 +37,14 @@ async function getContentData() {
   const orgId = memberships[0].org.id
 
   // Get content stats
-  const { data: sources } = await supabase
+  const { data: sources } = await (serviceClient as any)
     .from('content_sources')
     .select('theme_4e, repurpose_count')
     .eq('org_id', orgId)
     .eq('visibility', 'team')
 
   // Get recent sources
-  const { data: recentSources } = await supabase
+  const { data: recentSources } = await (serviceClient as any)
     .from('content_sources')
     .select('*')
     .eq('org_id', orgId)

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
@@ -59,11 +59,7 @@ export default function CallReviewPage() {
   const [extracting, setExtracting] = useState(false)
   const [promotingMomentId, setPromotingMomentId] = useState<string | null>(null)
 
-  useEffect(() => {
-    fetchCall()
-  }, [callId])
-
-  async function fetchCall() {
+  const fetchCall = useCallback(async () => {
     try {
       const res = await fetch(`/api/content-engine/calls/${callId}`)
       if (!res.ok) {
@@ -77,7 +73,11 @@ export default function CallReviewPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [callId])
+
+  useEffect(() => {
+    fetchCall()
+  }, [fetchCall])
 
   async function handleExtractMoments() {
     setExtracting(true)
@@ -280,7 +280,7 @@ export default function CallReviewPage() {
                     </div>
 
                     <blockquote className="text-[#2d2a26] text-lg leading-relaxed mb-4 pl-4 border-l-2 border-[#c45a3b]">
-                      "{moment.quote}"
+                      &ldquo;{moment.quote}&rdquo;
                     </blockquote>
 
                     {moment.speaker && (
@@ -328,7 +328,7 @@ export default function CallReviewPage() {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                           </svg>
                         </span>
-                        <p className="text-[#2d2a26] truncate">"{moment.quote.slice(0, 80)}..."</p>
+                        <p className="text-[#2d2a26] truncate">&ldquo;{moment.quote.slice(0, 80)}...&rdquo;</p>
                       </div>
                       <span className="text-xs text-[#c45a3b]">View in Repository →</span>
                     </div>

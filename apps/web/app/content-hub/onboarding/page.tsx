@@ -199,7 +199,7 @@ export default function ContentHubOnboarding() {
                 Create your organization
               </h1>
               <p className="text-[#8a8078] mb-6">
-                This is where your team's content will live. You can invite others later.
+                This is where your team&apos;s content will live. You can invite others later.
               </p>
 
               <div className="space-y-4">
@@ -339,7 +339,7 @@ export default function ContentHubOnboarding() {
                 Calibrate your voice
               </h1>
               <p className="text-[#8a8078] mb-6">
-                Paste 3-5 pieces of content you've written that you love. We'll learn your style.
+                Paste 3-5 pieces of content you&apos;ve written that you love. We&apos;ll learn your style.
               </p>
 
               <div className="space-y-4">
@@ -408,7 +408,7 @@ export default function ContentHubOnboarding() {
                 </svg>
               </div>
               <h1 className="text-2xl font-semibold text-[#2d2a26] mb-2">
-                You're all set!
+                You&apos;re all set!
               </h1>
               <p className="text-[#8a8078] mb-6">
                 Your voice has been calibrated. Time to start creating content.

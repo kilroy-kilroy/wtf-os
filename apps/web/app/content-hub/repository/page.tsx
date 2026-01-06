@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -41,11 +41,7 @@ export default function ContentRepository() {
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
 
-  useEffect(() => {
-    fetchSources()
-  }, [searchQuery, selectedTheme])
-
-  async function fetchSources() {
+  const fetchSources = useCallback(async () => {
     setLoading(true)
     try {
       const params = new URLSearchParams()
@@ -60,7 +56,11 @@ export default function ContentRepository() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [searchQuery, selectedTheme])
+
+  useEffect(() => {
+    fetchSources()
+  }, [fetchSources])
 
   async function handleAddContent() {
     if (!newContent.trim()) {
@@ -114,7 +114,7 @@ export default function ContentRepository() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-[#2d2a26]">Content Repository</h1>
-          <p className="text-[#8a8078] mt-1">Browse and repurpose your team's content</p>
+          <p className="text-[#8a8078] mt-1">Browse and repurpose your team&apos;s content</p>
         </div>
         <Button
           onClick={() => setShowAddModal(true)}

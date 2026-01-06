@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
@@ -52,11 +52,7 @@ export default function ContentSourcePage() {
   const [generating, setGenerating] = useState(false)
   const [copied, setCopied] = useState(false)
 
-  useEffect(() => {
-    fetchSource()
-  }, [sourceId])
-
-  async function fetchSource() {
+  const fetchSource = useCallback(async () => {
     try {
       const res = await fetch(`/api/content-engine/sources?limit=100`)
       const data = await res.json()
@@ -71,7 +67,11 @@ export default function ContentSourcePage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [sourceId])
+
+  useEffect(() => {
+    fetchSource()
+  }, [fetchSource])
 
   async function handleGenerate(platforms: string[]) {
     setGenerating(true)

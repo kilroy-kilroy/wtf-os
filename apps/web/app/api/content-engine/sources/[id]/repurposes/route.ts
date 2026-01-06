@@ -24,7 +24,7 @@ export async function GET(
       .from('repurposes')
       .select(`
         *,
-        user:content_profiles!repurposes_user_id_fkey(
+        user:voice_profiles!repurposes_user_id_fkey(
           id,
           user_id,
           title,

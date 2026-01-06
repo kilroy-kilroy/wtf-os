@@ -16,6 +16,21 @@ interface ContentSource {
   created_at: string
 }
 
+interface SavedRepurpose {
+  id: string
+  source_id: string
+  user_id: string | null
+  platform: string
+  output_content: string
+  created_at: string
+  user?: {
+    id: string
+    user_id: string
+    title: string | null
+    full_name: string | null
+  } | null
+}
+
 interface RepurposeOutput {
   platform: string
   content: string
@@ -43,13 +58,23 @@ export default function ContentSourcePage() {
   const sourceId = params.id as string
 
   const [source, setSource] = useState<ContentSource | null>(null)
+  const [savedRepurposes, setSavedRepurposes] = useState<SavedRepurpose[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   const [activePlatform, setActivePlatform] = useState('linkedin')
-  const [outputs, setOutputs] = useState<Record<string, string>>({})
   const [generating, setGenerating] = useState(false)
   const [copied, setCopied] = useState(false)
+
+  // Get repurposes for the active platform, sorted by most recent first
+  const platformRepurposes = savedRepurposes.filter(r => r.platform === activePlatform)
+  const latestRepurpose = platformRepurposes[0]
+
+  // Count repurposes per platform for the tab badges
+  const repurposeCounts = platformTabs.reduce((acc, tab) => {
+    acc[tab.id] = savedRepurposes.filter(r => r.platform === tab.id).length
+    return acc
+  }, {} as Record<string, number>)
 
   const fetchSource = useCallback(async () => {
     try {
@@ -63,14 +88,29 @@ export default function ContentSourcePage() {
       setSource(found)
     } catch (err) {
       setError('Failed to load content')
-    } finally {
-      setLoading(false)
+    }
+  }, [sourceId])
+
+  const fetchRepurposes = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/content-engine/sources/${sourceId}/repurposes`)
+      const data = await res.json()
+      if (data.repurposes) {
+        setSavedRepurposes(data.repurposes)
+      }
+    } catch (err) {
+      console.error('Failed to load repurposes:', err)
     }
   }, [sourceId])
 
   useEffect(() => {
-    fetchSource()
-  }, [fetchSource])
+    async function loadData() {
+      setLoading(true)
+      await Promise.all([fetchSource(), fetchRepurposes()])
+      setLoading(false)
+    }
+    loadData()
+  }, [fetchSource, fetchRepurposes])
 
   async function handleGenerate(platforms: string[]) {
     setGenerating(true)
@@ -91,19 +131,12 @@ export default function ContentSourcePage() {
         throw new Error(data.error || 'Failed to generate content')
       }
 
-      const data = await res.json()
+      // Refresh repurposes and source after generating
+      await Promise.all([fetchRepurposes(), fetchSource()])
 
-      const newOutputs: Record<string, string> = { ...outputs }
-      data.outputs.forEach((output: RepurposeOutput) => {
-        if (output.success) {
-          newOutputs[output.platform] = output.content
-        }
-      })
-      setOutputs(newOutputs)
-
-      // Set active tab to first generated
-      if (data.outputs.length > 0 && data.outputs[0].success) {
-        setActivePlatform(data.outputs[0].platform)
+      // Set active tab to first generated platform
+      if (platforms.length > 0) {
+        setActivePlatform(platforms[0])
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong')
@@ -113,12 +146,20 @@ export default function ContentSourcePage() {
   }
 
   async function handleCopy() {
-    const content = outputs[activePlatform]
-    if (!content) return
+    if (!latestRepurpose?.output_content) return
 
-    await navigator.clipboard.writeText(content)
+    await navigator.clipboard.writeText(latestRepurpose.output_content)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
+  }
+
+  function formatDate(dateString: string) {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    })
   }
 
   if (loading) {
@@ -231,6 +272,7 @@ export default function ContentSourcePage() {
         <div className="flex border-b-2 border-[#E5E5E5]">
           {platformTabs.map((tab) => {
             const isActive = activePlatform === tab.id
+            const count = repurposeCounts[tab.id] || 0
             return (
               <button
                 key={tab.id}
@@ -245,8 +287,10 @@ export default function ContentSourcePage() {
               >
                 <span>{tab.icon}</span>
                 {tab.label}
-                {outputs[tab.id] && (
-                  <span className="w-2 h-2 bg-[#22C55E] rounded-full" />
+                {count > 0 && (
+                  <span className="ml-1 px-2 py-0.5 text-xs rounded-full bg-[#E51B23] text-white">
+                    {count}
+                  </span>
                 )}
               </button>
             )
@@ -255,20 +299,42 @@ export default function ContentSourcePage() {
 
         {/* Output Content */}
         <div className="p-6">
-          {outputs[activePlatform] ? (
-            <div>
+          {platformRepurposes.length > 0 ? (
+            <div className="space-y-4">
+              {/* Latest/Selected Repurpose */}
               <div className="bg-[#F8F8F8] rounded-lg p-6">
+                {/* Author and date info */}
+                <div className="flex items-center justify-between mb-4 pb-3 border-b border-[#E5E5E5]">
+                  <div className="flex items-center gap-2 text-sm text-[#666666]">
+                    <span className="w-6 h-6 rounded-full bg-[#E51B23] text-white flex items-center justify-center text-xs font-bold">
+                      {latestRepurpose?.user?.full_name?.[0] || latestRepurpose?.user?.title?.[0] || 'U'}
+                    </span>
+                    <span>
+                      {latestRepurpose?.user?.full_name || latestRepurpose?.user?.title || 'Team member'}
+                    </span>
+                    <span className="text-[#999999]">·</span>
+                    <span className="text-[#999999]">{latestRepurpose && formatDate(latestRepurpose.created_at)}</span>
+                  </div>
+                  {platformRepurposes.length > 1 && (
+                    <span className="text-xs text-[#999999]">
+                      +{platformRepurposes.length - 1} more version{platformRepurposes.length > 2 ? 's' : ''}
+                    </span>
+                  )}
+                </div>
+
                 <p className="text-black whitespace-pre-wrap leading-relaxed">
-                  {outputs[activePlatform]}
+                  {latestRepurpose?.output_content}
                 </p>
               </div>
-              <div className="flex items-center justify-between mt-4">
+
+              {/* Actions */}
+              <div className="flex items-center justify-between">
                 <button
                   onClick={() => handleGenerate([activePlatform])}
                   disabled={generating}
                   className="px-5 py-2.5 bg-white border-2 border-black text-black rounded text-sm font-semibold hover:bg-[#F8F8F8] disabled:opacity-50 transition-colors"
                 >
-                  {generating ? 'Generating...' : 'Regenerate'}
+                  {generating ? 'Generating...' : 'Generate New Version'}
                 </button>
                 <button
                   onClick={handleCopy}
@@ -281,6 +347,32 @@ export default function ContentSourcePage() {
                   {copied ? 'Copied!' : 'Copy to Clipboard'}
                 </button>
               </div>
+
+              {/* Previous Versions */}
+              {platformRepurposes.length > 1 && (
+                <div className="mt-6 pt-6 border-t border-[#E5E5E5]">
+                  <h3 className="text-sm font-semibold text-[#666666] mb-3">Previous Versions</h3>
+                  <div className="space-y-3">
+                    {platformRepurposes.slice(1).map((repurpose) => (
+                      <div
+                        key={repurpose.id}
+                        className="p-4 bg-white border border-[#E5E5E5] rounded-lg"
+                      >
+                        <div className="flex items-center gap-2 text-xs text-[#999999] mb-2">
+                          <span>
+                            {repurpose.user?.full_name || repurpose.user?.title || 'Team member'}
+                          </span>
+                          <span>·</span>
+                          <span>{formatDate(repurpose.created_at)}</span>
+                        </div>
+                        <p className="text-sm text-[#666666] line-clamp-3">
+                          {repurpose.output_content}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             <div className="text-center py-12 bg-[#F8F8F8] rounded-lg">

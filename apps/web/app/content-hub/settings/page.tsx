@@ -27,6 +27,13 @@ interface Invite {
   expires_at: string
 }
 
+interface NotificationPrefs {
+  new_content_alerts: boolean
+  call_gold_alerts: boolean
+  weekly_digest: boolean
+  digest_day: string
+}
+
 export default function ContentHubSettings() {
   const [org, setOrg] = useState<Org | null>(null)
   const [members, setMembers] = useState<Member[]>([])
@@ -39,8 +46,17 @@ export default function ContentHubSettings() {
   const [inviteError, setInviteError] = useState<string | null>(null)
   const [inviteSuccess, setInviteSuccess] = useState<string | null>(null)
 
+  const [notifPrefs, setNotifPrefs] = useState<NotificationPrefs>({
+    new_content_alerts: true,
+    call_gold_alerts: true,
+    weekly_digest: true,
+    digest_day: 'monday',
+  })
+  const [savingNotifs, setSavingNotifs] = useState(false)
+
   useEffect(() => {
     fetchData()
+    fetchNotificationPrefs()
   }, [])
 
   async function fetchData() {
@@ -66,6 +82,38 @@ export default function ContentHubSettings() {
       console.error('Error fetching data:', err)
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function fetchNotificationPrefs() {
+    try {
+      const res = await fetch('/api/content-engine/notifications/preferences')
+      const data = await res.json()
+      if (data.preferences) {
+        setNotifPrefs(data.preferences)
+      }
+    } catch (err) {
+      console.error('Error fetching notification prefs:', err)
+    }
+  }
+
+  async function updateNotificationPref(key: keyof NotificationPrefs, value: boolean | string) {
+    setSavingNotifs(true)
+    const newPrefs = { ...notifPrefs, [key]: value }
+    setNotifPrefs(newPrefs)
+
+    try {
+      await fetch('/api/content-engine/notifications/preferences', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newPrefs),
+      })
+    } catch (err) {
+      console.error('Error updating notification prefs:', err)
+      // Revert on error
+      setNotifPrefs(notifPrefs)
+    } finally {
+      setSavingNotifs(false)
     }
   }
 
@@ -258,6 +306,93 @@ export default function ContentHubSettings() {
           )}
         </div>
       )}
+
+      {/* Notification Preferences */}
+      <div className="bg-white rounded-xl border border-[#e8e0d5] p-6">
+        <h2 className="text-lg font-medium text-[#2d2a26] mb-4">Notifications</h2>
+        <div className="space-y-4">
+          <label className="flex items-center justify-between cursor-pointer">
+            <div>
+              <p className="text-[#2d2a26] font-medium">New content alerts</p>
+              <p className="text-sm text-[#8a8078]">Get notified when Brand Official publishes new content</p>
+            </div>
+            <button
+              onClick={() => updateNotificationPref('new_content_alerts', !notifPrefs.new_content_alerts)}
+              disabled={savingNotifs}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                notifPrefs.new_content_alerts ? 'bg-[#c45a3b]' : 'bg-gray-200'
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  notifPrefs.new_content_alerts ? 'translate-x-6' : 'translate-x-1'
+                }`}
+              />
+            </button>
+          </label>
+
+          <label className="flex items-center justify-between cursor-pointer">
+            <div>
+              <p className="text-[#2d2a26] font-medium">Call gold alerts</p>
+              <p className="text-sm text-[#8a8078]">Get notified when your calls have content moments</p>
+            </div>
+            <button
+              onClick={() => updateNotificationPref('call_gold_alerts', !notifPrefs.call_gold_alerts)}
+              disabled={savingNotifs}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                notifPrefs.call_gold_alerts ? 'bg-[#c45a3b]' : 'bg-gray-200'
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  notifPrefs.call_gold_alerts ? 'translate-x-6' : 'translate-x-1'
+                }`}
+              />
+            </button>
+          </label>
+
+          <div className="pt-4 border-t border-[#e8e0d5]">
+            <label className="flex items-center justify-between cursor-pointer">
+              <div>
+                <p className="text-[#2d2a26] font-medium">Weekly digest</p>
+                <p className="text-sm text-[#8a8078]">Summary of new content available to repurpose</p>
+              </div>
+              <button
+                onClick={() => updateNotificationPref('weekly_digest', !notifPrefs.weekly_digest)}
+                disabled={savingNotifs}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                  notifPrefs.weekly_digest ? 'bg-[#c45a3b]' : 'bg-gray-200'
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    notifPrefs.weekly_digest ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </label>
+
+            {notifPrefs.weekly_digest && (
+              <div className="mt-4 pl-4 border-l-2 border-[#e8e0d5]">
+                <Label htmlFor="digestDay" className="text-sm text-[#8a8078]">Send on</Label>
+                <select
+                  id="digestDay"
+                  value={notifPrefs.digest_day}
+                  onChange={(e) => updateNotificationPref('digest_day', e.target.value)}
+                  disabled={savingNotifs}
+                  className="mt-1 h-9 px-3 border border-[#e8e0d5] rounded-md bg-white text-[#2d2a26] text-sm"
+                >
+                  <option value="monday">Monday</option>
+                  <option value="tuesday">Tuesday</option>
+                  <option value="wednesday">Wednesday</option>
+                  <option value="thursday">Thursday</option>
+                  <option value="friday">Friday</option>
+                </select>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

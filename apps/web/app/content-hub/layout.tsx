@@ -12,6 +12,7 @@ interface ContentHubLayoutProps {
 const navItems = [
   { href: '/content-hub', label: 'Dashboard', exact: true },
   { href: '/content-hub/repository', label: 'Repository' },
+  { href: '/content-hub/calls', label: 'Calls' },
   { href: '/content-hub/settings', label: 'Settings' },
 ]
 

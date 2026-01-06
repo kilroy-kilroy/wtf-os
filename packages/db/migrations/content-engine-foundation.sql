@@ -362,6 +362,36 @@ CREATE POLICY "Users can manage their own notification prefs" ON content_notific
   FOR ALL USING (user_id = auth.uid());
 
 -- ============================================================================
+-- NOTIFICATION LOG
+-- Track sent notifications
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS content_notifications (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  org_id UUID REFERENCES content_orgs(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  notification_type TEXT NOT NULL,
+  reference_id UUID,
+  sent_at TIMESTAMPTZ DEFAULT NOW(),
+  opened_at TIMESTAMPTZ,
+  clicked_at TIMESTAMPTZ
+);
+
+-- Indexes
+CREATE INDEX IF NOT EXISTS idx_content_notifications_user ON content_notifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_content_notifications_org ON content_notifications(org_id);
+CREATE INDEX IF NOT EXISTS idx_content_notifications_type ON content_notifications(notification_type);
+
+-- RLS
+ALTER TABLE content_notifications ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view their own notifications" ON content_notifications
+  FOR SELECT USING (user_id = auth.uid());
+
+CREATE POLICY "System can insert notifications" ON content_notifications
+  FOR INSERT WITH CHECK (true);
+
+-- ============================================================================
 -- HELPER FUNCTIONS
 -- ============================================================================
 

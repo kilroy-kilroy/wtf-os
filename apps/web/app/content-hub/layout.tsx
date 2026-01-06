@@ -19,60 +19,75 @@ const navItems = [
 export default function ContentHubLayout({ children }: ContentHubLayoutProps) {
   const pathname = usePathname()
 
-  // Check if we're in onboarding flow
+  // Check if we're in onboarding or login flow
   const isOnboarding = pathname?.includes('/onboarding')
-  if (isOnboarding) {
+  const isLogin = pathname?.includes('/login')
+  if (isOnboarding || isLogin) {
     return <>{children}</>
   }
 
   return (
-    <div className="min-h-screen bg-[#faf8f5]">
-      {/* Header */}
-      <header className="border-b border-[#e8e0d5] bg-white/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-8">
+    <div className="min-h-screen bg-[#F8F8F8]" style={{ fontFamily: "'Poppins', -apple-system, BlinkMacSystemFont, sans-serif" }}>
+      {/* Header with red accent bar */}
+      <header className="bg-white sticky top-0 z-50 border-b-[3px] border-[#E51B23]">
+        <div className="max-w-[1200px] mx-auto px-8 h-16 flex items-center justify-between">
+          {/* Logo */}
+          <div className="flex items-center gap-3">
             <Link href="/content-hub" className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-[#c45a3b] rounded-lg" />
-              <span className="text-lg font-medium text-[#2d2a26]">Content Hub</span>
-            </Link>
-            <nav className="hidden md:flex items-center gap-1">
-              {navItems.map((item) => {
-                const isActive = item.exact
-                  ? pathname === item.href
-                  : pathname?.startsWith(item.href)
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={cn(
-                      'px-4 py-2 rounded-lg text-sm font-medium transition-colors',
-                      isActive
-                        ? 'bg-[#c45a3b]/10 text-[#c45a3b]'
-                        : 'text-[#6b635a] hover:bg-[#f5f0e8] hover:text-[#2d2a26]'
-                    )}
-                  >
-                    {item.label}
-                  </Link>
-                )
-              })}
-            </nav>
-          </div>
-          <div className="flex items-center gap-4">
-            <Link
-              href="/content-hub/repository"
-              className="hidden sm:inline-flex items-center gap-2 px-4 py-2 bg-[#c45a3b] text-white rounded-lg text-sm font-medium hover:bg-[#b04a2d] transition-colors"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-              Add Content
+              {/* Red square with CH */}
+              <div className="w-9 h-9 bg-[#E51B23] rounded flex items-center justify-center">
+                <span
+                  className="text-white text-lg tracking-tight"
+                  style={{ fontFamily: "'Anton', sans-serif" }}
+                >
+                  CH
+                </span>
+              </div>
+              <span
+                className="text-[22px] text-black tracking-[0.5px]"
+                style={{ fontFamily: "'Anton', sans-serif" }}
+              >
+                CONTENT HUB
+              </span>
             </Link>
           </div>
+
+          {/* Nav Items */}
+          <nav className="hidden md:flex items-center gap-2">
+            {navItems.map((item) => {
+              const isActive = item.exact
+                ? pathname === item.href
+                : pathname?.startsWith(item.href)
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={cn(
+                    'px-5 py-2 rounded text-sm font-medium transition-all duration-150',
+                    isActive
+                      ? 'bg-[#E51B23] text-white'
+                      : 'text-black hover:bg-[#F8F8F8]'
+                  )}
+                >
+                  {item.label}
+                </Link>
+              )
+            })}
+          </nav>
+
+          {/* Add Content Button - Black */}
+          <Link
+            href="/content-hub/repository"
+            className="hidden sm:inline-flex items-center gap-2 px-6 py-2.5 bg-black text-white rounded text-sm font-semibold hover:bg-[#222] transition-all duration-150"
+          >
+            <span className="text-lg font-light">+</span>
+            Add Content
+          </Link>
         </div>
       </header>
 
       {/* Main content */}
-      <main className="max-w-7xl mx-auto px-6 py-8">
+      <main className="max-w-[1200px] mx-auto px-8 py-8">
         {children}
       </main>
     </div>

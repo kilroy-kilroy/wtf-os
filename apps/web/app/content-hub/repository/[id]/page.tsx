@@ -1,9 +1,8 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams } from 'next/navigation'
 import Link from 'next/link'
-import { Button } from '@/components/ui/button'
 
 interface ContentSource {
   id: string
@@ -24,11 +23,12 @@ interface RepurposeOutput {
   success: boolean
 }
 
-const theme4EColors: Record<string, string> = {
-  evidence: 'bg-blue-100 text-blue-700',
-  education: 'bg-green-100 text-green-700',
-  entertainment: 'bg-purple-100 text-purple-700',
-  envision: 'bg-amber-100 text-amber-700',
+// 4E Theme colors from style guide
+const theme4EColors: Record<string, { bg: string; text: string; primary: string }> = {
+  evidence: { bg: '#DBEAFE', text: '#1E40AF', primary: '#3B82F6' },
+  education: { bg: '#DCFCE7', text: '#166534', primary: '#10B981' },
+  entertainment: { bg: '#FEF3C7', text: '#92400E', primary: '#F59E0B' },
+  envision: { bg: '#FCE7F3', text: '#9D174D', primary: '#EC4899' },
 }
 
 const platformTabs = [
@@ -40,7 +40,6 @@ const platformTabs = [
 
 export default function ContentSourcePage() {
   const params = useParams()
-  const router = useRouter()
   const sourceId = params.id as string
 
   const [source, setSource] = useState<ContentSource | null>(null)
@@ -125,12 +124,14 @@ export default function ContentSourcePage() {
   if (loading) {
     return (
       <div className="animate-pulse">
-        <div className="h-8 bg-[#e8e0d5] rounded w-1/4 mb-4" />
-        <div className="bg-white rounded-xl p-6 border border-[#e8e0d5]">
-          <div className="h-6 bg-[#e8e0d5] rounded w-3/4 mb-4" />
-          <div className="h-4 bg-[#e8e0d5] rounded w-full mb-2" />
-          <div className="h-4 bg-[#e8e0d5] rounded w-full mb-2" />
-          <div className="h-4 bg-[#e8e0d5] rounded w-2/3" />
+        <div className="h-6 bg-[#E5E5E5] rounded w-32 mb-6" />
+        <div className="bg-white rounded-xl overflow-hidden border-t-4 border-[#E5E5E5]">
+          <div className="p-8">
+            <div className="h-8 bg-[#E5E5E5] rounded w-3/4 mb-4" />
+            <div className="h-4 bg-[#E5E5E5] rounded w-full mb-2" />
+            <div className="h-4 bg-[#E5E5E5] rounded w-full mb-2" />
+            <div className="h-4 bg-[#E5E5E5] rounded w-2/3" />
+          </div>
         </div>
       </div>
     )
@@ -139,8 +140,8 @@ export default function ContentSourcePage() {
   if (error && !source) {
     return (
       <div className="text-center py-12">
-        <p className="text-[#8a8078] mb-4">{error}</p>
-        <Link href="/content-hub/repository" className="text-[#c45a3b] hover:underline">
+        <p className="text-[#666666] mb-4">{error}</p>
+        <Link href="/content-hub/repository" className="text-[#E51B23] font-semibold hover:underline">
           Back to repository
         </Link>
       </div>
@@ -150,11 +151,11 @@ export default function ContentSourcePage() {
   if (!source) return null
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Back link */}
       <Link
         href="/content-hub/repository"
-        className="inline-flex items-center gap-2 text-[#8a8078] hover:text-[#2d2a26] transition-colors"
+        className="inline-flex items-center gap-2 text-[#666666] hover:text-black transition-colors text-sm"
       >
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -163,110 +164,136 @@ export default function ContentSourcePage() {
       </Link>
 
       {/* Source Content Card */}
-      <div className="bg-white rounded-xl border border-[#e8e0d5] overflow-hidden">
-        <div className="p-6 bg-gradient-to-r from-[#fdfcfa] to-[#faf8f5] border-b border-[#e8e0d5]">
-          {source.theme_4e && (
-            <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium mb-3 ${theme4EColors[source.theme_4e]}`}>
-              {source.theme_4e.charAt(0).toUpperCase() + source.theme_4e.slice(1)}
-            </span>
-          )}
-          <h1 className="text-2xl font-medium text-[#2d2a26] mb-2">
-            {source.title || `"${source.raw_content.slice(0, 60)}..."`}
-          </h1>
-          <p className="text-[#8a8078]">
-            {source.source_type || 'Original'} · {source.repurpose_count} repurpose{source.repurpose_count !== 1 ? 's' : ''}
-          </p>
-        </div>
-
-        <div className="p-6">
-          <p className="text-[#2d2a26] whitespace-pre-wrap leading-relaxed">
-            {source.synopsis || source.raw_content}
-          </p>
-          {source.source_url && (
-            <a
-              href={source.source_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-[#c45a3b] hover:underline mt-4 text-sm"
+      <div className="bg-white rounded-xl overflow-hidden border-t-4 border-[#E51B23] shadow-sm">
+        <div className="p-8">
+          {/* Header */}
+          <div className="mb-6">
+            {source.theme_4e && (
+              <span
+                className="inline-block px-3.5 py-1.5 rounded text-xs font-semibold mb-4"
+                style={{
+                  backgroundColor: theme4EColors[source.theme_4e]?.bg || '#F3F3F3',
+                  color: theme4EColors[source.theme_4e]?.text || '#666666',
+                }}
+              >
+                {source.theme_4e.charAt(0).toUpperCase() + source.theme_4e.slice(1)}
+              </span>
+            )}
+            <h1
+              className="text-[32px] text-black tracking-[0.5px] mb-2"
+              style={{ fontFamily: "'Anton', sans-serif" }}
             >
-              View original
-              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-              </svg>
-            </a>
-          )}
+              {(source.title || `"${source.raw_content.slice(0, 60)}..."`).toUpperCase()}
+            </h1>
+            <p className="text-[#666666] text-sm">
+              {source.source_type || 'original'} · {source.repurpose_count} repurpose{source.repurpose_count !== 1 ? 's' : ''}
+            </p>
+          </div>
+
+          {/* Synopsis Box with red left border */}
+          <div className="bg-[#F8F8F8] rounded-lg p-5 border-l-4 border-[#E51B23]">
+            <p className="text-black leading-relaxed">
+              {source.synopsis || source.raw_content}
+            </p>
+            {source.source_url && (
+              <a
+                href={source.source_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-[#E51B23] font-semibold hover:underline mt-3 text-sm"
+              >
+                View original →
+              </a>
+            )}
+          </div>
         </div>
       </div>
 
       {/* Repurpose Section */}
-      <div className="bg-white rounded-xl border border-[#e8e0d5] overflow-hidden">
-        <div className="p-6 border-b border-[#e8e0d5] flex items-center justify-between">
-          <h2 className="text-lg font-medium text-[#2d2a26]">Repurpose</h2>
-          <Button
+      <div className="bg-white rounded-xl overflow-hidden border-t-4 border-[#E51B23] shadow-sm">
+        <div className="p-6 border-b border-[#E5E5E5] flex items-center justify-between">
+          <h2
+            className="text-2xl text-black tracking-[0.5px]"
+            style={{ fontFamily: "'Anton', sans-serif" }}
+          >
+            REPURPOSE
+          </h2>
+          <button
             onClick={() => handleGenerate(['linkedin', 'twitter', 'email', 'pull_quotes'])}
             disabled={generating}
-            className="bg-[#c45a3b] hover:bg-[#b04a2d]"
+            className="px-6 py-2.5 bg-[#E51B23] text-white rounded text-sm font-semibold hover:bg-[#CC171F] disabled:opacity-50 transition-colors"
           >
             {generating ? 'Generating...' : 'Generate All'}
-          </Button>
+          </button>
         </div>
 
         {/* Platform Tabs */}
-        <div className="flex border-b border-[#e8e0d5] bg-[#fdfcfa]">
-          {platformTabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActivePlatform(tab.id)}
-              className={`flex-1 px-4 py-4 text-sm font-medium transition-colors ${
-                activePlatform === tab.id
-                  ? 'bg-white border-b-2 border-[#c45a3b] text-[#2d2a26]'
-                  : 'text-[#8a8078] hover:text-[#2d2a26]'
-              }`}
-            >
-              <span className="mr-2">{tab.icon}</span>
-              {tab.label}
-              {outputs[tab.id] && (
-                <span className="ml-2 w-2 h-2 bg-green-500 rounded-full inline-block" />
-              )}
-            </button>
-          ))}
+        <div className="flex border-b-2 border-[#E5E5E5]">
+          {platformTabs.map((tab) => {
+            const isActive = activePlatform === tab.id
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActivePlatform(tab.id)}
+                className="flex items-center gap-2 px-6 py-4 text-sm transition-colors"
+                style={{
+                  color: isActive ? 'black' : '#666666',
+                  fontWeight: isActive ? 600 : 400,
+                  borderBottom: isActive ? '3px solid #E51B23' : '3px solid transparent',
+                  marginBottom: '-2px',
+                }}
+              >
+                <span>{tab.icon}</span>
+                {tab.label}
+                {outputs[tab.id] && (
+                  <span className="w-2 h-2 bg-[#22C55E] rounded-full" />
+                )}
+              </button>
+            )
+          })}
         </div>
 
         {/* Output Content */}
         <div className="p-6">
           {outputs[activePlatform] ? (
             <div>
-              <div className="bg-[#faf8f5] rounded-xl p-6 border border-[#e8e0d5]">
-                <p className="text-[#2d2a26] whitespace-pre-wrap leading-relaxed">
+              <div className="bg-[#F8F8F8] rounded-lg p-6">
+                <p className="text-black whitespace-pre-wrap leading-relaxed">
                   {outputs[activePlatform]}
                 </p>
               </div>
               <div className="flex items-center justify-between mt-4">
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={() => handleGenerate([activePlatform])}>
-                    Regenerate
-                  </Button>
-                </div>
-                <Button
+                <button
+                  onClick={() => handleGenerate([activePlatform])}
+                  disabled={generating}
+                  className="px-5 py-2.5 bg-white border-2 border-black text-black rounded text-sm font-semibold hover:bg-[#F8F8F8] disabled:opacity-50 transition-colors"
+                >
+                  {generating ? 'Generating...' : 'Regenerate'}
+                </button>
+                <button
                   onClick={handleCopy}
-                  className={copied ? 'bg-green-600' : 'bg-[#c45a3b] hover:bg-[#b04a2d]'}
+                  className={`px-6 py-2.5 rounded text-sm font-semibold transition-colors ${
+                    copied
+                      ? 'bg-[#22C55E] text-white'
+                      : 'bg-[#E51B23] text-white hover:bg-[#CC171F]'
+                  }`}
                 >
                   {copied ? 'Copied!' : 'Copy to Clipboard'}
-                </Button>
+                </button>
               </div>
             </div>
           ) : (
-            <div className="text-center py-12">
-              <p className="text-[#8a8078] mb-4">
+            <div className="text-center py-12 bg-[#F8F8F8] rounded-lg">
+              <p className="text-[#666666] mb-4">
                 No {platformTabs.find(t => t.id === activePlatform)?.label} content generated yet
               </p>
-              <Button
+              <button
                 onClick={() => handleGenerate([activePlatform])}
                 disabled={generating}
-                variant="outline"
+                className="px-6 py-3 bg-white border-2 border-black text-black rounded text-sm font-semibold hover:bg-[#F8F8F8] disabled:opacity-50 transition-colors"
               >
                 {generating ? 'Generating...' : `Generate ${platformTabs.find(t => t.id === activePlatform)?.label}`}
-              </Button>
+              </button>
             </div>
           )}
         </div>

@@ -78,15 +78,12 @@ CREATE POLICY "Service role full access" ON public.call_lab_reports
     (select auth.role()) = 'service_role'
   );
 
--- conversation_patterns
+-- conversation_patterns (service role only - table schema unknown)
 ALTER TABLE public.conversation_patterns ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Users read own conversation patterns" ON public.conversation_patterns;
 DROP POLICY IF EXISTS "Service role full access" ON public.conversation_patterns;
-CREATE POLICY "Users read own conversation patterns" ON public.conversation_patterns
-  FOR SELECT USING (
-    user_id = (select auth.uid())
-  );
-CREATE POLICY "Service role full access" ON public.conversation_patterns
+DROP POLICY IF EXISTS "Service role full access conversation_patterns" ON public.conversation_patterns;
+CREATE POLICY "Service role full access conversation_patterns" ON public.conversation_patterns
   FOR ALL USING (
     (select auth.role()) = 'service_role'
   );

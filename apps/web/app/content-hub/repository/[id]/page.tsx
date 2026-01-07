@@ -24,12 +24,6 @@ interface SavedRepurpose {
   platform: string
   content: string
   created_at: string
-  voice_profile?: {
-    id: string
-    user_id: string
-    title: string | null
-    full_name: string | null
-  } | null
 }
 
 interface RepurposeOutput {
@@ -167,9 +161,9 @@ export default function ContentSourcePage() {
     setTimeout(() => setCopied(false), 2000)
   }
 
-  // Check if a repurpose belongs to the current user
+  // Check if a repurpose belongs to the current user (compare voice_profile_id)
   function isOwnRepurpose(repurpose: SavedRepurpose): boolean {
-    return repurpose.voice_profile?.id === currentUserId
+    return repurpose.voice_profile_id === currentUserId
   }
 
   // Handle viewing a previous version in the modal
@@ -335,11 +329,11 @@ export default function ContentSourcePage() {
                 {/* Author and date info */}
                 <div className="flex items-center justify-between mb-4 pb-3 border-b border-[#E5E5E5]">
                   <div className="flex items-center gap-2 text-sm text-[#666666]">
-                    <span className="w-6 h-6 rounded-full bg-[#E51B23] text-white flex items-center justify-center text-xs font-bold">
-                      {latestRepurpose?.voice_profile?.full_name?.[0] || latestRepurpose?.voice_profile?.title?.[0] || 'U'}
+                    <span className={`w-6 h-6 rounded-full ${latestRepurpose && isOwnRepurpose(latestRepurpose) ? 'bg-[#E51B23]' : 'bg-[#666666]'} text-white flex items-center justify-center text-xs font-bold`}>
+                      {latestRepurpose && isOwnRepurpose(latestRepurpose) ? 'Y' : 'T'}
                     </span>
                     <span>
-                      {latestRepurpose?.voice_profile?.full_name || latestRepurpose?.voice_profile?.title || 'Team member'}
+                      {latestRepurpose && isOwnRepurpose(latestRepurpose) ? 'You' : 'Team member'}
                     </span>
                     <span className="text-[#999999]">·</span>
                     <span className="text-[#999999]">{latestRepurpose && formatDate(latestRepurpose.created_at)}</span>
@@ -401,11 +395,11 @@ export default function ContentSourcePage() {
                       >
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-2 text-xs text-[#999999]">
-                            <span className="w-5 h-5 rounded-full bg-[#E5E5E5] text-[#666666] flex items-center justify-center text-[10px] font-bold">
-                              {repurpose.voice_profile?.full_name?.[0] || repurpose.voice_profile?.title?.[0] || 'U'}
+                            <span className={`w-5 h-5 rounded-full ${isOwnRepurpose(repurpose) ? 'bg-[#E51B23] text-white' : 'bg-[#E5E5E5] text-[#666666]'} flex items-center justify-center text-[10px] font-bold`}>
+                              {isOwnRepurpose(repurpose) ? 'Y' : 'T'}
                             </span>
                             <span>
-                              {repurpose.voice_profile?.full_name || repurpose.voice_profile?.title || 'Team member'}
+                              {isOwnRepurpose(repurpose) ? 'You' : 'Team member'}
                             </span>
                             <span>·</span>
                             <span>{formatDate(repurpose.created_at)}</span>
@@ -462,11 +456,11 @@ export default function ContentSourcePage() {
                     {platformTabs.find(t => t.id === selectedRepurpose.platform)?.label?.toUpperCase() || 'CONTENT'}
                   </h2>
                   <div className="flex items-center gap-2 text-sm text-[#666666] mt-1">
-                    <span className="w-6 h-6 rounded-full bg-[#E51B23] text-white flex items-center justify-center text-xs font-bold">
-                      {selectedRepurpose.voice_profile?.full_name?.[0] || selectedRepurpose.voice_profile?.title?.[0] || 'U'}
+                    <span className={`w-6 h-6 rounded-full ${isOwnRepurpose(selectedRepurpose) ? 'bg-[#E51B23]' : 'bg-[#666666]'} text-white flex items-center justify-center text-xs font-bold`}>
+                      {isOwnRepurpose(selectedRepurpose) ? 'Y' : 'T'}
                     </span>
                     <span>
-                      {selectedRepurpose.voice_profile?.full_name || selectedRepurpose.voice_profile?.title || 'Team member'}
+                      {isOwnRepurpose(selectedRepurpose) ? 'You' : 'Team member'}
                     </span>
                     <span className="text-[#999999]">·</span>
                     <span className="text-[#999999]">{formatDate(selectedRepurpose.created_at)}</span>

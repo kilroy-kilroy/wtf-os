@@ -19,37 +19,18 @@ export async function GET(
     const serviceClient = createServerClient()
     const sourceId = params.id
 
-    // Fetch repurposes for this source with voice profile info
+    // Fetch repurposes for this source
+    // Note: voice_profiles doesn't have title/full_name, so we query repurposes directly
     const { data: repurposes, error } = await (serviceClient as any)
       .from('repurposes')
-      .select(`
-        *,
-        voice_profile:voice_profiles(
-          id,
-          user_id,
-          title,
-          full_name
-        )
-      `)
+      .select('*')
       .eq('source_id', sourceId)
       .eq('visibility', 'team')
       .order('created_at', { ascending: false })
 
     if (error) {
       console.error('Error fetching repurposes:', error)
-      // Fall back to simple query without user join
-      const { data: simpleRepurposes, error: simpleError } = await (serviceClient as any)
-        .from('repurposes')
-        .select('*')
-        .eq('source_id', sourceId)
-        .eq('visibility', 'team')
-        .order('created_at', { ascending: false })
-
-      if (simpleError) {
-        throw simpleError
-      }
-
-      return NextResponse.json({ repurposes: simpleRepurposes || [] })
+      throw error
     }
 
     return NextResponse.json({ repurposes: repurposes || [] })

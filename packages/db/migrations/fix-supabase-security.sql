@@ -4,12 +4,41 @@
 -- ============================================
 
 -- ============================================
--- 1. DROP SECURITY DEFINER VIEWS (if they exist)
--- These views referenced columns that don't exist
+-- 1. FIX SECURITY DEFINER VIEWS
+-- Recreate with SECURITY INVOKER to use caller's permissions
 -- ============================================
 
 DROP VIEW IF EXISTS public.instant_scenario_stats;
 DROP VIEW IF EXISTS public.instant_report_stats;
+
+-- Recreate instant_report_stats with SECURITY INVOKER
+CREATE OR REPLACE VIEW public.instant_report_stats
+WITH (security_invoker = true)
+AS
+SELECT
+  DATE(created_at) as date,
+  COUNT(*) as total_reports,
+  COUNT(DISTINCT email) as unique_leads,
+  AVG(score) as avg_score,
+  COUNT(CASE WHEN email IS NOT NULL THEN 1 END) as emails_captured,
+  ROUND(COUNT(CASE WHEN email IS NOT NULL THEN 1 END)::NUMERIC / NULLIF(COUNT(*)::NUMERIC, 0) * 100, 2) as capture_rate
+FROM instant_reports
+GROUP BY DATE(created_at)
+ORDER BY date DESC;
+
+-- Recreate instant_scenario_stats with SECURITY INVOKER
+CREATE OR REPLACE VIEW public.instant_scenario_stats
+WITH (security_invoker = true)
+AS
+SELECT
+  scenario_type,
+  COUNT(*) as total,
+  AVG(score) as avg_score,
+  COUNT(CASE WHEN email IS NOT NULL THEN 1 END) as emails_captured
+FROM instant_reports
+WHERE scenario_type IS NOT NULL
+GROUP BY scenario_type
+ORDER BY total DESC;
 
 -- ============================================
 -- 2. ENABLE RLS ON TABLES MISSING IT
@@ -17,6 +46,7 @@ DROP VIEW IF EXISTS public.instant_report_stats;
 
 -- team_members (service role only - schema may vary)
 ALTER TABLE public.team_members ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Service role full access team_members" ON public.team_members;
 CREATE POLICY "Service role full access team_members" ON public.team_members
   FOR ALL USING (
     (select auth.role()) = 'service_role'
@@ -24,6 +54,8 @@ CREATE POLICY "Service role full access team_members" ON public.team_members
 
 -- call_followups
 ALTER TABLE public.call_followups ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Users read own call followups" ON public.call_followups;
+DROP POLICY IF EXISTS "Service role full access" ON public.call_followups;
 CREATE POLICY "Users read own call followups" ON public.call_followups
   FOR SELECT USING (
     user_id = (select auth.uid())
@@ -35,6 +67,8 @@ CREATE POLICY "Service role full access" ON public.call_followups
 
 -- call_lab_reports
 ALTER TABLE public.call_lab_reports ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Users read own call lab reports" ON public.call_lab_reports;
+DROP POLICY IF EXISTS "Service role full access" ON public.call_lab_reports;
 CREATE POLICY "Users read own call lab reports" ON public.call_lab_reports
   FOR SELECT USING (
     user_id = (select auth.uid())
@@ -46,6 +80,8 @@ CREATE POLICY "Service role full access" ON public.call_lab_reports
 
 -- conversation_patterns
 ALTER TABLE public.conversation_patterns ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Users read own conversation patterns" ON public.conversation_patterns;
+DROP POLICY IF EXISTS "Service role full access" ON public.conversation_patterns;
 CREATE POLICY "Users read own conversation patterns" ON public.conversation_patterns
   FOR SELECT USING (
     user_id = (select auth.uid())
@@ -57,6 +93,8 @@ CREATE POLICY "Service role full access" ON public.conversation_patterns
 
 -- coaching_reports
 ALTER TABLE public.coaching_reports ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Users read own coaching reports" ON public.coaching_reports;
+DROP POLICY IF EXISTS "Service role full access" ON public.coaching_reports;
 CREATE POLICY "Users read own coaching reports" ON public.coaching_reports
   FOR SELECT USING (
     user_id = (select auth.uid())

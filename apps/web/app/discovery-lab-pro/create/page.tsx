@@ -357,24 +357,50 @@ export default function DiscoveryLabProCreatePage() {
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-8">
-                {/* Your Info - Pre-filled and read-only for name/email/company */}
+                {/* Your Info - Editable */}
                 <div className="space-y-4">
                   <ConsoleHeading level={3} variant="yellow">
                     YOUR INFO
                   </ConsoleHeading>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="bg-[#1a1a1a] border border-[#333] px-4 py-3">
-                      <div className="text-[#666] text-xs font-poppins mb-1">NAME</div>
-                      <div className="text-white font-poppins">{formData.requestor_name || 'Not set'}</div>
-                    </div>
-                    <div className="bg-[#1a1a1a] border border-[#333] px-4 py-3">
-                      <div className="text-[#666] text-xs font-poppins mb-1">EMAIL</div>
-                      <div className="text-white font-poppins truncate">{formData.requestor_email || 'Not set'}</div>
-                    </div>
-                    <div className="bg-[#1a1a1a] border border-[#333] px-4 py-3">
-                      <div className="text-[#666] text-xs font-poppins mb-1">COMPANY</div>
-                      <div className="text-white font-poppins">{formData.requestor_company || 'Not set'}</div>
-                    </div>
+                    <ConsoleInput
+                      type="text"
+                      placeholder="Your name"
+                      label="NAME *"
+                      required
+                      value={formData.requestor_name}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          requestor_name: (e.target as HTMLInputElement).value,
+                        })
+                      }
+                    />
+                    <ConsoleInput
+                      type="email"
+                      placeholder="your@email.com"
+                      label="EMAIL *"
+                      required
+                      value={formData.requestor_email}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          requestor_email: (e.target as HTMLInputElement).value,
+                        })
+                      }
+                    />
+                    <ConsoleInput
+                      type="text"
+                      placeholder="Your company"
+                      label="COMPANY"
+                      value={formData.requestor_company}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          requestor_company: (e.target as HTMLInputElement).value,
+                        })
+                      }
+                    />
                   </div>
                 </div>
 

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 
 const PUBLIC_EMAIL_DOMAINS = [
   'gmail.com', 'googlemail.com', 'yahoo.com', 'yahoo.co.uk',
@@ -34,6 +35,16 @@ const CRM_OPTIONS = [
   'None yet', 'HubSpot', 'Salesforce', 'Pipedrive', 'Close', 'Copper', 'Other'
 ];
 
+const REVENUE_OPTIONS = [
+  'Pre-revenue',
+  '$0 - $100K',
+  '$100K - $500K',
+  '$500K - $1M',
+  '$1M - $5M',
+  '$5M - $10M',
+  '$10M+'
+];
+
 export default function ProfileSetupPage() {
   const [formData, setFormData] = useState({
     fullName: '',
@@ -43,6 +54,7 @@ export default function ProfileSetupPage() {
     companyName: '',
     companySize: '',
     salesTeamSize: '',
+    companyRevenue: '',
     crm: '',
   });
 
@@ -146,6 +158,7 @@ export default function ProfileSetupPage() {
             primary_domain: domain,
             company_size: formData.companySize,
             sales_team_size: formData.salesTeamSize,
+            company_revenue: formData.companyRevenue,
             crm: formData.crm,
             personal: false,
             mode: mode,
@@ -177,6 +190,7 @@ export default function ProfileSetupPage() {
             name: formData.companyName,
             company_size: formData.companySize,
             sales_team_size: formData.salesTeamSize,
+            company_revenue: formData.companyRevenue,
             crm: formData.crm,
             personal: true,
             mode: mode,
@@ -249,11 +263,15 @@ export default function ProfileSetupPage() {
       <div className="relative z-10 max-w-xl mx-auto">
         {/* Header */}
         <div className="text-center mb-10">
-          <h1 className="font-anton text-[clamp(32px,5vw,48px)] tracking-[3px] mb-3 leading-none uppercase">
-            WELCOME TO <span className="text-[#E51B23]">CALL LAB PRO</span>
-          </h1>
+          <Image
+            src="/logos/salesosdemandossqtransparent.png"
+            alt="SalesOS + DemandOS"
+            width={140}
+            height={140}
+            className="mx-auto mb-4"
+          />
           <p className="text-[#B3B3B3] text-lg">
-            Let&apos;s set up your profile so we can track the right calls, teams, and deals.
+            Let&apos;s set up your profile to get started.
           </p>
         </div>
 
@@ -383,6 +401,22 @@ export default function ProfileSetupPage() {
                       ))}
                     </select>
                   </div>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] tracking-[2px] text-[#666666] mb-2 uppercase">
+                    Company Revenue
+                  </label>
+                  <select
+                    value={formData.companyRevenue}
+                    onChange={(e) => setFormData({ ...formData, companyRevenue: e.target.value })}
+                    className="w-full bg-black border border-[#333333] text-white px-4 py-3 text-base focus:border-[#E51B23] focus:outline-none transition-colors rounded appearance-none cursor-pointer"
+                  >
+                    <option value="">Select</option>
+                    {REVENUE_OPTIONS.map(revenue => (
+                      <option key={revenue} value={revenue}>{revenue}</option>
+                    ))}
+                  </select>
                 </div>
 
                 <div>

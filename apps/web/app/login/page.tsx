@@ -44,7 +44,7 @@ export default function LoginPage() {
           },
         });
         if (error) throw error;
-        setError('Check your email for the confirmation link.');
+        setError('Check your email for the confirmation link. If you don\'t see it, check your spam folder.');
       } else {
         const { data: authData, error } = await supabase.auth.signInWithPassword({
           email,

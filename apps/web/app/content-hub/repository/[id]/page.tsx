@@ -20,10 +20,11 @@ interface SavedRepurpose {
   id: string
   source_id: string
   user_id: string | null
+  voice_profile_id: string | null
   platform: string
-  output_content: string
+  content: string
   created_at: string
-  user?: {
+  voice_profile?: {
     id: string
     user_id: string
     title: string | null
@@ -158,7 +159,7 @@ export default function ContentSourcePage() {
   }
 
   async function handleCopy(content?: string) {
-    const textToCopy = content || latestRepurpose?.output_content
+    const textToCopy = content || latestRepurpose?.content
     if (!textToCopy) return
 
     await navigator.clipboard.writeText(textToCopy)
@@ -168,7 +169,7 @@ export default function ContentSourcePage() {
 
   // Check if a repurpose belongs to the current user
   function isOwnRepurpose(repurpose: SavedRepurpose): boolean {
-    return repurpose.user?.id === currentUserId
+    return repurpose.voice_profile?.id === currentUserId
   }
 
   // Handle viewing a previous version in the modal
@@ -335,10 +336,10 @@ export default function ContentSourcePage() {
                 <div className="flex items-center justify-between mb-4 pb-3 border-b border-[#E5E5E5]">
                   <div className="flex items-center gap-2 text-sm text-[#666666]">
                     <span className="w-6 h-6 rounded-full bg-[#E51B23] text-white flex items-center justify-center text-xs font-bold">
-                      {latestRepurpose?.user?.full_name?.[0] || latestRepurpose?.user?.title?.[0] || 'U'}
+                      {latestRepurpose?.voice_profile?.full_name?.[0] || latestRepurpose?.voice_profile?.title?.[0] || 'U'}
                     </span>
                     <span>
-                      {latestRepurpose?.user?.full_name || latestRepurpose?.user?.title || 'Team member'}
+                      {latestRepurpose?.voice_profile?.full_name || latestRepurpose?.voice_profile?.title || 'Team member'}
                     </span>
                     <span className="text-[#999999]">·</span>
                     <span className="text-[#999999]">{latestRepurpose && formatDate(latestRepurpose.created_at)}</span>
@@ -351,7 +352,7 @@ export default function ContentSourcePage() {
                 </div>
 
                 <p className="text-black whitespace-pre-wrap leading-relaxed">
-                  {latestRepurpose?.output_content}
+                  {latestRepurpose?.content}
                 </p>
               </div>
 
@@ -401,10 +402,10 @@ export default function ContentSourcePage() {
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-2 text-xs text-[#999999]">
                             <span className="w-5 h-5 rounded-full bg-[#E5E5E5] text-[#666666] flex items-center justify-center text-[10px] font-bold">
-                              {repurpose.user?.full_name?.[0] || repurpose.user?.title?.[0] || 'U'}
+                              {repurpose.voice_profile?.full_name?.[0] || repurpose.voice_profile?.title?.[0] || 'U'}
                             </span>
                             <span>
-                              {repurpose.user?.full_name || repurpose.user?.title || 'Team member'}
+                              {repurpose.voice_profile?.full_name || repurpose.voice_profile?.title || 'Team member'}
                             </span>
                             <span>·</span>
                             <span>{formatDate(repurpose.created_at)}</span>
@@ -412,7 +413,7 @@ export default function ContentSourcePage() {
                           <span className="text-xs text-[#E51B23] font-medium">View full →</span>
                         </div>
                         <p className="text-sm text-[#666666] line-clamp-2">
-                          {repurpose.output_content}
+                          {repurpose.content}
                         </p>
                       </button>
                     ))}
@@ -462,10 +463,10 @@ export default function ContentSourcePage() {
                   </h2>
                   <div className="flex items-center gap-2 text-sm text-[#666666] mt-1">
                     <span className="w-6 h-6 rounded-full bg-[#E51B23] text-white flex items-center justify-center text-xs font-bold">
-                      {selectedRepurpose.user?.full_name?.[0] || selectedRepurpose.user?.title?.[0] || 'U'}
+                      {selectedRepurpose.voice_profile?.full_name?.[0] || selectedRepurpose.voice_profile?.title?.[0] || 'U'}
                     </span>
                     <span>
-                      {selectedRepurpose.user?.full_name || selectedRepurpose.user?.title || 'Team member'}
+                      {selectedRepurpose.voice_profile?.full_name || selectedRepurpose.voice_profile?.title || 'Team member'}
                     </span>
                     <span className="text-[#999999]">·</span>
                     <span className="text-[#999999]">{formatDate(selectedRepurpose.created_at)}</span>
@@ -484,7 +485,7 @@ export default function ContentSourcePage() {
               {/* Content */}
               <div className="bg-[#F8F8F8] rounded-lg p-6 mb-6">
                 <p className="text-black whitespace-pre-wrap leading-relaxed">
-                  {selectedRepurpose.output_content}
+                  {selectedRepurpose.content}
                 </p>
               </div>
 
@@ -505,7 +506,7 @@ export default function ContentSourcePage() {
                   )}
                 </div>
                 <button
-                  onClick={() => handleCopy(selectedRepurpose.output_content)}
+                  onClick={() => handleCopy(selectedRepurpose.content)}
                   className={`px-6 py-2.5 rounded text-sm font-semibold transition-colors ${
                     copied
                       ? 'bg-[#22C55E] text-white'

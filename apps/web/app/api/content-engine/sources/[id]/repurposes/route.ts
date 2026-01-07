@@ -19,12 +19,12 @@ export async function GET(
     const serviceClient = createServerClient()
     const sourceId = params.id
 
-    // Fetch repurposes for this source with user info
+    // Fetch repurposes for this source with voice profile info
     const { data: repurposes, error } = await (serviceClient as any)
       .from('repurposes')
       .select(`
         *,
-        user:voice_profiles!repurposes_user_id_fkey(
+        voice_profile:voice_profiles(
           id,
           user_id,
           title,

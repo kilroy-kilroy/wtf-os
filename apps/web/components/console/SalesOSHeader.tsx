@@ -1,4 +1,5 @@
 import React from 'react';
+import Image from 'next/image';
 
 export interface SalesOSHeaderProps {
   version?: string;
@@ -25,10 +26,13 @@ export function SalesOSHeader({
   return (
     <div className="flex items-start justify-between mb-8">
       <div>
-        <div className="font-anton text-3xl md:text-4xl uppercase tracking-wide">
-          <span className="text-white">SALES</span>
-          <span className="text-[#E51B23]">OS</span>
-        </div>
+        <Image
+          src="/logos/salesosdemandossqtransparent.png"
+          alt="SalesOS"
+          width={120}
+          height={120}
+          className="mb-2"
+        />
         <div className="font-anton text-sm uppercase tracking-wide mt-1">
           <span className="text-[#FFDE59]">{productName}</span>
           {productVariant && (

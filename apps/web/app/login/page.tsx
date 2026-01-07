@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -105,13 +106,14 @@ export default function LoginPage() {
       <div className="relative z-10 w-full max-w-md px-5">
         {/* Header */}
         <div className="text-center mb-10">
-          <div className="text-[9px] tracking-[2px] text-[#666666] mb-1.5">
-            SYSTEM STATUS: <span className="text-[#E51B23]">●</span> SECURE
-          </div>
-          <h1 className="font-anton text-[clamp(36px,7vw,56px)] tracking-[3px] my-0 mb-3 leading-none uppercase">
-            CALL LAB <span className="text-[#E51B23]">PRO</span>
-          </h1>
-          <div className="text-[clamp(12px,1.5vw,16px)] text-[#FFDE59] tracking-[2px]">
+          <Image
+            src="/logos/salesosdemandossqtransparent.png"
+            alt="SalesOS"
+            width={140}
+            height={140}
+            className="mx-auto mb-4"
+          />
+          <div className="text-[clamp(12px,1.5vw,16px)] text-[#FFDE59] tracking-[2px] font-anton">
             {mode === 'login' ? 'WELCOME BACK' : 'CREATE YOUR ACCOUNT'}
           </div>
         </div>

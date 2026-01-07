@@ -6,9 +6,10 @@ import { SupabaseClient } from '@supabase/supabase-js';
  * CANONICAL MODEL:
  *   Email → Per-Product Subscription Tiers → Show Appropriate Labs
  *
- * Access is granted if EITHER:
+ * Access is granted if ANY of these are true:
  *   1. User has personal pro tier (users.call_lab_tier = 'pro')
  *   2. User belongs to an agency with pro tier (agencies.call_lab_tier = 'pro')
+ *   3. User has active Stripe subscription (subscriptions table by email)
  *
  * Team subscriptions: When an agency has pro, all members get pro access
  * (up to max_seats limit, enforced at invite time)
@@ -20,7 +21,7 @@ export interface SubscriptionStatus {
   hasDiscoveryLabPro: boolean;
 
   // Source of access
-  source: 'personal' | 'team' | 'none';
+  source: 'personal' | 'team' | 'stripe' | 'none';
   agencyName?: string;
 
   // Raw tier values
@@ -34,7 +35,7 @@ export interface SubscriptionStatus {
 /**
  * Get subscription status for a user
  *
- * Checks both personal tiers and agency (team) tiers.
+ * Checks personal tiers, agency (team) tiers, and Stripe subscriptions.
  */
 export async function getSubscriptionStatus(
   supabase: SupabaseClient,
@@ -104,6 +105,28 @@ export async function getSubscriptionStatus(
         email,
       };
     }
+  }
+
+  // Check Stripe subscriptions table by email
+  const { data: stripeSubscription } = await supabase
+    .from('subscriptions')
+    .select('status, plan_type')
+    .eq('customer_email', email)
+    .in('status', ['active', 'trialing'])
+    .limit(1)
+    .single();
+
+  if (stripeSubscription) {
+    // Has active Stripe subscription - grant Discovery Lab Pro access
+    // (Discovery Lab Pro is the product sold via Stripe checkout)
+    return {
+      hasCallLabPro: false,
+      hasDiscoveryLabPro: true,
+      source: 'stripe',
+      callLabTier: personalCallLabTier,
+      discoveryLabTier: 'pro',
+      email,
+    };
   }
 
   // No pro access

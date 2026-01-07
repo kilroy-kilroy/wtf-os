@@ -1,15 +1,19 @@
 import Link from 'next/link';
+import Image from 'next/image';
 
 export default function Home() {
   return (
     <main className="min-h-screen flex items-center justify-center bg-black">
       <div className="text-center space-y-8 p-8">
         {/* Logo */}
-        <div>
-          <h1 className="font-anton text-6xl md:text-7xl tracking-wide uppercase">
-            <span className="text-white">SALES</span>
-            <span className="text-[#E51B23]">OS</span>
-          </h1>
+        <div className="flex justify-center">
+          <Image
+            src="/logos/salesosdemandossqtransparent.png"
+            alt="SalesOS + DemandOS"
+            width={180}
+            height={180}
+            priority
+          />
         </div>
 
         {/* Tagline */}

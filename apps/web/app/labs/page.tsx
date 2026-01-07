@@ -134,6 +134,12 @@ export default async function LabsPage() {
               >
                 Dashboard
               </Link>
+              <Link
+                href="/settings"
+                className="font-anton text-xs uppercase border border-[#333] text-white px-3 py-1 rounded hover:border-[#E51B23] transition"
+              >
+                Settings
+              </Link>
             </div>
           </div>
         </div>
@@ -235,6 +241,12 @@ export default async function LabsPage() {
             className="text-sm text-[#666] hover:text-white transition"
           >
             View Dashboard
+          </Link>
+          <Link
+            href="/settings"
+            className="text-sm text-[#666] hover:text-white transition"
+          >
+            Settings
           </Link>
           {!hasCallLabPro && !hasDiscoveryLabPro && (
             <Link

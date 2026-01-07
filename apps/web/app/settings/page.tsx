@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { getSubscriptionStatus } from '@/lib/subscription';
+import ChangePasswordButton from '@/components/ChangePasswordButton';
 
 export default async function SettingsPage() {
   const supabase = createServerComponentClient({ cookies });
@@ -113,15 +114,7 @@ export default async function SettingsPage() {
               <label className="block text-xs text-[#666] uppercase tracking-wider mb-2">
                 Password
               </label>
-              <button
-                className="border border-[#333] rounded px-4 py-2 text-white hover:border-[#E51B23] transition text-sm"
-                onClick={() => {}}
-              >
-                Change Password
-              </button>
-              <p className="text-xs text-[#666] mt-1">
-                You will receive an email to reset your password.
-              </p>
+              <ChangePasswordButton email={user.email || ''} />
             </div>
           </div>
         </div>

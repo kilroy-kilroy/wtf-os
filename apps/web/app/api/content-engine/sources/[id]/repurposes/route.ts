@@ -20,12 +20,12 @@ export async function GET(
     const sourceId = params.id
 
     // Fetch repurposes for this source
-    // Note: voice_profiles doesn't have title/full_name, so we query repurposes directly
+    // Include: all team-visible repurposes + user's own drafts
     const { data: repurposes, error } = await (serviceClient as any)
       .from('repurposes')
       .select('*')
       .eq('source_id', sourceId)
-      .eq('visibility', 'team')
+      .or(`visibility.eq.team,user_id.eq.${user.id}`)
       .order('created_at', { ascending: false })
 
     if (error) {

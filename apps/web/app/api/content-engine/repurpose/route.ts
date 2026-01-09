@@ -113,7 +113,7 @@ export async function POST(request: NextRequest) {
             content = response.content
           }
 
-          // Save the repurpose
+          // Save the repurpose (visibility: 'team' so teammates can see and learn from it)
           const repurpose = await createRepurpose(serviceClient, {
             source_id: source.id,
             user_id: user.id,
@@ -121,7 +121,7 @@ export async function POST(request: NextRequest) {
             content,
             voice_profile_id: body.voice_profile_id || undefined,
             tone_adjustments: toneAdjustments,
-            visibility: 'draft',
+            visibility: 'team',
           })
 
           return {

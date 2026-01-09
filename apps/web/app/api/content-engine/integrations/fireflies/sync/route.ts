@@ -134,6 +134,9 @@ export async function POST(request: NextRequest) {
         .join('\n') || ''
 
       // Create call import
+      // Note: Fireflies returns date as Unix timestamp in milliseconds
+      const callDate = t.date ? new Date(Number(t.date)).toISOString() : null
+
       const callImport = await createCallImport(serviceClient, {
         org_id: org.id,
         user_id: user.id,
@@ -143,7 +146,7 @@ export async function POST(request: NextRequest) {
         title: t.title,
         participants: t.participants || [],
         duration_seconds: t.duration ? Math.round(t.duration / 1000) : null,
-        call_date: t.date,
+        call_date: callDate,
         transcript: transcriptText,
         summary: t.summary?.overview || null,
         processing_status: 'pending',

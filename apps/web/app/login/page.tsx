@@ -262,8 +262,15 @@ export default function LoginPage() {
         </div>
 
         {/* Footer */}
-        <div className="mt-8 text-center text-[13px] text-[#666666]">
-          Questions? Email <span className="text-[#FFDE59]">tim@timkilroy.com</span>
+        <div className="mt-8 text-center text-[13px] text-[#666666] space-y-2">
+          <div>
+            Questions? Email <span className="text-[#FFDE59]">tim@timkilroy.com</span>
+          </div>
+          <div className="flex justify-center gap-4">
+            <a href="/privacy" className="hover:text-[#FFDE59] transition-colors">Privacy</a>
+            <span>·</span>
+            <a href="/terms" className="hover:text-[#FFDE59] transition-colors">Terms</a>
+          </div>
         </div>
       </div>
     </div>

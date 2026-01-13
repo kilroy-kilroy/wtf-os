@@ -10,24 +10,69 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [mode, setMode] = useState<'login' | 'signup'>('login');
+  const [mode, setMode] = useState<'login' | 'signup' | 'forgot'>('login');
+  const [resetSent, setResetSent] = useState(false);
 
   const router = useRouter();
   const supabase = createClientComponentClient();
 
-  // Check for recovery tokens in URL hash
+  // Check for auth tokens in URL hash (recovery, signup confirmation, magic link)
   useEffect(() => {
-    const hash = window.location.hash;
-    if (hash && hash.includes('access_token')) {
-      const hashParams = new URLSearchParams(hash.substring(1));
-      const type = hashParams.get('type');
+    const handleAuthTokens = async () => {
+      const hash = window.location.hash;
+      if (hash && hash.includes('access_token')) {
+        const hashParams = new URLSearchParams(hash.substring(1));
+        const type = hashParams.get('type');
+        const accessToken = hashParams.get('access_token');
+        const refreshToken = hashParams.get('refresh_token');
 
-      if (type === 'recovery') {
-        // Redirect to password reset page with the hash
-        router.push(`/auth/reset-password${hash}`);
+        if (type === 'recovery') {
+          // Redirect to password reset page with the hash
+          router.push(`/auth/reset-password${hash}`);
+          return;
+        }
+
+        // Handle signup confirmation and magic link
+        if ((type === 'signup' || type === 'magiclink') && accessToken && refreshToken) {
+          try {
+            // Set the session from the tokens
+            const { error } = await supabase.auth.setSession({
+              access_token: accessToken,
+              refresh_token: refreshToken,
+            });
+
+            if (error) {
+              console.error('Error setting session:', error);
+              setError('Failed to confirm email. Please try logging in.');
+              return;
+            }
+
+            // Get user and check onboarding status
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+              const { data: userData } = await supabase
+                .from('users')
+                .select('onboarding_completed')
+                .eq('id', user.id)
+                .single();
+
+              if (!userData || !userData.onboarding_completed) {
+                router.push('/onboarding/profile');
+              } else {
+                router.push('/labs');
+              }
+              router.refresh();
+            }
+          } catch (err) {
+            console.error('Error handling auth tokens:', err);
+            setError('Failed to confirm email. Please try logging in.');
+          }
+        }
       }
-    }
-  }, [router]);
+    };
+
+    handleAuthTokens();
+  }, [router, supabase]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,7 +80,14 @@ export default function LoginPage() {
     setError(null);
 
     try {
-      if (mode === 'signup') {
+      if (mode === 'forgot') {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/auth/reset-password`,
+        });
+        if (error) throw error;
+        setResetSent(true);
+        setError('Check your email for the password reset link. If you don\'t see it, check your spam folder.');
+      } else if (mode === 'signup') {
         const { error } = await supabase.auth.signUp({
           email,
           password,
@@ -114,7 +166,7 @@ export default function LoginPage() {
             className="mx-auto mb-4"
           />
           <div className="text-[clamp(12px,1.5vw,16px)] text-[#FFDE59] tracking-[2px] font-anton">
-            {mode === 'login' ? 'WELCOME BACK' : 'CREATE YOUR ACCOUNT'}
+            {mode === 'login' ? 'WELCOME BACK' : mode === 'signup' ? 'CREATE YOUR ACCOUNT' : 'RESET PASSWORD'}
           </div>
         </div>
 
@@ -137,20 +189,22 @@ export default function LoginPage() {
               />
             </div>
 
-            <div>
-              <label className="block text-[11px] tracking-[2px] text-[#666666] mb-2 uppercase">
-                Password
-              </label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                minLength={6}
-                className="w-full bg-black border border-[#333333] text-white px-4 py-3 text-base focus:border-[#E51B23] focus:outline-none transition-colors"
-                placeholder="••••••••"
-              />
-            </div>
+            {mode !== 'forgot' && (
+              <div>
+                <label className="block text-[11px] tracking-[2px] text-[#666666] mb-2 uppercase">
+                  Password
+                </label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  minLength={6}
+                  className="w-full bg-black border border-[#333333] text-white px-4 py-3 text-base focus:border-[#E51B23] focus:outline-none transition-colors"
+                  placeholder="••••••••"
+                />
+              </div>
+            )}
 
             {error && (
               <div className={`text-sm ${error.includes('Check your email') ? 'text-[#FFDE59]' : 'text-[#E51B23]'}`}>
@@ -160,21 +214,50 @@ export default function LoginPage() {
 
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={isLoading || (mode === 'forgot' && resetSent)}
               className="w-full bg-[#E51B23] text-white border-none py-4 px-6 font-anton text-base font-bold tracking-[2px] cursor-pointer transition-all duration-300 hover:bg-[#FFDE59] hover:text-black disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isLoading ? '[ AUTHENTICATING... ]' : mode === 'login' ? '[ ACCESS PRO ]' : '[ CREATE ACCOUNT ]'}
+              {isLoading ? '[ SENDING... ]' : mode === 'login' ? '[ ACCESS PRO ]' : mode === 'signup' ? '[ CREATE ACCOUNT ]' : '[ SEND RESET LINK ]'}
             </button>
           </form>
 
-          <div className="mt-6 text-center">
-            <button
-              type="button"
-              onClick={() => setMode(mode === 'login' ? 'signup' : 'login')}
-              className="text-[13px] text-[#666666] hover:text-[#FFDE59] transition-colors bg-transparent border-none cursor-pointer"
-            >
-              {mode === 'login' ? "Don't have an account? Sign up" : 'Already have an account? Log in'}
-            </button>
+          <div className="mt-6 text-center space-y-2">
+            {mode === 'login' && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => { setMode('forgot'); setError(null); setResetSent(false); }}
+                  className="block w-full text-[13px] text-[#666666] hover:text-[#FFDE59] transition-colors bg-transparent border-none cursor-pointer"
+                >
+                  Forgot your password?
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMode('signup')}
+                  className="block w-full text-[13px] text-[#666666] hover:text-[#FFDE59] transition-colors bg-transparent border-none cursor-pointer"
+                >
+                  Don&apos;t have an account? Sign up
+                </button>
+              </>
+            )}
+            {mode === 'signup' && (
+              <button
+                type="button"
+                onClick={() => setMode('login')}
+                className="text-[13px] text-[#666666] hover:text-[#FFDE59] transition-colors bg-transparent border-none cursor-pointer"
+              >
+                Already have an account? Log in
+              </button>
+            )}
+            {mode === 'forgot' && (
+              <button
+                type="button"
+                onClick={() => { setMode('login'); setError(null); setResetSent(false); }}
+                className="text-[13px] text-[#666666] hover:text-[#FFDE59] transition-colors bg-transparent border-none cursor-pointer"
+              >
+                Back to login
+              </button>
+            )}
           </div>
         </div>
 

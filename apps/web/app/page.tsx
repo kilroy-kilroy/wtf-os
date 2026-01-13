@@ -60,6 +60,15 @@ export default function Home() {
             </p>
           </Link>
         </div>
+
+        {/* Footer */}
+        <div className="mt-16 text-center text-[13px] text-[#666666]">
+          <div className="flex justify-center gap-4">
+            <Link href="/privacy" className="hover:text-[#FFDE59] transition-colors">Privacy</Link>
+            <span>·</span>
+            <Link href="/terms" className="hover:text-[#FFDE59] transition-colors">Terms</Link>
+          </div>
+        </div>
       </div>
     </main>
   );

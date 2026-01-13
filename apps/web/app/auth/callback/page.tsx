@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-export default function AuthCallbackPage() {
+function AuthCallbackContent() {
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -78,20 +78,33 @@ export default function AuthCallbackPage() {
   }, [searchParams, router, supabase]);
 
   return (
+    <div className="text-center">
+      {error ? (
+        <div className="space-y-4">
+          <p className="text-[#E51B23]">{error}</p>
+          <p className="text-[#666]">Redirecting to login...</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          <div className="animate-spin w-8 h-8 border-2 border-[#E51B23] border-t-transparent rounded-full mx-auto"></div>
+          <p className="text-[#666]">Authenticating...</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function AuthCallbackPage() {
+  return (
     <div className="min-h-screen bg-black text-white flex items-center justify-center">
-      <div className="text-center">
-        {error ? (
-          <div className="space-y-4">
-            <p className="text-[#E51B23]">{error}</p>
-            <p className="text-[#666]">Redirecting to login...</p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            <div className="animate-spin w-8 h-8 border-2 border-[#E51B23] border-t-transparent rounded-full mx-auto"></div>
-            <p className="text-[#666]">Authenticating...</p>
-          </div>
-        )}
-      </div>
+      <Suspense fallback={
+        <div className="text-center space-y-4">
+          <div className="animate-spin w-8 h-8 border-2 border-[#E51B23] border-t-transparent rounded-full mx-auto"></div>
+          <p className="text-[#666]">Loading...</p>
+        </div>
+      }>
+        <AuthCallbackContent />
+      </Suspense>
     </div>
   );
 }

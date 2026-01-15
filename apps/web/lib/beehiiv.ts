@@ -46,14 +46,20 @@ export async function addSubscriber(
   const publicationId = getPublicationId();
 
   if (!apiKey) {
-    console.log('Beehiiv API key not configured, skipping subscriber creation');
+    console.warn('[Beehiiv] API key not configured (BEEHIIV_API_KEY), skipping subscriber:', subscriber.email);
     return { success: false, error: 'API key not configured' };
   }
 
   if (!publicationId) {
-    console.log('Beehiiv publication ID not configured, skipping subscriber creation');
+    console.warn('[Beehiiv] Publication ID not configured (BEEHIIV_PUBLICATION_ID), skipping subscriber:', subscriber.email);
     return { success: false, error: 'Publication ID not configured' };
   }
+
+  console.log('[Beehiiv] Adding subscriber:', {
+    email: subscriber.email,
+    utm_source: subscriber.utm_source,
+    has_name: !!(subscriber.first_name || subscriber.last_name),
+  });
 
   try {
     const response = await fetch(
@@ -66,6 +72,8 @@ export async function addSubscriber(
         },
         body: JSON.stringify({
           email: subscriber.email,
+          first_name: subscriber.first_name,
+          last_name: subscriber.last_name,
           reactivate_existing: true, // Reactivate if they unsubscribed before
           send_welcome_email: false, // We handle welcome emails via Loops
           utm_source: subscriber.utm_source || 'app',
@@ -81,14 +89,18 @@ export async function addSubscriber(
 
     if (!response.ok) {
       const errorMsg = data.errors?.[0]?.message || `HTTP ${response.status}`;
-      console.error('Beehiiv API error:', errorMsg);
+      console.error('[Beehiiv] API error for', subscriber.email, ':', errorMsg, 'Status:', response.status);
       return { success: false, error: errorMsg };
     }
 
-    console.log('Beehiiv subscriber added:', subscriber.email);
+    console.log('[Beehiiv] Subscriber added successfully:', {
+      email: subscriber.email,
+      subscriber_id: data.data?.id,
+      status: data.data?.status,
+    });
     return { success: true, id: data.data?.id };
   } catch (error) {
-    console.error('Beehiiv subscriber creation failed:', error);
+    console.error('[Beehiiv] Subscriber creation failed for', subscriber.email, ':', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',

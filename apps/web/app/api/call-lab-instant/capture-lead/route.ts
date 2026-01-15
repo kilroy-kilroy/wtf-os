@@ -5,8 +5,10 @@ import {
   updateInstantReportEmail,
   findOrCreateInstantLead,
   updateLeadWelcomeSent,
+  updateLeadBeehiivSync,
 } from '@repo/db';
 import { sendEvent } from '@/lib/loops';
+import { addCallLabSubscriber } from '@/lib/beehiiv';
 
 export async function POST(request: NextRequest) {
   try {
@@ -49,6 +51,15 @@ export async function POST(request: NextRequest) {
       first_name: firstName,
       first_report_id: reportId,
     });
+
+    // Add to Beehiiv newsletter (fire-and-forget, update DB on success)
+    addCallLabSubscriber(email, firstName)
+      .then((result) => {
+        if (result.success && result.id) {
+          updateLeadBeehiivSync(supabase, email, result.id).catch(() => {});
+        }
+      })
+      .catch((err) => console.error('Beehiiv subscriber add failed:', err));
 
     // Generate URLs
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.timkilroy.com';

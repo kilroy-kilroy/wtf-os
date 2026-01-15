@@ -115,7 +115,7 @@ export async function addDiscoveryLabSubscriber(
   email: string,
   name?: string,
   company?: string
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; id?: string; error?: string }> {
   const [firstName, ...lastNameParts] = (name || '').split(' ');
   const lastName = lastNameParts.join(' ');
 
@@ -137,7 +137,7 @@ export async function addDiscoveryLabSubscriber(
 export async function addCallLabSubscriber(
   email: string,
   name?: string
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; id?: string; error?: string }> {
   const [firstName, ...lastNameParts] = (name || '').split(' ');
   const lastName = lastNameParts.join(' ');
 
@@ -158,7 +158,7 @@ export async function addAppSignupSubscriber(
   firstName?: string,
   lastName?: string,
   company?: string
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; id?: string; error?: string }> {
   return addSubscriber({
     email,
     first_name: firstName,
@@ -177,7 +177,7 @@ export async function addAppSignupSubscriber(
 export async function addProSubscriber(
   email: string,
   product: 'call-lab-pro' | 'discovery-lab-pro' | 'bundle'
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; id?: string; error?: string }> {
   return addSubscriber({
     email,
     utm_source: product,

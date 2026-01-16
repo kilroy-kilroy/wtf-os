@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import Image from 'next/image';
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -112,9 +113,11 @@ export function ExitIntentPopup() {
             <>
               {/* Agency Inner Circle Logo */}
               <div className="flex justify-center mb-6">
-                <img
+                <Image
                   src="/logos/Agency Inner Circle Transparent1500.png"
                   alt="Agency Inner Circle"
+                  width={200}
+                  height={64}
                   className="h-16 w-auto"
                 />
               </div>
@@ -180,7 +183,7 @@ export function ExitIntentPopup() {
                 Your resources are on their way!
               </p>
               <p className="text-gray-500 text-sm mt-2">
-                If you don't see them in the next few minutes, check your spam folder...
+                If you don&apos;t see them in the next few minutes, check your spam folder...
               </p>
             </div>
           )}

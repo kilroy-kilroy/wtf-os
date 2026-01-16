@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Anton, Poppins } from "next/font/google";
 import Script from "next/script";
 import { Analytics } from "@vercel/analytics/next";
+import { ExitIntentPopup } from "@/components/ExitIntentPopup";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -47,6 +48,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
           />
         </noscript>
         {children}
+        <ExitIntentPopup />
         <Analytics />
       </body>
     </html>

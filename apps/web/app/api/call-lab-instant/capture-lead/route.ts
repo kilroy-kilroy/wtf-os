@@ -9,6 +9,7 @@ import {
 } from '@repo/db';
 import { sendEvent } from '@/lib/loops';
 import { addCallLabSubscriber } from '@/lib/beehiiv';
+import { trackEmailCaptured, trackReportGenerated } from '@/lib/analytics';
 
 export async function POST(request: NextRequest) {
   try {
@@ -50,6 +51,13 @@ export async function POST(request: NextRequest) {
       email,
       first_name: firstName,
       first_report_id: reportId,
+    });
+
+    // Track email capture in Vercel Analytics
+    await trackEmailCaptured({
+      source: 'call-lab-instant',
+      isNewLead: isNew,
+      hasName: !!firstName,
     });
 
     // Add to Beehiiv newsletter (fire-and-forget, update DB on success)

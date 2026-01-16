@@ -3,6 +3,7 @@ import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { createOrUpdateContact, onCallLabSignup } from '@/lib/loops';
 import { addAppSignupSubscriber } from '@/lib/beehiiv';
+import { trackServerEvent, AnalyticsEvents } from '@/lib/analytics';
 
 export async function POST(request: NextRequest) {
   try {
@@ -47,6 +48,14 @@ export async function POST(request: NextRequest) {
     addAppSignupSubscriber(user.email!, firstName, lastName, companyName).catch((err) =>
       console.error('Beehiiv subscriber add failed:', err)
     );
+
+    // Track signup completed in Vercel Analytics
+    await trackServerEvent(AnalyticsEvents.SIGNUP_COMPLETED, {
+      has_company: !!companyName,
+      has_role: !!role,
+      has_team_size: !!salesTeamSize,
+      source: 'call_lab_onboarding',
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {

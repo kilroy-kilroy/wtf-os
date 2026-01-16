@@ -3,6 +3,7 @@ import { getStripe } from '@/lib/stripe'
 import { createClient } from '@supabase/supabase-js'
 import Stripe from 'stripe'
 import { onProUpgrade, onSubscriptionCancelled } from '@/lib/loops'
+import { trackPurchaseCompleted, trackSubscriptionCancelled } from '@/lib/analytics'
 
 export const runtime = 'nodejs'
 
@@ -97,10 +98,18 @@ export async function POST(request: NextRequest) {
           } else {
             console.log('Subscription saved successfully')
 
+            // Track purchase completed in Vercel Analytics
+            const product = session.metadata?.product || 'call-lab-pro';
+            const planType = session.metadata?.priceType || 'solo';
+            await trackPurchaseCompleted({
+              product,
+              planType,
+              subscriptionId: subscription.id,
+            });
+
             // Fire Loops event for Pro upgrade
             if (session.customer_email) {
-              const planType = (session.metadata?.priceType === 'team' ? 'team' : 'solo') as 'solo' | 'team';
-              await onProUpgrade(session.customer_email, planType).catch(err => {
+              await onProUpgrade(session.customer_email, planType as 'solo' | 'team').catch(err => {
                 console.error('Failed to send Loops Pro upgrade event:', err);
               });
             }
@@ -163,11 +172,18 @@ export async function POST(request: NextRequest) {
 
       if (error) {
         console.error('Error cancelling subscription:', error)
-      } else if (cancelledSub?.customer_email) {
-        // Fire Loops event for subscription cancellation
-        await onSubscriptionCancelled(cancelledSub.customer_email).catch(err => {
-          console.error('Failed to send Loops cancellation event:', err);
+      } else {
+        // Track subscription cancelled in Vercel Analytics
+        await trackSubscriptionCancelled({
+          subscriptionId: subscription.id,
         });
+
+        if (cancelledSub?.customer_email) {
+          // Fire Loops event for subscription cancellation
+          await onSubscriptionCancelled(cancelledSub.customer_email).catch(err => {
+            console.error('Failed to send Loops cancellation event:', err);
+          });
+        }
       }
       break
     }

@@ -6,6 +6,8 @@
  * - Syncing leads from Discovery Lab, Call Lab, and signup flows
  */
 
+import { trackServerEvent, AnalyticsEvents } from '@/lib/analytics';
+
 const BEEHIIV_API_BASE = 'https://api.beehiiv.com/v2';
 
 interface BeehiivSubscriber {
@@ -98,6 +100,14 @@ export async function addSubscriber(
       subscriber_id: data.data?.id,
       status: data.data?.status,
     });
+
+    // Track newsletter signup in Vercel Analytics
+    await trackServerEvent(AnalyticsEvents.NEWSLETTER_SIGNUP, {
+      source: subscriber.utm_source || 'unknown',
+      medium: subscriber.utm_medium || 'unknown',
+      has_name: !!(subscriber.first_name || subscriber.last_name),
+    });
+
     return { success: true, id: data.data?.id };
   } catch (error) {
     console.error('[Beehiiv] Subscriber creation failed for', subscriber.email, ':', error);

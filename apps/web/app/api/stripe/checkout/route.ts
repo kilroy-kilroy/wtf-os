@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
+import { trackCheckoutStarted } from '@/lib/analytics';
 
 // Lazy initialization to avoid build-time errors when env var isn't available
 let stripe: Stripe | null = null;
@@ -82,6 +83,13 @@ export async function POST(request: NextRequest) {
 
     // Create Stripe Checkout Session
     const session = await getStripe().checkout.sessions.create(sessionOptions);
+
+    // Track checkout started event
+    await trackCheckoutStarted({
+      product,
+      planType: priceType,
+      hasCoupon: !!coupon,
+    });
 
     return NextResponse.json({ url: session.url });
   } catch (error) {

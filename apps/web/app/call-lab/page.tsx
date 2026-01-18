@@ -9,6 +9,7 @@ import {
   ConsoleMarkdownRenderer
 } from '@/components/console';
 import { CallLabLogo } from '@/components/CallLabLogo';
+import { FirefliesTranscriptSelector } from '@/components/FirefliesTranscriptSelector';
 
 // Union type for both response formats
 type AnalysisResult =
@@ -321,10 +322,21 @@ export default function CallLabPage() {
                   <ConsoleHeading level={3} variant="yellow">
                     TRANSCRIPT INPUT
                   </ConsoleHeading>
+
+                  {/* Fireflies Import Option */}
+                  <FirefliesTranscriptSelector
+                    onSelect={(transcript) => {
+                      setFormData((prev) => ({
+                        ...prev,
+                        transcript: transcript.text,
+                      }));
+                    }}
+                  />
+
                   <ConsoleInput
                     multiline
                     rows={16}
-                    placeholder="Paste your call transcript here... Supports Zoom, Fireflies, Gong, or any text format."
+                    placeholder="Paste your call transcript here... Or import from Fireflies above."
                     label="CALL TRANSCRIPT *"
                     required
                     value={formData.transcript}

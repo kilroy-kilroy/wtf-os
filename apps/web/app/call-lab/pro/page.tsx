@@ -12,6 +12,7 @@ import {
 } from '@/components/console';
 import { PatternTag } from '@/components/pattern-tag';
 import { CallLabLogo } from '@/components/CallLabLogo';
+import { FirefliesTranscriptSelector } from '@/components/FirefliesTranscriptSelector';
 
 // Helper to safely extract score value (handles both number and {score, reason} format)
 function getScoreValue(value: unknown): number {
@@ -663,10 +664,23 @@ export default function CallLabProPage() {
 
                 <div className="space-y-4">
                   <ConsoleHeading level={3} variant="yellow">TRANSCRIPT INPUT</ConsoleHeading>
+
+                  {/* Fireflies Import Option */}
+                  <FirefliesTranscriptSelector
+                    onSelect={(transcript) => {
+                      setFormData((prev) => ({
+                        ...prev,
+                        transcript: transcript.text,
+                        // Auto-fill prospect name from first non-organizer participant if empty
+                        prospect_name: prev.prospect_name || (transcript.participants?.[1] || ''),
+                      }));
+                    }}
+                  />
+
                   <ConsoleInput
                     multiline
                     rows={16}
-                    placeholder="Paste your call transcript here... Supports Zoom, Fireflies, Gong, or any text format."
+                    placeholder="Paste your call transcript here... Or import from Fireflies above."
                     label="CALL TRANSCRIPT *"
                     required
                     value={formData.transcript}

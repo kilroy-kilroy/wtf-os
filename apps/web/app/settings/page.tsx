@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { getSubscriptionStatus } from '@/lib/subscription';
 import ChangePasswordButton from '@/components/ChangePasswordButton';
+import { FirefliesIntegration } from '@/components/FirefliesIntegration';
 
 export default async function SettingsPage() {
   const supabase = createServerComponentClient({ cookies });
@@ -32,8 +33,13 @@ export default async function SettingsPage() {
     user.email || ''
   );
 
-  const planName = subscriptionStatus.hasCallLabPro ? 'Call Lab Pro' : 'Free';
-  const isPro = subscriptionStatus.hasCallLabPro;
+  // Build list of active products
+  const activeProducts: string[] = [];
+  if (subscriptionStatus.hasCallLabPro) activeProducts.push('Call Lab Pro');
+  if (subscriptionStatus.hasDiscoveryLabPro) activeProducts.push('Discovery Lab Pro');
+
+  const planName = activeProducts.length > 0 ? activeProducts.join(' + ') : 'Free';
+  const isPro = subscriptionStatus.hasCallLabPro || subscriptionStatus.hasDiscoveryLabPro;
 
   return (
     <div className="min-h-screen bg-black py-8 px-4 text-white">
@@ -226,26 +232,10 @@ export default async function SettingsPage() {
           </div>
           <div className="p-6 space-y-4">
             {/* Fireflies */}
-            <div className="flex items-center justify-between py-3 border-b border-[#222]">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-[#111] border border-[#333] rounded flex items-center justify-center">
-                  <span className="text-lg">🔥</span>
-                </div>
-                <div>
-                  <span className="text-white font-medium">Fireflies.ai</span>
-                  <p className="text-xs text-[#666]">Auto-import call transcripts</p>
-                </div>
-              </div>
-              <button
-                className="border border-[#333] rounded px-3 py-1.5 text-[#666] text-sm cursor-not-allowed"
-                disabled
-              >
-                Coming Soon
-              </button>
-            </div>
+            <FirefliesIntegration />
 
             {/* Zoom */}
-            <div className="flex items-center justify-between py-3 border-b border-[#222]">
+            <div className="flex items-center justify-between py-3">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-[#111] border border-[#333] rounded flex items-center justify-center">
                   <span className="text-lg">📹</span>
@@ -253,25 +243,6 @@ export default async function SettingsPage() {
                 <div>
                   <span className="text-white font-medium">Zoom</span>
                   <p className="text-xs text-[#666]">Import recordings directly</p>
-                </div>
-              </div>
-              <button
-                className="border border-[#333] rounded px-3 py-1.5 text-[#666] text-sm cursor-not-allowed"
-                disabled
-              >
-                Coming Soon
-              </button>
-            </div>
-
-            {/* Gong */}
-            <div className="flex items-center justify-between py-3">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-[#111] border border-[#333] rounded flex items-center justify-center">
-                  <span className="text-lg">🎙️</span>
-                </div>
-                <div>
-                  <span className="text-white font-medium">Gong</span>
-                  <p className="text-xs text-[#666]">Sync call intelligence</p>
                 </div>
               </div>
               <button

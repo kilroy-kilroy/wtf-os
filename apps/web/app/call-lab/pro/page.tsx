@@ -699,9 +699,17 @@ export default function CallLabProPage() {
                       rows={2}
                       className="w-full bg-black border border-[#333333] text-white px-4 py-3 text-sm font-poppins focus:border-[#E51B23] focus:outline-none transition-colors rounded resize-none"
                     />
-                    <p className="text-[10px] text-[#555] mt-1">
-                      Helps us analyze your calls with relevant context. Edit per call if needed.
-                    </p>
+                    <div className="flex justify-between items-center mt-1">
+                      <p className="text-[10px] text-[#555]">
+                        Helps us analyze your calls with relevant context. Edit per call if needed.
+                      </p>
+                      <a
+                        href="/settings"
+                        className="text-[10px] text-[#FFDE59] hover:underline"
+                      >
+                        Change in settings
+                      </a>
+                    </div>
                   </div>
 
                   <div>

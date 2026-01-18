@@ -16,8 +16,8 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  title: "SalesOS Call Lab | AI-Powered Sales Coaching & Training",
-  description: "Get SalesOS Call Lab - the AI-powered sales call coaching & feedback tool. Upload your call transcript. Get a brutally honest diagnostic on what went wrong and what to fix. Get better at closing sales.",
+  title: "SalesOS Intelligence Tools Dashboard | TimKilroy.com",
+  description: "Access your SalesOS workspace with Discovery Lab, Call Lab and performance tools for smarter sales research, better calls and more wins in one central app.",
 };
 
 export default function RootLayout({

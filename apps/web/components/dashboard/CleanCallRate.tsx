@@ -1,24 +1,48 @@
 'use client';
 
-// ============================================
-// TYPES
-// ============================================
-
-interface CleanCallRateProps {
-  percentage: number;
-  cleanCalls: number;
-  totalCalls: number;
+interface DetectedPattern {
+  macro_id: string;
+  severity?: 'HIGH' | 'MEDIUM' | 'LOW';
 }
 
-// ============================================
-// HELPERS
-// ============================================
+interface CallData {
+  id: string;
+  detected_negative_patterns?: DetectedPattern[];
+}
+
+interface CleanCallRateProps {
+  clean_count: number;
+  total_count: number;
+}
+
+/**
+ * CleanCallRate Component
+ *
+ * Replaces the confusing "Red Flag Frequency" metric.
+ *
+ * OLD (confusing):
+ *   RED FLAG FREQUENCY
+ *   Your strongest skill: 3
+ *   (Lower is better)
+ *
+ * NEW (clear):
+ *   CLEAN CALL RATE
+ *   8 out of 12 calls (67%)
+ *   No major friction detected
+ */
 
 function getCleanCallLabel(percentage: number): string {
   if (percentage >= 80) return 'Consistently clean execution';
   if (percentage >= 60) return 'Mostly solid, some friction';
   if (percentage >= 40) return 'Inconsistent - needs focus';
   return 'High friction rate - priority fix needed';
+}
+
+function getCleanCallColor(percentage: number): string {
+  if (percentage >= 80) return 'text-green-400';
+  if (percentage >= 60) return 'text-[#FFDE59]';
+  if (percentage >= 40) return 'text-orange-400';
+  return 'text-[#E51B23]';
 }
 
 function getProgressColor(percentage: number): string {
@@ -28,45 +52,36 @@ function getProgressColor(percentage: number): string {
   return 'bg-[#E51B23]';
 }
 
-// ============================================
-// COMPONENT
-// ============================================
-
-export function CleanCallRate({ percentage, cleanCalls, totalCalls }: CleanCallRateProps) {
+export function CleanCallRate({ clean_count, total_count }: CleanCallRateProps) {
+  const percentage =
+    total_count > 0 ? Math.round((clean_count / total_count) * 100) : 0;
   const label = getCleanCallLabel(percentage);
+  const color = getCleanCallColor(percentage);
 
   return (
-    <div className="bg-[#1A1A1A] border-2 border-[#333] p-6">
-      {/* Header */}
-      <div className="mb-5">
-        <div className="text-[10px] font-bold tracking-wider text-[#999] mb-1">
-          CLEAN CALL RATE
-        </div>
-        <div className="text-[11px] text-[#666] tracking-wide">Calls without major friction</div>
-      </div>
+    <div className="bg-black border border-[#E51B23] rounded-lg p-4">
+      <h3 className="text-[#B3B3B3] text-xs font-semibold uppercase mb-2">
+        CLEAN CALL RATE
+      </h3>
 
-      {totalCalls > 0 ? (
-        <div className="flex flex-col gap-3">
-          {/* Value */}
+      {total_count > 0 ? (
+        <>
           <div className="flex items-baseline gap-2">
-            <span className="font-anton text-[56px] leading-none text-white">
-              {percentage}%
+            <span className={`text-2xl font-bold ${color}`}>{percentage}%</span>
+            <span className="text-[#666] text-sm">
+              ({clean_count} of {total_count} calls)
             </span>
           </div>
+          <p className="text-[#B3B3B3] text-sm mt-2">{label}</p>
 
-          {/* Detail */}
-          <div className="text-[11px] text-[#999]">
-            ({cleanCalls} of {totalCalls} calls)
-          </div>
-
-          {/* Progress bar - NO border-radius */}
-          <div className="h-1.5 bg-[#0A0A0A] border border-[#333] overflow-hidden">
+          {/* Progress bar */}
+          <div className="mt-3 h-2 bg-[#333] rounded-full overflow-hidden">
             <div
-              className={`h-full transition-all duration-500 ${getProgressColor(percentage)}`}
+              className={`h-full rounded-full transition-all ${getProgressColor(percentage)}`}
               style={{ width: `${percentage}%` }}
             />
           </div>
-        </div>
+        </>
       ) : (
         <p className="text-[#666] text-sm">No calls analyzed yet</p>
       )}
@@ -76,18 +91,24 @@ export function CleanCallRate({ percentage, cleanCalls, totalCalls }: CleanCallR
 
 /**
  * Helper function to calculate clean call rate from call data
+ *
  * A call is "clean" if it has no HIGH severity negative patterns
  */
-export function calculateCleanCallRate(calls: Array<{ hasHighSeverityIssue: boolean }>): {
-  cleanCalls: number;
-  totalCalls: number;
-  percentage: number;
+export function calculateCleanCallRate(calls: CallData[]): {
+  clean_count: number;
+  total_count: number;
 } {
-  const cleanCalls = calls.filter(c => !c.hasHighSeverityIssue).length;
-  const totalCalls = calls.length;
-  const percentage = totalCalls > 0 ? Math.round((cleanCalls / totalCalls) * 100) : 0;
+  const cleanCalls = calls.filter((call) => {
+    const hasHighSeverityIssues = call.detected_negative_patterns?.some(
+      (p) => p.severity === 'HIGH'
+    );
+    return !hasHighSeverityIssues;
+  });
 
-  return { cleanCalls, totalCalls, percentage };
+  return {
+    clean_count: cleanCalls.length,
+    total_count: calls.length,
+  };
 }
 
 export default CleanCallRate;

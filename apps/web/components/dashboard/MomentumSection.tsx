@@ -3,49 +3,16 @@
 type Trend = 'rising' | 'stable' | 'falling';
 
 interface PatternStat {
-  pattern_id: string;
   macro_name: string;
   frequency: number;
   total_calls: number;
-  percentage: number;
   trend?: Trend;
 }
 
 interface MomentumSectionProps {
-  biggestWin?: PatternStat;
-  biggestFix?: PatternStat;
-  nextFocus?: string;
-}
-
-// Context helpers for pattern explanations
-function getWinContext(patternId: string): string {
-  const contexts: Record<string, string> = {
-    cultural_handshake: "Your strongest trust-building move",
-    diagnostic_reveal: "You're great at uncovering the real problem",
-    vulnerability_flip: "You create deep buyer connection",
-    peer_validation_engine: "Buyers see you as a peer advisor",
-    self_diagnosis_pull: "Buyers discover their needs with you",
-    framework_drop: "You structure conversations clearly",
-    permission_builder: "You create psychological safety",
-    mirror_close: "You reflect buyer criteria effectively",
-  };
-  return contexts[patternId] || "Strong pattern detection";
-}
-
-function getFixContext(patternId: string): string {
-  const contexts: Record<string, string> = {
-    soft_close_fade: "You're losing deals at the finish line",
-    scenic_route: "Conversations lack clear direction",
-    generous_professor: "You're giving away too much for free",
-    advice_avalanche: "You solve problems before they buy",
-    surface_scanner: "Discovery isn't deep enough",
-    business_blitzer: "You skip rapport and go straight to business",
-    agenda_abandoner: "You lose control of the call flow",
-    passenger: "Buyer drives while you follow",
-    premature_solution: "You pitch before understanding",
-    over_explain_loop: "You over-explain when challenged",
-  };
-  return contexts[patternId] || "Pattern needs attention";
+  top_positive_pattern?: PatternStat;
+  top_negative_pattern?: PatternStat;
+  next_call_focus?: string;
 }
 
 function getTrendLabel(trend: Trend): string {
@@ -66,74 +33,97 @@ function getTrendIcon(trend: Trend): string {
   return icons[trend];
 }
 
+function getTrendColor(trend: Trend): string {
+  const colors: Record<Trend, string> = {
+    rising: 'text-green-400',
+    stable: 'text-[#B3B3B3]',
+    falling: 'text-orange-400',
+  };
+  return colors[trend];
+}
+
 export function MomentumSection({
-  biggestWin,
-  biggestFix,
-  nextFocus,
+  top_positive_pattern,
+  top_negative_pattern,
+  next_call_focus,
 }: MomentumSectionProps) {
   return (
-    <div className="bg-[#1A1A1A] border-2 border-[#333] p-6">
-      <h2 className="font-anton text-xl tracking-wide text-white mb-5">
+    <div className="bg-black border border-[#E51B23] rounded-lg p-6">
+      <h2 className="font-anton text-lg uppercase tracking-wide text-[#FFDE59] mb-4">
         MOMENTUM
       </h2>
 
-      <div className="flex flex-col gap-4">
-        {/* Biggest Win */}
-        {biggestWin && (
-          <div className="bg-[#0A0A0A] border-l-4 border-[#FFDE59] p-5">
-            <div className="text-[9px] font-bold tracking-wider text-[#666] mb-2.5">
+      <div className="space-y-4">
+        {/* Biggest Win - NEW */}
+        {top_positive_pattern && (
+          <div className="bg-[#0A0A0A] border-l-4 border-[#FFDE59] p-4 rounded-r">
+            <span className="text-[#666] text-xs font-semibold">
               BIGGEST WIN
+            </span>
+            <div className="flex items-center gap-2 mt-1">
+              <span className="text-[#FFDE59] font-bold text-lg">
+                {top_positive_pattern.macro_name}
+              </span>
+              <span className="text-[#FFDE59]">⚡</span>
             </div>
-            <div className="text-[17px] font-bold text-[#FFDE59] leading-tight mb-1.5">
-              {biggestWin.macro_name} ⚡
-            </div>
-            <div className="text-[11px] text-[#999] mb-2.5">
-              Appearing in {biggestWin.frequency}/{biggestWin.total_calls} calls ({Math.round(biggestWin.percentage)}%)
-            </div>
-            {biggestWin.trend && (
-              <div className="text-[11px] text-green-400 mb-2.5">
-                {getTrendIcon(biggestWin.trend)} {getTrendLabel(biggestWin.trend)}
-              </div>
+            <p className="text-[#B3B3B3] text-sm mt-1">
+              Appearing in {top_positive_pattern.frequency}/
+              {top_positive_pattern.total_calls} calls (
+              {Math.round(
+                (top_positive_pattern.frequency /
+                  top_positive_pattern.total_calls) *
+                  100
+              )}
+              %)
+            </p>
+            {top_positive_pattern.trend && (
+              <p
+                className={`text-sm mt-1 ${getTrendColor(top_positive_pattern.trend)}`}
+              >
+                {getTrendIcon(top_positive_pattern.trend)}{' '}
+                {getTrendLabel(top_positive_pattern.trend)}
+              </p>
             )}
-            <div className="text-[12px] text-white leading-relaxed">
-              {getWinContext(biggestWin.pattern_id)}
-            </div>
           </div>
         )}
 
-        {/* Biggest Thing to Fix */}
-        {biggestFix && (
-          <div className="bg-[#0A0A0A] border-l-4 border-[#E51B23] p-5">
-            <div className="text-[9px] font-bold tracking-wider text-[#666] mb-2.5">
-              BIGGEST THING TO FIX
+        {/* Biggest Missed Move */}
+        {top_negative_pattern && (
+          <div className="bg-[#0A0A0A] border-l-4 border-[#E51B23] p-4 rounded-r">
+            <span className="text-[#666] text-xs font-semibold">
+              BIGGEST MISSED MOVE
+            </span>
+            <div className="flex items-center gap-2 mt-1">
+              <span className="text-[#E51B23] font-bold text-lg">
+                {top_negative_pattern.macro_name}
+              </span>
             </div>
-            <div className="text-[17px] font-bold text-[#E51B23] leading-tight mb-1.5">
-              {biggestFix.macro_name}
-            </div>
-            <div className="text-[11px] text-[#999] mb-2.5">
-              Appearing in {biggestFix.frequency}/{biggestFix.total_calls} calls ({Math.round(biggestFix.percentage)}%)
-            </div>
-            <div className="text-[12px] text-white leading-relaxed">
-              {getFixContext(biggestFix.pattern_id)}
-            </div>
+            <p className="text-[#B3B3B3] text-sm mt-1">
+              Appearing in {top_negative_pattern.frequency}/
+              {top_negative_pattern.total_calls} calls (
+              {Math.round(
+                (top_negative_pattern.frequency /
+                  top_negative_pattern.total_calls) *
+                  100
+              )}
+              %)
+            </p>
           </div>
         )}
 
         {/* Next Call Focus */}
-        {nextFocus && (
-          <div className="bg-[#0A0A0A] border-l-4 border-[#4A90E2] p-5">
-            <div className="text-[9px] font-bold tracking-wider text-[#666] mb-2.5">
+        {next_call_focus && (
+          <div className="bg-[#0A0A0A] border-l-4 border-blue-500 p-4 rounded-r">
+            <span className="text-[#666] text-xs font-semibold">
               NEXT CALL FOCUS
-            </div>
-            <div className="text-[13px] text-white leading-relaxed">
-              {nextFocus}
-            </div>
+            </span>
+            <p className="text-white font-medium mt-1">{next_call_focus}</p>
           </div>
         )}
 
         {/* Empty State */}
-        {!biggestWin && !biggestFix && !nextFocus && (
-          <div className="text-center py-10">
+        {!top_positive_pattern && !top_negative_pattern && !next_call_focus && (
+          <div className="text-center py-8">
             <p className="text-[#666]">
               Analyze some calls to see your momentum
             </p>

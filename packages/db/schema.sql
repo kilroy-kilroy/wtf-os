@@ -14,7 +14,13 @@ CREATE TABLE users (
   first_name TEXT,
   last_name TEXT,
   auth_method TEXT DEFAULT 'magic_link', -- 'magic_link', 'password', 'google'
-  subscription_tier TEXT DEFAULT 'lead', -- 'lead', 'free', 'subscriber', 'client'
+  subscription_tier TEXT DEFAULT 'lead', -- 'lead', 'free', 'subscriber', 'client' (legacy)
+
+  -- Per-product subscription tiers
+  -- Values: 'free' | 'pro' (null means never accessed)
+  call_lab_tier TEXT DEFAULT 'free',
+  discovery_lab_tier TEXT,
+
   tags JSONB DEFAULT '[]',
   preferences JSONB DEFAULT '{}',
   created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -35,6 +41,13 @@ CREATE TABLE agencies (
   icp_data JSONB DEFAULT '{}',
   market_position TEXT,
   health_scores JSONB DEFAULT '{}',
+
+  -- Team subscription tiers (applies to all members)
+  -- Values: 'free' | 'pro'
+  call_lab_tier TEXT DEFAULT 'free',
+  discovery_lab_tier TEXT,
+  max_seats INTEGER DEFAULT 5, -- max team members with access
+
   metadata JSONB DEFAULT '{}',
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()

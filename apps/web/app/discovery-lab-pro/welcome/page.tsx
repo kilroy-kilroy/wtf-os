@@ -1,11 +1,67 @@
 'use client';
 
-import { useSearchParams } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { Suspense } from 'react';
 
 function WelcomeContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const sessionId = searchParams.get('session_id');
+  const supabase = createClientComponentClient();
+
+  const [website, setWebsite] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [userLoaded, setUserLoaded] = useState(false);
+
+  useEffect(() => {
+    // Load existing website from user preferences
+    async function loadUser() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: userData } = await supabase
+          .from('users')
+          .select('preferences')
+          .eq('id', user.id)
+          .single();
+
+        if (userData?.preferences?.website) {
+          setWebsite(userData.preferences.website);
+        }
+      }
+      setUserLoaded(true);
+    }
+    loadUser();
+  }, [supabase]);
+
+  const handleContinue = async () => {
+    setSaving(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user && website) {
+        // Get current preferences and merge
+        const { data: userData } = await supabase
+          .from('users')
+          .select('preferences')
+          .eq('id', user.id)
+          .single();
+
+        const currentPrefs = userData?.preferences || {};
+
+        await supabase
+          .from('users')
+          .update({
+            preferences: { ...currentPrefs, website },
+          })
+          .eq('id', user.id);
+      }
+      router.push('/discovery-lab-pro/create');
+    } catch (err) {
+      console.error('Error saving website:', err);
+      router.push('/discovery-lab-pro/create');
+    }
+  };
 
   return (
     <div className="min-h-screen bg-black flex items-center justify-center p-4">
@@ -39,49 +95,39 @@ function WelcomeContent() {
           Every discovery call is about to feel like an unfair advantage.
         </p>
 
-        {/* What's Next */}
+        {/* Quick Setup */}
         <div className="bg-[#1a1a1a] border border-[#333] p-8 mb-8 text-left">
           <h2 className="font-anton text-2xl text-[#E51B23] mb-6 tracking-wide">
-            WHAT HAPPENS NEXT
+            QUICK SETUP
           </h2>
-          <ul className="space-y-4 text-[#CCCCCC]">
-            <li className="flex items-start gap-3">
-              <span className="text-[#FFDE59] font-bold">1.</span>
-              <span>
-                Check your email for access instructions and your dashboard login
-              </span>
-            </li>
-            <li className="flex items-start gap-3">
-              <span className="text-[#FFDE59] font-bold">2.</span>
-              <span>
-                Start generating Discovery Blueprints with full company research,
-                prospect psychology, and conversation playbooks
-              </span>
-            </li>
-            <li className="flex items-start gap-3">
-              <span className="text-[#FFDE59] font-bold">3.</span>
-              <span>
-                Use your first blueprint on your next call and feel the difference
-              </span>
-            </li>
-          </ul>
+          <p className="text-[#B3B3B3] mb-4 font-poppins">
+            One thing we need to personalize your playbooks:
+          </p>
+          <div className="space-y-2">
+            <label className="block text-[#FFDE59] font-anton text-sm tracking-wide">
+              YOUR COMPANY WEBSITE
+            </label>
+            <input
+              type="url"
+              placeholder="https://yourcompany.com"
+              value={website}
+              onChange={(e) => setWebsite(e.target.value)}
+              className="w-full bg-black border border-[#333] text-white px-4 py-3 font-poppins focus:border-[#E51B23] focus:outline-none"
+            />
+            <p className="text-[#666] text-sm font-poppins">
+              We&apos;ll use this to help the AI understand your business better.
+            </p>
+          </div>
         </div>
 
-        {/* CTA Buttons */}
-        <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <a
-            href="/discovery-lab"
-            className="inline-block bg-[#E51B23] text-white px-8 py-4 font-anton text-lg tracking-wide hover:bg-[#FFDE59] hover:text-black transition-colors no-underline"
-          >
-            [ START YOUR FIRST BLUEPRINT ]
-          </a>
-          <a
-            href="/dashboard"
-            className="inline-block bg-[#333] text-white px-8 py-4 font-anton text-lg tracking-wide hover:bg-[#444] transition-colors no-underline"
-          >
-            [ GO TO DASHBOARD ]
-          </a>
-        </div>
+        {/* CTA Button */}
+        <button
+          onClick={handleContinue}
+          disabled={saving || !userLoaded}
+          className="inline-block bg-[#E51B23] text-white px-8 py-4 font-anton text-lg tracking-wide hover:bg-[#FFDE59] hover:text-black transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {saving ? 'SAVING...' : '[ START YOUR FIRST PLAYBOOK ]'}
+        </button>
 
         {/* Session ID for debugging */}
         {sessionId && (

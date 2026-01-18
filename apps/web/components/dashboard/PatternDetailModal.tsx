@@ -1,11 +1,19 @@
 'use client';
 
 import Link from 'next/link';
-import { type DetectedPattern } from './PatternIntelligence';
 
 // ============================================
 // TYPES
 // ============================================
+
+export interface DetectedPattern {
+  id: string;
+  name: string;
+  category: string;
+  polarity: 'positive' | 'negative';
+  frequency: number;
+  percentage: number;
+}
 
 interface PatternDetailModalProps {
   pattern: DetectedPattern;

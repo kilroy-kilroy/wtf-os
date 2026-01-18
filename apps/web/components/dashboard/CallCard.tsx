@@ -1,43 +1,33 @@
 'use client';
 
-import Link from 'next/link';
-import { isValidPattern } from './PatternIntelligence';
-
-// ============================================
-// TYPES
-// ============================================
-
-type Category = "connection" | "diagnosis" | "control" | "activation";
-
-interface DetectedPattern {
-  id: string;
-  name: string;
-  category: Category;
-}
+type MacroCategory = 'connection' | 'diagnosis' | 'control' | 'activation';
 
 interface CallCardProps {
   call: {
     id: string;
-    buyer_name: string;
+    name: string;
     company?: string;
     date: string;
     score: number;
-    top_positive_pattern: DetectedPattern | null;
-    top_negative_pattern: DetectedPattern | null;
+    top_positive_pattern?: {
+      macro_name: string;
+      category: MacroCategory;
+    };
+    top_negative_pattern?: {
+      macro_name: string;
+      category: MacroCategory;
+    };
     next_step?: string;
   };
+  onClick?: () => void;
 }
 
-// ============================================
-// HELPERS
-// ============================================
-
-function getCategoryColor(category: Category): string {
-  const colors: Record<Category, string> = {
-    connection: "#FFDE59",
-    diagnosis: "#4A90E2",
-    control: "#FF8C42",
-    activation: "#E51B23",
+function getCategoryColorClass(category: MacroCategory): string {
+  const colors: Record<MacroCategory, string> = {
+    connection: 'bg-[#FFDE59] text-black',
+    diagnosis: 'bg-blue-500 text-white',
+    control: 'bg-orange-500 text-white',
+    activation: 'bg-[#E51B23] text-white',
   };
   return colors[category];
 }
@@ -48,121 +38,69 @@ function getScoreColor(score: number): string {
   return 'text-[#E51B23]';
 }
 
-// ============================================
-// COMPONENT
-// ============================================
-
-export function CallCard({ call }: CallCardProps) {
-  // Validate patterns
-  const validPositive = call.top_positive_pattern && isValidPattern(call.top_positive_pattern.name)
-    ? call.top_positive_pattern
-    : null;
-  const validNegative = call.top_negative_pattern && isValidPattern(call.top_negative_pattern.name)
-    ? call.top_negative_pattern
-    : null;
-
-  const handleGenerateEmail = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    // TODO: Implement email generation
-    console.log('Generate email for call:', call.id);
-  };
-
+export function CallCard({ call, onClick }: CallCardProps) {
   return (
-    <Link
-      href={`/call-lab/report/${call.id}`}
-      className="block bg-[#1A1A1A] border-2 border-[#333] p-6 hover:border-[#E51B23] hover:-translate-y-0.5 transition-all cursor-pointer no-underline"
+    <div
+      className="bg-black border border-[#333] rounded-lg p-4 hover:border-[#E51B23] transition-colors cursor-pointer"
+      onClick={onClick}
     >
       {/* Header */}
-      <div className="flex justify-between items-start mb-4">
-        <div className="flex-1">
-          <h3 className="text-base font-bold text-white leading-tight">
-            {call.buyer_name}
+      <div className="flex justify-between items-start mb-3">
+        <div>
+          <h3 className="text-white font-semibold">
+            {call.name}
             {call.company && (
-              <span className="font-normal text-[#666]"> — {call.company}</span>
+              <span className="text-[#B3B3B3]"> - {call.company}</span>
             )}
           </h3>
-          <p className="text-[11px] text-[#666] tracking-wide mt-1.5">{call.date}</p>
+          <p className="text-[#666] text-xs mt-1">{call.date}</p>
         </div>
-        <span className={`font-anton text-[40px] leading-none ${getScoreColor(call.score)}`}>
+        <span className={`text-2xl font-bold ${getScoreColor(call.score)}`}>
           {call.score}
         </span>
       </div>
 
       {/* Patterns */}
-      <div className="flex flex-col gap-2.5 mb-4">
+      <div className="space-y-2 mb-3">
         {/* Positive Pattern */}
-        {validPositive && (
-          <div className="flex items-center gap-2.5 p-2.5 bg-[#0A0A0A] border-l-[3px] border-[#FFDE59]">
-            <span className="text-[#FFDE59] font-bold text-base w-5 text-center">✓</span>
-            <span className="text-white text-[12px] font-semibold flex-1">
-              {validPositive.name}
+        {call.top_positive_pattern && (
+          <div className="flex items-center gap-2">
+            <span className="text-green-400 text-sm">✓</span>
+            <span className="text-[#FFDE59] text-sm font-medium">
+              {call.top_positive_pattern.macro_name}
             </span>
             <span
-              className="text-[9px] font-bold tracking-wide px-2.5 py-1"
-              style={{
-                backgroundColor: getCategoryColor(validPositive.category),
-                color: '#000000'
-              }}
+              className={`text-[10px] px-2 py-0.5 rounded font-semibold uppercase ${getCategoryColorClass(call.top_positive_pattern.category)}`}
             >
-              {validPositive.category.toUpperCase()}
+              {call.top_positive_pattern.category}
             </span>
           </div>
         )}
 
         {/* Negative Pattern */}
-        {validNegative && (
-          <div className="flex items-center gap-2.5 p-2.5 bg-[#0A0A0A] border-l-[3px] border-[#E51B23]">
-            <span className="text-[#E51B23] font-bold text-base w-5 text-center">!</span>
-            <span className="text-white text-[12px] font-semibold flex-1">
-              {validNegative.name}
+        {call.top_negative_pattern && (
+          <div className="flex items-center gap-2">
+            <span className="text-[#E51B23] text-sm">!</span>
+            <span className="text-[#B3B3B3] text-sm font-medium">
+              {call.top_negative_pattern.macro_name}
             </span>
             <span
-              className="text-[9px] font-bold tracking-wide px-2.5 py-1"
-              style={{
-                backgroundColor: getCategoryColor(validNegative.category),
-                color: '#000000'
-              }}
+              className={`text-[10px] px-2 py-0.5 rounded font-semibold uppercase ${getCategoryColorClass(call.top_negative_pattern.category)}`}
             >
-              {validNegative.category.toUpperCase()}
+              {call.top_negative_pattern.category}
             </span>
           </div>
         )}
       </div>
 
-      {/* Next Step & Actions */}
-      <div className="flex flex-col gap-3 pt-4 border-t border-[#333]">
-        {call.next_step && (
-          <div className="text-[12px] text-[#999] leading-relaxed">
-            <span className="font-bold tracking-wide text-[#E51B23]">NEXT:</span> {call.next_step}
-          </div>
-        )}
-
-        {/* Action Buttons */}
-        <div className="flex gap-3" onClick={e => e.preventDefault()}>
-          <button
-            onClick={handleGenerateEmail}
-            className="flex-1 bg-[#0A0A0A] border border-[#333] text-white py-2.5 px-4 text-[10px] font-semibold tracking-wide hover:bg-[#E51B23] hover:border-[#E51B23] transition-all text-center"
-          >
-            📧 GENERATE EMAIL
-          </button>
-          <Link
-            href={`/call-lab/report/${call.id}`}
-            onClick={e => e.stopPropagation()}
-            className="flex-1 bg-[#0A0A0A] border border-[#333] text-white py-2.5 px-4 text-[10px] font-semibold tracking-wide hover:bg-[#E51B23] hover:border-[#E51B23] transition-all text-center no-underline"
-          >
-            📄 FULL REPORT
-          </Link>
+      {/* Next Step */}
+      {call.next_step && (
+        <div className="border-t border-[#333] pt-2 mt-2">
+          <span className="text-[#666] text-xs font-semibold">NEXT: </span>
+          <span className="text-[#B3B3B3] text-xs">{call.next_step}</span>
         </div>
-      </div>
-
-      {/* Click Hint */}
-      <div className="pt-3 mt-3 border-t border-[#333]">
-        <span className="text-[10px] font-bold tracking-wider text-[#666]">
-          CLICK FOR FULL ANALYSIS →
-        </span>
-      </div>
-    </Link>
+      )}
+    </div>
   );
 }
 

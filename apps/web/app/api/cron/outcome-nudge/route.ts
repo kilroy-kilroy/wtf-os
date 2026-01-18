@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { Resend } from 'resend';
 import { subDays, format } from 'date-fns';
+import { onOutcomeNudge } from '@/lib/loops';
 
 // Lazy-load Supabase client to avoid build-time errors
 const getSupabase = () => createClient(
@@ -9,21 +9,12 @@ const getSupabase = () => createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-// Nudge calls that are 3-7 days old without an outcome
+// Nudge calls that are 3-14 days old without an outcome
 const NUDGE_AFTER_DAYS = 3;
 const STOP_NUDGING_AFTER_DAYS = 14;
 
 export async function GET(request: NextRequest) {
   const CRON_SECRET = process.env.CRON_SECRET;
-  const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://app.timkilroy.com';
-  const FROM_EMAIL = process.env.FROM_EMAIL || 'coaching@timkilroy.com';
-  const RESEND_API_KEY = process.env.RESEND_API_KEY;
-
-  // Check for required Resend API key early
-  if (!RESEND_API_KEY) {
-    console.error('Missing RESEND_API_KEY environment variable');
-    return NextResponse.json({ error: 'Email service not configured' }, { status: 500 });
-  }
 
   try {
     // Verify cron secret
@@ -33,7 +24,6 @@ export async function GET(request: NextRequest) {
     }
 
     const supabase = getSupabase();
-    const resend = new Resend(RESEND_API_KEY);
 
     const now = new Date();
     const nudgeStart = subDays(now, STOP_NUDGING_AFTER_DAYS).toISOString();
@@ -95,40 +85,17 @@ export async function GET(request: NextRequest) {
           : format(new Date(call.created_at), 'MMM d');
         const prospect = call.buyer_name || call.company_name || 'your prospect';
 
-        const updateUrl = `${APP_URL}/calls/${call.id}/outcome`;
+        // Send via Loops event
+        const loopsResult = await onOutcomeNudge(
+          user.email,
+          user.first_name || 'there',
+          callDate,
+          prospect,
+          call.id
+        );
 
-        const subject = `Quick check: How did the call with ${prospect} go?`;
-        const body = `
-Hi ${user.first_name || 'there'},
-
-Just checking in about your call from ${callDate} with ${prospect}.
-
-How did it turn out?
-
-- Won the deal
-- Lost the deal
-- Got ghosted
-- Set a next step
-
-Update it here (takes 2 seconds):
-${updateUrl}
-
-Tracking outcomes helps your coaching reports be more accurate.
-If you'd rather skip this one, no worries -- I'll stop asking after a couple weeks.
-
-- Your WTF Coach
-        `.trim();
-
-        // Send email
-        const { error: emailError } = await resend.emails.send({
-          from: `WTF Sales Coach <${FROM_EMAIL}>`,
-          to: user.email,
-          subject,
-          text: body,
-        });
-
-        if (emailError) {
-          throw new Error(emailError.message);
+        if (!loopsResult.success) {
+          throw new Error(loopsResult.error || 'Loops event failed');
         }
 
         // Update last_nudge_at

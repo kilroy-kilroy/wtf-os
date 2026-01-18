@@ -70,7 +70,8 @@ export async function POST(req: Request) {
       agent: metadata.agent,
       version: metadata.version,
       call_id: metadata.callId || "",
-      transcript: metadata.transcript || ""
+      transcript: metadata.transcript || "",
+      discovery_brief_id: metadata.discoveryBriefId || null,
     };
 
     // --- Insert into Supabase ----------------------------------------------

@@ -149,6 +149,7 @@ export default function CallLabProPage() {
     call_type: 'discovery',
     call_stage: 'discovery',
     tier: 'pro',
+    service_offered: '',
   });
 
   const [loading, setLoading] = useState(false);
@@ -161,7 +162,7 @@ export default function CallLabProPage() {
   const router = useRouter();
   const supabase = createClientComponentClient();
 
-  // Pre-fill user email if logged in
+  // Pre-fill user data if logged in
   useEffect(() => {
     const getUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -172,10 +173,24 @@ export default function CallLabProPage() {
           email: user.email || '',
           first_name: user.user_metadata?.full_name || user.user_metadata?.first_name || '',
         }));
+
+        // Load service_offered from user preferences
+        const { data: userData } = await supabase
+          .from('users')
+          .select('preferences')
+          .eq('id', user.id)
+          .single();
+
+        if (userData?.preferences?.service_offered) {
+          setFormData(prev => ({
+            ...prev,
+            service_offered: userData.preferences.service_offered,
+          }));
+        }
       }
     };
     getUser();
-  }, [supabase.auth]);
+  }, [supabase.auth, supabase]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -633,6 +648,23 @@ export default function CallLabProPage() {
                       onChange={(e) => setFormData({ ...formData, prospect_role: (e.target as HTMLInputElement).value })}
                     />
                   </div>
+                  {/* Service Offered */}
+                  <div>
+                    <label className="block text-[11px] tracking-[2px] text-[#666666] mb-2 font-poppins uppercase">
+                      WHAT YOU SELL / YOUR SERVICE
+                    </label>
+                    <textarea
+                      placeholder="e.g., Paid media management for ecommerce brands..."
+                      value={formData.service_offered}
+                      onChange={(e) => setFormData({ ...formData, service_offered: e.target.value })}
+                      rows={2}
+                      className="w-full bg-black border border-[#333333] text-white px-4 py-3 text-sm font-poppins focus:border-[#E51B23] focus:outline-none transition-colors rounded resize-none"
+                    />
+                    <p className="text-[10px] text-[#555] mt-1">
+                      Helps us analyze your calls with relevant context. Edit per call if needed.
+                    </p>
+                  </div>
+
                   <div>
                     <label className="block text-[11px] tracking-[2px] text-[#666666] mb-2 font-poppins uppercase">
                       CALL TYPE

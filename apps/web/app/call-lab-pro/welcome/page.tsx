@@ -13,6 +13,7 @@ function WelcomeContent() {
 
   const [fullName, setFullName] = useState('');
   const [companyName, setCompanyName] = useState('');
+  const [serviceOffered, setServiceOffered] = useState('');
   const [saving, setSaving] = useState(false);
   const [userLoaded, setUserLoaded] = useState(false);
   const [needsProfileSetup, setNeedsProfileSetup] = useState(false);
@@ -34,6 +35,7 @@ function WelcomeContent() {
           full_name,
           first_name,
           last_name,
+          preferences,
           org:org_id (name)
         `)
         .eq('id', user.id)
@@ -44,9 +46,11 @@ function WelcomeContent() {
         const existingName = userData.full_name ||
           [userData.first_name, userData.last_name].filter(Boolean).join(' ') || '';
         const existingCompany = (userData.org as any)?.name || '';
+        const existingService = (userData.preferences as any)?.service_offered || '';
 
         setFullName(existingName);
         setCompanyName(existingCompany);
+        setServiceOffered(existingService);
 
         // Show profile setup if name or company is missing
         setNeedsProfileSetup(!existingName || !existingCompany);
@@ -75,7 +79,7 @@ function WelcomeContent() {
       // Get current user data
       const { data: userData } = await supabase
         .from('users')
-        .select('id, org_id')
+        .select('id, org_id, preferences')
         .eq('id', user.id)
         .single();
 
@@ -90,6 +94,15 @@ function WelcomeContent() {
           const nameParts = fullName.trim().split(' ');
           updates.first_name = nameParts[0] || '';
           updates.last_name = nameParts.slice(1).join(' ') || '';
+        }
+
+        // Update service_offered in preferences
+        if (serviceOffered) {
+          const currentPrefs = (userData.preferences as Record<string, any>) || {};
+          updates.preferences = {
+            ...currentPrefs,
+            service_offered: serviceOffered,
+          };
         }
 
         if (Object.keys(updates).length > 0) {
@@ -148,6 +161,7 @@ function WelcomeContent() {
             first_name: nameParts[0] || '',
             last_name: nameParts.slice(1).join(' ') || '',
             org_id: orgId,
+            preferences: serviceOffered ? { service_offered: serviceOffered } : {},
           });
       }
 
@@ -226,8 +240,22 @@ function WelcomeContent() {
                 onChange={(e) => setCompanyName(e.target.value)}
                 className="w-full bg-black border border-[#333] text-white px-4 py-3 font-poppins focus:border-[#E51B23] focus:outline-none"
               />
+            </div>
+
+            {/* Service offered field */}
+            <div className="space-y-2">
+              <label className="block text-[#FFDE59] font-anton text-sm tracking-wide">
+                WHAT DO YOU SELL? *
+              </label>
+              <textarea
+                placeholder="Describe your service or product..."
+                value={serviceOffered}
+                onChange={(e) => setServiceOffered(e.target.value)}
+                rows={3}
+                className="w-full bg-black border border-[#333] text-white px-4 py-3 font-poppins focus:border-[#E51B23] focus:outline-none resize-none"
+              />
               <p className="text-[#666] text-sm font-poppins">
-                This enables your weekly coaching reports.
+                This helps us analyze your calls with more relevant context.
               </p>
             </div>
           </div>
@@ -236,7 +264,7 @@ function WelcomeContent() {
         {/* CTA Button */}
         <button
           onClick={handleContinue}
-          disabled={saving || !userLoaded || !fullName || !companyName}
+          disabled={saving || !userLoaded || !fullName || !companyName || !serviceOffered}
           className="inline-block bg-[#E51B23] text-white px-8 py-4 font-anton text-lg tracking-wide hover:bg-[#FFDE59] hover:text-black transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {saving ? 'SAVING...' : '[ START ANALYZING CALLS ]'}

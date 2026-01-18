@@ -1,100 +1,276 @@
-import { getStripe } from '@/lib/stripe'
-import Link from 'next/link'
+'use client';
 
-interface WelcomePageProps {
-  searchParams: Promise<{ session_id?: string }>
-}
+import { useState, useEffect } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { Suspense } from 'react';
 
-export default async function WelcomePage({ searchParams }: WelcomePageProps) {
-  const params = await searchParams
-  const sessionId = params.session_id
-  let customerEmail: string | null = null
-  let plan: string | null = null
+function WelcomeContent() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const sessionId = searchParams.get('session_id');
+  const supabase = createClientComponentClient();
 
-  const stripe = getStripe()
-  if (sessionId && stripe) {
-    try {
-      const session = await stripe.checkout.sessions.retrieve(sessionId)
-      customerEmail = session.customer_email || (session.customer_details?.email ?? null)
-      plan = session.metadata?.priceType || null
-    } catch (error) {
-      console.error('Error retrieving session:', error)
+  const [fullName, setFullName] = useState('');
+  const [companyName, setCompanyName] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [userLoaded, setUserLoaded] = useState(false);
+  const [needsProfileSetup, setNeedsProfileSetup] = useState(false);
+
+  useEffect(() => {
+    // Load existing profile data
+    async function loadUser() {
+      const { data: { user } } = await supabase.auth.getUser();
+
+      // If not authenticated, redirect to login with return URL
+      if (!user) {
+        router.push('/login?returnTo=/call-lab-pro/welcome');
+        return;
+      }
+
+      const { data: userData } = await supabase
+        .from('users')
+        .select(`
+          full_name,
+          first_name,
+          last_name,
+          org:org_id (name)
+        `)
+        .eq('id', user.id)
+        .single();
+
+      if (userData) {
+        // Check if name is set
+        const existingName = userData.full_name ||
+          [userData.first_name, userData.last_name].filter(Boolean).join(' ') || '';
+        const existingCompany = (userData.org as any)?.name || '';
+
+        setFullName(existingName);
+        setCompanyName(existingCompany);
+
+        // Show profile setup if name or company is missing
+        setNeedsProfileSetup(!existingName || !existingCompany);
+      } else {
+        // No user record exists - need full profile setup
+        setNeedsProfileSetup(true);
+        // Pre-fill name from auth metadata if available
+        if (user.user_metadata?.full_name) {
+          setFullName(user.user_metadata.full_name);
+        }
+      }
+      setUserLoaded(true);
     }
-  }
+    loadUser();
+  }, [supabase, router]);
+
+  const handleContinue = async () => {
+    setSaving(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        router.push('/console');
+        return;
+      }
+
+      // Get current user data
+      const { data: userData } = await supabase
+        .from('users')
+        .select('id, org_id')
+        .eq('id', user.id)
+        .single();
+
+      if (userData) {
+        // User exists - update their profile
+        const updates: Record<string, any> = {};
+
+        // Update name if provided and was missing
+        if (fullName && needsProfileSetup) {
+          updates.full_name = fullName;
+          // Also split into first/last name
+          const nameParts = fullName.trim().split(' ');
+          updates.first_name = nameParts[0] || '';
+          updates.last_name = nameParts.slice(1).join(' ') || '';
+        }
+
+        if (Object.keys(updates).length > 0) {
+          await supabase
+            .from('users')
+            .update(updates)
+            .eq('id', user.id);
+        }
+
+        // Create/update org if company name provided and user has no org
+        if (companyName && !userData.org_id) {
+          const { data: newOrg } = await supabase
+            .from('orgs')
+            .insert({
+              name: companyName,
+              personal: true,
+              created_by_user_id: user.id,
+            })
+            .select('id')
+            .single();
+
+          if (newOrg) {
+            await supabase
+              .from('users')
+              .update({ org_id: newOrg.id })
+              .eq('id', user.id);
+          }
+        }
+      } else {
+        // User doesn't exist - create user record
+        // First create org if company name provided
+        let orgId = null;
+        if (companyName) {
+          const { data: newOrg } = await supabase
+            .from('orgs')
+            .insert({
+              name: companyName,
+              personal: true,
+              created_by_user_id: user.id,
+            })
+            .select('id')
+            .single();
+          orgId = newOrg?.id || null;
+        }
+
+        // Split name into first/last
+        const nameParts = fullName.trim().split(' ');
+
+        // Create user record
+        await supabase
+          .from('users')
+          .insert({
+            id: user.id,
+            email: user.email,
+            full_name: fullName,
+            first_name: nameParts[0] || '',
+            last_name: nameParts.slice(1).join(' ') || '',
+            org_id: orgId,
+          });
+      }
+
+      router.push('/console');
+    } catch (err) {
+      console.error('Error saving profile:', err);
+      router.push('/console');
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-black">
-      {/* Header */}
-      <div className="border-b border-[#333] py-4">
-        <div className="max-w-4xl mx-auto px-4">
-          <div className="flex items-center gap-2">
-            <span className="text-white font-bold text-xl tracking-wider font-anton">
-              SALES<span className="text-[#E51B23]">OS</span>
-              <span className="bg-[#FFDE59] text-black text-xs px-2 py-0.5 ml-2">PRO</span>
-            </span>
-          </div>
+    <div className="min-h-screen bg-black flex items-center justify-center p-4">
+      <div className="max-w-2xl mx-auto text-center">
+        {/* Success Icon */}
+        <div className="w-24 h-24 mx-auto mb-8 rounded-full bg-[#E51B23] flex items-center justify-center">
+          <svg
+            className="w-12 h-12 text-white"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={3}
+              d="M5 13l4 4L19 7"
+            />
+          </svg>
         </div>
-      </div>
 
-      {/* Main Content */}
-      <div className="max-w-2xl mx-auto px-4 py-16 text-center">
-        <div className="mb-8">
-          <div className="w-20 h-20 bg-[#27ca40] rounded-full flex items-center justify-center mx-auto mb-6">
-            <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-            </svg>
-          </div>
-          <h1 className="text-4xl font-bold text-white mb-4 font-anton">
-            Welcome to Call Lab Pro!
-          </h1>
-          <p className="text-xl text-gray-400">
-            Your subscription is now active.
-            {plan === 'team' && ' Team access has been enabled.'}
+        {/* Header */}
+        <h1 className="font-anton text-[clamp(36px,6vw,56px)] text-white mb-4 tracking-wide">
+          WELCOME TO{' '}
+          <span className="text-[#FFDE59]">CALL LAB PRO</span>
+        </h1>
+
+        <p className="text-xl text-[#CCCCCC] mb-8 leading-relaxed">
+          Your subscription is now active.
+          <br />
+          Every sales call is about to get a whole lot smarter.
+        </p>
+
+        {/* Quick Setup */}
+        <div className="bg-[#1a1a1a] border border-[#333] p-8 mb-8 text-left">
+          <h2 className="font-anton text-2xl text-[#E51B23] mb-6 tracking-wide">
+            SET UP YOUR PROFILE
+          </h2>
+          <p className="text-[#B3B3B3] mb-6 font-poppins">
+            Quick setup so we can personalize your coaching reports:
           </p>
+
+          <div className="space-y-5">
+            {/* Name field */}
+            <div className="space-y-2">
+              <label className="block text-[#FFDE59] font-anton text-sm tracking-wide">
+                YOUR NAME *
+              </label>
+              <input
+                type="text"
+                placeholder="Your full name"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                className="w-full bg-black border border-[#333] text-white px-4 py-3 font-poppins focus:border-[#E51B23] focus:outline-none"
+              />
+            </div>
+
+            {/* Company field */}
+            <div className="space-y-2">
+              <label className="block text-[#FFDE59] font-anton text-sm tracking-wide">
+                YOUR COMPANY *
+              </label>
+              <input
+                type="text"
+                placeholder="Your company name"
+                value={companyName}
+                onChange={(e) => setCompanyName(e.target.value)}
+                className="w-full bg-black border border-[#333] text-white px-4 py-3 font-poppins focus:border-[#E51B23] focus:outline-none"
+              />
+              <p className="text-[#666] text-sm font-poppins">
+                This enables your weekly coaching reports.
+              </p>
+            </div>
+          </div>
         </div>
 
-        {customerEmail && (
-          <p className="text-gray-500 mb-8">
-            Confirmation sent to <span className="text-white">{customerEmail}</span>
+        {/* CTA Button */}
+        <button
+          onClick={handleContinue}
+          disabled={saving || !userLoaded || !fullName || !companyName}
+          className="inline-block bg-[#E51B23] text-white px-8 py-4 font-anton text-lg tracking-wide hover:bg-[#FFDE59] hover:text-black transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {saving ? 'SAVING...' : '[ START ANALYZING CALLS ]'}
+        </button>
+
+        {/* Session ID for debugging */}
+        {sessionId && (
+          <p className="mt-8 text-xs text-[#666]">
+            Order reference: {sessionId.substring(0, 20)}...
           </p>
         )}
 
-        <div className="bg-[#1a1a1a] border border-[#333] p-8 mb-8">
-          <h2 className="text-xl font-bold text-white mb-4 font-anton">What&apos;s Next?</h2>
-          <ul className="text-left text-gray-400 space-y-3">
-            <li className="flex items-start gap-3">
-              <span className="text-[#FFDE59]">1.</span>
-              <span>Set up your profile so we know who you are</span>
-            </li>
-            <li className="flex items-start gap-3">
-              <span className="text-[#FFDE59]">2.</span>
-              <span>Upload your first call transcript to get your Pro analysis</span>
-            </li>
-            <li className="flex items-start gap-3">
-              <span className="text-[#FFDE59]">3.</span>
-              <span>Review your framework scores and tactical rewrites</span>
-            </li>
-            <li className="flex items-start gap-3">
-              <span className="text-[#FFDE59]">4.</span>
-              <span>Check your dashboard to track progress over time</span>
-            </li>
-          </ul>
-        </div>
-
-        <Link
-          href="/onboarding/profile"
-          className="inline-block bg-[#E51B23] text-white px-8 py-4 font-bold text-lg hover:bg-[#c41820] transition-colors font-anton tracking-wider"
-        >
-          SET UP YOUR PROFILE →
-        </Link>
-
-        <p className="text-gray-600 text-sm mt-8">
-          Questions? Contact us at{' '}
-          <a href="mailto:tim@timkilroy.com" className="text-[#FFDE59] hover:underline">
+        {/* Support */}
+        <p className="mt-8 text-sm text-[#666]">
+          Questions? Email{' '}
+          <a href="mailto:tim@timkilroy.com" className="text-[#FFDE59]">
             tim@timkilroy.com
           </a>
         </p>
       </div>
     </div>
-  )
+  );
+}
+
+export default function WelcomePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-black flex items-center justify-center">
+          <div className="text-white font-anton text-2xl">Loading...</div>
+        </div>
+      }
+    >
+      <WelcomeContent />
+    </Suspense>
+  );
 }

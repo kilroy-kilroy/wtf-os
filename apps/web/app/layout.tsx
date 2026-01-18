@@ -20,6 +20,11 @@ const poppins = Poppins({
 export const metadata: Metadata = {
   title: "SalesOS Intelligence Tools Dashboard | TimKilroy.com",
   description: "Access your SalesOS workspace with Discovery Lab, Call Lab and performance tools for smarter sales research, better calls and more wins in one central app.",
+  icons: {
+    icon: '/logos/favicon.png',
+    shortcut: '/logos/favicon.png',
+    apple: '/logos/favicon.png',
+  },
 };
 
 export default function RootLayout({

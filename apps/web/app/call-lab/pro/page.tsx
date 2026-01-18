@@ -11,8 +11,8 @@ import {
   ConsoleMarkdownRenderer
 } from '@/components/console';
 import { PatternTag } from '@/components/pattern-tag';
-import { CallLabLogo } from '@/components/CallLabLogo';
 import { FirefliesTranscriptSelector } from '@/components/FirefliesTranscriptSelector';
+import Image from 'next/image';
 
 // Helper to safely extract score value (handles both number and {score, reason} format)
 function getScoreValue(value: unknown): number {
@@ -634,7 +634,14 @@ export default function CallLabProPage() {
       {/* Header with Pro Logo */}
       <header className="border-b border-[#333] px-4 py-6">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
-          <CallLabLogo variant="pro-square" className="h-16 w-auto" />
+          <Image
+            src="/logos/salesosdemandossqtransparent.png"
+            width={200}
+            height={200}
+            alt="DemandOS"
+            className="h-16 w-auto"
+            priority
+          />
           <div className="flex items-center gap-2">
             <div className={`w-2 h-2 rounded-full ${loading ? 'bg-yellow-500 animate-pulse' : 'bg-green-500'}`} />
             <span className="font-anton text-xs text-white uppercase tracking-wider">

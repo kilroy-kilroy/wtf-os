@@ -151,6 +151,7 @@ export default function CallLabProPage() {
     call_stage: 'discovery',
     tier: 'pro',
     service_offered: '',
+    discovery_brief_id: '',
   });
 
   const [loading, setLoading] = useState(false);
@@ -159,6 +160,14 @@ export default function CallLabProPage() {
   const [error, setError] = useState<string | null>(null);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  const [discoveryBriefs, setDiscoveryBriefs] = useState<Array<{
+    id: string;
+    companyName: string;
+    contactName: string;
+    label: string;
+    createdAt: string;
+  }>>([]);
+  const [suggestedBrief, setSuggestedBrief] = useState<string | null>(null);
 
   const router = useRouter();
   const supabase = createClientComponentClient();
@@ -188,10 +197,39 @@ export default function CallLabProPage() {
             service_offered: userData.preferences.service_offered,
           }));
         }
+
+        // Fetch recent discovery briefs
+        try {
+          const briefsResponse = await fetch('/api/discovery-briefs/recent?limit=20');
+          if (briefsResponse.ok) {
+            const briefsData = await briefsResponse.json();
+            setDiscoveryBriefs(briefsData.briefs || []);
+          }
+        } catch (err) {
+          console.error('Failed to fetch discovery briefs:', err);
+        }
       }
     };
     getUser();
   }, [supabase.auth, supabase]);
+
+  // Auto-suggest discovery brief when prospect company changes
+  useEffect(() => {
+    if (formData.prospect_company && discoveryBriefs.length > 0) {
+      const companyLower = formData.prospect_company.toLowerCase();
+      const match = discoveryBriefs.find(brief =>
+        brief.companyName.toLowerCase().includes(companyLower) ||
+        companyLower.includes(brief.companyName.toLowerCase())
+      );
+      if (match && match.id !== formData.discovery_brief_id) {
+        setSuggestedBrief(match.id);
+      } else {
+        setSuggestedBrief(null);
+      }
+    } else {
+      setSuggestedBrief(null);
+    }
+  }, [formData.prospect_company, discoveryBriefs, formData.discovery_brief_id]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -279,6 +317,7 @@ export default function CallLabProPage() {
             createdAt: createdAt,
             buyerName: formData.prospect_name,
             companyName: formData.prospect_company,
+            discoveryBriefId: formData.discovery_brief_id || null,
           }
         };
 
@@ -432,7 +471,15 @@ export default function CallLabProPage() {
           <ConsolePanel>
             <ConsoleHeading level={2} variant="yellow" className="mb-4">SALES FRAMEWORK ANALYSIS</ConsoleHeading>
             <div className="grid md:grid-cols-2 gap-4">
-              {Object.entries(report.modelScores).map(([model, data]) => (
+              {Object.entries(report.modelScores)
+                .sort(([a], [b]) => {
+                  // Define preferred order: WTF Method first, MEDDIC last
+                  const order = ['wtfMethod', 'challenger', 'spin', 'gapSelling', 'buyerJourney', 'meddic'];
+                  const aIndex = order.indexOf(a.toLowerCase()) !== -1 ? order.indexOf(a.toLowerCase()) : order.length - 1;
+                  const bIndex = order.indexOf(b.toLowerCase()) !== -1 ? order.indexOf(b.toLowerCase()) : order.length - 1;
+                  return aIndex - bIndex;
+                })
+                .map(([model, data]) => (
                 <div key={model} className="bg-[#1A1A1A] border border-[#333] p-4 rounded">
                   <div className="flex items-center justify-between mb-3">
                     <span className="font-anton text-white uppercase">
@@ -661,9 +708,17 @@ export default function CallLabProPage() {
                       rows={2}
                       className="w-full bg-black border border-[#333333] text-white px-4 py-3 text-sm font-poppins focus:border-[#E51B23] focus:outline-none transition-colors rounded resize-none"
                     />
-                    <p className="text-[10px] text-[#555] mt-1">
-                      Helps us analyze your calls with relevant context. Edit per call if needed.
-                    </p>
+                    <div className="flex justify-between items-center mt-1">
+                      <p className="text-[10px] text-[#555]">
+                        Helps us analyze your calls with relevant context. Edit per call if needed.
+                      </p>
+                      <a
+                        href="/settings"
+                        className="text-[10px] text-[#FFDE59] hover:underline"
+                      >
+                        Change in settings
+                      </a>
+                    </div>
                   </div>
 
                   <div>
@@ -692,6 +747,62 @@ export default function CallLabProPage() {
                       ))}
                     </div>
                   </div>
+
+                  {/* Discovery Brief Link */}
+                  {discoveryBriefs.length > 0 && (
+                    <div>
+                      <label className="block text-[11px] tracking-[2px] text-[#666666] mb-2 font-poppins uppercase">
+                        RELATED DISCOVERY BRIEF
+                      </label>
+                      <select
+                        value={formData.discovery_brief_id}
+                        onChange={(e) => {
+                          setFormData({ ...formData, discovery_brief_id: e.target.value });
+                          setSuggestedBrief(null);
+                        }}
+                        className="w-full bg-black border border-[#333333] text-white px-4 py-3 text-sm font-poppins focus:border-[#E51B23] focus:outline-none transition-colors rounded appearance-none cursor-pointer"
+                      >
+                        <option value="">None / New Prospect</option>
+                        {discoveryBriefs.map((brief) => (
+                          <option key={brief.id} value={brief.id}>
+                            {brief.label} ({new Date(brief.createdAt).toLocaleDateString()})
+                          </option>
+                        ))}
+                      </select>
+                      <p className="text-[10px] text-[#555] mt-1">
+                        Link this call to a discovery brief for pipeline tracking.
+                      </p>
+
+                      {/* Auto-suggestion */}
+                      {suggestedBrief && (
+                        <div className="mt-2 p-3 bg-[#1A1A1A] border border-[#FFDE59] rounded">
+                          <p className="text-[#FFDE59] text-xs mb-2">
+                            Is this call related to your discovery brief for{' '}
+                            <strong>{discoveryBriefs.find(b => b.id === suggestedBrief)?.companyName}</strong>?
+                          </p>
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setFormData({ ...formData, discovery_brief_id: suggestedBrief });
+                                setSuggestedBrief(null);
+                              }}
+                              className="px-3 py-1 bg-[#FFDE59] text-black text-xs font-medium rounded hover:bg-[#E51B23] hover:text-white transition-colors"
+                            >
+                              Yes, link it
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setSuggestedBrief(null)}
+                              className="px-3 py-1 bg-[#333] text-white text-xs font-medium rounded hover:bg-[#444] transition-colors"
+                            >
+                              No, different prospect
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-4">

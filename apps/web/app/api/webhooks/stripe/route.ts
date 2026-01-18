@@ -130,22 +130,35 @@ export async function POST(request: NextRequest) {
         customerId: subscription.customer,
       })
 
-      // Update subscription in database
-      const { error } = await supabase
-        .from('subscriptions')
-        .update({
-          status: subscription.status,
-          current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
-          current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
-          canceled_at: subscription.canceled_at
-            ? new Date(subscription.canceled_at * 1000).toISOString()
-            : null,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('stripe_subscription_id', subscription.id)
+      try {
+        // Safely convert timestamps to ISO strings, handling undefined/null values
+        const currentPeriodStart = subscription.current_period_start
+          ? new Date(subscription.current_period_start * 1000).toISOString()
+          : null
+        const currentPeriodEnd = subscription.current_period_end
+          ? new Date(subscription.current_period_end * 1000).toISOString()
+          : null
+        const canceledAt = subscription.canceled_at
+          ? new Date(subscription.canceled_at * 1000).toISOString()
+          : null
 
-      if (error) {
-        console.error('Error updating subscription:', error)
+        // Update subscription in database
+        const { error } = await supabase
+          .from('subscriptions')
+          .update({
+            status: subscription.status,
+            ...(currentPeriodStart && { current_period_start: currentPeriodStart }),
+            ...(currentPeriodEnd && { current_period_end: currentPeriodEnd }),
+            canceled_at: canceledAt,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('stripe_subscription_id', subscription.id)
+
+        if (error) {
+          console.error('Error updating subscription:', error)
+        }
+      } catch (err) {
+        console.error('Error processing subscription update:', err)
       }
       break
     }

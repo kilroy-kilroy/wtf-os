@@ -3,13 +3,11 @@ import { createClient } from '@supabase/supabase-js';
 import { Resend } from 'resend';
 import { subDays, format } from 'date-fns';
 
-// Lazy-load clients to avoid build-time errors
+// Lazy-load Supabase client to avoid build-time errors
 const getSupabase = () => createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
-
-const getResend = () => new Resend(process.env.RESEND_API_KEY);
 
 // Nudge calls that are 3-7 days old without an outcome
 const NUDGE_AFTER_DAYS = 3;
@@ -19,6 +17,13 @@ export async function GET(request: NextRequest) {
   const CRON_SECRET = process.env.CRON_SECRET;
   const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://app.timkilroy.com';
   const FROM_EMAIL = process.env.FROM_EMAIL || 'coaching@timkilroy.com';
+  const RESEND_API_KEY = process.env.RESEND_API_KEY;
+
+  // Check for required Resend API key early
+  if (!RESEND_API_KEY) {
+    console.error('Missing RESEND_API_KEY environment variable');
+    return NextResponse.json({ error: 'Email service not configured' }, { status: 500 });
+  }
 
   try {
     // Verify cron secret
@@ -28,7 +33,7 @@ export async function GET(request: NextRequest) {
     }
 
     const supabase = getSupabase();
-    const resend = getResend();
+    const resend = new Resend(RESEND_API_KEY);
 
     const now = new Date();
     const nudgeStart = subDays(now, STOP_NUDGING_AFTER_DAYS).toISOString();

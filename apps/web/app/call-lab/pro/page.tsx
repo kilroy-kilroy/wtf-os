@@ -470,7 +470,15 @@ export default function CallLabProPage() {
           <ConsolePanel>
             <ConsoleHeading level={2} variant="yellow" className="mb-4">SALES FRAMEWORK ANALYSIS</ConsoleHeading>
             <div className="grid md:grid-cols-2 gap-4">
-              {Object.entries(report.modelScores).map(([model, data]) => (
+              {Object.entries(report.modelScores)
+                .sort(([a], [b]) => {
+                  // Define preferred order: WTF Method first, MEDDIC last
+                  const order = ['wtfMethod', 'challenger', 'spin', 'gapSelling', 'buyerJourney', 'meddic'];
+                  const aIndex = order.indexOf(a.toLowerCase()) !== -1 ? order.indexOf(a.toLowerCase()) : order.length - 1;
+                  const bIndex = order.indexOf(b.toLowerCase()) !== -1 ? order.indexOf(b.toLowerCase()) : order.length - 1;
+                  return aIndex - bIndex;
+                })
+                .map(([model, data]) => (
                 <div key={model} className="bg-[#1A1A1A] border border-[#333] p-4 rounded">
                   <div className="flex items-center justify-between mb-3">
                     <span className="font-anton text-white uppercase">

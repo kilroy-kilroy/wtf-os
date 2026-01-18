@@ -295,6 +295,33 @@ export async function onDiscoveryReportGenerated(
 }
 
 /**
+ * Fire when we need to nudge a user about a call outcome
+ * Triggers email asking them to tag how the call went
+ */
+export async function onOutcomeNudge(
+  email: string,
+  firstName: string,
+  callDate: string,
+  prospect: string,
+  callId: string
+): Promise<{ success: boolean; error?: string }> {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.timkilroy.com';
+  const updateUrl = `${appUrl}/calls/${callId}/outcome`;
+
+  return sendEvent({
+    email,
+    eventName: 'outcome_nudge',
+    eventProperties: {
+      firstName: firstName || 'there',
+      callDate,
+      prospect,
+      updateUrl,
+      callId,
+    },
+  });
+}
+
+/**
  * Fire when a coaching report is ready (weekly, monthly, quarterly)
  * Triggers email with link to coaching report
  */

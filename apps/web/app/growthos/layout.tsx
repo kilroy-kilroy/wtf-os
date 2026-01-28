@@ -1,6 +1,3 @@
-import { redirect } from 'next/navigation';
-import { cookies } from 'next/headers';
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
 import Link from 'next/link';
 
 export const metadata = {
@@ -8,18 +5,11 @@ export const metadata = {
   description: 'Find what\'s broken in your business. Get a data-driven diagnostic with actionable insights.',
 };
 
-export default async function GrowthOSLayout({
+export default function GrowthOSLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = createServerComponentClient({ cookies });
-  const { data: { session } } = await supabase.auth.getSession();
-
-  if (!session) {
-    redirect('/login?next=/growthos');
-  }
-
   return (
     <div className="min-h-screen bg-slate-950">
       {/* Header */}
@@ -33,20 +23,6 @@ export default async function GrowthOSLayout({
               GrowthOS
             </span>
           </Link>
-          <div className="flex items-center gap-4">
-            <Link
-              href="/dashboard"
-              className="text-sm text-slate-400 hover:text-slate-200 transition-colors"
-            >
-              Dashboard
-            </Link>
-            <Link
-              href="/growthos"
-              className="text-sm text-slate-400 hover:text-slate-200 transition-colors"
-            >
-              Assessments
-            </Link>
-          </div>
         </div>
       </header>
 

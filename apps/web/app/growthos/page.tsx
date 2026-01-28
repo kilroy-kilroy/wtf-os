@@ -1,412 +1,285 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState } from 'react';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 
-// Form section component
-function FormSection({ number, title, note, children }: {
-  number: number;
-  title: string;
-  note?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="relative bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 mb-4">
-      <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-emerald-500 to-indigo-500 rounded-l-2xl" />
-      <div className="flex items-center gap-3 mb-5">
-        <span className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-indigo-500 flex items-center justify-center text-white text-sm font-bold">
-          {number}
-        </span>
-        <h2 className="text-lg font-bold text-white">{title}</h2>
-      </div>
-      {note && (
-        <div className="bg-indigo-500/10 border-l-2 border-indigo-400 rounded-r-lg px-4 py-3 mb-5 text-sm text-indigo-300">
-          {note}
-        </div>
-      )}
-      {children}
-    </div>
-  );
-}
+export default function GrowthOSGatePage() {
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [website, setWebsite] = useState('');
+  const [password, setPassword] = useState('');
+  const [step, setStep] = useState<'info' | 'account'>('info');
+  const [mode, setMode] = useState<'signup' | 'login'>('signup');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [confirmationSent, setConfirmationSent] = useState(false);
 
-// Field components
-function TextField({ label, name, required, placeholder, helpText, value, onChange, type = 'text' }: {
-  label: string; name: string; required?: boolean; placeholder?: string;
-  helpText?: string; value: string; onChange: (name: string, value: string) => void;
-  type?: string;
-}) {
-  return (
-    <div className="mb-4">
-      <label className="block text-sm font-semibold text-white mb-1.5">
-        {label} {required && <span className="text-red-400">*</span>}
-      </label>
-      <input
-        type={type}
-        name={name}
-        required={required}
-        placeholder={placeholder}
-        value={value}
-        onChange={(e) => onChange(name, e.target.value)}
-        className="w-full px-4 py-3 bg-slate-700/50 border-2 border-slate-600 rounded-xl text-white placeholder-slate-500 focus:border-emerald-500 focus:ring-0 focus:outline-none transition-colors text-sm"
-      />
-      {helpText && <p className="mt-1 text-xs text-slate-500">{helpText}</p>}
-    </div>
-  );
-}
-
-function NumberField({ label, name, required, placeholder, helpText, min, max, step, value, onChange }: {
-  label: string; name: string; required?: boolean; placeholder?: string;
-  helpText?: string; min?: number; max?: number; step?: number;
-  value: string; onChange: (name: string, value: string) => void;
-}) {
-  return (
-    <div className="mb-4">
-      <label className="block text-sm font-semibold text-white mb-1.5">
-        {label} {required && <span className="text-red-400">*</span>}
-      </label>
-      <input
-        type="number"
-        name={name}
-        required={required}
-        placeholder={placeholder}
-        min={min}
-        max={max}
-        step={step}
-        value={value}
-        onChange={(e) => onChange(name, e.target.value)}
-        className="w-full px-4 py-3 bg-slate-700/50 border-2 border-slate-600 rounded-xl text-white placeholder-slate-500 focus:border-emerald-500 focus:ring-0 focus:outline-none transition-colors text-sm"
-      />
-      {helpText && <p className="mt-1 text-xs text-slate-500">{helpText}</p>}
-    </div>
-  );
-}
-
-function TextAreaField({ label, name, required, placeholder, helpText, value, onChange }: {
-  label: string; name: string; required?: boolean; placeholder?: string;
-  helpText?: string; value: string; onChange: (name: string, value: string) => void;
-}) {
-  return (
-    <div className="mb-4">
-      <label className="block text-sm font-semibold text-white mb-1.5">
-        {label} {required && <span className="text-red-400">*</span>}
-      </label>
-      <textarea
-        name={name}
-        required={required}
-        placeholder={placeholder}
-        value={value}
-        onChange={(e) => onChange(name, e.target.value)}
-        rows={3}
-        className="w-full px-4 py-3 bg-slate-700/50 border-2 border-slate-600 rounded-xl text-white placeholder-slate-500 focus:border-emerald-500 focus:ring-0 focus:outline-none transition-colors text-sm resize-y"
-      />
-      {helpText && <p className="mt-1 text-xs text-slate-500">{helpText}</p>}
-    </div>
-  );
-}
-
-function RadioField({ label, name, required, options, value, onChange }: {
-  label: string; name: string; required?: boolean;
-  options: Array<{ value: string; label: string }>;
-  value: string; onChange: (name: string, value: string) => void;
-}) {
-  return (
-    <div className="mb-4">
-      <label className="block text-sm font-semibold text-white mb-2">
-        {label} {required && <span className="text-red-400">*</span>}
-      </label>
-      <div className="space-y-2">
-        {options.map((opt) => (
-          <label
-            key={opt.value}
-            className={`flex items-center px-4 py-3 rounded-xl border-2 cursor-pointer transition-all text-sm ${
-              value === opt.value
-                ? 'border-emerald-500 bg-emerald-500/10 text-white'
-                : 'border-slate-600 bg-slate-700/50 text-slate-400 hover:border-slate-500'
-            }`}
-          >
-            <input
-              type="radio"
-              name={name}
-              value={opt.value}
-              checked={value === opt.value}
-              onChange={(e) => onChange(name, e.target.value)}
-              className="w-4 h-4 mr-3 accent-emerald-500"
-            />
-            <span>{opt.label}</span>
-          </label>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// CEO Rating options
-const CEO_RATING_OPTIONS = (area: string) => [
-  { value: `1 - I do most ${area} myself`, label: `1 - I do most ${area} myself` },
-  { value: `2 - I'm heavily involved in ${area}`, label: `2 - Heavily involved` },
-  { value: `3 - I oversee ${area} but team executes`, label: `3 - I oversee, team executes` },
-  { value: `4 - Team handles ${area}, I'm available if needed`, label: `4 - Team handles it, I'm backup` },
-  { value: `5 - ${area} function operates independently`, label: `5 - Fully delegated` },
-];
-
-const SOP_OPTIONS = [
-  { value: 'Yes, comprehensive', label: 'Yes, comprehensive' },
-  { value: 'Partial/some documented', label: 'Partial/some docs' },
-  { value: 'No, mostly in my head', label: 'No, mostly in my head' },
-];
-
-export default function AssessmentPage() {
   const router = useRouter();
-  const [formData, setFormData] = useState<Record<string, string>>({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState('');
-  const [loadingStep, setLoadingStep] = useState(0);
+  const supabase = createClientComponentClient();
 
-  const handleChange = useCallback((name: string, value: string) => {
-    setFormData(prev => ({ ...prev, [name]: value }));
-  }, []);
-
-  // Calculate progress
-  const requiredFields = [
-    'agencyName', 'founderName', 'email', 'website', 'founderLinkedinUrl',
-    'annualRevenue', 'targetRevenue', 'netProfit', 'teamSize', 'avgClientValue',
-    'clientsAddedPerMonth', 'clientsLostPerMonth', 'newRevenueAnnual', 'churnRevenueAnnual',
-    'clientCount', 'avgClientLifetime',
-    'referralPercent', 'inboundPercent', 'contentPercent', 'paidPercent', 'outboundPercent',
-    'monthlyLeads', 'closeRate',
-    'ceoDeliveryRating', 'ceoAccountMgmtRating', 'ceoMarketingRating', 'ceoSalesRating',
-    'founderWeeklyHours', 'strategyHoursPerWeek',
-    'hasSalesSOP', 'hasDeliverySOP', 'hasAccountMgmtSOP', 'hasMarketingSOP',
-    'targetMarket', 'coreOffer', 'hasCaseStudies', 'hasNamedClients'
-  ];
-  const filledCount = requiredFields.filter(f => formData[f]?.trim()).length;
-  const progress = Math.round((filledCount / requiredFields.length) * 100);
+  function handleContinue(e: React.FormEvent) {
+    e.preventDefault();
+    if (!name.trim() || !email.trim() || !website.trim()) return;
+    setStep('account');
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setIsSubmitting(true);
-    setError('');
-
-    // Animate loading steps
-    const stepInterval = setInterval(() => {
-      setLoadingStep(prev => Math.min(prev + 1, 4));
-    }, 2500);
+    setIsLoading(true);
+    setError(null);
 
     try {
-      // Build intake data with proper number parsing
-      const numberFields = [
-        'annualRevenue', 'targetRevenue', 'netProfit', 'teamSize', 'avgClientValue',
-        'clientsAddedPerMonth', 'clientsLostPerMonth', 'newRevenueAnnual', 'churnRevenueAnnual',
-        'clientCount', 'avgClientLifetime',
-        'referralPercent', 'inboundPercent', 'contentPercent', 'paidPercent', 'outboundPercent', 'partnershipPercent',
-        'monthlyLeads', 'closeRate',
-        'founderWeeklyHours', 'strategyHoursPerWeek', 'founderPostsPerWeek', 'teamPostsPerWeek'
-      ];
+      if (mode === 'signup') {
+        const { data, error: signUpError } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            emailRedirectTo: `${window.location.origin}/auth/callback?next=/growthos/assessment`,
+            data: {
+              full_name: name,
+              website,
+            },
+          },
+        });
+        if (signUpError) throw signUpError;
 
-      const intakeData: Record<string, any> = { ...formData };
-      numberFields.forEach(f => {
-        if (intakeData[f]) intakeData[f] = parseFloat(intakeData[f]);
-      });
+        // If email confirmation is required
+        if (data.user && !data.session) {
+          setConfirmationSent(true);
+          return;
+        }
 
-      const response = await fetch('/api/growthos/submit', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          intakeData,
-          userId: 'current' // Server will resolve from session
-        })
-      });
-
-      const result = await response.json();
-      clearInterval(stepInterval);
-
-      if (result.success) {
-        router.push(`/growthos/results/${result.data.assessmentId}`);
+        // If session exists (email confirmation disabled), store intake basics and go
+        if (data.session) {
+          sessionStorage.setItem('growthos_intake', JSON.stringify({ founderName: name, email, website }));
+          router.push('/growthos/assessment');
+          router.refresh();
+        }
       } else {
-        throw new Error(result.message || 'Assessment failed');
+        const { data, error: signInError } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+        if (signInError) throw signInError;
+
+        if (data.session) {
+          sessionStorage.setItem('growthos_intake', JSON.stringify({ founderName: name, email, website }));
+          router.push('/growthos/assessment');
+          router.refresh();
+        }
       }
     } catch (err: any) {
-      clearInterval(stepInterval);
-      setError(err.message);
-      setIsSubmitting(false);
-      setLoadingStep(0);
+      setError(err.message || 'Something went wrong');
+    } finally {
+      setIsLoading(false);
     }
   }
 
-  const loadingSteps = [
-    'Validating data',
-    'Scraping website & LinkedIn',
-    'Running visibility & awareness checks',
-    'Scoring & generating insights'
-  ];
+  async function handleGoogleSignIn() {
+    // Store intake data before redirecting to OAuth
+    sessionStorage.setItem('growthos_intake', JSON.stringify({ founderName: name, email, website }));
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback?next=/growthos/assessment`,
+        },
+      });
+      if (error) throw error;
+    } catch (err: any) {
+      setError(err.message || 'Failed to sign in with Google');
+    }
+  }
+
+  if (confirmationSent) {
+    return (
+      <div className="min-h-[80vh] flex items-center justify-center px-4">
+        <div className="max-w-md w-full text-center">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-500 to-indigo-500 flex items-center justify-center text-white text-2xl font-bold mx-auto mb-6">
+            G
+          </div>
+          <h1 className="text-2xl font-extrabold text-white mb-3">Check your email</h1>
+          <p className="text-slate-400 mb-2">
+            We sent a confirmation link to <span className="text-white font-medium">{email}</span>
+          </p>
+          <p className="text-slate-500 text-sm">
+            Click the link to activate your account, then you&apos;ll land right in the assessment.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <>
-      {/* Progress bar */}
-      <div className="border-b border-slate-700/50 bg-slate-900/80 px-4 sm:px-6 lg:px-8 py-3">
-        <div className="max-w-3xl mx-auto">
-          <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-gradient-to-r from-emerald-500 to-indigo-500 rounded-full transition-all duration-300"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-          <div className="flex justify-between mt-1.5 text-xs text-slate-500">
-            <span>Section {Math.min(Math.ceil(progress / 14) || 1, 7)} of 7</span>
-            <span>{progress}% complete</span>
-          </div>
-        </div>
-      </div>
-
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-extrabold text-white mb-2">Business Diagnostic</h1>
-          <p className="text-slate-400">Let&apos;s find what&apos;s holding your business back</p>
+    <div className="min-h-[80vh] flex items-center justify-center px-4">
+      <div className="max-w-lg w-full">
+        {/* Hero */}
+        <div className="text-center mb-10">
+          <h1 className="text-4xl sm:text-5xl font-extrabold text-white mb-4 leading-tight">
+            Take the WTF Assessment.
+            <br />
+            <span className="bg-gradient-to-r from-emerald-400 to-indigo-400 bg-clip-text text-transparent">
+              Get your GrowthOS Baseline.
+            </span>
+          </h1>
+          <p className="text-slate-400 text-lg max-w-md mx-auto">
+            Find out what&apos;s actually broken in your agency. Data in, diagnosis out. Takes about 5 minutes.
+          </p>
         </div>
 
-        <form onSubmit={handleSubmit}>
-          {/* Section 1: Basics */}
-          <FormSection number={1} title="The Basics">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <TextField label="Company Name" name="agencyName" required placeholder="Your agency name" value={formData.agencyName || ''} onChange={handleChange} />
-              <TextField label="Your Name" name="founderName" required placeholder="Your full name" value={formData.founderName || ''} onChange={handleChange} />
-            </div>
-            <TextField label="Email" name="email" required type="email" placeholder="you@company.com" value={formData.email || ''} onChange={handleChange} />
-            <TextField label="Website URL" name="website" required type="url" placeholder="https://yourcompany.com" helpText="We'll analyze your homepage copy, case studies, and positioning" value={formData.website || ''} onChange={handleChange} />
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <TextField label="Founder LinkedIn URL" name="founderLinkedinUrl" required type="url" placeholder="https://linkedin.com/in/you" helpText="We'll analyze your last 20 posts" value={formData.founderLinkedinUrl || ''} onChange={handleChange} />
-              <TextField label="Company LinkedIn URL" name="companyLinkedinUrl" type="url" placeholder="https://linkedin.com/company/you" helpText="Optional" value={formData.companyLinkedinUrl || ''} onChange={handleChange} />
-            </div>
-          </FormSection>
+        {step === 'info' ? (
+          /* Step 1: Basic info */
+          <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-8">
+            <form onSubmit={handleContinue} className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-white mb-1.5">Your Name</label>
+                <input
+                  type="text"
+                  required
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Jane Smith"
+                  className="w-full px-4 py-3 bg-slate-700/50 border-2 border-slate-600 rounded-xl text-white placeholder-slate-500 focus:border-emerald-500 focus:ring-0 focus:outline-none transition-colors text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-white mb-1.5">Email</label>
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="jane@agency.com"
+                  className="w-full px-4 py-3 bg-slate-700/50 border-2 border-slate-600 rounded-xl text-white placeholder-slate-500 focus:border-emerald-500 focus:ring-0 focus:outline-none transition-colors text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-white mb-1.5">Agency Website</label>
+                <input
+                  type="url"
+                  required
+                  value={website}
+                  onChange={(e) => setWebsite(e.target.value)}
+                  placeholder="https://youragency.com"
+                  className="w-full px-4 py-3 bg-slate-700/50 border-2 border-slate-600 rounded-xl text-white placeholder-slate-500 focus:border-emerald-500 focus:ring-0 focus:outline-none transition-colors text-sm"
+                />
+                <p className="mt-1 text-xs text-slate-500">We&apos;ll analyze your site for positioning and visibility</p>
+              </div>
 
-          {/* Section 2: Revenue & Profit */}
-          <FormSection number={2} title="Revenue & Profit">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <NumberField label="Annual Revenue" name="annualRevenue" required placeholder="e.g., 1500000" helpText="USD" value={formData.annualRevenue || ''} onChange={handleChange} />
-              <NumberField label="Target Revenue (12 months)" name="targetRevenue" required placeholder="e.g., 2000000" value={formData.targetRevenue || ''} onChange={handleChange} />
+              <button
+                type="submit"
+                className="w-full py-4 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 text-white font-bold text-lg hover:shadow-lg hover:shadow-emerald-500/25 hover:-translate-y-0.5 transition-all mt-2"
+              >
+                Continue
+              </button>
+            </form>
+          </div>
+        ) : (
+          /* Step 2: Create account / login */
+          <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-8">
+            <div className="text-center mb-6">
+              <h2 className="text-xl font-bold text-white mb-1">
+                {mode === 'signup' ? 'Create your account' : 'Welcome back'}
+              </h2>
+              <p className="text-slate-400 text-sm">
+                {mode === 'signup'
+                  ? 'Save your results and track progress over time'
+                  : 'Sign in to continue to the assessment'}
+              </p>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <NumberField label="Net Profit Margin (%)" name="netProfit" required min={0} max={100} placeholder="e.g., 20" helpText="After all expenses" value={formData.netProfit || ''} onChange={handleChange} />
-              <NumberField label="Team Size (FTEs)" name="teamSize" required placeholder="e.g., 12" value={formData.teamSize || ''} onChange={handleChange} />
-            </div>
-            <NumberField label="Average Monthly Retainer" name="avgClientValue" required placeholder="e.g., 5000" helpText="USD per client per month" value={formData.avgClientValue || ''} onChange={handleChange} />
-          </FormSection>
 
-          {/* Section 3: Growth & Churn */}
-          <FormSection number={3} title="Growth & Churn" note="Critical for diagnosis. Be as accurate as possible.">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <NumberField label="New Clients Per Month" name="clientsAddedPerMonth" required step={0.1} placeholder="e.g., 3" value={formData.clientsAddedPerMonth || ''} onChange={handleChange} />
-              <NumberField label="Clients Lost Per Month" name="clientsLostPerMonth" required step={0.1} placeholder="e.g., 1.5" value={formData.clientsLostPerMonth || ''} onChange={handleChange} />
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <NumberField label="Annual Revenue from New Clients" name="newRevenueAnnual" required placeholder="e.g., 500000" value={formData.newRevenueAnnual || ''} onChange={handleChange} />
-              <NumberField label="Annual Revenue Lost to Churn" name="churnRevenueAnnual" required placeholder="e.g., 200000" value={formData.churnRevenueAnnual || ''} onChange={handleChange} />
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <NumberField label="Current Active Clients" name="clientCount" required placeholder="e.g., 25" value={formData.clientCount || ''} onChange={handleChange} />
-              <NumberField label="Avg Client Lifetime (months)" name="avgClientLifetime" required placeholder="e.g., 18" value={formData.avgClientLifetime || ''} onChange={handleChange} />
-            </div>
-          </FormSection>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-white mb-1.5">Email</label>
+                <input
+                  type="email"
+                  value={email}
+                  readOnly
+                  className="w-full px-4 py-3 bg-slate-700/30 border-2 border-slate-700 rounded-xl text-slate-400 text-sm cursor-not-allowed"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-white mb-1.5">Password</label>
+                <input
+                  type="password"
+                  required
+                  minLength={6}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder={mode === 'signup' ? 'Create a password (6+ chars)' : 'Your password'}
+                  className="w-full px-4 py-3 bg-slate-700/50 border-2 border-slate-600 rounded-xl text-white placeholder-slate-500 focus:border-emerald-500 focus:ring-0 focus:outline-none transition-colors text-sm"
+                />
+              </div>
 
-          {/* Section 4: Lead Sources */}
-          <FormSection number={4} title="Where Leads Come From" note="Should total approximately 100%">
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-              <NumberField label="Referrals (%)" name="referralPercent" required min={0} max={100} placeholder="0" value={formData.referralPercent || ''} onChange={handleChange} />
-              <NumberField label="Inbound/SEO (%)" name="inboundPercent" required min={0} max={100} placeholder="0" value={formData.inboundPercent || ''} onChange={handleChange} />
-              <NumberField label="Content/Social (%)" name="contentPercent" required min={0} max={100} placeholder="0" value={formData.contentPercent || ''} onChange={handleChange} />
-              <NumberField label="Paid Ads (%)" name="paidPercent" required min={0} max={100} placeholder="0" value={formData.paidPercent || ''} onChange={handleChange} />
-              <NumberField label="Outbound/Cold (%)" name="outboundPercent" required min={0} max={100} placeholder="0" value={formData.outboundPercent || ''} onChange={handleChange} />
-              <NumberField label="Partnerships (%)" name="partnershipPercent" min={0} max={100} placeholder="0" value={formData.partnershipPercent || ''} onChange={handleChange} />
+              {error && (
+                <div className="text-sm text-red-400">{error}</div>
+              )}
+
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full py-4 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 text-white font-bold text-lg hover:shadow-lg hover:shadow-emerald-500/25 hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+              >
+                {isLoading ? 'Working...' : mode === 'signup' ? 'Create Account & Start' : 'Sign In & Start'}
+              </button>
+            </form>
+
+            {/* Google OAuth */}
+            <div className="flex items-center gap-4 my-5">
+              <div className="flex-1 h-px bg-slate-700" />
+              <span className="text-xs text-slate-500 uppercase tracking-wider">or</span>
+              <div className="flex-1 h-px bg-slate-700" />
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
-              <NumberField label="Qualified Leads Per Month" name="monthlyLeads" required placeholder="e.g., 15" value={formData.monthlyLeads || ''} onChange={handleChange} />
-              <NumberField label="Close Rate (%)" name="closeRate" required min={0} max={100} placeholder="e.g., 25" value={formData.closeRate || ''} onChange={handleChange} />
-            </div>
-          </FormSection>
 
-          {/* Section 5: Founder Load */}
-          <FormSection number={5} title="Founder Load" note="1 = You do it all | 5 = Fully delegated">
-            <RadioField label="Client Deliverables" name="ceoDeliveryRating" required options={CEO_RATING_OPTIONS('deliverables')} value={formData.ceoDeliveryRating || ''} onChange={handleChange} />
-            <RadioField label="Account Management" name="ceoAccountMgmtRating" required options={CEO_RATING_OPTIONS('account management')} value={formData.ceoAccountMgmtRating || ''} onChange={handleChange} />
-            <RadioField label="Marketing" name="ceoMarketingRating" required options={CEO_RATING_OPTIONS('marketing')} value={formData.ceoMarketingRating || ''} onChange={handleChange} />
-            <RadioField label="Sales & BD" name="ceoSalesRating" required options={CEO_RATING_OPTIONS('sales')} value={formData.ceoSalesRating || ''} onChange={handleChange} />
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <NumberField label="Your Weekly Hours" name="founderWeeklyHours" required placeholder="e.g., 50" value={formData.founderWeeklyHours || ''} onChange={handleChange} />
-              <NumberField label="Hours on Strategy / Vision / BD" name="strategyHoursPerWeek" required min={0} max={60} placeholder="e.g., 10" helpText="Working ON vs IN the business" value={formData.strategyHoursPerWeek || ''} onChange={handleChange} />
-            </div>
-          </FormSection>
+            <button
+              type="button"
+              onClick={handleGoogleSignIn}
+              className="w-full py-3 rounded-xl bg-white text-black font-medium text-sm hover:bg-gray-100 transition-colors flex items-center justify-center gap-3"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24">
+                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+              </svg>
+              Continue with Google
+            </button>
 
-          {/* Section 6: Systems */}
-          <FormSection number={6} title="Systems & Documentation">
-            <RadioField label="Documented Sales Processes?" name="hasSalesSOP" required options={SOP_OPTIONS} value={formData.hasSalesSOP || ''} onChange={handleChange} />
-            <RadioField label="Documented Delivery Processes?" name="hasDeliverySOP" required options={SOP_OPTIONS} value={formData.hasDeliverySOP || ''} onChange={handleChange} />
-            <RadioField label="Documented Account Management?" name="hasAccountMgmtSOP" required options={SOP_OPTIONS} value={formData.hasAccountMgmtSOP || ''} onChange={handleChange} />
-            <RadioField label="Documented Marketing Processes?" name="hasMarketingSOP" required options={SOP_OPTIONS} value={formData.hasMarketingSOP || ''} onChange={handleChange} />
-          </FormSection>
-
-          {/* Section 7: Positioning */}
-          <FormSection number={7} title="Positioning & Visibility">
-            <TextAreaField label="Who is your ideal client?" name="targetMarket" required placeholder="E.g., B2B SaaS companies with $5M-$20M ARR who need SEO and content" helpText='Be specific. "Everyone" is wrong.' value={formData.targetMarket || ''} onChange={handleChange} />
-            <TextAreaField label="What is your core offer?" name="coreOffer" required placeholder="E.g., Done-for-you SEO + content that drives qualified pipeline" helpText="Your main thing" value={formData.coreOffer || ''} onChange={handleChange} />
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <NumberField label="Founder LinkedIn Posts/Week" name="founderPostsPerWeek" placeholder="e.g., 3" helpText="Optional - we'll verify via scrape" value={formData.founderPostsPerWeek || ''} onChange={handleChange} />
-              <NumberField label="Team LinkedIn Posts/Week" name="teamPostsPerWeek" placeholder="e.g., 5" helpText="Optional" value={formData.teamPostsPerWeek || ''} onChange={handleChange} />
-            </div>
-            <RadioField label="Published Case Studies?" name="hasCaseStudies" required options={[
-              { value: 'Yes, multiple (3+)', label: 'Yes, multiple (3+)' },
-              { value: 'Yes, 1-2', label: 'Yes, 1-2' },
-              { value: 'No', label: 'No' },
-            ]} value={formData.hasCaseStudies || ''} onChange={handleChange} />
-            <RadioField label="Display Client Logos/Names?" name="hasNamedClients" required options={[
-              { value: 'Yes', label: 'Yes' },
-              { value: 'No', label: 'No' },
-            ]} value={formData.hasNamedClients || ''} onChange={handleChange} />
-          </FormSection>
-
-          {/* Submit */}
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="w-full py-4 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 text-white font-bold text-lg hover:shadow-lg hover:shadow-emerald-500/25 hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none mt-6"
-          >
-            {isSubmitting ? 'Analyzing...' : 'Run My Diagnostic'}
-          </button>
-
-          {error && (
-            <div className="mt-4 p-4 bg-red-500/10 border border-red-500/50 rounded-xl text-red-400 text-sm">
-              {error}
-            </div>
-          )}
-        </form>
-      </div>
-
-      {/* Loading Overlay */}
-      {isSubmitting && (
-        <div className="fixed inset-0 bg-slate-950/95 z-50 flex items-center justify-center">
-          <div className="text-center max-w-sm">
-            <div className="w-16 h-16 border-4 border-slate-700 border-t-emerald-500 rounded-full animate-spin mx-auto mb-6" />
-            <h2 className="text-2xl font-bold text-white mb-2">Analyzing Your Business</h2>
-            <p className="text-slate-400 mb-8">Running diagnostic engine...</p>
-            <div className="space-y-3 text-left">
-              {loadingSteps.map((step, i) => (
-                <div
-                  key={i}
-                  className={`flex items-center gap-3 text-sm ${
-                    i < loadingStep ? 'text-emerald-400' :
-                    i === loadingStep ? 'text-white' : 'text-slate-600'
-                  }`}
+            {/* Toggle login/signup */}
+            <div className="mt-5 text-center">
+              {mode === 'signup' ? (
+                <button
+                  type="button"
+                  onClick={() => { setMode('login'); setError(null); }}
+                  className="text-sm text-slate-500 hover:text-emerald-400 transition-colors bg-transparent border-none cursor-pointer"
                 >
-                  <span className="w-5 text-center">
-                    {i < loadingStep ? '✓' : '●'}
-                  </span>
-                  <span>{step}</span>
-                </div>
-              ))}
+                  Already have an account? Sign in
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => { setMode('signup'); setError(null); }}
+                  className="text-sm text-slate-500 hover:text-emerald-400 transition-colors bg-transparent border-none cursor-pointer"
+                >
+                  Need an account? Sign up
+                </button>
+              )}
+            </div>
+
+            {/* Back link */}
+            <div className="mt-3 text-center">
+              <button
+                type="button"
+                onClick={() => setStep('info')}
+                className="text-xs text-slate-600 hover:text-slate-400 transition-colors bg-transparent border-none cursor-pointer"
+              >
+                Back
+              </button>
             </div>
           </div>
-        </div>
-      )}
-    </>
+        )}
+      </div>
+    </div>
   );
 }

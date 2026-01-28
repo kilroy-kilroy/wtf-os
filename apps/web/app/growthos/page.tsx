@@ -96,7 +96,7 @@ export default function GrowthOSGatePage() {
     return (
       <div className="min-h-[80vh] flex items-center justify-center px-4">
         <div className="max-w-md w-full text-center">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-500 to-indigo-500 flex items-center justify-center text-white text-2xl font-bold mx-auto mb-6">
+          <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-white text-2xl font-bold mx-auto mb-6" style={{ background: 'linear-gradient(135deg, #00D4FF, #E31B23)' }}>
             G
           </div>
           <h1 className="text-2xl font-extrabold text-white mb-3">Check your email</h1>
@@ -119,7 +119,7 @@ export default function GrowthOSGatePage() {
           <h1 className="text-4xl sm:text-5xl font-extrabold text-white mb-4 leading-tight">
             Take the WTF Assessment.
             <br />
-            <span className="bg-gradient-to-r from-emerald-400 to-indigo-400 bg-clip-text text-transparent">
+            <span className="bg-clip-text text-transparent" style={{ backgroundImage: 'linear-gradient(to right, #00D4FF, #E31B23)' }}>
               Get your GrowthOS Baseline.
             </span>
           </h1>
@@ -140,7 +140,7 @@ export default function GrowthOSGatePage() {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Jane Smith"
-                  className="w-full px-4 py-3 bg-slate-700/50 border-2 border-slate-600 rounded-xl text-white placeholder-slate-500 focus:border-emerald-500 focus:ring-0 focus:outline-none transition-colors text-sm"
+                  className="w-full px-4 py-3 bg-slate-700/50 border-2 border-slate-600 rounded-xl text-white placeholder-slate-500 focus:border-[#00D4FF] focus:ring-0 focus:outline-none transition-colors text-sm"
                 />
               </div>
               <div>
@@ -151,7 +151,7 @@ export default function GrowthOSGatePage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="jane@agency.com"
-                  className="w-full px-4 py-3 bg-slate-700/50 border-2 border-slate-600 rounded-xl text-white placeholder-slate-500 focus:border-emerald-500 focus:ring-0 focus:outline-none transition-colors text-sm"
+                  className="w-full px-4 py-3 bg-slate-700/50 border-2 border-slate-600 rounded-xl text-white placeholder-slate-500 focus:border-[#00D4FF] focus:ring-0 focus:outline-none transition-colors text-sm"
                 />
               </div>
               <div>
@@ -162,14 +162,14 @@ export default function GrowthOSGatePage() {
                   value={website}
                   onChange={(e) => setWebsite(e.target.value)}
                   placeholder="https://youragency.com"
-                  className="w-full px-4 py-3 bg-slate-700/50 border-2 border-slate-600 rounded-xl text-white placeholder-slate-500 focus:border-emerald-500 focus:ring-0 focus:outline-none transition-colors text-sm"
+                  className="w-full px-4 py-3 bg-slate-700/50 border-2 border-slate-600 rounded-xl text-white placeholder-slate-500 focus:border-[#00D4FF] focus:ring-0 focus:outline-none transition-colors text-sm"
                 />
                 <p className="mt-1 text-xs text-slate-500">We&apos;ll analyze your site for positioning and visibility</p>
               </div>
 
               <button
                 type="submit"
-                className="w-full py-4 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 text-white font-bold text-lg hover:shadow-lg hover:shadow-emerald-500/25 hover:-translate-y-0.5 transition-all mt-2"
+                className="w-full py-4 rounded-xl bg-[#E31B23] text-white font-bold text-lg hover:shadow-lg hover:shadow-[#E31B23]/25 hover:-translate-y-0.5 transition-all mt-2"
               >
                 Continue
               </button>
@@ -208,7 +208,7 @@ export default function GrowthOSGatePage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder={mode === 'signup' ? 'Create a password (6+ chars)' : 'Your password'}
-                  className="w-full px-4 py-3 bg-slate-700/50 border-2 border-slate-600 rounded-xl text-white placeholder-slate-500 focus:border-emerald-500 focus:ring-0 focus:outline-none transition-colors text-sm"
+                  className="w-full px-4 py-3 bg-slate-700/50 border-2 border-slate-600 rounded-xl text-white placeholder-slate-500 focus:border-[#00D4FF] focus:ring-0 focus:outline-none transition-colors text-sm"
                 />
               </div>
 
@@ -219,7 +219,7 @@ export default function GrowthOSGatePage() {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full py-4 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 text-white font-bold text-lg hover:shadow-lg hover:shadow-emerald-500/25 hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                className="w-full py-4 rounded-xl bg-[#E31B23] text-white font-bold text-lg hover:shadow-lg hover:shadow-[#E31B23]/25 hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
               >
                 {isLoading ? 'Working...' : mode === 'signup' ? 'Create Account & Start' : 'Sign In & Start'}
               </button>
@@ -252,7 +252,7 @@ export default function GrowthOSGatePage() {
                 <button
                   type="button"
                   onClick={() => { setMode('login'); setError(null); }}
-                  className="text-sm text-slate-500 hover:text-emerald-400 transition-colors bg-transparent border-none cursor-pointer"
+                  className="text-sm text-slate-500 hover:text-[#00D4FF] transition-colors bg-transparent border-none cursor-pointer"
                 >
                   Already have an account? Sign in
                 </button>
@@ -260,7 +260,7 @@ export default function GrowthOSGatePage() {
                 <button
                   type="button"
                   onClick={() => { setMode('signup'); setError(null); }}
-                  className="text-sm text-slate-500 hover:text-emerald-400 transition-colors bg-transparent border-none cursor-pointer"
+                  className="text-sm text-slate-500 hover:text-[#00D4FF] transition-colors bg-transparent border-none cursor-pointer"
                 >
                   Need an account? Sign up
                 </button>

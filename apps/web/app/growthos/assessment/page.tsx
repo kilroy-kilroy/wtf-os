@@ -12,15 +12,15 @@ function FormSection({ number, title, note, children }: {
 }) {
   return (
     <div className="relative bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 mb-4">
-      <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-emerald-500 to-indigo-500 rounded-l-2xl" />
+      <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-[#00D4FF] to-[#E31B23] rounded-l-2xl" />
       <div className="flex items-center gap-3 mb-5">
-        <span className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-indigo-500 flex items-center justify-center text-white text-sm font-bold">
+        <span className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#00D4FF] to-[#E31B23] flex items-center justify-center text-white text-sm font-bold">
           {number}
         </span>
         <h2 className="text-lg font-bold text-white">{title}</h2>
       </div>
       {note && (
-        <div className="bg-indigo-500/10 border-l-2 border-indigo-400 rounded-r-lg px-4 py-3 mb-5 text-sm text-indigo-300">
+        <div className="bg-[#00D4FF]/10 border-l-2 border-[#00D4FF] rounded-r-lg px-4 py-3 mb-5 text-sm text-[#00D4FF]/80">
           {note}
         </div>
       )}
@@ -47,7 +47,7 @@ function TextField({ label, name, required, placeholder, helpText, value, onChan
         placeholder={placeholder}
         value={value}
         onChange={(e) => onChange(name, e.target.value)}
-        className="w-full px-4 py-3 bg-slate-700/50 border-2 border-slate-600 rounded-xl text-white placeholder-slate-500 focus:border-emerald-500 focus:ring-0 focus:outline-none transition-colors text-sm"
+        className="w-full px-4 py-3 bg-slate-700/50 border-2 border-slate-600 rounded-xl text-white placeholder-slate-500 focus:border-[#00D4FF] focus:ring-0 focus:outline-none transition-colors text-sm"
       />
       {helpText && <p className="mt-1 text-xs text-slate-500">{helpText}</p>}
     </div>
@@ -74,7 +74,7 @@ function NumberField({ label, name, required, placeholder, helpText, min, max, s
         step={step}
         value={value}
         onChange={(e) => onChange(name, e.target.value)}
-        className="w-full px-4 py-3 bg-slate-700/50 border-2 border-slate-600 rounded-xl text-white placeholder-slate-500 focus:border-emerald-500 focus:ring-0 focus:outline-none transition-colors text-sm"
+        className="w-full px-4 py-3 bg-slate-700/50 border-2 border-slate-600 rounded-xl text-white placeholder-slate-500 focus:border-[#00D4FF] focus:ring-0 focus:outline-none transition-colors text-sm"
       />
       {helpText && <p className="mt-1 text-xs text-slate-500">{helpText}</p>}
     </div>
@@ -97,7 +97,7 @@ function TextAreaField({ label, name, required, placeholder, helpText, value, on
         value={value}
         onChange={(e) => onChange(name, e.target.value)}
         rows={3}
-        className="w-full px-4 py-3 bg-slate-700/50 border-2 border-slate-600 rounded-xl text-white placeholder-slate-500 focus:border-emerald-500 focus:ring-0 focus:outline-none transition-colors text-sm resize-y"
+        className="w-full px-4 py-3 bg-slate-700/50 border-2 border-slate-600 rounded-xl text-white placeholder-slate-500 focus:border-[#00D4FF] focus:ring-0 focus:outline-none transition-colors text-sm resize-y"
       />
       {helpText && <p className="mt-1 text-xs text-slate-500">{helpText}</p>}
     </div>
@@ -120,7 +120,7 @@ function RadioField({ label, name, required, options, value, onChange }: {
             key={opt.value}
             className={`flex items-center px-4 py-3 rounded-xl border-2 cursor-pointer transition-all text-sm ${
               value === opt.value
-                ? 'border-emerald-500 bg-emerald-500/10 text-white'
+                ? 'border-[#00D4FF] bg-[#00D4FF]/10 text-white'
                 : 'border-slate-600 bg-slate-700/50 text-slate-400 hover:border-slate-500'
             }`}
           >
@@ -130,7 +130,7 @@ function RadioField({ label, name, required, options, value, onChange }: {
               value={opt.value}
               checked={value === opt.value}
               onChange={(e) => onChange(name, e.target.value)}
-              className="w-4 h-4 mr-3 accent-emerald-500"
+              className="w-4 h-4 mr-3 accent-[#00D4FF]"
             />
             <span>{opt.label}</span>
           </label>
@@ -270,7 +270,7 @@ export default function AssessmentPage() {
         <div className="max-w-3xl mx-auto">
           <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
             <div
-              className="h-full bg-gradient-to-r from-emerald-500 to-indigo-500 rounded-full transition-all duration-300"
+              className="h-full bg-gradient-to-r from-[#00D4FF] to-[#E31B23] rounded-full transition-all duration-300"
               style={{ width: `${progress}%` }}
             />
           </div>
@@ -386,7 +386,7 @@ export default function AssessmentPage() {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full py-4 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 text-white font-bold text-lg hover:shadow-lg hover:shadow-emerald-500/25 hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none mt-6"
+            className="w-full py-4 rounded-xl bg-[#E31B23] text-white font-bold text-lg hover:shadow-lg hover:shadow-[#E31B23]/25 hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none mt-6"
           >
             {isSubmitting ? 'Analyzing...' : 'Run My Diagnostic'}
           </button>
@@ -403,7 +403,7 @@ export default function AssessmentPage() {
       {isSubmitting && (
         <div className="fixed inset-0 bg-slate-950/95 z-50 flex items-center justify-center">
           <div className="text-center max-w-sm">
-            <div className="w-16 h-16 border-4 border-slate-700 border-t-emerald-500 rounded-full animate-spin mx-auto mb-6" />
+            <div className="w-16 h-16 border-4 border-slate-700 border-t-[#00D4FF] rounded-full animate-spin mx-auto mb-6" />
             <h2 className="text-2xl font-bold text-white mb-2">Analyzing Your Business</h2>
             <p className="text-slate-400 mb-8">Running diagnostic engine...</p>
             <div className="space-y-3 text-left">
@@ -411,7 +411,7 @@ export default function AssessmentPage() {
                 <div
                   key={i}
                   className={`flex items-center gap-3 text-sm ${
-                    i < loadingStep ? 'text-emerald-400' :
+                    i < loadingStep ? 'text-[#00D4FF]' :
                     i === loadingStep ? 'text-white' : 'text-slate-600'
                   }`}
                 >

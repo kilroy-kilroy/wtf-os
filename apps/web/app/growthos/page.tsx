@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 
 export default function GrowthOSGatePage() {
   const [name, setName] = useState('');
@@ -96,9 +97,13 @@ export default function GrowthOSGatePage() {
     return (
       <div className="min-h-[80vh] flex items-center justify-center px-4">
         <div className="max-w-md w-full text-center">
-          <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-white text-2xl font-bold mx-auto mb-6" style={{ background: 'linear-gradient(135deg, #00D4FF, #E31B23)' }}>
-            G
-          </div>
+          <Image
+            src="/logos/growthostransparentsq.png"
+            alt="GrowthOS"
+            width={160}
+            height={160}
+            className="mx-auto mb-6 w-24 h-auto"
+          />
           <h1 className="text-2xl font-extrabold text-white mb-3">Check your email</h1>
           <p className="text-slate-400 mb-2">
             We sent a confirmation link to <span className="text-white font-medium">{email}</span>

@@ -8,7 +8,7 @@ Phase 1: Core OS + Call Lab
 - **Language**: TypeScript (strict mode)
 - **Database**: Supabase (PostgreSQL + Auth + Storage)
 - **UI**: ShadCN UI + Tailwind CSS
-- **Email**: Resend
+- **Email**: Resend * Loops
 - **AI**: Model-agnostic (Claude/GPT)
 - **Monorepo**: Turborepo
 

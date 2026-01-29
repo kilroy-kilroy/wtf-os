@@ -148,6 +148,19 @@ export interface AnalysisResult {
     gaps: string[];
     recommendations: string[];
   } | null;
+  icpProblemAwareness: {
+    score: number;
+    verdict: string;
+    problemCoverage: Array<{
+      problem: string;
+      addressed: boolean;
+      where: string;
+    }>;
+    coveragePercent: number;
+    missingProblems: string[];
+    contentOpportunities: string[];
+    recommendations: string[];
+  } | null;
 }
 
 // ============================================
@@ -387,7 +400,7 @@ function extractTopics(text: string): string[] {
 // EXA SEARCHES
 // ============================================
 
-const EXA_API_KEY = process.env.EXA_API_KEY;
+const EXA_API_KEY = process.env.EXA_API_KEY || process.env.EXA_API;
 
 async function exaSearch(query: string, numResults: number, intakeData: IntakeData): Promise<ExaSearchResult | null> {
   if (!EXA_API_KEY) return null;
@@ -771,12 +784,30 @@ Respond with ONLY valid JSON matching this schema:
   "gaps": ["<gap1>", "<gap2>"],
   "recommendations": ["<rec1>", "<rec2>"]
 }`),
+    callClaudeAnalysis(apiKey, `Analyze the ICP PROBLEM AWARENESS for this agency. Cross-reference the ICP problems discovered via Exa research against ALL of the agency's content — website copy, blog posts, LinkedIn posts, case studies. For each ICP problem, determine if the agency addresses it anywhere, and where.
+
+${contextBlock}
+
+Respond with ONLY valid JSON matching this schema:
+{
+  "score": <1-10>,
+  "verdict": "<one sentence>",
+  "problemCoverage": [
+    {"problem": "<icp problem>", "addressed": true/false, "where": "<where addressed or 'Not found'>"},
+    ...
+  ],
+  "coveragePercent": <0-100>,
+  "missingProblems": ["<problem not addressed>", ...],
+  "contentOpportunities": ["<specific content piece they should create>", ...],
+  "recommendations": ["<rec1>", "<rec2>"]
+}`),
   ]);
 
   return {
     positioningCoherence: parseAnalysisResult(analyses[0]),
     contentMarketFit: parseAnalysisResult(analyses[1]),
     socialProofAlignment: parseAnalysisResult(analyses[2]),
+    icpProblemAwareness: parseAnalysisResult(analyses[3]),
   };
 }
 

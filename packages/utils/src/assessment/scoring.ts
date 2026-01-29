@@ -86,19 +86,37 @@ export interface GrowthLever {
   recommendation: string;
 }
 
+export interface PriorityAction {
+  priority: number;
+  action: string;
+  why: string;
+}
+
+export interface RealityCheck {
+  id: string;
+  title: string;
+  body: string;
+}
+
 export interface AssessmentResult {
   overall: number;
+  overallLabel: string;
   segment: string;
   segmentLabel: string;
   wtfZones: WTFZones;
+  narratives: Record<string, string>;
   growthLevers: GrowthLever[];
   founderOS: {
     delegationScore: number;
+    delegationNarrative: string;
     onVsInRatio: number;
+    onVsInNarrative: string;
     bottleneckAreas: string[];
     burnoutRisk: string;
   };
+  realityChecks: RealityCheck[];
   impossibilities: string[];
+  priorityActions: PriorityAction[];
   benchmarks: Record<string, any>;
 }
 
@@ -484,6 +502,275 @@ function extractRating(ratingString: string): number {
 }
 
 // ============================================
+// NARRATIVE COPY
+// ============================================
+
+function generateNarratives(data: IntakeData, zones: WTFZones): Record<string, string> {
+  const n: Record<string, string> = {};
+  const revenuePerFTE = Math.round(data.annualRevenue / data.teamSize).toLocaleString();
+  const channels = [data.referralPercent, data.inboundPercent, data.contentPercent, data.paidPercent, data.outboundPercent];
+  const activeChannels = channels.filter(c => c > 10).length;
+  const ratings = [extractRating(data.ceoDeliveryRating), extractRating(data.ceoAccountMgmtRating), extractRating(data.ceoMarketingRating), extractRating(data.ceoSalesRating)];
+  const avgDelegation = (ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(1);
+  const sops = [data.hasSalesSOP, data.hasDeliverySOP, data.hasAccountMgmtSOP, data.hasMarketingSOP];
+  const documented = sops.filter(s => s?.includes('Yes, comprehensive')).length;
+  const founderPosts = data.founderPostsPerWeek || 0;
+  const teamPosts = data.teamPostsPerWeek || 0;
+
+  // Revenue Quality
+  const rqNarratives: Record<number, string> = {
+    5: `$${revenuePerFTE} per FTE is excellent. You're operating at elite efficiency.`,
+    4: `$${revenuePerFTE} per FTE is solid. Not elite, but you're not bleeding efficiency.`,
+    3: `$${revenuePerFTE} per FTE is average. There's room to tighten operations.`,
+    2: `$${revenuePerFTE} per FTE is below benchmark. You're either overstaffed or underpriced.`,
+    1: `$${revenuePerFTE} per FTE is a problem. You're running a jobs program, not a business.`,
+  };
+  n.revenueQuality = rqNarratives[zones.revenueQuality.score] || rqNarratives[3];
+
+  // Profitability
+  const profNarratives: Record<number, string> = {
+    5: `${data.netProfit}% net margin is excellent. You've got real leverage for growth or exit.`,
+    4: `${data.netProfit}% net margin is good for your segment. Healthy, sustainable.`,
+    3: `${data.netProfit}% net margin is fine. Not fuck-you money, but you're not drowning.`,
+    2: `${data.netProfit}% net margin is thin. One bad quarter and you're in trouble.`,
+    1: `${data.netProfit}% net margin is a crisis. You're working for free (or worse).`,
+  };
+  n.profitability = profNarratives[zones.profitability.score] || profNarratives[3];
+
+  // Growth vs Churn
+  const netGrowthRevenue = data.newRevenueAnnual - data.churnRevenueAnnual;
+  const netGrowthRate = data.annualRevenue > 0 ? ((netGrowthRevenue / data.annualRevenue) * 100).toFixed(1) : '0';
+  const gcNarratives: Record<number, string> = {
+    5: `Net growth of ${netGrowthRate}% is excellent. You're outpacing churn by a wide margin.`,
+    4: `Net growth of ${netGrowthRate}% is healthy. You're outrunning your losses.`,
+    3: `Net growth of ${netGrowthRate}% is okay. You're growing, but churn is eating into it.`,
+    2: `Net growth of ${netGrowthRate}% is concerning. Churn is almost matching new business.`,
+    1: `Net growth of ${netGrowthRate}%. You're shrinking. Stop everything and fix retention.`,
+  };
+  n.growthVsChurn = gcNarratives[zones.growthVsChurn.score] || gcNarratives[3];
+
+  // Lead Engine
+  const leNarratives: Record<number, string> = {
+    5: `${activeChannels} active channels with ${data.monthlyLeads} leads/month. Diversified and strong.`,
+    4: `${activeChannels} active channels with ${data.monthlyLeads} leads/month. Solid foundation.`,
+    3: `${activeChannels} active channels with ${data.monthlyLeads} leads/month. Workable, but not bulletproof.`,
+    2: `${activeChannels} channels, ${data.monthlyLeads} leads/month. One bad quarter away from panic.`,
+    1: `${activeChannels} channel generating ${data.monthlyLeads} leads/month. This is not a lead engine. It's hope.`,
+  };
+  n.leadEngine = leNarratives[zones.leadEngine.score] || leNarratives[3];
+
+  // Founder Load
+  const flNarratives: Record<number, string> = {
+    5: `Delegation avg ${avgDelegation}/5. You've built a business, not a job. Congrats.`,
+    4: `Delegation avg ${avgDelegation}/5 at ${data.founderWeeklyHours}hrs/week. Getting there. Keep delegating.`,
+    3: `Delegation avg ${avgDelegation}/5 at ${data.founderWeeklyHours}hrs/week. You're still too involved in delivery.`,
+    2: `Delegation avg ${avgDelegation}/5 at ${data.founderWeeklyHours}hrs/week. You're a bottleneck. The business can't grow past you.`,
+    1: `Delegation avg ${avgDelegation}/5 at ${data.founderWeeklyHours}hrs/week. You're the bottleneck. You ARE the business. That's not a flex.`,
+  };
+  n.founderLoad = flNarratives[zones.founderLoad.score] || flNarratives[3];
+
+  // Systems Readiness
+  const srNarratives: Record<number, string> = {
+    5: `All processes documented. You could hand this off tomorrow.`,
+    4: `${documented}/4 processes documented. Most of the playbook exists.`,
+    3: `${documented}/4 processes documented. Getting there, but gaps remain.`,
+    2: `${documented}/4 processes documented. Too much lives in your head.`,
+    1: `Zero documented processes. Everything lives in your head. You can't scale this.`,
+  };
+  n.systemsReadiness = srNarratives[zones.systemsReadiness.score] || srNarratives[3];
+
+  // Content & Positioning
+  const cpNarratives: Record<number, string> = {
+    5: `Posting ${founderPosts}x/week with strong case studies. Content engine is running.`,
+    4: `Posting ${founderPosts}x/week with few case studies. Good volume, need more proof.`,
+    3: `Posting ${founderPosts}x/week with few case studies. Decent volume, questionable relevance.`,
+    2: `Posting ${founderPosts}x/week. Sporadic at best. Your ICP isn't seeing you.`,
+    1: `Posting ${founderPosts}x/week. You're invisible. That's a choice.`,
+  };
+  n.contentPositioning = cpNarratives[zones.contentPositioning.score] || cpNarratives[3];
+
+  // Team Visibility
+  const tvNarratives: Record<number, string> = {
+    5: `Team posting ${teamPosts}/week. Your people are building authority alongside you.`,
+    4: `Team posting ${teamPosts}/week. Good start on distributed authority.`,
+    3: `Team posting ${teamPosts}/week. Some visibility, but room to grow.`,
+    2: `Team posting ${teamPosts}/week. Your people are mostly invisible.`,
+    1: `Team posts: 0/week. Your people are invisible. That's wasted leverage.`,
+  };
+  n.teamVisibility = tvNarratives[zones.teamVisibility.score] || tvNarratives[3];
+
+  return n;
+}
+
+// ============================================
+// EXPANDED REALITY CHECKS
+// ============================================
+
+function detectRealityChecks(data: IntakeData, zones: WTFZones): RealityCheck[] {
+  const checks: RealityCheck[] = [];
+  const ratings = [extractRating(data.ceoDeliveryRating), extractRating(data.ceoAccountMgmtRating), extractRating(data.ceoMarketingRating), extractRating(data.ceoSalesRating)];
+  const avgDelegation = ratings.reduce((a, b) => a + b, 0) / ratings.length;
+  const bottleneckAreas: string[] = [];
+  if (extractRating(data.ceoDeliveryRating) <= 2) bottleneckAreas.push('Delivery');
+  if (extractRating(data.ceoAccountMgmtRating) <= 2) bottleneckAreas.push('Account Management');
+  if (extractRating(data.ceoMarketingRating) <= 2) bottleneckAreas.push('Marketing');
+  if (extractRating(data.ceoSalesRating) <= 2) bottleneckAreas.push('Sales');
+
+  // Referral Dependency
+  if (data.referralPercent >= 70) {
+    checks.push({
+      id: 'referral-dependency',
+      title: 'REFERRAL DEPENDENCY ALERT',
+      body: `${data.referralPercent}% of your leads come from referrals.\n\nThat sounds great until you realize:\n• You don't control it\n• It doesn't scale\n• One key referrer leaves or retires, and your pipeline craters\n\nReferrals are dessert. You need a main course. Build a channel you control.`
+    });
+  }
+
+  // Growth Target Mismatch
+  if (data.targetRevenue > data.annualRevenue * 1.5) {
+    const netGrowthRevenue = data.newRevenueAnnual - data.churnRevenueAnnual;
+    const netGrowthRate = data.annualRevenue > 0 ? ((netGrowthRevenue / data.annualRevenue) * 100).toFixed(1) : '0';
+    const targetGrowth = ((data.targetRevenue / data.annualRevenue - 1) * 100).toFixed(0);
+    checks.push({
+      id: 'growth-target-mismatch',
+      title: 'REALITY CHECK',
+      body: `You're targeting ${targetGrowth}% growth while your net growth rate is ${netGrowthRate}%.\n\nThat's not ambition — that's denial.\n\nEither:\n1. Fix churn first (you're losing ${data.clientsLostPerMonth} clients/month)\n2. Dramatically increase lead gen\n3. Adjust your target to reality\n\nHoping harder isn't a strategy.`
+    });
+  }
+
+  // AI Invisibility (placeholder — actual score comes from enrichment)
+  // This will be checked in the results page using enrichment data
+
+  // Founder is Everything
+  if (avgDelegation <= 1.5 && bottleneckAreas.length >= 3) {
+    checks.push({
+      id: 'founder-is-everything',
+      title: 'YOU ARE THE BOTTLENECK',
+      body: `At $${(data.annualRevenue / 1000000).toFixed(1)}M, with a delegation score of ${avgDelegation.toFixed(1)}, you ARE the ceiling on this business.\n\n${bottleneckAreas.join(', ')} — that's everything. The business doesn't run without you in every seat.\n\nIf you got hit by a bus tomorrow, there's no business left. That's not an asset anyone would buy. It's a job you created for yourself.`
+    });
+  }
+
+  // Churn Death Spiral
+  if (data.churnRevenueAnnual > data.newRevenueAnnual) {
+    checks.push({
+      id: 'churn-death-spiral',
+      title: 'CHURN DEATH SPIRAL',
+      body: `Losing more to churn ($${data.churnRevenueAnnual.toLocaleString()}) than gaining from new clients ($${data.newRevenueAnnual.toLocaleString()}). You're on a death spiral.\n\nStop everything and fix retention before spending another dollar on growth.`
+    });
+  }
+
+  // High delegation + no systems
+  if (avgDelegation >= 3.5 && zones.systemsReadiness.score <= 2) {
+    checks.push({
+      id: 'delegation-without-systems',
+      title: 'DELEGATION WITHOUT SYSTEMS',
+      body: `You're delegating work without documented processes. That's not delegation — it's abdication.\n\nYour team is guessing at what "good" looks like. Document your processes before you delegate more.`
+    });
+  }
+
+  return checks;
+}
+
+// ============================================
+// PRIORITY ACTIONS
+// ============================================
+
+function generatePriorityActions(data: IntakeData, zones: WTFZones): PriorityAction[] {
+  const actions: PriorityAction[] = [];
+  const ratings = [extractRating(data.ceoDeliveryRating), extractRating(data.ceoAccountMgmtRating), extractRating(data.ceoMarketingRating), extractRating(data.ceoSalesRating)];
+  const avgDelegation = ratings.reduce((a, b) => a + b, 0) / ratings.length;
+
+  // These are ordered by the framework's priority logic
+  if (zones.contentPositioning.score <= 2) {
+    actions.push({
+      priority: actions.length + 1,
+      action: 'Fix positioning/proof mismatch',
+      why: "Everything else is noise until this is solved. You can't market a confused message."
+    });
+  }
+
+  if (avgDelegation <= 2 && data.annualRevenue > 1000000) {
+    actions.push({
+      priority: actions.length + 1,
+      action: 'Hire or promote a delivery lead',
+      why: `Free yourself from ${data.founderWeeklyHours}+ hrs/week of client work. You're the ceiling.`
+    });
+  }
+
+  if (zones.growthVsChurn.score <= 2) {
+    actions.push({
+      priority: actions.length + 1,
+      action: 'Fix churn before adding leads',
+      why: `You're losing $${data.churnRevenueAnnual.toLocaleString()}/yr. New clients are filling a leaky bucket.`
+    });
+  }
+
+  if (data.referralPercent >= 70) {
+    actions.push({
+      priority: actions.length + 1,
+      action: 'Build a second lead channel',
+      why: `${data.referralPercent}% referral dependency is a single point of failure. Build content or outbound.`
+    });
+  }
+
+  if (zones.systemsReadiness.score <= 2) {
+    actions.push({
+      priority: actions.length + 1,
+      action: 'Document your processes',
+      why: "You can't delegate what isn't written down. Start with delivery."
+    });
+  }
+
+  if (zones.leadEngine.score <= 2 && data.referralPercent < 70) {
+    actions.push({
+      priority: actions.length + 1,
+      action: 'Rebuild your lead engine',
+      why: `${data.monthlyLeads} leads/month at ${data.closeRate}% close rate isn't enough to grow.`
+    });
+  }
+
+  if (zones.founderLoad.score <= 2 && data.annualRevenue <= 1000000) {
+    actions.push({
+      priority: actions.length + 1,
+      action: 'Restructure your time',
+      why: `At ${data.founderWeeklyHours}hrs/week, you need to cut non-strategic work before you can grow.`
+    });
+  }
+
+  // Always cap at 5
+  return actions.slice(0, 5);
+}
+
+// ============================================
+// FOUNDER OS NARRATIVES
+// ============================================
+
+function getDelegationNarrative(score: number): string {
+  if (score >= 4.5) return "You've built a machine. The business runs without you in the weeds.";
+  if (score >= 3.5) return "Strong delegation. Stay vigilant about creep.";
+  if (score >= 2.5) return "Getting there, but you're still too involved in day-to-day.";
+  if (score >= 1.5) return "You're doing too much. The business is capped by your capacity.";
+  return "You ARE the business. That's not leadership, it's martyrdom.";
+}
+
+function getOnVsInNarrative(ratio: number): string {
+  if (ratio > 50) return "Healthy balance. You're working on growth, not just execution.";
+  if (ratio >= 30) return "Tilted toward execution. Block more strategic time.";
+  return "You're trapped in the business. No time for growth work.";
+}
+
+// ============================================
+// OVERALL LABEL
+// ============================================
+
+function getOverallLabel(score: number): string {
+  if (score >= 4.5) return 'Strong Foundation';
+  if (score >= 3.5) return 'Needs Work';
+  if (score >= 2.5) return 'Significant Gaps';
+  if (score >= 1.5) return 'Critical Issues';
+  return 'Red Alert';
+}
+
+// ============================================
 // MAIN EXPORT
 // ============================================
 
@@ -503,18 +790,31 @@ export function calculateAssessment(data: IntakeData): AssessmentResult {
   };
 
   const overall = calculateOverallScore(wtfZones);
+  const overallLabel = getOverallLabel(overall);
+  const narratives = generateNarratives(data, wtfZones);
   const growthLevers = detectGrowthLevers(data, wtfZones, benchmarks);
-  const founderOS = analyzeFounderOS(data, segment);
+  const rawFounderOS = analyzeFounderOS(data, segment);
+  const founderOS = {
+    ...rawFounderOS,
+    delegationNarrative: getDelegationNarrative(rawFounderOS.delegationScore),
+    onVsInNarrative: getOnVsInNarrative(rawFounderOS.onVsInRatio),
+  };
   const impossibilities = detectImpossibilities(data, benchmarks);
+  const realityChecks = detectRealityChecks(data, wtfZones);
+  const priorityActions = generatePriorityActions(data, wtfZones);
 
   return {
     overall,
+    overallLabel,
     segment,
     segmentLabel,
     wtfZones,
+    narratives,
     growthLevers,
     founderOS,
+    realityChecks,
     impossibilities,
+    priorityActions,
     benchmarks
   };
 }

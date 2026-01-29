@@ -14,18 +14,18 @@ const supabase = createClient(
 
 export async function POST(request: NextRequest) {
   try {
-    // Get user from session
+    // Get authenticated user (secure, validates with Supabase Auth server)
     const authClient = createServerComponentClient({ cookies });
-    const { data: { session } } = await authClient.auth.getSession();
+    const { data: { user }, error: authError } = await authClient.auth.getUser();
 
-    if (!session) {
+    if (authError || !user) {
       return NextResponse.json(
         { success: false, message: 'Not authenticated' },
         { status: 401 }
       );
     }
 
-    const userId = session.user.id;
+    const userId = user.id;
     const body = await request.json();
     const { intakeData } = body as { intakeData: IntakeData };
 
@@ -42,6 +42,35 @@ export async function POST(request: NextRequest) {
         { success: false, message: 'Missing required fields: agencyName, email, website' },
         { status: 400 }
       );
+    }
+
+    // Ensure user record exists in users table (GrowthOS skips onboarding)
+    const { data: existingUser } = await supabase
+      .from('users')
+      .select('id')
+      .eq('id', userId)
+      .single();
+
+    if (!existingUser) {
+      const nameParts = (intakeData.founderName || '').split(' ');
+      const { error: userError } = await supabase
+        .from('users')
+        .insert({
+          id: userId,
+          email: user.email || intakeData.email,
+          first_name: nameParts[0] || null,
+          last_name: nameParts.slice(1).join(' ') || null,
+          full_name: intakeData.founderName || null,
+          subscription_tier: 'lead',
+        });
+
+      if (userError) {
+        console.error('[GrowthOS] Failed to create user record:', userError);
+        return NextResponse.json(
+          { success: false, message: 'Failed to create user record' },
+          { status: 500 }
+        );
+      }
     }
 
     // Create assessment record in pending state

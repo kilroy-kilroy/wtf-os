@@ -229,7 +229,7 @@ export default function AssessmentPage() {
         if (intakeData[f]) intakeData[f] = parseFloat(intakeData[f]);
       });
 
-      const response = await fetch('/api/growthos/submit', {
+      const response = await fetch('/api/growthos', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

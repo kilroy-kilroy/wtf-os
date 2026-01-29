@@ -4,7 +4,9 @@ import { cookies } from 'next/headers';
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
 import { calculateAssessment } from '@repo/utils/src/assessment/scoring';
 import { runEnrichmentPipeline } from '@repo/utils/src/assessment/enrichment';
+import { calculateRevelations } from '@repo/utils/src/assessment/revelations';
 import type { IntakeData } from '@repo/utils/src/assessment/scoring';
+import type { RevelationIntakeData } from '@repo/utils/src/assessment/revelations';
 import { addAssessmentSubscriber } from '@/lib/beehiiv';
 
 const supabase = createClient(
@@ -119,6 +121,15 @@ export async function POST(request: NextRequest) {
 
     // Run scoring engine
     const scores = calculateAssessment(intakeData);
+
+    // Run revelations engine (uses enrichment data when available)
+    try {
+      const revelationData = intakeData as unknown as RevelationIntakeData;
+      const revelations = calculateRevelations(revelationData, enrichmentData);
+      (scores as any).revelations = revelations;
+    } catch (revError: any) {
+      console.error('[GrowthOS] Revelations calculation failed (continuing):', revError.message);
+    }
 
     // Update assessment with results
     const { error: updateError } = await supabase

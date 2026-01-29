@@ -17,17 +17,34 @@ export interface IntakeData {
   website: string;
   founderLinkedinUrl?: string;
   companyLinkedinUrl?: string;
-  annualRevenue: number;
-  targetRevenue: number;
-  netProfit: number;
   teamSize: number;
+
+  // Revenue & Financials (v2 fields)
+  lastYearRevenue?: number;
+  targetRevenue: number;
+  netProfitMargin?: string; // dropdown range: '<5%', '5-10%', etc.
+  lastMonthRevenue?: number;
+
+  // Legacy fields (v1 compatibility)
+  annualRevenue: number;
+  netProfit: number;
   avgClientValue: number;
+
+  // Clients & Churn (v2 fields)
+  currentClients?: number;
+  clientsLostAnnual?: string;   // range: '0-2', '3-5', '6-10', '11-15', '16+'
+  clientsAddedAnnual?: string;  // range: '0-3', '4-8', '9-15', '16-25', '26+'
+  churnCalibration?: string;    // 'Lower', 'About Right', 'Higher'
+
+  // Legacy fields (v1 compatibility)
   clientsAddedPerMonth: number;
   clientsLostPerMonth: number;
   newRevenueAnnual: number;
   churnRevenueAnnual: number;
   clientCount: number;
   avgClientLifetime: number;
+
+  // Lead Sources
   referralPercent: number;
   inboundPercent: number;
   contentPercent: number;
@@ -35,27 +52,36 @@ export interface IntakeData {
   outboundPercent: number;
   partnershipPercent?: number;
   monthlyLeads: number;
-  closeRate: number;
-  ceoDeliveryRating: string;
-  ceoAccountMgmtRating: string;
-  ceoMarketingRating: string;
-  ceoSalesRating: string;
+  closeRate: number | string;
+
+  // Founder Time
+  ceoDeliveryRating: string | number;
+  ceoAccountMgmtRating: string | number;
+  ceoMarketingRating: string | number;
+  ceoSalesRating: string | number;
   founderWeeklyHours: number;
   strategyHoursPerWeek?: number;
+
+  // Systems & Documentation
   hasSalesSOP: string;
   hasDeliverySOP: string;
   hasAccountMgmtSOP: string;
   hasMarketingSOP: string;
+
+  // Positioning & ICP
   targetMarket: string;
   coreOffer: string;
+  statedICP?: string;
+  differentiator?: string;
+  targetCompanySize?: string;
+  targetIndustry?: string | string[];
+  targetIndustryOther?: string;
+
+  // Visibility & Proof
   founderPostsPerWeek?: number;
   teamPostsPerWeek?: number;
   hasCaseStudies: string;
   hasNamedClients: string;
-  targetCompanySize?: string;
-  targetIndustry?: string;
-  targetIndustryOther?: string;
-  differentiator?: string;
 }
 
 export interface ZoneScore {

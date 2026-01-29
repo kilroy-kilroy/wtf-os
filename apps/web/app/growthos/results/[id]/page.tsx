@@ -182,14 +182,149 @@ export default async function ResultsPage({ params }: { params: { id: string } }
         </div>
       )}
 
-      {/* LLM Awareness */}
+      {/* Positioning Coherence */}
+      {enrichment?.analysis?.positioningCoherence && (() => {
+        const pos = enrichment.analysis.positioningCoherence;
+        const alignColor = pos.alignment === 'aligned' ? 'text-[#00D4FF]' : pos.alignment === 'partial' ? 'text-amber-400' : 'text-red-400';
+        return (
+          <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold text-white">Positioning Analysis</h2>
+              <span className="text-sm font-bold text-[#00D4FF]">{pos.score}/10</span>
+            </div>
+            <p className="text-sm text-slate-300 mb-4">{pos.verdict}</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+              <div className="bg-slate-700/30 rounded-xl p-4">
+                <p className="text-xs text-slate-500 mb-1 font-bold uppercase">Website Says</p>
+                <p className="text-sm text-slate-300">{pos.websiteMessage}</p>
+              </div>
+              <div className="bg-slate-700/30 rounded-xl p-4">
+                <p className="text-xs text-slate-500 mb-1 font-bold uppercase">LinkedIn Says</p>
+                <p className="text-sm text-slate-300">{pos.linkedinMessage}</p>
+              </div>
+            </div>
+            <p className="text-sm mb-3">Alignment: <span className={`font-bold capitalize ${alignColor}`}>{pos.alignment}</span></p>
+            {pos.gaps?.length > 0 && (
+              <div className="mb-3">
+                <p className="text-xs text-slate-500 font-bold uppercase mb-1">Gaps</p>
+                <ul className="space-y-1">{pos.gaps.map((g: string, i: number) => <li key={i} className="text-sm text-slate-400">• {g}</li>)}</ul>
+              </div>
+            )}
+            {pos.recommendations?.length > 0 && (
+              <div>
+                <p className="text-xs text-[#00D4FF] font-bold uppercase mb-1">Recommendations</p>
+                <ul className="space-y-1">{pos.recommendations.map((r: string, i: number) => <li key={i} className="text-sm text-slate-300">• {r}</li>)}</ul>
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
+      {/* Content-Market Fit */}
+      {enrichment?.analysis?.contentMarketFit && (() => {
+        const cmf = enrichment.analysis.contentMarketFit;
+        return (
+          <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold text-white">Content-Market Fit</h2>
+              <span className="text-sm font-bold text-[#00D4FF]">{cmf.score}/10</span>
+            </div>
+            <p className="text-sm text-slate-300 mb-4">{cmf.verdict}</p>
+            {cmf.topicsVsIcpProblems && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                <div className="bg-slate-700/30 rounded-xl p-4">
+                  <p className="text-xs text-slate-500 mb-2 font-bold uppercase">Your Content Topics</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {cmf.topicsVsIcpProblems.topContentTopics?.map((t: string, i: number) => (
+                      <span key={i} className="px-2 py-0.5 rounded-full bg-[#00D4FF]/10 text-[#00D4FF] text-xs">{t}</span>
+                    ))}
+                  </div>
+                </div>
+                <div className="bg-slate-700/30 rounded-xl p-4">
+                  <p className="text-xs text-slate-500 mb-2 font-bold uppercase">ICP Problems</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {cmf.topicsVsIcpProblems.topIcpProblems?.map((p: string, i: number) => (
+                      <span key={i} className="px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 text-xs">{p}</span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+            {cmf.topicsVsIcpProblems?.overlap !== undefined && (
+              <div className="mb-4">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs text-slate-500 font-bold">Content-Problem Overlap</span>
+                  <span className="text-xs font-bold text-[#00D4FF]">{cmf.topicsVsIcpProblems.overlap}%</span>
+                </div>
+                <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
+                  <div className="h-full bg-[#00D4FF] rounded-full" style={{ width: `${cmf.topicsVsIcpProblems.overlap}%` }} />
+                </div>
+              </div>
+            )}
+            {cmf.gaps?.length > 0 && (
+              <div className="mb-3">
+                <p className="text-xs text-slate-500 font-bold uppercase mb-1">Gaps</p>
+                <ul className="space-y-1">{cmf.gaps.map((g: string, i: number) => <li key={i} className="text-sm text-slate-400">• {g}</li>)}</ul>
+              </div>
+            )}
+            {cmf.recommendations?.length > 0 && (
+              <div>
+                <p className="text-xs text-[#00D4FF] font-bold uppercase mb-1">Recommendations</p>
+                <ul className="space-y-1">{cmf.recommendations.map((r: string, i: number) => <li key={i} className="text-sm text-slate-300">• {r}</li>)}</ul>
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
+      {/* Social Proof Alignment */}
+      {enrichment?.analysis?.socialProofAlignment && (() => {
+        const sp = enrichment.analysis.socialProofAlignment;
+        return (
+          <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold text-white">Social Proof Audit</h2>
+              <span className="text-sm font-bold text-[#00D4FF]">{sp.score}/10</span>
+            </div>
+            <p className="text-sm text-slate-300 mb-4">{sp.verdict}</p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+              <div className="bg-slate-700/30 rounded-xl p-4">
+                <p className="text-xs text-slate-500 mb-1 font-bold uppercase">Case Studies</p>
+                <p className="text-sm text-slate-300">{sp.caseStudyRelevance}</p>
+              </div>
+              <div className="bg-slate-700/30 rounded-xl p-4">
+                <p className="text-xs text-slate-500 mb-1 font-bold uppercase">Testimonials</p>
+                <p className="text-sm text-slate-300">{sp.testimonialStrength}</p>
+              </div>
+              <div className="bg-slate-700/30 rounded-xl p-4">
+                <p className="text-xs text-slate-500 mb-1 font-bold uppercase">Client Logos</p>
+                <p className="text-sm text-slate-300">{sp.logoSignalStrength}</p>
+              </div>
+            </div>
+            {sp.gaps?.length > 0 && (
+              <div className="mb-3">
+                <p className="text-xs text-slate-500 font-bold uppercase mb-1">Gaps</p>
+                <ul className="space-y-1">{sp.gaps.map((g: string, i: number) => <li key={i} className="text-sm text-slate-400">• {g}</li>)}</ul>
+              </div>
+            )}
+            {sp.recommendations?.length > 0 && (
+              <div>
+                <p className="text-xs text-[#00D4FF] font-bold uppercase mb-1">Recommendations</p>
+                <ul className="space-y-1">{sp.recommendations.map((r: string, i: number) => <li key={i} className="text-sm text-slate-300">• {r}</li>)}</ul>
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
+      {/* AI Discoverability */}
       {enrichment?.llmAwareness?.summary && (
         <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 mb-6">
-          <h2 className="text-lg font-bold text-white mb-4">AI Awareness Check</h2>
+          <h2 className="text-lg font-bold text-white mb-4">AI Discoverability</h2>
           <p className="text-sm text-slate-400 mb-4">
-            We asked Claude, ChatGPT, and Perplexity who the best agencies are for your ICP.
+            We ran 3 queries across Claude, ChatGPT, and Perplexity to see if your agency surfaces when your ICP asks for help.
           </p>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-3 gap-4 mb-4">
             {['claude', 'chatgpt', 'perplexity'].map(provider => {
               const check = enrichment.llmAwareness[provider];
               if (!check?.available) return (
@@ -201,16 +336,31 @@ export default async function ResultsPage({ params }: { params: { id: string } }
               return (
                 <div key={provider} className="bg-slate-700/30 rounded-xl p-4 text-center">
                   <p className="text-xs text-slate-500 capitalize mb-1">{provider}</p>
-                  <p className={`text-sm font-bold ${check.agencyMentioned ? 'text-[#00D4FF]' : 'text-red-400'}`}>
+                  <p className={`text-lg font-bold ${check.agencyMentioned ? 'text-[#00D4FF]' : 'text-red-400'}`}>
                     {check.agencyMentioned ? 'Found' : 'Not Found'}
                   </p>
+                  {check.founderMentioned && <p className="text-xs text-slate-500 mt-1">Founder mentioned</p>}
                 </div>
               );
             })}
           </div>
-          <p className="text-xs text-slate-500 mt-3">
-            Awareness score: {enrichment.llmAwareness.summary.score}% — Agency mentioned in {enrichment.llmAwareness.summary.agencyMentionedIn}/{enrichment.llmAwareness.summary.totalChecked} LLMs
-          </p>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs text-slate-500 font-bold">AI Awareness Score</span>
+            <span className="text-xs font-bold text-[#00D4FF]">{enrichment.llmAwareness.summary.score}%</span>
+          </div>
+          <div className="h-2 bg-slate-700 rounded-full overflow-hidden mb-4">
+            <div className="h-full bg-[#00D4FF] rounded-full" style={{ width: `${enrichment.llmAwareness.summary.score}%` }} />
+          </div>
+          {enrichment.llmAwareness.summary.topCompetitors?.length > 0 && (
+            <div>
+              <p className="text-xs text-slate-500 font-bold uppercase mb-2">Competitors LLMs Recommend Instead</p>
+              <div className="flex flex-wrap gap-2">
+                {enrichment.llmAwareness.summary.topCompetitors.map((name: string, i: number) => (
+                  <span key={i} className="px-3 py-1 rounded-full bg-red-500/10 text-red-400 text-xs border border-red-500/20">{name}</span>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 

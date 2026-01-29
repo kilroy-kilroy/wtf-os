@@ -365,8 +365,30 @@ export default function AssessmentPage() {
 
             <div className="border-t border-slate-700/50 mt-6 pt-6" />
 
+            <RadioField label="Target Client Company Size" name="targetCompanySize" required options={[
+              { value: '1-10', label: '1-10 employees' },
+              { value: '11-50', label: '11-50 employees' },
+              { value: '51-200', label: '51-200 employees' },
+              { value: '201-1000', label: '201-1,000 employees' },
+              { value: '1000+', label: '1,000+ employees' },
+            ]} value={formData.targetCompanySize || ''} onChange={handleChange} />
+            <RadioField label="Target Client Industry" name="targetIndustry" required options={[
+              { value: 'SaaS / Software', label: 'SaaS / Software' },
+              { value: 'E-commerce / DTC', label: 'E-commerce / DTC' },
+              { value: 'Professional Services', label: 'Professional Services' },
+              { value: 'Healthcare', label: 'Healthcare' },
+              { value: 'Financial Services', label: 'Financial Services' },
+              { value: 'Real Estate', label: 'Real Estate' },
+              { value: 'Manufacturing / Industrial', label: 'Manufacturing / Industrial' },
+              { value: 'Education', label: 'Education' },
+              { value: 'Other', label: 'Other (specify below)' },
+            ]} value={formData.targetIndustry || ''} onChange={handleChange} />
+            {formData.targetIndustry === 'Other' && (
+              <TextField label="Specify Industry" name="targetIndustryOther" required placeholder="e.g., Crypto / Web3" value={formData.targetIndustryOther || ''} onChange={handleChange} />
+            )}
             <TextAreaField label="Who is your ideal client?" name="targetMarket" required placeholder="E.g., B2B SaaS companies with $5M-$20M ARR who need SEO and content" helpText='"Everyone" is wrong.' value={formData.targetMarket || ''} onChange={handleChange} />
             <TextAreaField label="What is your core offer?" name="coreOffer" required placeholder="E.g., Done-for-you SEO + content that drives qualified pipeline" helpText="Your main thing" value={formData.coreOffer || ''} onChange={handleChange} />
+            <TextAreaField label="What makes you different?" name="differentiator" placeholder="E.g., We only work with Series A+ SaaS. Our playbook has generated $50M+ in pipeline for clients." helpText="Your unique edge — why should they pick you?" value={formData.differentiator || ''} onChange={handleChange} />
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <NumberField label="Founder LinkedIn Posts/Week" name="founderPostsPerWeek" placeholder="e.g., 3" helpText="Optional - we'll verify via scrape" value={formData.founderPostsPerWeek || ''} onChange={handleChange} />
               <NumberField label="Team LinkedIn Posts/Week" name="teamPostsPerWeek" placeholder="e.g., 5" helpText="Optional" value={formData.teamPostsPerWeek || ''} onChange={handleChange} />

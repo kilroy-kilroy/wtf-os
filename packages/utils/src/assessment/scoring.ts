@@ -52,6 +52,10 @@ export interface IntakeData {
   teamPostsPerWeek?: number;
   hasCaseStudies: string;
   hasNamedClients: string;
+  targetCompanySize?: string;
+  targetIndustry?: string;
+  targetIndustryOther?: string;
+  differentiator?: string;
 }
 
 export interface ZoneScore {

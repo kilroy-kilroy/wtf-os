@@ -142,9 +142,10 @@ export async function POST(request: NextRequest) {
         assessmentId,
         scores,
         enrichment: enrichmentData ? {
-          hasApify: !!(enrichmentData.apify.homepage || enrichmentData.apify.caseStudies),
-          hasExa: !!(enrichmentData.exa.visibility || enrichmentData.exa.authority),
+          hasApify: !!enrichmentData.apify.website,
+          hasExa: enrichmentData.exa.icpProblems.length > 0 || !!enrichmentData.exa.competitors,
           hasLLM: !!enrichmentData.llmAwareness,
+          hasAnalysis: !!enrichmentData.analysis,
           errors: enrichmentData.meta.errors.length
         } : null
       }

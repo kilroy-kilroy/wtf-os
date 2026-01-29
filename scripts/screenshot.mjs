@@ -8,7 +8,7 @@
  *   node scripts/screenshot.mjs https://app.vercel.app  # screenshots all key pages
  */
 
-import { chromium } from 'playwright';
+import { chromium } from 'playwright-core';
 import { mkdirSync } from 'fs';
 import { join } from 'path';
 
@@ -27,7 +27,15 @@ const pages = specificPath
   : ['/growthos', '/growthos/assessment'];
 
 async function run() {
-  const browser = await chromium.launch({ headless: true });
+  const proxyUrl = process.env.HTTPS_PROXY || process.env.HTTP_PROXY || process.env.https_proxy || process.env.http_proxy;
+  const launchOptions = {
+    headless: true,
+    executablePath: process.env.CHROME_PATH || '/root/.cache/ms-playwright/chromium-1194/chrome-linux/chrome',
+  };
+  if (proxyUrl) {
+    launchOptions.proxy = { server: proxyUrl };
+  }
+  const browser = await chromium.launch(launchOptions);
   const context = await browser.newContext({
     viewport: { width: 1440, height: 900 },
     deviceScaleFactor: 2,

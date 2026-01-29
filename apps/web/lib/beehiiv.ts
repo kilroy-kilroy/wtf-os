@@ -182,6 +182,31 @@ export async function addAppSignupSubscriber(
 }
 
 /**
+ * Add subscriber from GrowthOS assessment completion
+ * Tags them for the Agency Inner Circle list
+ */
+export async function addAssessmentSubscriber(
+  email: string,
+  name?: string,
+  agencyName?: string
+): Promise<{ success: boolean; id?: string; error?: string }> {
+  const [firstName, ...lastNameParts] = (name || '').split(' ');
+  const lastName = lastNameParts.join(' ');
+
+  return addSubscriber({
+    email,
+    first_name: firstName || undefined,
+    last_name: lastName || undefined,
+    utm_source: 'growthos-assessment',
+    utm_medium: 'assessment',
+    utm_campaign: 'agency-inner-circle',
+    custom_fields: agencyName
+      ? [{ name: 'company', value: agencyName }]
+      : undefined,
+  });
+}
+
+/**
  * Add subscriber from Stripe checkout (Pro upgrade)
  */
 export async function addProSubscriber(

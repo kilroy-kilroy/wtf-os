@@ -5,6 +5,7 @@ import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
 import { calculateAssessment } from '@repo/utils/src/assessment/scoring';
 import { runEnrichmentPipeline } from '@repo/utils/src/assessment/enrichment';
 import type { IntakeData } from '@repo/utils/src/assessment/scoring';
+import { addAssessmentSubscriber } from '@/lib/beehiiv';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -135,6 +136,15 @@ export async function POST(request: NextRequest) {
     if (updateError) {
       console.error('[GrowthOS] Failed to update assessment:', updateError);
     }
+
+    // Add to Agency Inner Circle newsletter list (fire-and-forget)
+    addAssessmentSubscriber(
+      intakeData.email,
+      intakeData.founderName,
+      intakeData.agencyName
+    ).catch((err) => {
+      console.error('[GrowthOS] Beehiiv subscription failed:', err);
+    });
 
     return NextResponse.json({
       success: true,

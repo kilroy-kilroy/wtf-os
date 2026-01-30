@@ -225,7 +225,7 @@ export function buildAgencyContext(
   enrichment: EnrichmentResult | null,
   scores: AssessmentResult,
 ): AgencyContext {
-  const annualRevenue = intakeData.lastYearRevenue || (intakeData.lastMonthRevenue * 12) || 0;
+  const annualRevenue = intakeData.lastYearRevenue || ((intakeData.lastMonthRevenue || 0) * 12) || 0;
   const segment = getSegment(annualRevenue);
   const teamSize = Number(intakeData.teamSize) || 1;
   const revenuePerFTE = annualRevenue / teamSize;
@@ -238,7 +238,7 @@ export function buildAgencyContext(
   const clientsAddedMidpoint = RANGE_MIDPOINTS.clientsAdded[intakeData.clientsAddedAnnual || ''] || 6;
   const netClientGrowth = clientsAddedMidpoint - clientsLostMidpoint;
   const netGrowthRate = currentClients > 0 ? Math.round((netClientGrowth / currentClients) * 100) : 0;
-  const avgClientValue = currentClients > 0 ? (intakeData.lastMonthRevenue / currentClients) * 12 : 0;
+  const avgClientValue = currentClients > 0 ? ((intakeData.lastMonthRevenue || 0) / currentClients) * 12 : 0;
 
   const closeRateMidpoint = CLOSE_RATE_MIDPOINTS[intakeData.closeRate as string || ''] || 25;
 

@@ -164,7 +164,185 @@ export interface AnalysisResult {
 }
 
 // ============================================
-// APIFY SCRAPERS
+// BRIGHT DATA SCRAPERS
+// ============================================
+
+const BRIGHT_DATA_API = process.env.BRIGHT_DATA_API;
+const BRIGHT_DATA_BASE = 'https://api.brightdata.com/datasets/v3';
+
+// Dataset IDs from Bright Data scraper library
+const BD_DATASETS = {
+  linkedinProfile: 'gd_l1viktl72bvl7bjuj0',
+  linkedinCompany: 'gd_l1vikfnt1wgvvqz95w',
+  linkedinPosts: 'gd_lyy3tktm25m4avu764',
+  chatgpt: 'gd_m7aof0k82r803d5bjm',
+};
+
+async function bdTrigger(datasetId: string, input: any[]): Promise<string | null> {
+  if (!BRIGHT_DATA_API) return null;
+
+  try {
+    const response = await fetch(`${BRIGHT_DATA_BASE}/trigger?dataset_id=${datasetId}`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${BRIGHT_DATA_API}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(input),
+      signal: AbortSignal.timeout(15000),
+    });
+
+    if (!response.ok) {
+      console.error(`[BrightData] Trigger failed for ${datasetId}: ${response.status}`);
+      return null;
+    }
+
+    const data = await response.json();
+    return data.snapshot_id || null;
+  } catch (error: any) {
+    console.error(`[BrightData] Trigger error for ${datasetId}:`, error.message);
+    return null;
+  }
+}
+
+async function bdPollAndDownload(snapshotId: string, maxWaitMs: number = 60000): Promise<any[]> {
+  if (!BRIGHT_DATA_API || !snapshotId) return [];
+
+  const startTime = Date.now();
+  const pollInterval = 5000;
+
+  while (Date.now() - startTime < maxWaitMs) {
+    try {
+      const statusResponse = await fetch(`${BRIGHT_DATA_BASE}/progress/${snapshotId}`, {
+        headers: { 'Authorization': `Bearer ${BRIGHT_DATA_API}` },
+        signal: AbortSignal.timeout(10000),
+      });
+      const statusData = await statusResponse.json();
+
+      if (statusData.status === 'ready') {
+        const dataResponse = await fetch(`${BRIGHT_DATA_BASE}/snapshot/${snapshotId}?format=json`, {
+          headers: { 'Authorization': `Bearer ${BRIGHT_DATA_API}` },
+          signal: AbortSignal.timeout(15000),
+        });
+        return await dataResponse.json();
+      }
+
+      if (statusData.status === 'failed') {
+        console.error(`[BrightData] Snapshot ${snapshotId} failed`);
+        return [];
+      }
+    } catch {
+      // Continue polling
+    }
+
+    await new Promise(resolve => setTimeout(resolve, pollInterval));
+  }
+
+  console.warn(`[BrightData] Snapshot ${snapshotId} timed out after ${maxWaitMs}ms`);
+  return [];
+}
+
+async function bdScrapeLinkedInProfile(linkedinUrl: string | undefined): Promise<ApifyLinkedInProfile | null> {
+  if (!BRIGHT_DATA_API || !linkedinUrl) return null;
+
+  try {
+    const snapshotId = await bdTrigger(BD_DATASETS.linkedinProfile, [{ url: linkedinUrl }]);
+    if (!snapshotId) return null;
+
+    const results = await bdPollAndDownload(snapshotId, 45000);
+    const profile = results[0];
+    if (!profile) return null;
+
+    return {
+      name: profile.full_name || profile.name || profile.fullName || '',
+      headline: profile.headline || profile.position || '',
+      about: (profile.about || profile.summary || profile.description || '').substring(0, 2000),
+      followerCount: profile.followers || profile.follower_count || profile.followersCount || 0,
+      connectionCount: profile.connections || profile.connection_count || profile.connectionsCount || 0,
+    };
+  } catch (error: any) {
+    console.error('[BrightData] LinkedIn profile scrape failed:', error.message);
+    return null;
+  }
+}
+
+async function bdScrapeLinkedInCompany(linkedinUrl: string | undefined): Promise<ApifyLinkedInProfile | null> {
+  if (!BRIGHT_DATA_API || !linkedinUrl) return null;
+
+  try {
+    const snapshotId = await bdTrigger(BD_DATASETS.linkedinCompany, [{ url: linkedinUrl }]);
+    if (!snapshotId) return null;
+
+    const results = await bdPollAndDownload(snapshotId, 45000);
+    const company = results[0];
+    if (!company) return null;
+
+    return {
+      name: company.name || company.company_name || '',
+      headline: company.tagline || company.headline || '',
+      about: (company.about || company.description || company.overview || '').substring(0, 2000),
+      followerCount: company.followers || company.follower_count || company.followersCount || 0,
+      connectionCount: company.employee_count || company.employees || 0,
+    };
+  } catch (error: any) {
+    console.error('[BrightData] LinkedIn company scrape failed:', error.message);
+    return null;
+  }
+}
+
+async function bdScrapeLinkedInPosts(linkedinUrl: string | undefined): Promise<ApifyLinkedInPosts | null> {
+  if (!BRIGHT_DATA_API || !linkedinUrl) return null;
+
+  try {
+    const snapshotId = await bdTrigger(BD_DATASETS.linkedinPosts, [{ url: linkedinUrl }]);
+    if (!snapshotId) return null;
+
+    const results = await bdPollAndDownload(snapshotId, 60000);
+    if (!results.length) return null;
+
+    const posts = results.slice(0, 20).map((item: any) => ({
+      text: (item.post_text || item.text || item.content || item.description || '').substring(0, 2000),
+      date: item.post_date || item.date || item.posted_at || '',
+      likes: item.num_likes || item.likes || item.reactions || 0,
+      comments: item.num_comments || item.comments || 0,
+      shares: item.num_shares || item.shares || item.reposts || 0,
+    }));
+
+    const totalEngagement = posts.reduce((sum: number, p: any) => sum + p.likes + p.comments + p.shares, 0);
+    const allText = posts.map((p: any) => p.text).join(' ').toLowerCase();
+    const topTopics = extractTopics(allText);
+
+    return {
+      posts,
+      postCount: posts.length,
+      avgEngagement: posts.length > 0 ? Math.round(totalEngagement / posts.length) : 0,
+      topTopics,
+    };
+  } catch (error: any) {
+    console.error('[BrightData] LinkedIn posts scrape failed:', error.message);
+    return null;
+  }
+}
+
+async function bdSearchChatGPT(prompt: string): Promise<string> {
+  if (!BRIGHT_DATA_API) throw new Error('Not configured');
+
+  const snapshotId = await bdTrigger(BD_DATASETS.chatgpt, [{
+    url: 'https://chatgpt.com/',
+    prompt,
+    country: '',
+  }]);
+  if (!snapshotId) throw new Error('No snapshot');
+
+  const results = await bdPollAndDownload(snapshotId, 45000);
+  const result = results[0];
+  if (!result) throw new Error('No result');
+
+  return result.content || result.response || result.text || result.answer || JSON.stringify(result);
+}
+
+// ============================================
+// APIFY SCRAPERS (fallback for website scraping)
 // ============================================
 
 const APIFY_TOKEN = process.env.APIFY_API_KEY || process.env.APIFY_API_TOKEN;
@@ -714,6 +892,17 @@ async function callClaude(prompt: string): Promise<string> {
 }
 
 async function callChatGPT(prompt: string): Promise<string> {
+  // Try Bright Data ChatGPT scraper first (real ChatGPT responses)
+  if (BRIGHT_DATA_API) {
+    try {
+      const result = await bdSearchChatGPT(prompt);
+      if (result) return result;
+    } catch {
+      console.log('[v4] Bright Data ChatGPT failed, falling back to OpenAI API');
+    }
+  }
+
+  // Fallback to OpenAI API
   const apiKey = process.env.OPENAI_API_KEY || process.env.OPEN_AI_KEY;
   if (!apiKey) throw new Error('Not configured');
 
@@ -1005,10 +1194,22 @@ export async function runEnrichmentPipeline(intakeData: IntakeData): Promise<Enr
   // Phase 1: Data collection (all parallel)
   const dataJobs: Promise<void>[] = [
     apifyScrapeWebsite(intakeData.website).then(d => { result.apify.website = d; }).catch(e => { result.meta.errors.push({ source: 'apify.website', error: e.message }); }),
-    apifyScrapeLinkedInProfile(intakeData.founderLinkedinUrl).then(d => { result.apify.founderLinkedin = d; }).catch(e => { result.meta.errors.push({ source: 'apify.founderProfile', error: e.message }); }),
-    apifyScrapeLinkedInPosts(intakeData.founderLinkedinUrl).then(d => { result.apify.founderPosts = d; }).catch(e => { result.meta.errors.push({ source: 'apify.founderPosts', error: e.message }); }),
-    apifyScrapeLinkedInProfile(intakeData.companyLinkedinUrl).then(d => { result.apify.companyLinkedin = d; }).catch(e => { result.meta.errors.push({ source: 'apify.companyProfile', error: e.message }); }),
-    apifyScrapeLinkedInPosts(intakeData.companyLinkedinUrl).then(d => { result.apify.companyPosts = d; }).catch(e => { result.meta.errors.push({ source: 'apify.companyPosts', error: e.message }); }),
+    bdScrapeLinkedInProfile(intakeData.founderLinkedinUrl)
+      .then(d => { if (d) result.apify.founderLinkedin = d; })
+      .catch(() => apifyScrapeLinkedInProfile(intakeData.founderLinkedinUrl).then(d => { result.apify.founderLinkedin = d; }))
+      .catch(e => { result.meta.errors.push({ source: 'bd.founderProfile', error: e.message }); }),
+    bdScrapeLinkedInPosts(intakeData.founderLinkedinUrl)
+      .then(d => { if (d) result.apify.founderPosts = d; })
+      .catch(() => apifyScrapeLinkedInPosts(intakeData.founderLinkedinUrl).then(d => { result.apify.founderPosts = d; }))
+      .catch(e => { result.meta.errors.push({ source: 'bd.founderPosts', error: e.message }); }),
+    bdScrapeLinkedInCompany(intakeData.companyLinkedinUrl)
+      .then(d => { if (d) result.apify.companyLinkedin = d; })
+      .catch(() => apifyScrapeLinkedInProfile(intakeData.companyLinkedinUrl).then(d => { result.apify.companyLinkedin = d; }))
+      .catch(e => { result.meta.errors.push({ source: 'bd.companyProfile', error: e.message }); }),
+    bdScrapeLinkedInPosts(intakeData.companyLinkedinUrl)
+      .then(d => { if (d) result.apify.companyPosts = d; })
+      .catch(() => apifyScrapeLinkedInPosts(intakeData.companyLinkedinUrl).then(d => { result.apify.companyPosts = d; }))
+      .catch(e => { result.meta.errors.push({ source: 'bd.companyPosts', error: e.message }); }),
     exaIcpProblemSearches(intakeData).then(d => { result.exa.icpProblems = d; }).catch(e => { result.meta.errors.push({ source: 'exa.icpProblems', error: e.message }); }),
     exaCompetitorSearch(intakeData).then(d => { result.exa.competitors = d; }).catch(e => { result.meta.errors.push({ source: 'exa.competitors', error: e.message }); }),
     runLLMAwarenessChecks(intakeData).then(d => { result.llmAwareness = d; }).catch(e => { result.meta.errors.push({ source: 'llm', error: e.message }); })

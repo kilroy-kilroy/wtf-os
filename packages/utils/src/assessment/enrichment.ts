@@ -170,7 +170,7 @@ export interface AnalysisResult {
 const APIFY_TOKEN = process.env.APIFY_API_KEY || process.env.APIFY_API_TOKEN;
 const APIFY_BASE = 'https://api.apify.com/v2';
 
-async function runApifyActor(actorId: string, input: any, waitMs: number = 15000): Promise<any[]> {
+async function runApifyActor(actorId: string, input: any, maxWaitMs: number = 60000): Promise<any[]> {
   if (!APIFY_TOKEN) return [];
 
   const response = await fetch(`${APIFY_BASE}/acts/${actorId}/runs`, {
@@ -185,8 +185,33 @@ async function runApifyActor(actorId: string, input: any, waitMs: number = 15000
 
   if (!response.ok) throw new Error(`Apify returned ${response.status}`);
   const run = await response.json();
+  const runId = run.data?.id;
+  if (!runId) throw new Error('No run ID returned');
 
-  await new Promise(resolve => setTimeout(resolve, waitMs));
+  // Poll for completion instead of fixed wait
+  const startTime = Date.now();
+  const pollInterval = 3000; // 3 seconds between polls
+  let status = run.data?.status;
+
+  while (Date.now() - startTime < maxWaitMs) {
+    if (status === 'SUCCEEDED') break;
+    if (status === 'FAILED' || status === 'ABORTED' || status === 'TIMED-OUT') {
+      throw new Error(`Apify run ${status}`);
+    }
+
+    await new Promise(resolve => setTimeout(resolve, pollInterval));
+
+    try {
+      const statusResponse = await fetch(`${APIFY_BASE}/acts/${actorId}/runs/${runId}`, {
+        headers: { 'Authorization': `Bearer ${APIFY_TOKEN}` },
+        signal: AbortSignal.timeout(10000)
+      });
+      const statusData = await statusResponse.json();
+      status = statusData.data?.status;
+    } catch {
+      // If status check fails, keep waiting
+    }
+  }
 
   const dataResponse = await fetch(`${APIFY_BASE}/datasets/${run.data.defaultDatasetId}/items`, {
     headers: { 'Authorization': `Bearer ${APIFY_TOKEN}` },
@@ -480,70 +505,74 @@ async function exaCompetitorSearch(intakeData: IntakeData): Promise<ExaSearchRes
 // ============================================
 
 function buildAwarenessPrompts(intakeData: IntakeData): string[] {
-  // Parse the intake data to understand what the user's ICP actually struggles with,
-  // then generate the questions those ICP buyers would realistically type into AI.
+  // Build queries that match what the ASSESSMENT USER's ICP would actually search for.
+  // The user is the one being assessed — we want to see if THEY show up when
+  // their target clients search for help.
 
   const coreOfferLines = (intakeData.coreOffer || '').split('\n').filter(l => l.trim());
   const revenue = intakeData.lastYearRevenue || ((intakeData.lastMonthRevenue || 0) * 12) || 0;
-  const revLabel = revenue >= 1000000 ? `$${(revenue / 1000000).toFixed(0)}mm` : `$${Math.round(revenue / 1000)}K`;
 
-  // Figure out what kind of business the ICP is
-  const icpDesc = intakeData.statedICP || intakeData.targetMarket || '';
-  // Extract the business type (e.g., "marketing agency" from "Marketing agencies between $1mm...")
-  const bizType = icpDesc
-    .replace(/between.*$/i, '')
-    .replace(/struggling.*$/i, '')
-    .replace(/\$[\d.,]+[kmb]*/gi, '')
-    .replace(/\d+\s*-\s*\d+/g, '')
-    .trim()
-    .replace(/ies$/i, 'y')  // "agencies" -> "agency"
-    .replace(/\s+/g, ' ')
-    .trim() || 'agency';
-
-  // Figure out what problems the ICP has based on the user's core offer
+  // What the user does (their core offer determines the search context)
   const offerKeywords = coreOfferLines.join(' ').toLowerCase();
-  const problems: string[] = [];
+  const agencyName = intakeData.agencyName || '';
+  const founderName = intakeData.founderName || '';
 
-  if (offerKeywords.includes('sales') || offerKeywords.includes('salesos')) {
-    problems.push('improve my sales process');
-    problems.push('close more deals');
-  }
-  if (offerKeywords.includes('positioning') || offerKeywords.includes('demandos')) {
-    problems.push('fix my positioning');
-    problems.push('generate more inbound leads');
-  }
-  if (offerKeywords.includes('content') || offerKeywords.includes('social')) {
-    problems.push('build a content strategy that generates leads');
-  }
-  if (offerKeywords.includes('coaching') || offerKeywords.includes('growth')) {
-    problems.push('grow my business');
-    problems.push('scale past my current revenue');
-  }
-  if (offerKeywords.includes('team') || offerKeywords.includes('amplification')) {
-    problems.push('get my team to help with business development');
-  }
-  if (problems.length === 0) {
-    problems.push('grow my business', 'get more clients');
-  }
+  // Parse what kind of business they serve
+  const icpDesc = intakeData.statedICP || intakeData.targetMarket || '';
+  const targetSize = intakeData.targetCompanySize || '';
 
-  // Pick a realistic revenue for the ICP (use target company size context)
-  const sizeContext = intakeData.targetCompanySize || '';
-  let icpRevExample = '$3mm';
-  if (sizeContext.includes('1-10')) icpRevExample = '$1.5mm';
-  else if (sizeContext.includes('51-200')) icpRevExample = '$8mm';
-  else if (sizeContext.includes('201-')) icpRevExample = '$15mm';
+  // Determine what the user actually does — are they a coach, consultant, agency, etc.?
+  const isCoachOrConsultant = /coach|consult|adviso|mentor|train/i.test(offerKeywords + ' ' + agencyName);
+  const isAgencyServing = /agenc|shop|firm|studio/i.test(icpDesc);
 
-  // Build 3 distinct, realistic queries an ICP buyer would actually type
-  const prompts = [
-    // Query 1: Specific operational problem
-    `I run a ${icpRevExample} ${bizType} and I need to ${problems[0]}${problems[1] ? ` and ${problems[1]}` : ''}. Who are the best consultants or coaches that specialize in this? I want names, not generic advice.`,
+  // Build a revenue range label for the ICP
+  let icpRevLabel = 'under $10mm';
+  if (targetSize.includes('1-10') || targetSize.includes('1 to 10')) icpRevLabel = '$1mm-$5mm';
+  else if (targetSize.includes('11-50') || targetSize.includes('11 to 50')) icpRevLabel = '$2mm-$10mm';
+  else if (targetSize.includes('51-200')) icpRevLabel = '$5mm-$20mm';
+  else if (targetSize.includes('201-')) icpRevLabel = '$10mm-$50mm';
 
-    // Query 2: Growth-focused, different angle
-    `My ${bizType} is stuck at ${icpRevExample} in revenue. I need outside help to ${problems[Math.min(2, problems.length - 1)]}. Who are the go-to people for ${bizType} growth? Looking for someone who's actually done this, not a generalist.`,
+  // Figure out the service category
+  let serviceCategory = 'growth';
+  if (/sales|salesos|close|pipeline|revenue/i.test(offerKeywords)) serviceCategory = 'sales';
+  else if (/position|brand|demand|market/i.test(offerKeywords)) serviceCategory = 'positioning and marketing';
+  else if (/content|social|visib|amplif/i.test(offerKeywords)) serviceCategory = 'content and visibility';
+  else if (/coach|mentor|lead|scale/i.test(offerKeywords)) serviceCategory = 'growth coaching';
+  else if (/team|hire|recruit|talent/i.test(offerKeywords)) serviceCategory = 'team building';
+  else if (/operation|system|process|sop/i.test(offerKeywords)) serviceCategory = 'operations';
 
-    // Query 3: Hiring/resource focused
-    `Who are the top coaches or consultants that help ${bizType} owners ${problems[Math.min(3, problems.length - 1)]}? I want someone who works specifically with ${bizType.endsWith('y') ? bizType.slice(0, -1) + 'ies' : bizType + 's'} in the $1mm-$20mm range. Give me specific names.`,
-  ];
+  // Determine what the ICP is (agency owner, marketing director, etc.)
+  let icpType = 'business';
+  if (isAgencyServing) icpType = 'agency';
+  else if (/saas|software|tech/i.test(icpDesc)) icpType = 'SaaS company';
+  else if (/ecomm|retail|shop/i.test(icpDesc)) icpType = 'ecommerce brand';
+  else if (/b2b|professional/i.test(icpDesc)) icpType = 'B2B company';
+
+  // Build 3 distinct queries that match how the user's ICP would actually search
+  const prompts: string[] = [];
+
+  if (isCoachOrConsultant && isAgencyServing) {
+    // User coaches/consults agencies — ICP is agency owners looking for coaches
+    prompts.push(
+      `Best ${icpType} coaches for ${icpType === 'agency' ? 'agencies' : `${icpType}s`} ${icpRevLabel} in revenue. I want specific names of people who specialize in helping ${icpType === 'agency' ? 'agency' : icpType} owners with ${serviceCategory}. Not generic business coaches.`,
+      `I run a ${icpRevLabel} ${icpType} and need help with ${serviceCategory}. Who are the best coaches or consultants that actually work with ${icpType === 'agency' ? 'agencies' : `${icpType}s`} my size? Give me names.`,
+      `Top ${serviceCategory} consultants for ${icpType === 'agency' ? 'marketing agencies' : `${icpType}s`} doing ${icpRevLabel}. Who has a real track record helping owners at this stage? I want someone who knows the ${icpType} world specifically.`,
+    );
+  } else if (isAgencyServing) {
+    // User is an agency that serves other agencies
+    prompts.push(
+      `Best ${serviceCategory} agencies for ${icpType === 'agency' ? 'agencies' : `${icpType}s`} ${icpRevLabel}. Looking for someone who specializes in this space. Names please.`,
+      `My ${icpType} needs help with ${serviceCategory}. We're doing ${icpRevLabel} in revenue. Who are the go-to firms or people for this?`,
+      `Who are the top ${serviceCategory} providers that work with ${icpType === 'agency' ? 'agencies' : `${icpType}s`} in the ${icpRevLabel} range? I want specific recommendations.`,
+    );
+  } else {
+    // General case — user serves non-agency businesses
+    prompts.push(
+      `Best ${serviceCategory} consultants for ${icpType}s doing ${icpRevLabel} in revenue. I need someone who specializes in ${icpType === 'business' ? 'companies' : `${icpType}s`} at my stage. Give me specific names.`,
+      `I run a ${icpRevLabel} ${icpType} and I need to improve our ${serviceCategory}. Who are the best people or firms to help with this? Looking for specialists, not generalists.`,
+      `Top ${serviceCategory} coaches or agencies for ${icpType}s in the ${icpRevLabel} range. Who has actually helped companies like mine? Specific names and recommendations please.`,
+    );
+  }
 
   return prompts;
 }
@@ -553,17 +582,23 @@ function checkMentions(text: string, intakeData: IntakeData) {
   const agencyName = (intakeData.agencyName || '').toLowerCase();
   const founderName = (intakeData.founderName || '').toLowerCase();
 
-  // Also check partial matches and common variations
-  const agencyWords = agencyName.split(/\s+/).filter(w => w.length > 2);
+  // Check agency name — full match, word-by-word, and domain-based
+  const agencyWords = agencyName.split(/[\s\-–.]+/).filter(w => w.length > 2);
+  const domain = extractDomain(intakeData.website || '').replace(/\.com|\.co|\.io|\.org|\.net/g, '');
   const agencyMentioned = agencyName.length > 2 && (
     lower.includes(agencyName) ||
-    (agencyWords.length > 1 && agencyWords.every(w => lower.includes(w)))
+    (agencyWords.length > 1 && agencyWords.every(w => lower.includes(w))) ||
+    (domain.length > 3 && lower.includes(domain))
   );
 
-  return {
-    agencyMentioned,
-    founderMentioned: founderName.length > 2 && lower.includes(founderName)
-  };
+  // Check founder name — full name, and also first+last appearing near each other
+  const founderWords = founderName.split(/\s+/).filter(w => w.length > 2);
+  const founderMentioned = founderName.length > 2 && (
+    lower.includes(founderName) ||
+    (founderWords.length >= 2 && founderWords.every(w => lower.includes(w)))
+  );
+
+  return { agencyMentioned: agencyMentioned || founderMentioned, founderMentioned };
 }
 
 function extractCompetitorNames(text: string, intakeData: IntakeData): string[] {
@@ -664,7 +699,7 @@ async function callClaude(prompt: string): Promise<string> {
 }
 
 async function callChatGPT(prompt: string): Promise<string> {
-  const apiKey = process.env.OPENAI_API_KEY;
+  const apiKey = process.env.OPENAI_API_KEY || process.env.OPEN_AI_KEY;
   if (!apiKey) throw new Error('Not configured');
 
   const response = await fetch('https://api.openai.com/v1/chat/completions', {

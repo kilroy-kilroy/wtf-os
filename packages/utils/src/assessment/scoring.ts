@@ -820,7 +820,16 @@ function detectImpossibilities(data: IntakeData): string[] {
   const revenue = getEffectiveRevenue(data);
 
   if (data.targetRevenue > revenue * 2) {
-    impossibilities.push(`Targeting ${Math.round((data.targetRevenue / revenue - 1) * 100)}% growth. Fix churn and lead gen first.`);
+    const growthPct = Math.round((data.targetRevenue / revenue - 1) * 100);
+    // Only flag churn/leads if they're actually weak — don't contradict good scores
+    const hasChurnProblem = data.churnRevenueAnnual > data.newRevenueAnnual * 0.5;
+    const hasLeadProblem = data.monthlyLeads < 5;
+    if (hasChurnProblem || hasLeadProblem) {
+      const fixes = [hasChurnProblem && 'churn', hasLeadProblem && 'lead gen'].filter(Boolean).join(' and ');
+      impossibilities.push(`Targeting ${growthPct}% growth. Fix ${fixes} first.`);
+    } else {
+      impossibilities.push(`Targeting ${growthPct}% growth from $${Math.round(revenue / 1000)}K to $${Math.round(data.targetRevenue / 1000)}K. Aggressive but possible — your fundamentals support it. Focus on capacity and new channels.`);
+    }
   }
 
   if (data.churnRevenueAnnual > data.newRevenueAnnual) {

@@ -480,18 +480,17 @@ async function exaCompetitorSearch(intakeData: IntakeData): Promise<ExaSearchRes
 // ============================================
 
 function buildAwarenessPrompts(intakeData: IntakeData): string[] {
-  const industry = intakeData.targetIndustry === 'Other'
-    ? intakeData.targetIndustryOther || intakeData.targetMarket
-    : intakeData.targetIndustry || intakeData.targetMarket;
+  // Use statedICP or targetMarket — these are the actual client descriptions
+  // that matter, not the generic industry dropdown
+  const icp = intakeData.statedICP || intakeData.targetMarket || '';
+  const coreOfferShort = (intakeData.coreOffer || '').split('\n')[0].substring(0, 100);
 
-  // These prompts simulate how a real buyer would ask AI for help —
-  // problem-first, not "who is the best agency" (nobody searches that way).
-  const coreOfferShort = (intakeData.coreOffer || '').split('\n')[0].substring(0, 80);
-
+  // These prompts are written FROM the ICP's perspective — the question
+  // a potential buyer would actually type into ChatGPT/Claude/Perplexity.
   return [
-    `I run a ${industry} company and I'm struggling to grow. I need help with ${coreOfferShort}. Who should I talk to? Give me specific people or companies I should reach out to.`,
-    `What consultants or agencies help ${industry} businesses with ${coreOfferShort}? I want someone who actually specializes in this, not a generalist. Name names.`,
-    `I'm a ${intakeData.targetCompanySize || 'small'} employee ${industry} company. We're stuck at our current revenue and need outside help with growth strategy and ${coreOfferShort}. Who are the go-to experts for this?`,
+    `I'm a ${icp}. I need help with ${coreOfferShort}. Who should I hire or talk to? Give me specific names of consultants, coaches, or agencies.`,
+    `Who are the best consultants or coaches for ${icp}? I want someone who specializes in ${coreOfferShort}. List specific people and companies, not categories.`,
+    `I own a ${icp.toLowerCase().replace(/^(i'm a |i run a |i own a )/i, '')} and I'm looking for help with growth. Who are the recognized experts that work specifically with businesses like mine?`,
   ];
 }
 
@@ -514,13 +513,18 @@ function checkMentions(text: string, intakeData: IntakeData) {
 }
 
 function extractCompetitorNames(text: string, intakeData: IntakeData): string[] {
-  // Extract names that look like agency names (capitalized multi-word or single brand names)
   const agencyName = (intakeData.agencyName || '').toLowerCase();
   const lines = text.split('\n');
   const names: string[] = [];
 
+  // Generic category words that indicate a description, not a business name
+  const genericTerms = [
+    'consulting', 'firms', 'agencies', 'services', 'solutions', 'group',
+    'management', 'strategy', 'marketing', 'digital', 'growth', 'revenue',
+    'advisory', 'partners', 'network', 'platform', 'institute', 'association',
+  ];
+
   for (const line of lines) {
-    // Match patterns like "1. Agency Name" or "**Agency Name**" or "- Agency Name:"
     const patterns = [
       /(?:\d+\.\s*\*{0,2})([A-Z][a-zA-Z\s&.]+?)(?:\*{0,2}\s*[-–:])/g,
       /\*\*([A-Z][a-zA-Z\s&.]+?)\*\*/g,
@@ -529,9 +533,19 @@ function extractCompetitorNames(text: string, intakeData: IntakeData): string[] 
       let match;
       while ((match = pattern.exec(line)) !== null) {
         const name = match[1].trim();
-        if (name.length > 2 && name.length < 50 && !name.toLowerCase().includes(agencyName)) {
-          names.push(name);
-        }
+        if (name.length < 3 || name.length > 40) continue;
+        if (name.toLowerCase().includes(agencyName)) continue;
+
+        // Filter out generic category descriptions:
+        // If ALL words in the name are generic terms, it's a category not a business
+        const words = name.toLowerCase().split(/\s+/).filter(w => w.length > 2);
+        const genericWordCount = words.filter(w => genericTerms.some(t => w.includes(t))).length;
+        if (words.length > 0 && genericWordCount === words.length) continue;
+
+        // Skip names that start with "The" followed by a single generic word
+        if (/^The\s+\w+$/i.test(name) && genericTerms.some(t => name.toLowerCase().includes(t))) continue;
+
+        names.push(name);
       }
     }
   }

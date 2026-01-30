@@ -322,15 +322,43 @@ async function bdScrapeLinkedInPosts(linkedinUrl: string | undefined): Promise<A
   if (!BRIGHT_DATA_API || !linkedinUrl) return null;
 
   try {
-    const snapshotId = await bdTrigger(BD_DATASETS.linkedinPosts, [{ url: linkedinUrl }]);
-    if (!snapshotId) return null;
+    // Use synchronous /scrape endpoint with "discover by profile url" mode
+    const url = linkedinUrl.trim().replace(/\/$/, '');
+    console.log(`[BrightData] Scraping LinkedIn posts (discover by profile): ${url}`);
 
-    const results = await bdPollAndDownload(snapshotId, 60000);
+    const response = await fetch(`${BRIGHT_DATA_BASE}/scrape?dataset_id=${BD_DATASETS.linkedinPosts}&format=json&include_errors=true`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${BRIGHT_DATA_API}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ input: [{ url }] }),
+      signal: AbortSignal.timeout(90000),
+    });
+
+    if (!response.ok) {
+      const body = await response.text().catch(() => '');
+      console.error(`[BrightData] LinkedIn posts scrape failed: ${response.status} - ${body}`);
+      return null;
+    }
+
+    let results: any[];
+    if (response.status === 202) {
+      const data = await response.json();
+      if (!data.snapshot_id) return null;
+      results = await bdPollAndDownload(data.snapshot_id, 90000);
+    } else {
+      results = await response.json();
+      if (!Array.isArray(results)) results = [results];
+    }
+
     if (!results.length) return null;
+    console.log(`[BrightData] LinkedIn posts: got ${results.length} results`);
 
+    // Filter to only posts by the profile owner or their feed
     const posts = results.slice(0, 20).map((item: any) => ({
       text: (item.post_text || item.text || item.content || item.description || '').substring(0, 2000),
-      date: item.post_date || item.date || item.posted_at || '',
+      date: item.date_posted || item.post_date || item.date || item.posted_at || '',
       likes: item.num_likes || item.likes || item.reactions || 0,
       comments: item.num_comments || item.comments || 0,
       shares: item.num_shares || item.shares || item.reposts || 0,
@@ -1342,13 +1370,19 @@ export async function runEnrichmentPipeline(intakeData: IntakeData): Promise<Enr
       .then(d => { if (d) result.apify.founderLinkedin = d; })
       .catch(() => apifyScrapeLinkedInProfile(intakeData.founderLinkedinUrl).then(d => { result.apify.founderLinkedin = d; }))
       .catch(e => { result.meta.errors.push({ source: 'bd.founderProfile', error: e.message }); }),
-    // BD posts dataset requires post/article URLs, not profile URLs — use Apify for posts
-    apifyScrapeLinkedInPosts(intakeData.founderLinkedinUrl).then(d => { result.apify.founderPosts = d; }).catch(e => { result.meta.errors.push({ source: 'apify.founderPosts', error: e.message }); }),
+    // BD posts: use sync /scrape endpoint with "discover by profile url" mode, Apify fallback
+    bdScrapeLinkedInPosts(intakeData.founderLinkedinUrl)
+      .then(d => { if (d) result.apify.founderPosts = d; })
+      .catch(() => apifyScrapeLinkedInPosts(intakeData.founderLinkedinUrl).then(d => { result.apify.founderPosts = d; }))
+      .catch(e => { result.meta.errors.push({ source: 'bd.founderPosts', error: e.message }); }),
     bdScrapeLinkedInCompany(intakeData.companyLinkedinUrl)
       .then(d => { if (d) result.apify.companyLinkedin = d; })
       .catch(() => apifyScrapeLinkedInProfile(intakeData.companyLinkedinUrl).then(d => { result.apify.companyLinkedin = d; }))
       .catch(e => { result.meta.errors.push({ source: 'bd.companyProfile', error: e.message }); }),
-    apifyScrapeLinkedInPosts(intakeData.companyLinkedinUrl).then(d => { result.apify.companyPosts = d; }).catch(e => { result.meta.errors.push({ source: 'apify.companyPosts', error: e.message }); }),
+    bdScrapeLinkedInPosts(intakeData.companyLinkedinUrl)
+      .then(d => { if (d) result.apify.companyPosts = d; })
+      .catch(() => apifyScrapeLinkedInPosts(intakeData.companyLinkedinUrl).then(d => { result.apify.companyPosts = d; }))
+      .catch(e => { result.meta.errors.push({ source: 'bd.companyPosts', error: e.message }); }),
     exaIcpProblemSearches(intakeData).then(d => { result.exa.icpProblems = d; }).catch(e => { result.meta.errors.push({ source: 'exa.icpProblems', error: e.message }); }),
     exaCompetitorSearch(intakeData).then(d => { result.exa.competitors = d; }).catch(e => { result.meta.errors.push({ source: 'exa.competitors', error: e.message }); }),
     runLLMAwarenessChecks(intakeData).then(d => { result.llmAwareness = d; }).catch(e => { result.meta.errors.push({ source: 'llm', error: e.message }); })

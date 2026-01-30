@@ -945,7 +945,8 @@ function determineCTA(diagnoses: Record<string, string | null>, ctx: AgencyConte
   subtext: string;
 } {
   // Look for dollar amounts in diagnoses to find the biggest gap
-  const dollarPattern = /\$[\d,.]+[KMkm]?/g;
+  // Match $123, $1,234, $1.2M, $500K — but NOT false positives like "$20.0M" from "$20.00/month"
+  const dollarPattern = /\$[\d,]+(?:\.\d{1,2})?([KMkm])\b|\$[\d,]+(?:\.\d{1,2})?(?![KMkm])/g;
   const allDollars: { type: string; amount: number }[] = [];
 
   for (const [type, text] of Object.entries(diagnoses)) {
@@ -953,9 +954,19 @@ function determineCTA(diagnoses: Record<string, string | null>, ctx: AgencyConte
     const matches = text.match(dollarPattern);
     if (matches) {
       for (const m of matches) {
-        const num = parseFloat(m.replace(/[$,]/g, ''));
-        const multiplier = m.toLowerCase().includes('m') ? 1000000 : m.toLowerCase().includes('k') ? 1000 : 1;
-        allDollars.push({ type, amount: num * multiplier });
+        // Remove $ and commas, extract number
+        const cleaned = m.replace(/[$,]/g, '');
+        // Check for K/M suffix at the END of the match only
+        const suffixMatch = cleaned.match(/^([\d.]+)([KMkm])$/);
+        let amount: number;
+        if (suffixMatch) {
+          amount = parseFloat(suffixMatch[1]) * (suffixMatch[2].toLowerCase() === 'm' ? 1000000 : 1000);
+        } else {
+          amount = parseFloat(cleaned);
+        }
+        if (!isNaN(amount) && amount > 0) {
+          allDollars.push({ type, amount });
+        }
       }
     }
   }
@@ -1014,6 +1025,13 @@ export async function generateDiagnoses(
 
   const ctx = buildAgencyContext(intakeData, enrichment, scores);
 
+  // Log gate checks
+  const revelationTypes: RevelationType[] = ['founderTax', 'pipeline', 'authority', 'positioning', 'trajectory'];
+  for (const type of revelationTypes) {
+    const canGen = canGenerateRevelation(type, ctx);
+    console.log(`[Diagnosis] Gate check ${type}: ${canGen ? 'PASS' : 'FAIL'} (revenue=${ctx.annualRevenue}, clients=${ctx.currentClients}, hours=${ctx.founderWeeklyHours})`);
+  }
+
   // Generate all 5 revelations in parallel
   const [founderTax, pipeline, authority, positioning, trajectory] = await Promise.all([
     generateRevelation('founderTax', ctx),
@@ -1024,6 +1042,7 @@ export async function generateDiagnoses(
   ]);
 
   const diagnoses = { founderTax, pipeline, authority, positioning, trajectory };
+  console.log(`[Diagnosis] Results: founderTax=${!!founderTax}, pipeline=${!!pipeline}, authority=${!!authority}, positioning=${!!positioning}, trajectory=${!!trajectory}`);
 
   // Validate quality
   const quality: Record<string, DiagnosisQuality | null> = {};

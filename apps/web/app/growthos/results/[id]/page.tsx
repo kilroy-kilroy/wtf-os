@@ -603,16 +603,7 @@ export default async function ResultsPage({ params }: { params: { id: string } }
         </>
       )}
 
-      {/* Diagnosis CTA */}
-      {ctaData?.headline && (
-        <div className="bg-gradient-to-r from-[#00D4FF]/10 to-[#E31B23]/10 border border-slate-700/50 rounded-2xl p-6 mb-6 text-center">
-          <p className="text-lg font-bold text-white mb-4">{ctaData.headline}</p>
-          <a href="[ROADMAP_URL]" className="inline-block px-6 py-3 rounded-xl bg-[#E31B23] text-white font-bold text-sm hover:shadow-lg hover:shadow-[#E31B23]/25 transition-all">
-            {ctaData.buttonText} &rarr;
-          </a>
-          <p className="text-sm text-slate-500 mt-3">{ctaData.subtext}</p>
-        </div>
-      )}
+      {/* Diagnosis CTA — only show standalone if NOT showing Next Steps below */}
 
       {/* ===== GROWTH LEVERS ===== */}
       {scores.growthLevers?.length > 0 && (
@@ -698,6 +689,9 @@ export default async function ResultsPage({ params }: { params: { id: string } }
 
       {/* ===== NEXT STEPS CTA ===== */}
       <div className="bg-gradient-to-br from-slate-800/80 to-slate-900/80 border border-slate-700/50 rounded-2xl p-8 mb-6">
+        {ctaData?.headline && (
+          <p className="text-lg font-bold text-[#E31B23] mb-6 text-center">{ctaData.headline}</p>
+        )}
         <h2 className="text-xl font-bold text-white mb-6 text-center">Next Steps</h2>
 
         <div className="bg-slate-700/30 rounded-xl p-6 mb-4 border border-[#00D4FF]/20">

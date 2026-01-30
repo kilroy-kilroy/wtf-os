@@ -2,6 +2,7 @@ import { cookies } from 'next/headers';
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
 import { redirect, notFound } from 'next/navigation';
 import Link from 'next/link';
+import { ReEnrichButton } from './re-enrich-button';
 
 // ============================================
 // SHARED COMPONENTS
@@ -483,9 +484,14 @@ export default async function ResultsPage({ params }: { params: { id: string } }
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Back Link */}
-      <Link href="/growthos" className="text-sm text-slate-400 hover:text-slate-200 mb-6 inline-block">
-        &larr; Back to GrowthOS
-      </Link>
+      <div className="flex items-center justify-between mb-6">
+        <Link href="/growthos" className="text-sm text-slate-400 hover:text-slate-200">
+          &larr; Back to GrowthOS
+        </Link>
+        {!enrichment?.analysis && (
+          <ReEnrichButton assessmentId={params.id} />
+        )}
+      </div>
 
       {/* Header */}
       <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-8 mb-6 text-center">

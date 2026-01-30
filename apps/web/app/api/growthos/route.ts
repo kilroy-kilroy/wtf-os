@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
 
     // Map assessment revenue to revenue range
     let revenueEstimate = '';
-    const rev = Number(intakeData.lastYearRevenue || intakeData.monthlyRevenue && Number(intakeData.monthlyRevenue) * 12 || 0);
+    const rev = Number(intakeData.lastYearRevenue || (intakeData.lastMonthRevenue ? Number(intakeData.lastMonthRevenue) * 12 : 0));
     if (rev > 0) {
       if (rev < 100000) revenueEstimate = '$0 - $100K';
       else if (rev < 500000) revenueEstimate = '$100K - $500K';

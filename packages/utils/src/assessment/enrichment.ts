@@ -182,6 +182,7 @@ async function bdTrigger(datasetId: string, input: any[]): Promise<string | null
   if (!BRIGHT_DATA_API) return null;
 
   try {
+    // Try trigger endpoint with bare array first, fall back to scrape endpoint
     const response = await fetch(`${BRIGHT_DATA_BASE}/trigger?dataset_id=${datasetId}&format=json&uncompressed_webhook=true`, {
       method: 'POST',
       headers: {
@@ -194,8 +195,27 @@ async function bdTrigger(datasetId: string, input: any[]): Promise<string | null
 
     if (!response.ok) {
       const body = await response.text().catch(() => '');
-      console.error(`[BrightData] Trigger failed for ${datasetId}: ${response.status} - ${body}`);
-      return null;
+      console.error(`[BrightData] Trigger (bare array) failed for ${datasetId}: ${response.status} - ${body}`);
+
+      // Retry with {"input": [...]} wrapper format
+      const response2 = await fetch(`${BRIGHT_DATA_BASE}/trigger?dataset_id=${datasetId}&format=json&uncompressed_webhook=true`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${BRIGHT_DATA_API}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ input }),
+        signal: AbortSignal.timeout(15000),
+      });
+
+      if (!response2.ok) {
+        const body2 = await response2.text().catch(() => '');
+        console.error(`[BrightData] Trigger (wrapped) failed for ${datasetId}: ${response2.status} - ${body2}`);
+        return null;
+      }
+
+      const data2 = await response2.json();
+      return data2.snapshot_id || null;
     }
 
     const data = await response.json();
@@ -334,15 +354,45 @@ async function bdScrapeLinkedInPosts(linkedinUrl: string | undefined): Promise<A
 async function bdSearchChatGPT(prompt: string): Promise<string> {
   if (!BRIGHT_DATA_API) throw new Error('Not configured');
 
-  const snapshotId = await bdTrigger(BD_DATASETS.chatgpt, [{
-    url: 'https://chatgpt.com/',
-    prompt,
-    country: '',
-  }]);
-  if (!snapshotId) throw new Error('No snapshot');
+  // Use synchronous /scrape endpoint (real-time) per Bright Data docs
+  const response = await fetch(`${BRIGHT_DATA_BASE}/scrape?dataset_id=${BD_DATASETS.chatgpt}&format=json&include_errors=true`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${BRIGHT_DATA_API}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      input: [{
+        url: 'https://chatgpt.com/',
+        prompt,
+        country: '',
+        web_search: false,
+        additional_prompt: '',
+      }],
+    }),
+    signal: AbortSignal.timeout(90000), // ChatGPT scraping can be slow
+  });
 
-  const results = await bdPollAndDownload(snapshotId, 60000);
-  const result = results[0];
+  if (!response.ok) {
+    const body = await response.text().catch(() => '');
+    console.error(`[BrightData] ChatGPT scrape failed: ${response.status} - ${body}`);
+    throw new Error(`ChatGPT scrape failed: ${response.status}`);
+  }
+
+  // 200 = data ready, 202 = async (poll snapshot)
+  if (response.status === 202) {
+    const data = await response.json();
+    if (data.snapshot_id) {
+      const results = await bdPollAndDownload(data.snapshot_id, 60000);
+      const result = results[0];
+      if (!result) throw new Error('No result from async');
+      return result.content || result.response || result.text || result.answer || JSON.stringify(result);
+    }
+    throw new Error('No snapshot_id in 202 response');
+  }
+
+  const results = await response.json();
+  const result = Array.isArray(results) ? results[0] : results;
   if (!result) throw new Error('No result');
 
   return result.content || result.response || result.text || result.answer || JSON.stringify(result);

@@ -1,9 +1,9 @@
 /**
- * Agency Assessment Scoring Engine v3
- * Ported from wtf-grader scoring-v2.js + benchmarks-v2.js
+ * Agency Assessment Scoring Engine v3.0
+ * WTF Zones + Holy Shit Revelations
  *
- * Calculates WTF Zones heatmap, growth levers, founder OS analysis,
- * and impossibility detection with segment-based benchmarks.
+ * Calculates WTF Zones heatmap (8 scores), narratives, reality checks,
+ * growth levers, founder OS, and priority actions.
  */
 
 // ============================================
@@ -122,6 +122,7 @@ export interface RealityCheck {
   id: string;
   title: string;
   body: string;
+  type: 'alert' | 'celebration';
 }
 
 export interface AssessmentResult {
@@ -147,355 +148,322 @@ export interface AssessmentResult {
 }
 
 // ============================================
-// BENCHMARKS
+// CONSTANTS
 // ============================================
 
-type Segment = 'startup' | 'growth' | 'scale' | 'enterprise';
+type Segment = 'startup' | 'growth' | 'scale' | 'established' | 'enterprise';
 
-interface SegmentBenchmarks {
-  revenuePerFTE: { poor: number; fair: number; good: number; excellent: number };
-  netProfit: { poor: number; fair: number; good: number; excellent: number };
-  netGrowthRate: { poor: number; fair: number; good: number; excellent: number };
-  churnRate: { poor: number; fair: number; good: number; excellent: number };
-}
-
-const BENCHMARKS: Record<Segment, SegmentBenchmarks> = {
-  startup: {
-    revenuePerFTE: { poor: 80000, fair: 120000, good: 150000, excellent: 200000 },
-    netProfit: { poor: 5, fair: 12, good: 20, excellent: 30 },
-    netGrowthRate: { poor: -5, fair: 5, good: 20, excellent: 40 },
-    churnRate: { poor: 40, fair: 25, good: 15, excellent: 8 }
-  },
-  growth: {
-    revenuePerFTE: { poor: 100000, fair: 150000, good: 200000, excellent: 250000 },
-    netProfit: { poor: 8, fair: 15, good: 22, excellent: 30 },
-    netGrowthRate: { poor: -10, fair: 5, good: 15, excellent: 30 },
-    churnRate: { poor: 35, fair: 20, good: 12, excellent: 6 }
-  },
-  scale: {
-    revenuePerFTE: { poor: 120000, fair: 175000, good: 225000, excellent: 300000 },
-    netProfit: { poor: 10, fair: 18, good: 25, excellent: 35 },
-    netGrowthRate: { poor: -15, fair: 3, good: 12, excellent: 25 },
-    churnRate: { poor: 30, fair: 18, good: 10, excellent: 5 }
-  },
-  enterprise: {
-    revenuePerFTE: { poor: 150000, fair: 200000, good: 275000, excellent: 350000 },
-    netProfit: { poor: 12, fair: 20, good: 28, excellent: 38 },
-    netGrowthRate: { poor: -20, fair: 2, good: 10, excellent: 20 },
-    churnRate: { poor: 25, fair: 15, good: 8, excellent: 4 }
-  }
+const RANGE_MIDPOINTS = {
+  clientsLost: { '0-2': 1, '3-5': 4, '6-10': 8, '11-15': 13, '16+': 20 } as Record<string, number>,
+  clientsAdded: { '0-3': 1.5, '4-8': 6, '9-15': 12, '16-25': 20, '26+': 30 } as Record<string, number>,
 };
+
+const REVENUE_PER_FTE_BENCHMARKS: Record<Segment, { poor: number; ok: number; good: number; great: number }> = {
+  startup: { poor: 80000, ok: 100000, good: 130000, great: 160000 },
+  growth: { poor: 100000, ok: 140000, good: 180000, great: 220000 },
+  scale: { poor: 140000, ok: 180000, good: 220000, great: 280000 },
+  established: { poor: 160000, ok: 200000, good: 260000, great: 320000 },
+  enterprise: { poor: 180000, ok: 240000, good: 300000, great: 380000 },
+};
+
+const LEAD_VOLUME_BENCHMARKS: Record<Segment, number> = {
+  startup: 5, growth: 10, scale: 15, established: 20, enterprise: 30,
+};
+
+const MARGIN_MIDPOINTS: Record<string, number> = {
+  '<5%': 0.03, '5-10%': 0.075, '10-15%': 0.125,
+  '15-20%': 0.175, '20-25%': 0.225, '25-30%': 0.275, '30%+': 0.35,
+};
+
+// ============================================
+// HELPERS
+// ============================================
 
 function getSegment(annualRevenue: number): { segment: Segment; label: string } {
   if (annualRevenue < 500000) return { segment: 'startup', label: 'Startup (<$500K)' };
   if (annualRevenue < 2000000) return { segment: 'growth', label: 'Growth ($500K-$2M)' };
-  if (annualRevenue < 10000000) return { segment: 'scale', label: 'Scale ($2M-$10M)' };
+  if (annualRevenue < 5000000) return { segment: 'scale', label: 'Scale ($2M-$5M)' };
+  if (annualRevenue < 10000000) return { segment: 'established', label: 'Established ($5M-$10M)' };
   return { segment: 'enterprise', label: 'Enterprise ($10M+)' };
 }
 
-function scoreFromBenchmark(value: number, benchmarks: { poor: number; fair: number; good: number; excellent: number }): { score: number; label: string; color: string } {
-  if (value >= benchmarks.excellent) return { score: 5, label: 'Excellent', color: '#10B981' };
-  if (value >= benchmarks.good) return { score: 4, label: 'Good', color: '#34D399' };
-  if (value >= benchmarks.fair) return { score: 3, label: 'Fair', color: '#F59E0B' };
-  if (value >= benchmarks.poor) return { score: 2, label: 'Needs Work', color: '#F97316' };
-  return { score: 1, label: 'Critical', color: '#EF4444' };
+function extractRating(ratingInput: string | number): number {
+  if (ratingInput === undefined || ratingInput === null || ratingInput === '') return 3;
+  if (typeof ratingInput === 'number') return Math.max(1, Math.min(5, Math.round(ratingInput)));
+  const match = ratingInput.match(/^(\d)/);
+  return match ? parseInt(match[1]) : 3;
+}
+
+function parseMarginMidpoint(marginRange: string | undefined): number {
+  if (!marginRange) return 0.15;
+  return MARGIN_MIDPOINTS[marginRange] || 0.15;
+}
+
+function getEffectiveRevenue(data: IntakeData): number {
+  return data.lastYearRevenue || data.annualRevenue || 0;
+}
+
+function scoreColor(score: number): string {
+  if (score >= 4) return '#00D4FF';  // Cyan - positive
+  if (score >= 3) return '#f59e0b';  // Yellow - moderate
+  return '#E31B23';                   // Red - warning
+}
+
+function scoreLabel(score: number): string {
+  if (score >= 5) return 'Excellent';
+  if (score >= 4) return 'Good';
+  if (score >= 3) return 'Fair';
+  if (score >= 2) return 'Needs Work';
+  return 'Critical';
 }
 
 // ============================================
-// ZONE SCORING
+// ZONE 1: REVENUE QUALITY (1-5)
 // ============================================
 
-function scoreRevenueQuality(data: IntakeData, benchmarks: SegmentBenchmarks): ZoneScore {
-  const revenuePerFTE = data.annualRevenue / data.teamSize;
-  const { score, label, color } = scoreFromBenchmark(revenuePerFTE, benchmarks.revenuePerFTE);
+function scoreRevenueQuality(data: IntakeData, segment: Segment): ZoneScore {
+  const revenue = getEffectiveRevenue(data);
+  const revenuePerFTE = revenue / data.teamSize;
+  const b = REVENUE_PER_FTE_BENCHMARKS[segment];
+
+  let score: number;
+  if (revenuePerFTE >= b.great) score = 5;
+  else if (revenuePerFTE >= b.good) score = 4;
+  else if (revenuePerFTE >= b.ok) score = 3;
+  else if (revenuePerFTE >= b.poor) score = 2;
+  else score = 1;
+
   return {
-    score, label, color,
+    score,
+    label: scoreLabel(score),
+    color: scoreColor(score),
     value: revenuePerFTE,
-    benchmark: benchmarks.revenuePerFTE.good,
-    insight: score <= 2
-      ? `At $${Math.round(revenuePerFTE).toLocaleString()}/FTE, you're overstaffed or undercharging.`
-      : `$${Math.round(revenuePerFTE).toLocaleString()}/FTE is ${label.toLowerCase()} for your segment.`
+    benchmark: b.good,
+    insight: `$${Math.round(revenuePerFTE).toLocaleString()} per FTE`,
   };
 }
 
-function scoreProfitability(data: IntakeData, benchmarks: SegmentBenchmarks): ZoneScore {
-  const { score, label, color } = scoreFromBenchmark(data.netProfit, benchmarks.netProfit);
+// ============================================
+// ZONE 2: PROFITABILITY (1-5)
+// ============================================
+
+function scoreProfitability(data: IntakeData): ZoneScore {
+  const margin = data.netProfitMargin
+    ? parseMarginMidpoint(data.netProfitMargin)
+    : (data.netProfit / 100);
+  const marginPercent = Math.round(margin * 100);
+
+  let score: number;
+  if (margin >= 0.25) score = 5;
+  else if (margin >= 0.20) score = 4;
+  else if (margin >= 0.15) score = 3;
+  else if (margin >= 0.10) score = 2;
+  else score = 1;
+
   return {
-    score, label, color,
-    value: data.netProfit,
-    benchmark: benchmarks.netProfit.good,
-    insight: score <= 2
-      ? `${data.netProfit}% net margin means you're working for free (or close to it).`
-      : `${data.netProfit}% net margin is ${label.toLowerCase()} for your segment.`
+    score,
+    label: scoreLabel(score),
+    color: scoreColor(score),
+    value: marginPercent,
+    benchmark: 20,
+    insight: `${marginPercent}% net margin`,
   };
 }
 
-function scoreGrowthVsChurn(data: IntakeData, benchmarks: SegmentBenchmarks): ZoneScore {
-  const netGrowthRevenue = data.newRevenueAnnual - data.churnRevenueAnnual;
-  const netGrowthRate = data.annualRevenue > 0 ? (netGrowthRevenue / data.annualRevenue) * 100 : 0;
-  const { score, label, color } = scoreFromBenchmark(netGrowthRate, benchmarks.netGrowthRate);
+// ============================================
+// ZONE 3: GROWTH VS CHURN (1-5)
+// ============================================
+
+function scoreGrowthVsChurn(data: IntakeData): ZoneScore {
+  let netGrowthRate: number;
+
+  // Use v2 client-based calculation if available
+  if (data.clientsLostAnnual && data.clientsAddedAnnual && data.currentClients && data.currentClients > 0) {
+    const clientsLost = RANGE_MIDPOINTS.clientsLost[data.clientsLostAnnual] ?? 4;
+    const clientsAdded = RANGE_MIDPOINTS.clientsAdded[data.clientsAddedAnnual] ?? 6;
+    const netGrowth = clientsAdded - clientsLost;
+    netGrowthRate = (netGrowth / data.currentClients) * 100;
+  } else {
+    // Legacy fallback
+    const revenue = getEffectiveRevenue(data);
+    const netGrowthRevenue = data.newRevenueAnnual - data.churnRevenueAnnual;
+    netGrowthRate = revenue > 0 ? (netGrowthRevenue / revenue) * 100 : 0;
+  }
+
+  let score: number;
+  if (netGrowthRate >= 30) score = 5;
+  else if (netGrowthRate >= 15) score = 4;
+  else if (netGrowthRate >= 5) score = 3;
+  else if (netGrowthRate >= 0) score = 2;
+  else score = 1;
+
   return {
-    score, label, color,
+    score,
+    label: scoreLabel(score),
+    color: scoreColor(score),
     value: netGrowthRate,
-    benchmark: benchmarks.netGrowthRate.good,
-    insight: netGrowthRate < 0
-      ? `You're shrinking at ${Math.abs(netGrowthRate).toFixed(1)}% annually. Churn is eating growth.`
-      : `Net growth of ${netGrowthRate.toFixed(1)}% is ${label.toLowerCase()}.`
+    benchmark: 15,
+    insight: `Net growth rate: ${netGrowthRate.toFixed(1)}%`,
   };
 }
 
-function scoreLeadEngine(data: IntakeData): ZoneScore {
-  // Score based on channel diversity and volume
-  let score = 3;
-  const channels = [data.referralPercent, data.inboundPercent, data.contentPercent, data.paidPercent, data.outboundPercent];
-  const activeChannels = channels.filter(c => c > 10).length;
+// ============================================
+// ZONE 4: LEAD ENGINE (1-5)
+// ============================================
 
-  if (data.referralPercent > 60) score -= 1; // Over-dependent on referrals
-  if (activeChannels >= 3) score += 1;
-  if (data.monthlyLeads >= 20 && Number(data.closeRate) >= 25) score += 1;
-  if (data.monthlyLeads < 5) score -= 1;
+function scoreLeadEngine(data: IntakeData, segment: Segment): ZoneScore {
+  let score = 3;
+
+  const channels = [
+    data.referralPercent, data.inboundPercent, data.contentPercent,
+    data.paidPercent, data.outboundPercent, data.partnershipPercent || 0,
+  ];
+  const activeChannels = channels.filter(c => c >= 10).length;
+
+  if (activeChannels >= 4) score += 1;
+  else if (activeChannels <= 1) score -= 1;
+
+  const volumeBenchmark = LEAD_VOLUME_BENCHMARKS[segment];
+  if (data.monthlyLeads >= volumeBenchmark * 1.5) score += 1;
+  else if (data.monthlyLeads < volumeBenchmark * 0.5) score -= 1;
+
+  if (data.referralPercent >= 70) score -= 1;
 
   score = Math.max(1, Math.min(5, score));
-  const label = score >= 4 ? 'Good' : score >= 3 ? 'Fair' : score >= 2 ? 'Needs Work' : 'Critical';
-  const color = score >= 4 ? '#10B981' : score >= 3 ? '#F59E0B' : '#EF4444';
 
   return {
-    score, label, color,
+    score,
+    label: scoreLabel(score),
+    color: scoreColor(score),
     value: data.monthlyLeads,
-    benchmark: 15,
-    insight: data.referralPercent > 60
-      ? `${data.referralPercent}% referral-dependent. One dry spell and you're in trouble.`
-      : `${activeChannels} active lead channels with ${data.monthlyLeads} leads/month.`
+    benchmark: volumeBenchmark,
+    insight: `${activeChannels} active channels, ${data.monthlyLeads} leads/month`,
   };
 }
 
-function scoreFounderLoad(data: IntakeData, segment: Segment): ZoneScore {
+// ============================================
+// ZONE 5: FOUNDER LOAD (1-5)
+// ============================================
+
+function scoreFounderLoad(data: IntakeData): ZoneScore {
   const ratings = [
     extractRating(data.ceoDeliveryRating),
     extractRating(data.ceoAccountMgmtRating),
     extractRating(data.ceoMarketingRating),
-    extractRating(data.ceoSalesRating)
+    extractRating(data.ceoSalesRating),
   ];
-  const avgDelegation = ratings.reduce((a, b) => a + b, 0) / ratings.length;
+  const delegationAvg = ratings.reduce((a, b) => a + b, 0) / ratings.length;
 
-  let score = Math.round(avgDelegation);
+  let score = Math.round(delegationAvg);
   if (data.founderWeeklyHours > 55) score = Math.max(1, score - 1);
+  if (data.founderWeeklyHours > 60) score = Math.max(1, score - 1);
 
   score = Math.max(1, Math.min(5, score));
-  const label = score >= 4 ? 'Good' : score >= 3 ? 'Fair' : score >= 2 ? 'Needs Work' : 'Critical';
-  const color = score >= 4 ? '#10B981' : score >= 3 ? '#F59E0B' : '#EF4444';
 
   return {
-    score, label, color,
-    value: avgDelegation,
-    benchmark: segment === 'startup' ? 2.5 : 3.5,
-    insight: score <= 2
-      ? `You're the bottleneck. Delegation avg: ${avgDelegation.toFixed(1)}/5 at ${data.founderWeeklyHours}hrs/week.`
-      : `Delegation avg: ${avgDelegation.toFixed(1)}/5. ${data.founderWeeklyHours}hrs/week.`
+    score,
+    label: scoreLabel(score),
+    color: scoreColor(score),
+    value: delegationAvg,
+    benchmark: 3.5,
+    insight: `Delegation avg: ${delegationAvg.toFixed(1)}/5, ${data.founderWeeklyHours}hrs/week`,
   };
 }
 
-function scoreSystemsReadiness(data: IntakeData, segment: Segment): ZoneScore {
-  const sops = [data.hasSalesSOP, data.hasDeliverySOP, data.hasAccountMgmtSOP, data.hasMarketingSOP];
-  const documented = sops.filter(s => s?.includes('Yes, comprehensive')).length;
-  const partial = sops.filter(s => s?.includes('Partial')).length;
+// ============================================
+// ZONE 6: SYSTEMS READINESS (1-5)
+// ============================================
 
-  let score = 1 + documented + (partial * 0.5);
-  score = Math.max(1, Math.min(5, Math.round(score)));
+function scoreSystemsReadiness(data: IntakeData): ZoneScore {
+  const sopFields = [data.hasSalesSOP, data.hasDeliverySOP, data.hasAccountMgmtSOP, data.hasMarketingSOP];
 
-  const label = score >= 4 ? 'Good' : score >= 3 ? 'Fair' : score >= 2 ? 'Needs Work' : 'Critical';
-  const color = score >= 4 ? '#10B981' : score >= 3 ? '#F59E0B' : '#EF4444';
+  let documentedCount = 0;
+  sopFields.forEach(field => {
+    if (field === 'Yes' || field === 'Yes, comprehensive') documentedCount += 1;
+    else if (field === 'Partial') documentedCount += 0.5;
+  });
+
+  let score: number;
+  if (documentedCount >= 4) score = 5;
+  else if (documentedCount >= 3) score = 4;
+  else if (documentedCount >= 2) score = 3;
+  else if (documentedCount >= 1) score = 2;
+  else score = 1;
 
   return {
-    score, label, color,
-    value: documented,
-    benchmark: segment === 'startup' ? 1 : 3,
-    insight: documented === 0
-      ? `Zero documented processes. Everything lives in your head. You can't scale this.`
-      : `${documented}/4 processes fully documented.`
+    score,
+    label: scoreLabel(score),
+    color: scoreColor(score),
+    value: documentedCount,
+    benchmark: 3,
+    insight: `${documentedCount}/4 processes documented`,
   };
 }
 
-function scoreContentPositioning(data: IntakeData): ZoneScore {
+// ============================================
+// ZONE 7: CONTENT & POSITIONING (1-5)
+// ============================================
+
+function scoreContentPositioning(data: IntakeData, enrichment?: any): ZoneScore {
   let score = 2;
-  const founderPosts = data.founderPostsPerWeek || 0;
 
-  if (founderPosts >= 3) score += 1;
-  if (founderPosts >= 5) score += 1;
-  if (data.hasCaseStudies?.includes('multiple')) score += 1;
+  const founderPosts = data.founderPostsPerWeek || 0;
+  const teamPosts = data.teamPostsPerWeek || 0;
+  const totalPosts = founderPosts + teamPosts;
+
+  if (totalPosts >= 5) score += 1;
+  else if (totalPosts >= 3) score += 0.5;
+
+  if (data.hasCaseStudies === 'Yes (3+)') score += 1;
+  else if (data.hasCaseStudies === 'Some (1-2)') score += 0.5;
+
   if (data.hasNamedClients === 'Yes') score += 0.5;
 
+  if (enrichment?.positioningScore >= 8) score += 0.5;
+
   score = Math.max(1, Math.min(5, Math.round(score)));
-  const label = score >= 4 ? 'Good' : score >= 3 ? 'Fair' : score >= 2 ? 'Needs Work' : 'Critical';
-  const color = score >= 4 ? '#10B981' : score >= 3 ? '#F59E0B' : '#EF4444';
 
   return {
-    score, label, color,
-    value: founderPosts,
-    benchmark: 3,
-    insight: founderPosts < 2
-      ? `Posting ${founderPosts}x/week. You're invisible to your market.`
-      : `Posting ${founderPosts}x/week with ${data.hasCaseStudies?.includes('multiple') ? 'multiple' : 'few'} case studies.`
+    score,
+    label: scoreLabel(score),
+    color: scoreColor(score),
+    value: totalPosts,
+    benchmark: 5,
+    insight: `${totalPosts} posts/week`,
   };
 }
+
+// ============================================
+// ZONE 8: TEAM VISIBILITY (1-5)
+// ============================================
 
 function scoreTeamVisibility(data: IntakeData): ZoneScore {
   let score = 2;
   const teamPosts = data.teamPostsPerWeek || 0;
 
-  if (teamPosts >= 3) score += 1;
-  if (teamPosts >= 7) score += 1;
-  if (data.hasNamedClients === 'Yes') score += 1;
+  if (teamPosts >= 5) score += 2;
+  else if (teamPosts >= 3) score += 1.5;
+  else if (teamPosts >= 1) score += 1;
+
+  if (data.hasNamedClients === 'Yes') score += 0.5;
+
+  // Solo founder adjustment
+  if (data.teamSize === 1) {
+    score = Math.max(3, score);
+  }
 
   score = Math.max(1, Math.min(5, Math.round(score)));
-  const label = score >= 4 ? 'Good' : score >= 3 ? 'Fair' : score >= 2 ? 'Needs Work' : 'Critical';
-  const color = score >= 4 ? '#10B981' : score >= 3 ? '#F59E0B' : '#EF4444';
 
   return {
-    score, label, color,
+    score,
+    label: scoreLabel(score),
+    color: scoreColor(score),
     value: teamPosts,
     benchmark: 5,
-    insight: teamPosts < 2
-      ? `Team is invisible. ${teamPosts} posts/week won't build authority.`
-      : `Team posting ${teamPosts}x/week.`
+    insight: data.teamSize === 1
+      ? `Solo operator—team visibility doesn't apply yet.`
+      : `Team posting ${teamPosts}x/week`,
   };
-}
-
-// ============================================
-// GROWTH LEVERS
-// ============================================
-
-function detectGrowthLevers(data: IntakeData, zones: WTFZones, benchmarks: SegmentBenchmarks): GrowthLever[] {
-  const levers: GrowthLever[] = [];
-
-  if (zones.growthVsChurn.score <= 2) {
-    levers.push({
-      name: 'Fix Churn',
-      impact: 'high',
-      description: 'Revenue churn is destroying growth. Fix retention before adding leads.',
-      currentState: `Losing $${data.churnRevenueAnnual.toLocaleString()}/yr to churn`,
-      recommendation: 'Implement 30/60/90 day client health checks and QBRs.'
-    });
-  }
-
-  if (zones.founderLoad.score <= 2) {
-    levers.push({
-      name: 'Founder Bottleneck',
-      impact: 'high',
-      description: 'You are the constraint. The business can\'t grow past you.',
-      currentState: `Delegation avg: ${zones.founderLoad.value.toFixed(1)}/5`,
-      recommendation: 'Hire or promote a #2. Delegate delivery first, then accounts.'
-    });
-  }
-
-  if (zones.leadEngine.score <= 2) {
-    levers.push({
-      name: 'Lead Engine',
-      impact: 'high',
-      description: 'Not enough qualified leads to sustain growth.',
-      currentState: `${data.monthlyLeads} leads/month at ${data.closeRate}% close rate`,
-      recommendation: 'Build a second channel beyond referrals. Content or outbound.'
-    });
-  }
-
-  if (zones.revenueQuality.score <= 2) {
-    levers.push({
-      name: 'Revenue Per Head',
-      impact: 'medium',
-      description: 'Too many people for the revenue generated.',
-      currentState: `$${Math.round(zones.revenueQuality.value).toLocaleString()}/FTE`,
-      recommendation: 'Raise prices, reduce scope creep, or restructure team.'
-    });
-  }
-
-  if (zones.systemsReadiness.score <= 2) {
-    levers.push({
-      name: 'Systems Gap',
-      impact: 'medium',
-      description: 'No documented processes means you can\'t delegate or scale.',
-      currentState: `${zones.systemsReadiness.value}/4 documented`,
-      recommendation: 'Document your top 3 processes this month. Start with delivery.'
-    });
-  }
-
-  if (zones.contentPositioning.score <= 2) {
-    levers.push({
-      name: 'Visibility',
-      impact: 'medium',
-      description: 'Your market doesn\'t know you exist.',
-      currentState: `${data.founderPostsPerWeek || 0} founder posts/week`,
-      recommendation: 'Post 3x/week on LinkedIn. Share case studies and insights.'
-    });
-  }
-
-  return levers;
-}
-
-// ============================================
-// FOUNDER OS
-// ============================================
-
-function analyzeFounderOS(data: IntakeData, segment: Segment) {
-  const ratings = [
-    extractRating(data.ceoDeliveryRating),
-    extractRating(data.ceoAccountMgmtRating),
-    extractRating(data.ceoMarketingRating),
-    extractRating(data.ceoSalesRating)
-  ];
-  const avgDelegation = ratings.reduce((a, b) => a + b, 0) / ratings.length;
-
-  const strategyHours = data.strategyHoursPerWeek || 0;
-  const onVsInRatio = data.founderWeeklyHours > 0
-    ? Math.round((strategyHours / data.founderWeeklyHours) * 100)
-    : 0;
-
-  const bottleneckAreas: string[] = [];
-  if (extractRating(data.ceoDeliveryRating) <= 2) bottleneckAreas.push('Delivery');
-  if (extractRating(data.ceoAccountMgmtRating) <= 2) bottleneckAreas.push('Account Management');
-  if (extractRating(data.ceoMarketingRating) <= 2) bottleneckAreas.push('Marketing');
-  if (extractRating(data.ceoSalesRating) <= 2) bottleneckAreas.push('Sales');
-
-  let burnoutRisk = 'low';
-  if (data.founderWeeklyHours > 55 && avgDelegation < 2.5) burnoutRisk = 'critical';
-  else if (data.founderWeeklyHours > 50 && avgDelegation < 3) burnoutRisk = 'high';
-  else if (data.founderWeeklyHours > 45) burnoutRisk = 'moderate';
-
-  return {
-    delegationScore: avgDelegation,
-    onVsInRatio,
-    bottleneckAreas,
-    burnoutRisk
-  };
-}
-
-// ============================================
-// IMPOSSIBILITIES
-// ============================================
-
-function detectImpossibilities(data: IntakeData, benchmarks: SegmentBenchmarks): string[] {
-  const impossibilities: string[] = [];
-
-  if (data.targetRevenue > data.annualRevenue * 2) {
-    impossibilities.push(`Targeting ${Math.round((data.targetRevenue / data.annualRevenue - 1) * 100)}% growth while losing ${data.clientsLostPerMonth} clients/month. Fix churn first.`);
-  }
-
-  if (data.churnRevenueAnnual > data.newRevenueAnnual) {
-    impossibilities.push(`Losing more to churn ($${data.churnRevenueAnnual.toLocaleString()}) than gaining from new clients ($${data.newRevenueAnnual.toLocaleString()}). You're on a death spiral.`);
-  }
-
-  const ceoRatings = [
-    extractRating(data.ceoDeliveryRating),
-    extractRating(data.ceoAccountMgmtRating),
-    extractRating(data.ceoMarketingRating),
-    extractRating(data.ceoSalesRating)
-  ];
-  const avgDelegation = ceoRatings.reduce((a, b) => a + b, 0) / ceoRatings.length;
-
-  if (avgDelegation < 2 && data.annualRevenue > 1000000) {
-    impossibilities.push(`Running a $${(data.annualRevenue / 1000000).toFixed(1)}M agency with almost no delegation. Something will break.`);
-  }
-
-  return impossibilities;
 }
 
 // ============================================
@@ -511,38 +479,63 @@ function calculateOverallScore(zones: WTFZones): number {
     zones.founderLoad.score,
     zones.systemsReadiness.score,
     zones.contentPositioning.score,
-    zones.teamVisibility.score
+    zones.teamVisibility.score,
   ];
   const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
   return Math.round(avg * 10) / 10;
 }
 
-// ============================================
-// HELPERS
-// ============================================
-
-function extractRating(ratingInput: string | number): number {
-  if (ratingInput === undefined || ratingInput === null || ratingInput === '') return 3;
-  if (typeof ratingInput === 'number') return Math.max(1, Math.min(5, Math.round(ratingInput)));
-  const match = ratingInput.match(/^(\d)/);
-  return match ? parseInt(match[1]) : 3;
+function getOverallLabel(score: number): string {
+  if (score >= 4.5) return 'Strong Foundation';
+  if (score >= 3.5) return 'Needs Work';
+  if (score >= 2.5) return 'Significant Gaps';
+  if (score >= 1.5) return 'Critical Issues';
+  return 'Red Alert';
 }
 
 // ============================================
-// NARRATIVE COPY
+// NARRATIVE COPY MATRIX (v3.0 spec)
 // ============================================
 
 function generateNarratives(data: IntakeData, zones: WTFZones): Record<string, string> {
   const n: Record<string, string> = {};
-  const revenuePerFTE = Math.round(data.annualRevenue / data.teamSize).toLocaleString();
-  const channels = [data.referralPercent, data.inboundPercent, data.contentPercent, data.paidPercent, data.outboundPercent];
-  const activeChannels = channels.filter(c => c > 10).length;
+  const revenue = getEffectiveRevenue(data);
+  const revenuePerFTE = Math.round(revenue / data.teamSize).toLocaleString();
+
+  const channels = [
+    data.referralPercent, data.inboundPercent, data.contentPercent,
+    data.paidPercent, data.outboundPercent, data.partnershipPercent || 0,
+  ];
+  const activeChannels = channels.filter(c => c >= 10).length;
+
   const ratings = [extractRating(data.ceoDeliveryRating), extractRating(data.ceoAccountMgmtRating), extractRating(data.ceoMarketingRating), extractRating(data.ceoSalesRating)];
   const avgDelegation = (ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(1);
-  const sops = [data.hasSalesSOP, data.hasDeliverySOP, data.hasAccountMgmtSOP, data.hasMarketingSOP];
-  const documented = sops.filter(s => s?.includes('Yes, comprehensive')).length;
+
+  const sopFields = [data.hasSalesSOP, data.hasDeliverySOP, data.hasAccountMgmtSOP, data.hasMarketingSOP];
+  let documentedCount = 0;
+  sopFields.forEach(field => {
+    if (field === 'Yes' || field === 'Yes, comprehensive') documentedCount += 1;
+    else if (field === 'Partial') documentedCount += 0.5;
+  });
+
   const founderPosts = data.founderPostsPerWeek || 0;
   const teamPosts = data.teamPostsPerWeek || 0;
+  const totalPosts = founderPosts + teamPosts;
+
+  // Margin display
+  const marginPercent = data.netProfitMargin
+    ? Math.round(parseMarginMidpoint(data.netProfitMargin) * 100)
+    : data.netProfit;
+
+  // Net growth rate
+  let netGrowthRate = '0';
+  if (data.clientsLostAnnual && data.clientsAddedAnnual && data.currentClients && data.currentClients > 0) {
+    const clientsLost = RANGE_MIDPOINTS.clientsLost[data.clientsLostAnnual] ?? 4;
+    const clientsAdded = RANGE_MIDPOINTS.clientsAdded[data.clientsAddedAnnual] ?? 6;
+    netGrowthRate = (((clientsAdded - clientsLost) / data.currentClients) * 100).toFixed(1);
+  } else if (revenue > 0) {
+    netGrowthRate = (((data.newRevenueAnnual - data.churnRevenueAnnual) / revenue) * 100).toFixed(1);
+  }
 
   // Revenue Quality
   const rqNarratives: Record<number, string> = {
@@ -556,17 +549,15 @@ function generateNarratives(data: IntakeData, zones: WTFZones): Record<string, s
 
   // Profitability
   const profNarratives: Record<number, string> = {
-    5: `${data.netProfit}% net margin is excellent. You've got real leverage for growth or exit.`,
-    4: `${data.netProfit}% net margin is good for your segment. Healthy, sustainable.`,
-    3: `${data.netProfit}% net margin is fine. Not fuck-you money, but you're not drowning.`,
-    2: `${data.netProfit}% net margin is thin. One bad quarter and you're in trouble.`,
-    1: `${data.netProfit}% net margin is a crisis. You're working for free (or worse).`,
+    5: `${marginPercent}% net margin is excellent. You've got real leverage for growth or exit.`,
+    4: `${marginPercent}% net margin is good for your segment. Healthy, sustainable.`,
+    3: `${marginPercent}% net margin is fine. Not fuck-you money, but you're not drowning.`,
+    2: `${marginPercent}% net margin is thin. One bad quarter and you're in trouble.`,
+    1: `${marginPercent}% net margin is a crisis. You're working for free (or worse).`,
   };
   n.profitability = profNarratives[zones.profitability.score] || profNarratives[3];
 
   // Growth vs Churn
-  const netGrowthRevenue = data.newRevenueAnnual - data.churnRevenueAnnual;
-  const netGrowthRate = data.annualRevenue > 0 ? ((netGrowthRevenue / data.annualRevenue) * 100).toFixed(1) : '0';
   const gcNarratives: Record<number, string> = {
     5: `Net growth of ${netGrowthRate}% is excellent. You're outpacing churn by a wide margin.`,
     4: `Net growth of ${netGrowthRate}% is healthy. You're outrunning your losses.`,
@@ -587,110 +578,117 @@ function generateNarratives(data: IntakeData, zones: WTFZones): Record<string, s
   n.leadEngine = leNarratives[zones.leadEngine.score] || leNarratives[3];
 
   // Founder Load
-  const flNarratives: Record<number, string> = {
-    5: `Delegation avg ${avgDelegation}/5. You've built a business, not a job. Congrats.`,
-    4: `Delegation avg ${avgDelegation}/5 at ${data.founderWeeklyHours}hrs/week. Getting there. Keep delegating.`,
-    3: `Delegation avg ${avgDelegation}/5 at ${data.founderWeeklyHours}hrs/week. You're still too involved in delivery.`,
-    2: `Delegation avg ${avgDelegation}/5 at ${data.founderWeeklyHours}hrs/week. You're a bottleneck. The business can't grow past you.`,
-    1: `Delegation avg ${avgDelegation}/5 at ${data.founderWeeklyHours}hrs/week. You're the bottleneck. You ARE the business. That's not a flex.`,
-  };
-  n.founderLoad = flNarratives[zones.founderLoad.score] || flNarratives[3];
+  if (data.teamSize === 1) {
+    n.founderLoad = `Solo operator at ${data.founderWeeklyHours}hrs/week. The question isn't delegation—it's when you make your first key hire.`;
+  } else {
+    const flNarratives: Record<number, string> = {
+      5: `Delegation avg ${avgDelegation}/5. You've built a business, not a job. Congrats.`,
+      4: `Delegation avg ${avgDelegation}/5 at ${data.founderWeeklyHours}hrs/week. Getting there. Keep delegating.`,
+      3: `Delegation avg ${avgDelegation}/5 at ${data.founderWeeklyHours}hrs/week. You're still too involved in delivery.`,
+      2: `Delegation avg ${avgDelegation}/5 at ${data.founderWeeklyHours}hrs/week. You're a bottleneck. The business can't grow past you.`,
+      1: `Delegation avg ${avgDelegation}/5 at ${data.founderWeeklyHours}hrs/week. You ARE the business. That's not a flex.`,
+    };
+    n.founderLoad = flNarratives[zones.founderLoad.score] || flNarratives[3];
+  }
 
   // Systems Readiness
   const srNarratives: Record<number, string> = {
     5: `All processes documented. You could hand this off tomorrow.`,
-    4: `${documented}/4 processes documented. Most of the playbook exists.`,
-    3: `${documented}/4 processes documented. Getting there, but gaps remain.`,
-    2: `${documented}/4 processes documented. Too much lives in your head.`,
+    4: `${documentedCount}/4 processes documented. Most of the playbook exists.`,
+    3: `${documentedCount}/4 processes documented. Getting there, but gaps remain.`,
+    2: `${documentedCount}/4 processes documented. Too much lives in your head.`,
     1: `Zero documented processes. Everything lives in your head. You can't scale this.`,
   };
   n.systemsReadiness = srNarratives[zones.systemsReadiness.score] || srNarratives[3];
 
   // Content & Positioning
   const cpNarratives: Record<number, string> = {
-    5: `Posting ${founderPosts}x/week with strong case studies. Content engine is running.`,
-    4: `Posting ${founderPosts}x/week with few case studies. Good volume, need more proof.`,
-    3: `Posting ${founderPosts}x/week with few case studies. Decent volume, questionable relevance.`,
-    2: `Posting ${founderPosts}x/week. Sporadic at best. Your ICP isn't seeing you.`,
-    1: `Posting ${founderPosts}x/week. You're invisible. That's a choice.`,
+    5: `Posting ${totalPosts}x/week with strong case studies. Content engine is running.`,
+    4: `Posting ${totalPosts}x/week with some case studies. Good volume, building proof.`,
+    3: `Posting ${totalPosts}x/week. Decent volume, but proof points are thin.`,
+    2: `Posting ${totalPosts}x/week. Sporadic at best. Your ICP isn't seeing you.`,
+    1: `Posting ${totalPosts}x/week. You're invisible. That's a choice.`,
   };
   n.contentPositioning = cpNarratives[zones.contentPositioning.score] || cpNarratives[3];
 
   // Team Visibility
-  const tvNarratives: Record<number, string> = {
-    5: `Team posting ${teamPosts}/week. Your people are building authority alongside you.`,
-    4: `Team posting ${teamPosts}/week. Good start on distributed authority.`,
-    3: `Team posting ${teamPosts}/week. Some visibility, but room to grow.`,
-    2: `Team posting ${teamPosts}/week. Your people are mostly invisible.`,
-    1: `Team posts: 0/week. Your people are invisible. That's wasted leverage.`,
-  };
-  n.teamVisibility = tvNarratives[zones.teamVisibility.score] || tvNarratives[3];
+  if (data.teamSize === 1) {
+    n.teamVisibility = `Solo operator—team visibility doesn't apply yet. Focus on your own content first.`;
+  } else {
+    const tvNarratives: Record<number, string> = {
+      5: `Team posting ${teamPosts}x/week. Your people are building authority alongside you.`,
+      4: `Team posting ${teamPosts}x/week. Good start on distributed authority.`,
+      3: `Team posting ${teamPosts}x/week. Some visibility, but room to grow.`,
+      2: `Team posting ${teamPosts}x/week. Your people are mostly invisible.`,
+      1: `Team posts: 0/week. Your people are invisible. That's wasted leverage.`,
+    };
+    n.teamVisibility = tvNarratives[zones.teamVisibility.score] || tvNarratives[3];
+  }
 
   return n;
 }
 
 // ============================================
-// EXPANDED REALITY CHECKS
+// REALITY CHECKS (v3.0 spec)
 // ============================================
 
 function detectRealityChecks(data: IntakeData, zones: WTFZones): RealityCheck[] {
   const checks: RealityCheck[] = [];
+  const revenue = getEffectiveRevenue(data);
+
   const ratings = [extractRating(data.ceoDeliveryRating), extractRating(data.ceoAccountMgmtRating), extractRating(data.ceoMarketingRating), extractRating(data.ceoSalesRating)];
-  const avgDelegation = ratings.reduce((a, b) => a + b, 0) / ratings.length;
   const bottleneckAreas: string[] = [];
   if (extractRating(data.ceoDeliveryRating) <= 2) bottleneckAreas.push('Delivery');
   if (extractRating(data.ceoAccountMgmtRating) <= 2) bottleneckAreas.push('Account Management');
   if (extractRating(data.ceoMarketingRating) <= 2) bottleneckAreas.push('Marketing');
   if (extractRating(data.ceoSalesRating) <= 2) bottleneckAreas.push('Sales');
+  const biggestBottleneck = bottleneckAreas[0] || 'delivery';
 
-  // Referral Dependency
+  // Check 1: Referral Dependency
   if (data.referralPercent >= 70) {
     checks.push({
       id: 'referral-dependency',
+      type: 'alert',
       title: 'REFERRAL DEPENDENCY ALERT',
-      body: `${data.referralPercent}% of your leads come from referrals.\n\nThat sounds great until you realize:\n• You don't control it\n• It doesn't scale\n• One key referrer leaves or retires, and your pipeline craters\n\nReferrals are dessert. You need a main course. Build a channel you control.`
+      body: `${data.referralPercent}% of your leads come from referrals.\n\nThat sounds great until you realize:\n• You don't control it\n• It doesn't scale\n• One key referrer leaves, and your pipeline craters\n\nReferrals are dessert. You need a main course.`,
     });
   }
 
-  // Growth Target Mismatch
-  if (data.targetRevenue > data.annualRevenue * 1.5) {
-    const netGrowthRevenue = data.newRevenueAnnual - data.churnRevenueAnnual;
-    const netGrowthRate = data.annualRevenue > 0 ? ((netGrowthRevenue / data.annualRevenue) * 100).toFixed(1) : '0';
-    const targetGrowth = ((data.targetRevenue / data.annualRevenue - 1) * 100).toFixed(0);
+  // Check 2: Growth Target Mismatch
+  let netGrowthRate = 0;
+  if (data.clientsLostAnnual && data.clientsAddedAnnual && data.currentClients && data.currentClients > 0) {
+    const clientsLost = RANGE_MIDPOINTS.clientsLost[data.clientsLostAnnual] ?? 4;
+    const clientsAdded = RANGE_MIDPOINTS.clientsAdded[data.clientsAddedAnnual] ?? 6;
+    netGrowthRate = ((clientsAdded - clientsLost) / data.currentClients) * 100;
+  } else if (revenue > 0) {
+    netGrowthRate = ((data.newRevenueAnnual - data.churnRevenueAnnual) / revenue) * 100;
+  }
+  const targetGrowthPercent = revenue > 0 ? ((data.targetRevenue / revenue - 1) * 100) : 0;
+
+  if (netGrowthRate > targetGrowthPercent && netGrowthRate > 0) {
+    // Crushing it — celebration
+    checks.push({
+      id: 'crushing-it',
+      type: 'celebration',
+      title: 'CRUSHING IT',
+      body: `Your net growth rate of ${netGrowthRate.toFixed(1)}% exceeds your ${targetGrowthPercent.toFixed(0)}% target.\n\nKeep doing what you're doing.`,
+    });
+  } else if (targetGrowthPercent > (netGrowthRate * 1.5) && netGrowthRate > 0) {
     checks.push({
       id: 'growth-target-mismatch',
+      type: 'alert',
       title: 'REALITY CHECK',
-      body: `You're targeting ${targetGrowth}% growth while your net growth rate is ${netGrowthRate}%.\n\nThat's not ambition — that's denial.\n\nEither:\n1. Fix churn first (you're losing ${data.clientsLostPerMonth} clients/month)\n2. Dramatically increase lead gen\n3. Adjust your target to reality\n\nHoping harder isn't a strategy.`
+      body: `You're targeting ${targetGrowthPercent.toFixed(0)}% growth while your net growth rate is ${netGrowthRate.toFixed(1)}%.\n\nThat's ambition. But the math doesn't support it without intervention.\n\nEither:\n1. Fix churn first\n2. Dramatically increase lead gen\n3. Adjust your target to reality`,
     });
   }
 
-  // AI Invisibility (placeholder — actual score comes from enrichment)
-  // This will be checked in the results page using enrichment data
-
-  // Founder is Everything
-  if (avgDelegation <= 1.5 && bottleneckAreas.length >= 3) {
+  // Check 5: Solo Founder Reality
+  if (data.teamSize === 1 && data.founderWeeklyHours > 50) {
     checks.push({
-      id: 'founder-is-everything',
-      title: 'YOU ARE THE BOTTLENECK',
-      body: `At $${(data.annualRevenue / 1000000).toFixed(1)}M, with a delegation score of ${avgDelegation.toFixed(1)}, you ARE the ceiling on this business.\n\n${bottleneckAreas.join(', ')} — that's everything. The business doesn't run without you in every seat.\n\nIf you got hit by a bus tomorrow, there's no business left. That's not an asset anyone would buy. It's a job you created for yourself.`
-    });
-  }
-
-  // Churn Death Spiral
-  if (data.churnRevenueAnnual > data.newRevenueAnnual) {
-    checks.push({
-      id: 'churn-death-spiral',
-      title: 'CHURN DEATH SPIRAL',
-      body: `Losing more to churn ($${data.churnRevenueAnnual.toLocaleString()}) than gaining from new clients ($${data.newRevenueAnnual.toLocaleString()}). You're on a death spiral.\n\nStop everything and fix retention before spending another dollar on growth.`
-    });
-  }
-
-  // High delegation + no systems
-  if (avgDelegation >= 3.5 && zones.systemsReadiness.score <= 2) {
-    checks.push({
-      id: 'delegation-without-systems',
-      title: 'DELEGATION WITHOUT SYSTEMS',
-      body: `You're delegating work without documented processes. That's not delegation — it's abdication.\n\nYour team is guessing at what "good" looks like. Document your processes before you delegate more.`
+      id: 'solo-founder-reality',
+      type: 'alert',
+      title: 'SOLO FOUNDER REALITY',
+      body: `You're doing everything at ${data.founderWeeklyHours} hours/week.\n\nThis isn't a delegation problem—it's a first-hire decision.\n\nBased on your time, ${biggestBottleneck} is the biggest unlock.\nConsider a part-time contractor before a full-time hire.`,
     });
   }
 
@@ -698,78 +696,106 @@ function detectRealityChecks(data: IntakeData, zones: WTFZones): RealityCheck[] 
 }
 
 // ============================================
-// PRIORITY ACTIONS
+// GROWTH LEVERS
 // ============================================
 
-function generatePriorityActions(data: IntakeData, zones: WTFZones): PriorityAction[] {
-  const actions: PriorityAction[] = [];
-  const ratings = [extractRating(data.ceoDeliveryRating), extractRating(data.ceoAccountMgmtRating), extractRating(data.ceoMarketingRating), extractRating(data.ceoSalesRating)];
-  const avgDelegation = ratings.reduce((a, b) => a + b, 0) / ratings.length;
-
-  // These are ordered by the framework's priority logic
-  if (zones.contentPositioning.score <= 2) {
-    actions.push({
-      priority: actions.length + 1,
-      action: 'Fix positioning/proof mismatch',
-      why: "Everything else is noise until this is solved. You can't market a confused message."
-    });
-  }
-
-  if (avgDelegation <= 2 && data.annualRevenue > 1000000) {
-    actions.push({
-      priority: actions.length + 1,
-      action: 'Hire or promote a delivery lead',
-      why: `Free yourself from ${data.founderWeeklyHours}+ hrs/week of client work. You're the ceiling.`
-    });
-  }
+function detectGrowthLevers(data: IntakeData, zones: WTFZones): GrowthLever[] {
+  const levers: GrowthLever[] = [];
 
   if (zones.growthVsChurn.score <= 2) {
-    actions.push({
-      priority: actions.length + 1,
-      action: 'Fix churn before adding leads',
-      why: `You're losing $${data.churnRevenueAnnual.toLocaleString()}/yr. New clients are filling a leaky bucket.`
+    levers.push({
+      name: 'Fix Churn',
+      impact: 'high',
+      description: 'Revenue churn is destroying growth. Fix retention before adding leads.',
+      currentState: `Net growth rate: ${zones.growthVsChurn.value.toFixed(1)}%`,
+      recommendation: 'Implement 30/60/90 day client health checks and QBRs.',
     });
   }
 
-  if (data.referralPercent >= 70) {
-    actions.push({
-      priority: actions.length + 1,
-      action: 'Build a second lead channel',
-      why: `${data.referralPercent}% referral dependency is a single point of failure. Build content or outbound.`
+  if (zones.founderLoad.score <= 2) {
+    levers.push({
+      name: 'Founder Bottleneck',
+      impact: 'high',
+      description: "You are the constraint. The business can't grow past you.",
+      currentState: `Delegation avg: ${zones.founderLoad.value.toFixed(1)}/5`,
+      recommendation: 'Hire or promote a #2. Delegate delivery first, then accounts.',
+    });
+  }
+
+  if (zones.leadEngine.score <= 2) {
+    levers.push({
+      name: 'Lead Engine',
+      impact: 'high',
+      description: 'Not enough qualified leads to sustain growth.',
+      currentState: `${data.monthlyLeads} leads/month`,
+      recommendation: 'Build a second channel beyond referrals. Content or outbound.',
+    });
+  }
+
+  if (zones.revenueQuality.score <= 2) {
+    levers.push({
+      name: 'Revenue Per Head',
+      impact: 'medium',
+      description: 'Too many people for the revenue generated.',
+      currentState: `$${Math.round(zones.revenueQuality.value).toLocaleString()}/FTE`,
+      recommendation: 'Raise prices, reduce scope creep, or restructure team.',
     });
   }
 
   if (zones.systemsReadiness.score <= 2) {
-    actions.push({
-      priority: actions.length + 1,
-      action: 'Document your processes',
-      why: "You can't delegate what isn't written down. Start with delivery."
+    levers.push({
+      name: 'Systems Gap',
+      impact: 'medium',
+      description: "No documented processes means you can't delegate or scale.",
+      currentState: `${zones.systemsReadiness.value}/4 documented`,
+      recommendation: 'Document your top 3 processes this month. Start with delivery.',
     });
   }
 
-  if (zones.leadEngine.score <= 2 && data.referralPercent < 70) {
-    actions.push({
-      priority: actions.length + 1,
-      action: 'Rebuild your lead engine',
-      why: `${data.monthlyLeads} leads/month at ${data.closeRate}% close rate isn't enough to grow.`
+  if (zones.contentPositioning.score <= 2) {
+    levers.push({
+      name: 'Visibility',
+      impact: 'medium',
+      description: "Your market doesn't know you exist.",
+      currentState: `${data.founderPostsPerWeek || 0} founder posts/week`,
+      recommendation: 'Post 3x/week on LinkedIn. Share case studies and insights.',
     });
   }
 
-  if (zones.founderLoad.score <= 2 && data.annualRevenue <= 1000000) {
-    actions.push({
-      priority: actions.length + 1,
-      action: 'Restructure your time',
-      why: `At ${data.founderWeeklyHours}hrs/week, you need to cut non-strategic work before you can grow.`
-    });
-  }
-
-  // Always cap at 5
-  return actions.slice(0, 5);
+  return levers;
 }
 
 // ============================================
-// FOUNDER OS NARRATIVES
+// FOUNDER OS
 // ============================================
+
+function analyzeFounderOS(data: IntakeData) {
+  const ratings = [
+    extractRating(data.ceoDeliveryRating),
+    extractRating(data.ceoAccountMgmtRating),
+    extractRating(data.ceoMarketingRating),
+    extractRating(data.ceoSalesRating),
+  ];
+  const avgDelegation = ratings.reduce((a, b) => a + b, 0) / ratings.length;
+
+  const strategyHours = data.strategyHoursPerWeek || 0;
+  const onVsInRatio = data.founderWeeklyHours > 0
+    ? Math.round((strategyHours / data.founderWeeklyHours) * 100)
+    : 0;
+
+  const bottleneckAreas: string[] = [];
+  if (extractRating(data.ceoDeliveryRating) <= 2) bottleneckAreas.push('Delivery');
+  if (extractRating(data.ceoAccountMgmtRating) <= 2) bottleneckAreas.push('Account Management');
+  if (extractRating(data.ceoMarketingRating) <= 2) bottleneckAreas.push('Marketing');
+  if (extractRating(data.ceoSalesRating) <= 2) bottleneckAreas.push('Sales');
+
+  let burnoutRisk = 'low';
+  if (data.founderWeeklyHours > 55 && avgDelegation < 2.5) burnoutRisk = 'critical';
+  else if (data.founderWeeklyHours > 50 && avgDelegation < 3) burnoutRisk = 'high';
+  else if (data.founderWeeklyHours > 45) burnoutRisk = 'moderate';
+
+  return { delegationScore: avgDelegation, onVsInRatio, bottleneckAreas, burnoutRisk };
+}
 
 function getDelegationNarrative(score: number): string {
   if (score >= 4.5) return "You've built a machine. The business runs without you in the weeds.";
@@ -786,15 +812,82 @@ function getOnVsInNarrative(ratio: number): string {
 }
 
 // ============================================
-// OVERALL LABEL
+// IMPOSSIBILITIES
 // ============================================
 
-function getOverallLabel(score: number): string {
-  if (score >= 4.5) return 'Strong Foundation';
-  if (score >= 3.5) return 'Needs Work';
-  if (score >= 2.5) return 'Significant Gaps';
-  if (score >= 1.5) return 'Critical Issues';
-  return 'Red Alert';
+function detectImpossibilities(data: IntakeData): string[] {
+  const impossibilities: string[] = [];
+  const revenue = getEffectiveRevenue(data);
+
+  if (data.targetRevenue > revenue * 2) {
+    impossibilities.push(`Targeting ${Math.round((data.targetRevenue / revenue - 1) * 100)}% growth. Fix churn and lead gen first.`);
+  }
+
+  if (data.churnRevenueAnnual > data.newRevenueAnnual) {
+    impossibilities.push(`Losing more to churn ($${data.churnRevenueAnnual.toLocaleString()}) than gaining ($${data.newRevenueAnnual.toLocaleString()}). Death spiral.`);
+  }
+
+  const ceoRatings = [extractRating(data.ceoDeliveryRating), extractRating(data.ceoAccountMgmtRating), extractRating(data.ceoMarketingRating), extractRating(data.ceoSalesRating)];
+  const avgDelegation = ceoRatings.reduce((a, b) => a + b, 0) / ceoRatings.length;
+
+  if (avgDelegation < 2 && revenue > 1000000) {
+    impossibilities.push(`Running a $${(revenue / 1000000).toFixed(1)}M agency with almost no delegation. Something will break.`);
+  }
+
+  return impossibilities;
+}
+
+// ============================================
+// PRIORITY ACTIONS
+// ============================================
+
+function generatePriorityActions(data: IntakeData, zones: WTFZones): PriorityAction[] {
+  const actions: PriorityAction[] = [];
+  const revenue = getEffectiveRevenue(data);
+  const ratings = [extractRating(data.ceoDeliveryRating), extractRating(data.ceoAccountMgmtRating), extractRating(data.ceoMarketingRating), extractRating(data.ceoSalesRating)];
+  const avgDelegation = ratings.reduce((a, b) => a + b, 0) / ratings.length;
+
+  if (zones.contentPositioning.score <= 2) {
+    actions.push({
+      priority: actions.length + 1,
+      action: 'Fix positioning/proof mismatch',
+      why: "Everything else is noise until this is solved. You can't market a confused message.",
+    });
+  }
+
+  if (avgDelegation <= 2 && revenue > 1000000) {
+    actions.push({
+      priority: actions.length + 1,
+      action: 'Hire or promote a delivery lead',
+      why: `Free yourself from ${data.founderWeeklyHours}+ hrs/week of client work. You're the ceiling.`,
+    });
+  }
+
+  if (zones.growthVsChurn.score <= 2) {
+    actions.push({
+      priority: actions.length + 1,
+      action: 'Fix churn before adding leads',
+      why: `Net growth rate is ${zones.growthVsChurn.value.toFixed(1)}%. New clients are filling a leaky bucket.`,
+    });
+  }
+
+  if (data.referralPercent >= 70) {
+    actions.push({
+      priority: actions.length + 1,
+      action: 'Build a second lead channel',
+      why: `${data.referralPercent}% referral dependency is a single point of failure. Build content or outbound.`,
+    });
+  }
+
+  if (zones.systemsReadiness.score <= 2) {
+    actions.push({
+      priority: actions.length + 1,
+      action: 'Document your processes',
+      why: "You can't delegate what isn't written down. Start with delivery.",
+    });
+  }
+
+  return actions.slice(0, 5);
 }
 
 // ============================================
@@ -802,31 +895,31 @@ function getOverallLabel(score: number): string {
 // ============================================
 
 export function calculateAssessment(data: IntakeData): AssessmentResult {
-  const { segment, label: segmentLabel } = getSegment(data.annualRevenue);
-  const benchmarks = BENCHMARKS[segment];
+  const revenue = getEffectiveRevenue(data);
+  const { segment, label: segmentLabel } = getSegment(revenue);
 
   const wtfZones: WTFZones = {
-    revenueQuality: scoreRevenueQuality(data, benchmarks),
-    profitability: scoreProfitability(data, benchmarks),
-    growthVsChurn: scoreGrowthVsChurn(data, benchmarks),
-    leadEngine: scoreLeadEngine(data),
-    founderLoad: scoreFounderLoad(data, segment),
-    systemsReadiness: scoreSystemsReadiness(data, segment),
+    revenueQuality: scoreRevenueQuality(data, segment),
+    profitability: scoreProfitability(data),
+    growthVsChurn: scoreGrowthVsChurn(data),
+    leadEngine: scoreLeadEngine(data, segment),
+    founderLoad: scoreFounderLoad(data),
+    systemsReadiness: scoreSystemsReadiness(data),
     contentPositioning: scoreContentPositioning(data),
-    teamVisibility: scoreTeamVisibility(data)
+    teamVisibility: scoreTeamVisibility(data),
   };
 
   const overall = calculateOverallScore(wtfZones);
   const overallLabel = getOverallLabel(overall);
   const narratives = generateNarratives(data, wtfZones);
-  const growthLevers = detectGrowthLevers(data, wtfZones, benchmarks);
-  const rawFounderOS = analyzeFounderOS(data, segment);
+  const growthLevers = detectGrowthLevers(data, wtfZones);
+  const rawFounderOS = analyzeFounderOS(data);
   const founderOS = {
     ...rawFounderOS,
     delegationNarrative: getDelegationNarrative(rawFounderOS.delegationScore),
     onVsInNarrative: getOnVsInNarrative(rawFounderOS.onVsInRatio),
   };
-  const impossibilities = detectImpossibilities(data, benchmarks);
+  const impossibilities = detectImpossibilities(data);
   const realityChecks = detectRealityChecks(data, wtfZones);
   const priorityActions = generatePriorityActions(data, wtfZones);
 
@@ -842,6 +935,6 @@ export function calculateAssessment(data: IntakeData): AssessmentResult {
     realityChecks,
     impossibilities,
     priorityActions,
-    benchmarks
+    benchmarks: REVENUE_PER_FTE_BENCHMARKS,
   };
 }

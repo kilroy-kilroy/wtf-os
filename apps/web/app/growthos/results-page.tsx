@@ -71,6 +71,14 @@ function RevelationSection({ title, children, color = '#E31B23' }: {
   );
 }
 
+function getOverallLabel(score: number): string {
+  if (score >= 4.5) return 'Strong Foundation';
+  if (score >= 3.5) return 'Needs Work';
+  if (score >= 2.5) return 'Significant Gaps';
+  if (score >= 1.5) return 'Critical Issues';
+  return 'Red Alert';
+}
+
 function formatCurrency(amount: number): string {
   if (amount >= 1000000) return '$' + (amount / 1000000).toFixed(1) + 'M';
   if (amount >= 1000) return '$' + Math.round(amount / 1000) + 'K';
@@ -468,8 +476,9 @@ export default async function ResultsPage({ params }: { params: { id: string } }
     );
   }
 
-  const overallColor = scores.overall >= 4 ? '#10B981' : scores.overall >= 2.5 ? '#F59E0B' : '#EF4444';
+  const overallColor = scores.overall >= 4 ? '#00D4FF' : scores.overall >= 2.5 ? '#f59e0b' : '#E31B23';
   const segmentLabel = scores.segmentLabel || 'Agency';
+  const realityChecks = scores.realityChecks as Array<{ id: string; type: string; title: string; body: string }> | undefined;
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -480,13 +489,12 @@ export default async function ResultsPage({ params }: { params: { id: string } }
 
       {/* Header */}
       <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-8 mb-6 text-center">
-        <h1 className="text-3xl font-extrabold text-white mb-2">{intake.agencyName}</h1>
-        <p className="text-slate-400 mb-1">The Holy Shit Diagnostic</p>
-        <span className="inline-block px-3 py-1 rounded-full text-xs font-bold bg-slate-700/50 text-slate-300">
+        <h1 className="text-3xl font-extrabold text-white mb-2">{intake.agencyName} Business Diagnostic</h1>
+        <span className="inline-block px-3 py-1 rounded-full text-xs font-bold bg-slate-700/50 text-slate-300 mb-4">
           {segmentLabel}
         </span>
 
-        <div className="inline-flex items-center gap-4 mt-6">
+        <div className="inline-flex items-center gap-4 mt-4">
           <div
             className="w-24 h-24 rounded-2xl flex items-center justify-center text-3xl font-extrabold text-white"
             style={{ backgroundColor: overallColor + '20', border: `2px solid ${overallColor}40` }}
@@ -495,12 +503,65 @@ export default async function ResultsPage({ params }: { params: { id: string } }
           </div>
           <div className="text-left">
             <p className="text-xs text-slate-500 uppercase tracking-wider font-bold">Overall Score</p>
-            <p className="text-lg font-bold text-white">{scores.overallLabel || (scores.overall >= 4 ? 'Strong' : scores.overall >= 2.5 ? 'Needs Work' : 'Critical')}</p>
+            <p className="text-lg font-bold text-white">{scores.overallLabel || getOverallLabel(scores.overall)}</p>
           </div>
         </div>
       </div>
 
-      {/* REVELATIONS (v2) */}
+      {/* WTF ZONES HEATMAP — always visible, top of results */}
+      <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 mb-6">
+        <h2 className="text-lg font-bold text-white mb-5">WTF Zones Heatmap</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
+          <ScoreBar score={zones.revenueQuality.score} label="Revenue Quality" insight={scores.narratives?.revenueQuality || zones.revenueQuality.insight} color={zones.revenueQuality.color} />
+          <ScoreBar score={zones.profitability.score} label="Profitability" insight={scores.narratives?.profitability || zones.profitability.insight} color={zones.profitability.color} />
+          <ScoreBar score={zones.growthVsChurn.score} label="Growth vs Churn" insight={scores.narratives?.growthVsChurn || zones.growthVsChurn.insight} color={zones.growthVsChurn.color} />
+          <ScoreBar score={zones.leadEngine.score} label="Lead Engine" insight={scores.narratives?.leadEngine || zones.leadEngine.insight} color={zones.leadEngine.color} />
+          <ScoreBar score={zones.founderLoad.score} label="Founder Load" insight={scores.narratives?.founderLoad || zones.founderLoad.insight} color={zones.founderLoad.color} />
+          <ScoreBar score={zones.systemsReadiness.score} label="Systems Readiness" insight={scores.narratives?.systemsReadiness || zones.systemsReadiness.insight} color={zones.systemsReadiness.color} />
+          <ScoreBar score={zones.contentPositioning.score} label="Content & Positioning" insight={scores.narratives?.contentPositioning || zones.contentPositioning.insight} color={zones.contentPositioning.color} />
+          <ScoreBar score={zones.teamVisibility.score} label="Team Visibility" insight={scores.narratives?.teamVisibility || zones.teamVisibility.insight} color={zones.teamVisibility.color} />
+        </div>
+      </div>
+
+      {/* REALITY CHECKS (conditional) */}
+      {realityChecks && realityChecks.length > 0 && (
+        <div className="space-y-4 mb-6">
+          {realityChecks.map((check: any) => (
+            <div
+              key={check.id}
+              className={`rounded-2xl p-6 border ${
+                check.type === 'celebration'
+                  ? 'bg-emerald-500/5 border-emerald-500/20'
+                  : 'bg-red-500/5 border-red-500/20'
+              }`}
+            >
+              <h3 className={`text-sm font-bold uppercase tracking-wider mb-3 ${
+                check.type === 'celebration' ? 'text-emerald-400' : 'text-red-400'
+              }`}>
+                {check.type === 'celebration' ? '\u2705' : '\uD83D\uDEA8'} {check.title}
+              </h3>
+              <div className="text-sm text-slate-300 whitespace-pre-line">{check.body}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Legacy impossibilities (backward compat) */}
+      {scores.impossibilities && scores.impossibilities.length > 0 && (!realityChecks || realityChecks.length === 0) && (
+        <div className="bg-red-500/5 border border-red-500/20 rounded-2xl p-6 mb-6">
+          <h2 className="text-lg font-bold text-red-400 mb-4">Reality Checks</h2>
+          <ul className="space-y-3">
+            {scores.impossibilities.map((item: string, i: number) => (
+              <li key={i} className="flex items-start gap-3 text-sm text-red-300">
+                <span className="text-red-500 mt-0.5 font-bold">!</span>
+                <span>{item}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* REVELATIONS */}
       {revelations?.founderTax && <FounderTaxSection data={revelations.founderTax} />}
       {revelations?.pipelineProbability && <PipelineProbabilitySection data={revelations.pipelineProbability} />}
       {revelations?.authorityGap && <AuthorityGapSection data={revelations.authorityGap} />}
@@ -520,21 +581,6 @@ export default async function ResultsPage({ params }: { params: { id: string } }
           <p className="text-sm text-slate-500 mt-3">{revelations.cta.subtext}</p>
         </div>
       )}
-
-      {/* WTF Zones Heatmap (legacy, still useful) */}
-      <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 mb-6">
-        <h2 className="text-lg font-bold text-white mb-5">WTF Zones Heatmap</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
-          <ScoreBar score={zones.revenueQuality.score} label="Revenue Quality" insight={zones.revenueQuality.insight} color={zones.revenueQuality.color} />
-          <ScoreBar score={zones.profitability.score} label="Profitability" insight={zones.profitability.insight} color={zones.profitability.color} />
-          <ScoreBar score={zones.growthVsChurn.score} label="Growth vs Churn" insight={zones.growthVsChurn.insight} color={zones.growthVsChurn.color} />
-          <ScoreBar score={zones.leadEngine.score} label="Lead Engine" insight={zones.leadEngine.insight} color={zones.leadEngine.color} />
-          <ScoreBar score={zones.founderLoad.score} label="Founder Load" insight={zones.founderLoad.insight} color={zones.founderLoad.color} />
-          <ScoreBar score={zones.systemsReadiness.score} label="Systems Readiness" insight={zones.systemsReadiness.insight} color={zones.systemsReadiness.color} />
-          <ScoreBar score={zones.contentPositioning.score} label="Content & Positioning" insight={zones.contentPositioning.insight} color={zones.contentPositioning.color} />
-          <ScoreBar score={zones.teamVisibility.score} label="Team Visibility" insight={zones.teamVisibility.insight} color={zones.teamVisibility.color} />
-        </div>
-      </div>
 
       {/* Growth Levers */}
       {scores.growthLevers && scores.growthLevers.length > 0 && (
@@ -583,21 +629,6 @@ export default async function ResultsPage({ params }: { params: { id: string } }
         </div>
       )}
 
-      {/* Impossibilities */}
-      {scores.impossibilities && scores.impossibilities.length > 0 && (
-        <div className="bg-red-500/5 border border-red-500/20 rounded-2xl p-6 mb-6">
-          <h2 className="text-lg font-bold text-red-400 mb-4">Reality Checks</h2>
-          <ul className="space-y-3">
-            {scores.impossibilities.map((item: string, i: number) => (
-              <li key={i} className="flex items-start gap-3 text-sm text-red-300">
-                <span className="text-red-500 mt-0.5 font-bold">!</span>
-                <span>{item}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
       {/* LLM Awareness */}
       {enrichment?.llmAwareness?.summary && (
         <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 mb-6">
@@ -634,7 +665,7 @@ export default async function ResultsPage({ params }: { params: { id: string } }
       <div className="flex gap-4 mt-8">
         <Link
           href="/growthos/assessment"
-          className="flex-1 text-center py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 text-white font-bold text-sm hover:shadow-lg hover:shadow-emerald-500/25 transition-all"
+          className="flex-1 text-center py-3 rounded-xl bg-gradient-to-r from-[#00D4FF] to-[#00B4D8] text-white font-bold text-sm hover:shadow-lg hover:shadow-[#00D4FF]/25 transition-all"
         >
           Retake Assessment
         </Link>

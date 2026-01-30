@@ -185,38 +185,40 @@ export default function ProfileSetupPage() {
         mode = 'team';
       }
 
-      if (!isPublicDomain && !existingOrgName) {
-        // Create new org for this domain
-        const { data: newOrg, error: orgError } = await supabase
-          .from('orgs')
-          .insert({
-            name: formData.companyName,
-            primary_domain: domain,
-            company_size: formData.companySize,
-            sales_team_size: formData.salesTeamSize,
-            company_revenue: formData.companyRevenue,
-            crm: formData.crm,
-            personal: false,
-            mode: mode,
-            created_by_user_id: user.id,
-          })
-          .select()
-          .single();
-
-        if (orgError) throw orgError;
-        orgId = newOrg.id;
-        isOrgOwner = true;
-      } else if (!isPublicDomain && existingOrgName) {
-        // Join existing org
-        const { data: existingOrg } = await supabase
+      if (!isPublicDomain) {
+        // Always re-check for existing org at submit time (may have been
+        // created by assessment or another flow since page load)
+        const { data: domainOrg } = await supabase
           .from('orgs')
           .select('id, mode')
           .eq('primary_domain', domain)
           .single();
 
-        if (existingOrg) {
-          orgId = existingOrg.id;
-          mode = existingOrg.mode || 'team';
+        if (domainOrg) {
+          // Join existing org
+          orgId = domainOrg.id;
+          mode = domainOrg.mode || 'team';
+        } else {
+          // Create new org for this domain
+          const { data: newOrg, error: orgError } = await supabase
+            .from('orgs')
+            .insert({
+              name: formData.companyName,
+              primary_domain: domain,
+              company_size: formData.companySize,
+              sales_team_size: formData.salesTeamSize,
+              company_revenue: formData.companyRevenue,
+              crm: formData.crm,
+              personal: false,
+              mode: mode,
+              created_by_user_id: user.id,
+            })
+            .select()
+            .single();
+
+          if (orgError) throw orgError;
+          orgId = newOrg.id;
+          isOrgOwner = true;
         }
       } else {
         // Personal workspace for public email domains

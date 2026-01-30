@@ -210,30 +210,31 @@ async function bdPollAndDownload(snapshotId: string, maxWaitMs: number = 60000):
   if (!BRIGHT_DATA_API || !snapshotId) return [];
 
   const startTime = Date.now();
-  const pollInterval = 5000;
+  const pollInterval = 10000; // Docs recommend 10s intervals
 
   while (Date.now() - startTime < maxWaitMs) {
     try {
-      const statusResponse = await fetch(`${BRIGHT_DATA_BASE}/progress/${snapshotId}`, {
+      // Per docs: poll snapshot endpoint, 202=running, 200=ready
+      const response = await fetch(`${BRIGHT_DATA_BASE}/snapshot/${snapshotId}?format=json`, {
         headers: { 'Authorization': `Bearer ${BRIGHT_DATA_API}` },
-        signal: AbortSignal.timeout(10000),
+        signal: AbortSignal.timeout(15000),
       });
-      const statusData = await statusResponse.json();
 
-      if (statusData.status === 'ready') {
-        const dataResponse = await fetch(`${BRIGHT_DATA_BASE}/snapshot/${snapshotId}?format=json`, {
-          headers: { 'Authorization': `Bearer ${BRIGHT_DATA_API}` },
-          signal: AbortSignal.timeout(15000),
-        });
-        return await dataResponse.json();
+      if (response.status === 200) {
+        const data = await response.json();
+        console.log(`[BrightData] Snapshot ${snapshotId} ready, got ${Array.isArray(data) ? data.length : 1} results`);
+        return Array.isArray(data) ? data : [data];
       }
 
-      if (statusData.status === 'failed') {
-        console.error(`[BrightData] Snapshot ${snapshotId} failed`);
+      if (response.status === 202) {
+        // Still running, continue polling
+      } else {
+        const body = await response.text().catch(() => '');
+        console.error(`[BrightData] Snapshot ${snapshotId} unexpected status ${response.status}: ${body}`);
         return [];
       }
     } catch {
-      // Continue polling
+      // Continue polling on network errors
     }
 
     await new Promise(resolve => setTimeout(resolve, pollInterval));
@@ -253,7 +254,7 @@ async function bdScrapeLinkedInProfile(linkedinUrl: string | undefined): Promise
     const snapshotId = await bdTrigger(BD_DATASETS.linkedinProfile, [{ url }]);
     if (!snapshotId) return null;
 
-    const results = await bdPollAndDownload(snapshotId, 45000);
+    const results = await bdPollAndDownload(snapshotId, 60000);
     const profile = results[0];
     if (!profile) return null;
 
@@ -279,7 +280,7 @@ async function bdScrapeLinkedInCompany(linkedinUrl: string | undefined): Promise
     const snapshotId = await bdTrigger(BD_DATASETS.linkedinCompany, [{ url }]);
     if (!snapshotId) return null;
 
-    const results = await bdPollAndDownload(snapshotId, 45000);
+    const results = await bdPollAndDownload(snapshotId, 60000);
     const company = results[0];
     if (!company) return null;
 
@@ -340,7 +341,7 @@ async function bdSearchChatGPT(prompt: string): Promise<string> {
   }]);
   if (!snapshotId) throw new Error('No snapshot');
 
-  const results = await bdPollAndDownload(snapshotId, 45000);
+  const results = await bdPollAndDownload(snapshotId, 60000);
   const result = results[0];
   if (!result) throw new Error('No result');
 
@@ -845,6 +846,19 @@ function extractCompetitorNames(text: string, intakeData: IntakeData): string[] 
           continue;
         }
 
+        // Filter out action phrases / advice headings that start with verbs
+        // e.g. "Review Your Value Proposition", "Improve Client Retention"
+        const actionVerbs = /^(review|improve|expand|enhance|invest|consider|explore|develop|build|create|focus|implement|leverage|optimize|increase|reduce|establish|strengthen|evaluate|adopt|prioritize|ensure)\b/i;
+        if (actionVerbs.test(name)) continue;
+
+        // Must contain at least one word that looks like a proper noun / brand
+        // Filter out pure generic phrases like "Client Retention" or "Marketing Efforts"
+        const hasProperNoun = nameWords.some(w =>
+          /^[A-Z]/.test(w) && !genericTerms.some(t => w.toLowerCase().includes(t)) &&
+          !['Your', 'The', 'And', 'For', 'With', 'Our', 'Their', 'Its', 'New', 'Best', 'Top', 'Key', 'How', 'Why', 'More', 'All', 'Any', 'Each', 'Most', 'Some', 'Client', 'Base', 'Efforts', 'Retention', 'Proposition', 'Value'].includes(w)
+        );
+        if (!hasProperNoun) continue;
+
         names.push(name);
       }
     }
@@ -1220,14 +1234,18 @@ export async function runEnrichmentPipeline(intakeData: IntakeData): Promise<Enr
       .then(d => { if (d) result.apify.founderLinkedin = d; })
       .catch(() => apifyScrapeLinkedInProfile(intakeData.founderLinkedinUrl).then(d => { result.apify.founderLinkedin = d; }))
       .catch(e => { result.meta.errors.push({ source: 'bd.founderProfile', error: e.message }); }),
-    // Posts scraper requires individual post URLs, not profile URLs — use Apify for now
-    apifyScrapeLinkedInPosts(intakeData.founderLinkedinUrl).then(d => { result.apify.founderPosts = d; }).catch(e => { result.meta.errors.push({ source: 'apify.founderPosts', error: e.message }); }),
+    bdScrapeLinkedInPosts(intakeData.founderLinkedinUrl)
+      .then(d => { if (d) result.apify.founderPosts = d; })
+      .catch(() => apifyScrapeLinkedInPosts(intakeData.founderLinkedinUrl).then(d => { result.apify.founderPosts = d; }))
+      .catch(e => { result.meta.errors.push({ source: 'bd.founderPosts', error: e.message }); }),
     bdScrapeLinkedInCompany(intakeData.companyLinkedinUrl)
       .then(d => { if (d) result.apify.companyLinkedin = d; })
       .catch(() => apifyScrapeLinkedInProfile(intakeData.companyLinkedinUrl).then(d => { result.apify.companyLinkedin = d; }))
       .catch(e => { result.meta.errors.push({ source: 'bd.companyProfile', error: e.message }); }),
-    // Posts scraper requires individual post URLs, not profile URLs — use Apify for now
-    apifyScrapeLinkedInPosts(intakeData.companyLinkedinUrl).then(d => { result.apify.companyPosts = d; }).catch(e => { result.meta.errors.push({ source: 'apify.companyPosts', error: e.message }); }),
+    bdScrapeLinkedInPosts(intakeData.companyLinkedinUrl)
+      .then(d => { if (d) result.apify.companyPosts = d; })
+      .catch(() => apifyScrapeLinkedInPosts(intakeData.companyLinkedinUrl).then(d => { result.apify.companyPosts = d; }))
+      .catch(e => { result.meta.errors.push({ source: 'bd.companyPosts', error: e.message }); }),
     exaIcpProblemSearches(intakeData).then(d => { result.exa.icpProblems = d; }).catch(e => { result.meta.errors.push({ source: 'exa.icpProblems', error: e.message }); }),
     exaCompetitorSearch(intakeData).then(d => { result.exa.competitors = d; }).catch(e => { result.meta.errors.push({ source: 'exa.competitors', error: e.message }); }),
     runLLMAwarenessChecks(intakeData).then(d => { result.llmAwareness = d; }).catch(e => { result.meta.errors.push({ source: 'llm', error: e.message }); })

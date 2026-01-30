@@ -115,6 +115,7 @@ interface LLMAwarenessResult {
     founderMentionedIn: number;
     score: number;
     topCompetitors: string[];
+    queriesUsed: string[];
   };
 }
 
@@ -386,7 +387,7 @@ async function bdSearchChatGPT(prompt: string): Promise<string> {
       const results = await bdPollAndDownload(data.snapshot_id, 60000);
       const result = results[0];
       if (!result) throw new Error('No result from async');
-      return result.content || result.response || result.text || result.answer || JSON.stringify(result);
+      return extractBdChatGPTText(result);
     }
     throw new Error('No snapshot_id in 202 response');
   }
@@ -395,7 +396,36 @@ async function bdSearchChatGPT(prompt: string): Promise<string> {
   const result = Array.isArray(results) ? results[0] : results;
   if (!result) throw new Error('No result');
 
-  return result.content || result.response || result.text || result.answer || JSON.stringify(result);
+  return extractBdChatGPTText(result);
+}
+
+function extractBdChatGPTText(result: any): string {
+  // BD ChatGPT scraper returns answer_html (raw HTML) — extract plain text
+  if (result.answer_html) {
+    // Strip HTML tags to get plain text
+    const text = result.answer_html
+      .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (text.length > 10) return text;
+  }
+  // Try other possible fields
+  if (result.answer_text && result.answer_text.length > 10) return result.answer_text;
+  if (result.answer && result.answer.length > 10) return result.answer;
+  if (result.content && result.content.length > 10) return result.content;
+  if (result.response && result.response.length > 10) return result.response;
+  if (result.text && result.text.length > 10) return result.text;
+  // Log the actual keys so we can debug
+  console.log(`[BrightData] ChatGPT result keys: ${Object.keys(result).join(', ')}`);
+  return JSON.stringify(result);
 }
 
 // ============================================
@@ -472,6 +502,9 @@ async function apifyScrapeWebsite(websiteUrl: string): Promise<ApifyWebsite | nu
       { url: `${baseUrl}/blog` },
       { url: `${baseUrl}/team` },
       { url: `${baseUrl}/testimonials` },
+      { url: `${baseUrl}/testimonial` },
+      { url: `${baseUrl}/reviews` },
+      { url: `${baseUrl}/results` },
     ];
 
     const items = await runApifyActor('apify~web-scraper', {
@@ -496,7 +529,7 @@ async function apifyScrapeWebsite(websiteUrl: string): Promise<ApifyWebsite | nu
           result.services = $('h2, h3, .service-title, [class*="service"]').map((_, el) => $(el).text().trim()).get().filter(t => t.length > 2 && t.length < 200);
         }
 
-        if (url.includes('case') || url.includes('work') || url.includes('portfolio') || url.includes('client') || url.includes('result')) {
+        if (url.includes('case') || url.includes('work') || url.includes('portfolio') || url.includes('client') || url.includes('result') || url.includes('gen-plus')) {
           result.type = 'caseStudies';
           const cards = $('[class*="case"], [class*="study"], [class*="portfolio"], [class*="work"] article, .card, [class*="project"]').slice(0, 20);
           result.caseStudies = cards.map((_, el) => ({
@@ -508,13 +541,23 @@ async function apifyScrapeWebsite(websiteUrl: string): Promise<ApifyWebsite | nu
           })).get();
         }
 
-        if (url.includes('testimonial') || url.includes('review')) {
+        if (url.includes('testimonial') || url.includes('review') || url.includes('fire-yourself') || url.includes('gen-plus')) {
           result.type = 'testimonials';
-          result.testimonials = $('blockquote, [class*="testimonial"], [class*="quote"], [class*="review"]').map((_, el) => ({
+          // Try structured testimonial elements first
+          var testimonials = $('blockquote, [class*="testimonial"], [class*="quote"], [class*="review"], [class*="client-story"], [class*="success"]').map((_, el) => ({
             text: $(el).find('p, .text, .content').first().text().trim() || $(el).text().trim(),
-            author: $(el).find('[class*="author"], [class*="name"], cite').first().text().trim() || null,
+            author: $(el).find('[class*="author"], [class*="name"], cite, strong, b').first().text().trim() || null,
             company: $(el).find('[class*="company"], [class*="title"], [class*="role"]').first().text().trim() || null
-          })).get().slice(0, 10);
+          })).get().slice(0, 15);
+          // Fallback: grab any paragraphs on testimonial pages as potential testimonials
+          if (testimonials.length === 0 && (url.includes('testimonial') || url.includes('review'))) {
+            testimonials = $('main p, article p, .content p, section p').filter((_, el) => $(el).text().trim().length > 50).map((_, el) => ({
+              text: $(el).text().trim().substring(0, 500),
+              author: null,
+              company: null
+            })).get().slice(0, 10);
+          }
+          result.testimonials = testimonials;
         }
 
         if (url.includes('about') || url.includes('team')) {
@@ -531,12 +574,17 @@ async function apifyScrapeWebsite(websiteUrl: string): Promise<ApifyWebsite | nu
           })).get().slice(0, 20);
         }
 
-        // Look for client logos on any page
-        result.logos = $('img[class*="logo"], img[class*="client"], [class*="logo-grid"] img, [class*="client-logo"] img, [class*="trusted"] img').map((_, el) => $(el).attr('alt') || $(el).attr('title') || '').get().filter(t => t.length > 0).slice(0, 20);
+        // Look for client logos on any page — broad search
+        result.logos = $('img[class*="logo"], img[class*="client"], img[class*="partner"], img[class*="brand"], [class*="logo"] img, [class*="client"] img, [class*="partner"] img, [class*="trusted"] img, [class*="featured"] img').map((_, el) => $(el).attr('alt') || $(el).attr('title') || $(el).attr('src')?.split('/').pop()?.replace(/[-_]/g, ' ')?.replace(/\.\w+$/, '') || '').get().filter(t => t.length > 1 && t.length < 100).slice(0, 30);
+        // Also check for client names in text on /gen-plus, /clients type pages
+        if (url.includes('gen-plus') || url.includes('client') || url.includes('partner')) {
+          var clientNames = $('h3, h4, [class*="client-name"], [class*="company"], figcaption').map((_, el) => $(el).text().trim()).get().filter(t => t.length > 2 && t.length < 60);
+          if (clientNames.length > 0) result.logos = (result.logos || []).concat(clientNames);
+        }
 
         return result;
       }`,
-      maxPagesPerCrawl: 10,
+      maxPagesPerCrawl: 15,
       maxConcurrency: 5
     }, 20000);
 
@@ -920,10 +968,11 @@ function extractCompetitorNames(text: string, intakeData: IntakeData): string[] 
 async function checkLLMAwareness(
   provider: string,
   apiCall: (prompt: string) => Promise<string>,
-  intakeData: IntakeData
+  intakeData: IntakeData,
+  prompts?: string[],
 ): Promise<LLMAwarenessCheck> {
   try {
-    const prompts = await buildAwarenessPrompts(intakeData);
+    if (!prompts) prompts = await buildAwarenessPrompts(intakeData);
     console.log(`[LLM-${provider}] Queries:`, prompts);
     const responses = await Promise.allSettled(prompts.map(p => apiCall(p)));
 
@@ -1033,10 +1082,14 @@ async function callPerplexity(prompt: string): Promise<string> {
 }
 
 async function runLLMAwarenessChecks(intakeData: IntakeData): Promise<LLMAwarenessResult> {
+  // Generate queries once and share across all providers
+  const queriesUsed = await buildAwarenessPrompts(intakeData);
+  console.log(`[LLM] Awareness queries generated:`, queriesUsed);
+
   const [claude, chatgpt, perplexity] = await Promise.allSettled([
-    checkLLMAwareness('claude', callClaude, intakeData),
-    checkLLMAwareness('chatgpt', callChatGPT, intakeData),
-    checkLLMAwareness('perplexity', callPerplexity, intakeData),
+    checkLLMAwareness('claude', callClaude, intakeData, queriesUsed),
+    checkLLMAwareness('chatgpt', callChatGPT, intakeData, queriesUsed),
+    checkLLMAwareness('perplexity', callPerplexity, intakeData, queriesUsed),
   ]);
 
   const results = {
@@ -1069,6 +1122,7 @@ async function runLLMAwarenessChecks(intakeData: IntakeData): Promise<LLMAwarene
         ? Math.round(((available.filter(c => c.agencyMentioned).length + available.filter(c => c.founderMentioned).length) / (available.length * 2)) * 100)
         : 0,
       topCompetitors,
+      queriesUsed,
     }
   };
 }
@@ -1288,18 +1342,13 @@ export async function runEnrichmentPipeline(intakeData: IntakeData): Promise<Enr
       .then(d => { if (d) result.apify.founderLinkedin = d; })
       .catch(() => apifyScrapeLinkedInProfile(intakeData.founderLinkedinUrl).then(d => { result.apify.founderLinkedin = d; }))
       .catch(e => { result.meta.errors.push({ source: 'bd.founderProfile', error: e.message }); }),
-    bdScrapeLinkedInPosts(intakeData.founderLinkedinUrl)
-      .then(d => { if (d) result.apify.founderPosts = d; })
-      .catch(() => apifyScrapeLinkedInPosts(intakeData.founderLinkedinUrl).then(d => { result.apify.founderPosts = d; }))
-      .catch(e => { result.meta.errors.push({ source: 'bd.founderPosts', error: e.message }); }),
+    // BD posts dataset requires post/article URLs, not profile URLs — use Apify for posts
+    apifyScrapeLinkedInPosts(intakeData.founderLinkedinUrl).then(d => { result.apify.founderPosts = d; }).catch(e => { result.meta.errors.push({ source: 'apify.founderPosts', error: e.message }); }),
     bdScrapeLinkedInCompany(intakeData.companyLinkedinUrl)
       .then(d => { if (d) result.apify.companyLinkedin = d; })
       .catch(() => apifyScrapeLinkedInProfile(intakeData.companyLinkedinUrl).then(d => { result.apify.companyLinkedin = d; }))
       .catch(e => { result.meta.errors.push({ source: 'bd.companyProfile', error: e.message }); }),
-    bdScrapeLinkedInPosts(intakeData.companyLinkedinUrl)
-      .then(d => { if (d) result.apify.companyPosts = d; })
-      .catch(() => apifyScrapeLinkedInPosts(intakeData.companyLinkedinUrl).then(d => { result.apify.companyPosts = d; }))
-      .catch(e => { result.meta.errors.push({ source: 'bd.companyPosts', error: e.message }); }),
+    apifyScrapeLinkedInPosts(intakeData.companyLinkedinUrl).then(d => { result.apify.companyPosts = d; }).catch(e => { result.meta.errors.push({ source: 'apify.companyPosts', error: e.message }); }),
     exaIcpProblemSearches(intakeData).then(d => { result.exa.icpProblems = d; }).catch(e => { result.meta.errors.push({ source: 'exa.icpProblems', error: e.message }); }),
     exaCompetitorSearch(intakeData).then(d => { result.exa.competitors = d; }).catch(e => { result.meta.errors.push({ source: 'exa.competitors', error: e.message }); }),
     runLLMAwarenessChecks(intakeData).then(d => { result.llmAwareness = d; }).catch(e => { result.meta.errors.push({ source: 'llm', error: e.message }); })

@@ -233,7 +233,7 @@ export function buildAgencyContext(
   const growthTarget = annualRevenue > 0 ? Math.round(((targetRevenue / annualRevenue) - 1) * 100) : 0;
   const marginMidpoint = MARGIN_MIDPOINTS[intakeData.netProfitMargin || ''] || 15;
 
-  const currentClients = intakeData.currentClients || 0;
+  const currentClients = intakeData.currentClients || intakeData.clientCount || 0;
   const clientsLostMidpoint = RANGE_MIDPOINTS.clientsLost[intakeData.clientsLostAnnual || ''] || 4;
   const clientsAddedMidpoint = RANGE_MIDPOINTS.clientsAdded[intakeData.clientsAddedAnnual || ''] || 6;
   const netClientGrowth = clientsAddedMidpoint - clientsLostMidpoint;
@@ -1021,9 +1021,18 @@ export async function generateDiagnoses(
   scores: AssessmentResult,
 ): Promise<DiagnosisResult> {
   console.log(`[Diagnosis] Starting Claude diagnoses for: ${intakeData.agencyName}`);
+  console.log(`[Diagnosis] intakeData keys: currentClients=${intakeData.currentClients} (${typeof intakeData.currentClients}), clientCount=${intakeData.clientCount} (${typeof intakeData.clientCount})`);
   const startTime = Date.now();
 
   const ctx = buildAgencyContext(intakeData, enrichment, scores);
+
+  // Use clientCount as fallback if currentClients is missing
+  if (!ctx.currentClients && intakeData.clientCount) {
+    ctx.currentClients = Number(intakeData.clientCount);
+    ctx.avgClientValue = ctx.currentClients > 0 ? (ctx.lastMonthRevenue / ctx.currentClients) * 12 : 0;
+    ctx.netGrowthRate = ctx.currentClients > 0 ? Math.round((ctx.netClientGrowth / ctx.currentClients) * 100) : 0;
+    console.log(`[Diagnosis] Used clientCount fallback: ${ctx.currentClients}`);
+  }
 
   // Log gate checks
   const revelationTypes: RevelationType[] = ['founderTax', 'pipeline', 'authority', 'positioning', 'trajectory'];

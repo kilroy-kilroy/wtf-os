@@ -502,7 +502,7 @@ export default async function ResultsPage({ params }: { params: { id: string } }
             <div className="h-2 bg-slate-700 rounded-full overflow-hidden mb-4">
               <div className="h-full rounded-full" style={{ width: `${aiScore}%`, backgroundColor: aiScore >= 50 ? '#00D4FF' : '#E31B23' }} />
             </div>
-            {llm.summary.topCompetitors?.length > 0 && (
+            {llm.summary.topCompetitors?.length > 0 && aiScore > 0 && (
               <div>
                 <p className="text-xs text-slate-500 font-bold uppercase mb-2">Competitors LLMs Recommend Instead</p>
                 <div className="flex flex-wrap gap-2">
@@ -514,13 +514,21 @@ export default async function ResultsPage({ params }: { params: { id: string } }
             )}
             {aiScore === 0 && (
               <div className="mt-4 bg-slate-700/30 rounded-xl p-4">
-                <p className="text-xs text-slate-500 font-bold uppercase mb-2">Why This Matters</p>
+                <p className="text-xs text-slate-500 font-bold uppercase mb-2">What Buyers Are Asking AI Right Now</p>
+                {llm.summary.queriesUsed?.length > 0 && (
+                  <div className="mb-3 space-y-1">
+                    {llm.summary.queriesUsed.map((q: string, i: number) => (
+                      <p key={i} className="text-sm text-white bg-slate-600/30 rounded-lg px-3 py-2 italic">&ldquo;{q}&rdquo;</p>
+                    ))}
+                  </div>
+                )}
+                <p className="text-sm text-slate-400 mb-2">We asked Claude, ChatGPT, and Perplexity these exact questions. You weren&apos;t mentioned. Not once.</p>
                 <ul className="space-y-1 text-sm text-slate-400">
                   <li>&bull; AI is increasingly how people research purchases</li>
                   <li>&bull; Your competitors ARE showing up</li>
                   <li>&bull; This gap will widen, not shrink</li>
                 </ul>
-                <p className="text-sm text-[#00D4FF] mt-3 font-medium">The fix: become the answer. Your ICP is asking AI real questions about their real problems right now. You need content that answers those exact questions &mdash; not thought leadership, not brand awareness. Specific, tactical answers to specific problems. That&apos;s how you get cited.</p>
+                <p className="text-sm text-[#00D4FF] mt-3 font-medium">The fix: become the answer. Your ICP is asking questions like {llm.summary.queriesUsed?.[0] ? `"${llm.summary.queriesUsed[0]}"` : 'these'} right now. You need content that answers those exact questions &mdash; not thought leadership, not brand awareness. Specific, tactical answers to specific problems. That&apos;s how you get cited.</p>
               </div>
             )}
           </div>

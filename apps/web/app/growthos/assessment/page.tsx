@@ -17,7 +17,7 @@ function FormSection({ number, title, note, children }: {
         <span className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#00D4FF] to-[#E31B23] flex items-center justify-center text-white text-sm font-bold">
           {number}
         </span>
-        <h2 className="text-lg font-bold text-white">{title}</h2>
+        <h2 className="text-lg font-bold text-white font-anton uppercase tracking-wide">{title}</h2>
       </div>
       {note && (
         <div className="bg-[#00D4FF]/10 border-l-2 border-[#00D4FF] rounded-r-lg px-4 py-3 mb-5 text-sm text-[#00D4FF]/80">
@@ -473,10 +473,10 @@ export default function AssessmentPage() {
 
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-extrabold text-white mb-2">
+          <h1 className="text-3xl font-extrabold text-white mb-2 font-anton uppercase tracking-wide">
             Hi {firstName}! Let&apos;s diagnose your business.
           </h1>
-          <p className="text-slate-400">Fill in the details below so we can find what&apos;s holding you back</p>
+          <p className="text-slate-400 font-poppins">Fill in the details below so we can find what&apos;s holding you back</p>
         </div>
 
         <form onSubmit={handleSubmit}>
@@ -664,7 +664,7 @@ export default function AssessmentPage() {
         <div className="fixed inset-0 bg-slate-950/95 z-50 flex items-center justify-center">
           <div className="text-center max-w-sm">
             <div className="w-16 h-16 border-4 border-slate-700 border-t-[#00D4FF] rounded-full animate-spin mx-auto mb-6" />
-            <h2 className="text-2xl font-bold text-white mb-2">Analyzing Your Business</h2>
+            <h2 className="text-2xl font-bold text-white mb-2 font-anton uppercase tracking-wide">Analyzing Your Business</h2>
             <p className="text-slate-400 mb-8">Running diagnostic engine...</p>
             <div className="space-y-3 text-left">
               {loadingSteps.map((step, i) => (

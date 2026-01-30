@@ -64,7 +64,7 @@ function RevelationSection({ title, children, color = '#E31B23' }: {
     <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 mb-6">
       <div className="flex items-center gap-3 mb-5">
         <div className="w-1.5 h-8 rounded-full" style={{ backgroundColor: color }} />
-        <h2 className="text-lg font-bold text-white">{title}</h2>
+        <h2 className="text-lg font-bold text-white font-anton uppercase tracking-wide">{title}</h2>
       </div>
       {children}
     </div>
@@ -467,7 +467,7 @@ export default async function ResultsPage({ params }: { params: { id: string } }
   if (!scores || !zones) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-12 text-center">
-        <h1 className="text-2xl font-bold text-white mb-4">Assessment Processing</h1>
+        <h1 className="text-2xl font-bold text-white mb-4 font-anton uppercase tracking-wide">Assessment Processing</h1>
         <p className="text-slate-400">Your assessment is still being processed. Check back shortly.</p>
         <Link href="/growthos" className="inline-block mt-6 text-emerald-400 hover:text-emerald-300 font-medium">
           &larr; Back to GrowthOS
@@ -489,7 +489,7 @@ export default async function ResultsPage({ params }: { params: { id: string } }
 
       {/* Header */}
       <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-8 mb-6 text-center">
-        <h1 className="text-3xl font-extrabold text-white mb-2">{intake.agencyName} Business Diagnostic</h1>
+        <h1 className="text-3xl font-extrabold text-white mb-2 font-anton uppercase tracking-wide">{intake.agencyName} Business Diagnostic</h1>
         <span className="inline-block px-3 py-1 rounded-full text-xs font-bold bg-slate-700/50 text-slate-300 mb-4">
           {segmentLabel}
         </span>
@@ -510,7 +510,7 @@ export default async function ResultsPage({ params }: { params: { id: string } }
 
       {/* WTF ZONES HEATMAP — always visible, top of results */}
       <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 mb-6">
-        <h2 className="text-lg font-bold text-white mb-5">WTF Zones Heatmap</h2>
+        <h2 className="text-lg font-bold text-white mb-5 font-anton uppercase tracking-wide">WTF Zones Heatmap</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
           <ScoreBar score={zones.revenueQuality.score} label="Revenue Quality" insight={scores.narratives?.revenueQuality || zones.revenueQuality.insight} color={zones.revenueQuality.color} />
           <ScoreBar score={zones.profitability.score} label="Profitability" insight={scores.narratives?.profitability || zones.profitability.insight} color={zones.profitability.color} />
@@ -549,7 +549,7 @@ export default async function ResultsPage({ params }: { params: { id: string } }
       {/* Legacy impossibilities (backward compat) */}
       {scores.impossibilities && scores.impossibilities.length > 0 && (!realityChecks || realityChecks.length === 0) && (
         <div className="bg-red-500/5 border border-red-500/20 rounded-2xl p-6 mb-6">
-          <h2 className="text-lg font-bold text-red-400 mb-4">Reality Checks</h2>
+          <h2 className="text-lg font-bold text-red-400 mb-4 font-anton uppercase tracking-wide">Reality Checks</h2>
           <ul className="space-y-3">
             {scores.impossibilities.map((item: string, i: number) => (
               <li key={i} className="flex items-start gap-3 text-sm text-red-300">
@@ -571,7 +571,7 @@ export default async function ResultsPage({ params }: { params: { id: string } }
       {/* CTA */}
       {revelations?.cta?.headline && (
         <div className="bg-gradient-to-r from-[#E31B23]/10 to-[#00D4FF]/10 border border-slate-700/50 rounded-2xl p-8 mb-6 text-center">
-          <p className="text-lg font-bold text-white mb-4">{revelations.cta.headline}</p>
+          <p className="text-lg font-bold text-white mb-4 font-anton uppercase tracking-wide">{revelations.cta.headline}</p>
           <a
             href="#"
             className="inline-block px-8 py-4 rounded-xl bg-[#E31B23] text-white font-bold text-lg hover:shadow-lg hover:shadow-[#E31B23]/25 hover:-translate-y-0.5 transition-all"
@@ -585,7 +585,7 @@ export default async function ResultsPage({ params }: { params: { id: string } }
       {/* Growth Levers */}
       {scores.growthLevers && scores.growthLevers.length > 0 && (
         <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 mb-6">
-          <h2 className="text-lg font-bold text-white mb-5">Growth Levers</h2>
+          <h2 className="text-lg font-bold text-white mb-5 font-anton uppercase tracking-wide">Growth Levers</h2>
           <div className="space-y-4">
             {scores.growthLevers.map((lever: any, i: number) => (
               <GrowthLeverCard key={i} lever={lever} />
@@ -597,7 +597,7 @@ export default async function ResultsPage({ params }: { params: { id: string } }
       {/* Founder OS */}
       {scores.founderOS && (
         <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 mb-6">
-          <h2 className="text-lg font-bold text-white mb-5">Founder Operating System</h2>
+          <h2 className="text-lg font-bold text-white mb-5 font-anton uppercase tracking-wide">Founder Operating System</h2>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
             <div className="bg-slate-700/30 rounded-xl p-4 text-center">
               <p className="text-2xl font-bold text-white">{scores.founderOS.delegationScore.toFixed(1)}</p>
@@ -634,7 +634,7 @@ export default async function ResultsPage({ params }: { params: { id: string } }
       {/* Positioning Analysis */}
       {enrichment?.analysis?.positioningCoherence && (
         <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 mb-6">
-          <h2 className="text-lg font-bold text-white mb-4">Positioning Analysis</h2>
+          <h2 className="text-lg font-bold text-white mb-4 font-anton uppercase tracking-wide">Positioning Analysis</h2>
           <div className="flex items-center gap-4 mb-4">
             <div className="text-2xl font-bold" style={{ color: enrichment.analysis.positioningCoherence.score >= 7 ? '#22c55e' : enrichment.analysis.positioningCoherence.score >= 4 ? '#f59e0b' : '#E31B23' }}>
               {enrichment.analysis.positioningCoherence.score}/10
@@ -690,7 +690,7 @@ export default async function ResultsPage({ params }: { params: { id: string } }
       {/* Content-Market Fit */}
       {enrichment?.analysis?.contentMarketFit && (
         <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 mb-6">
-          <h2 className="text-lg font-bold text-white mb-4">Content-Market Fit</h2>
+          <h2 className="text-lg font-bold text-white mb-4 font-anton uppercase tracking-wide">Content-Market Fit</h2>
           <div className="flex items-center gap-4 mb-4">
             <div className="text-2xl font-bold" style={{ color: enrichment.analysis.contentMarketFit.score >= 7 ? '#22c55e' : enrichment.analysis.contentMarketFit.score >= 4 ? '#f59e0b' : '#E31B23' }}>
               {enrichment.analysis.contentMarketFit.score}/10
@@ -748,7 +748,7 @@ export default async function ResultsPage({ params }: { params: { id: string } }
       {/* Social Proof Alignment */}
       {enrichment?.analysis?.socialProofAlignment && (
         <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 mb-6">
-          <h2 className="text-lg font-bold text-white mb-4">Social Proof Alignment</h2>
+          <h2 className="text-lg font-bold text-white mb-4 font-anton uppercase tracking-wide">Social Proof Alignment</h2>
           <div className="flex items-center gap-4 mb-4">
             <div className="text-2xl font-bold" style={{ color: enrichment.analysis.socialProofAlignment.score >= 7 ? '#22c55e' : enrichment.analysis.socialProofAlignment.score >= 4 ? '#f59e0b' : '#E31B23' }}>
               {enrichment.analysis.socialProofAlignment.score}/10
@@ -799,7 +799,7 @@ export default async function ResultsPage({ params }: { params: { id: string } }
       {/* ICP Problem Awareness */}
       {enrichment?.analysis?.icpProblemAwareness && (
         <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 mb-6">
-          <h2 className="text-lg font-bold text-white mb-4">ICP Problem Awareness</h2>
+          <h2 className="text-lg font-bold text-white mb-4 font-anton uppercase tracking-wide">ICP Problem Awareness</h2>
           <div className="flex items-center gap-4 mb-4">
             <div className="text-2xl font-bold" style={{ color: enrichment.analysis.icpProblemAwareness.score >= 7 ? '#22c55e' : enrichment.analysis.icpProblemAwareness.score >= 4 ? '#f59e0b' : '#E31B23' }}>
               {enrichment.analysis.icpProblemAwareness.score}/10
@@ -863,7 +863,7 @@ export default async function ResultsPage({ params }: { params: { id: string } }
       {/* LLM Awareness */}
       {enrichment?.llmAwareness?.summary && (
         <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 mb-6">
-          <h2 className="text-lg font-bold text-white mb-4">AI Awareness Check</h2>
+          <h2 className="text-lg font-bold text-white mb-4 font-anton uppercase tracking-wide">AI Awareness Check</h2>
           <p className="text-sm text-slate-400 mb-4">
             We asked Claude, ChatGPT, and Perplexity who the best agencies are for your ICP.
           </p>
@@ -895,7 +895,7 @@ export default async function ResultsPage({ params }: { params: { id: string } }
       {/* Priority Actions */}
       {scores.priorityActions && scores.priorityActions.length > 0 && (
         <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 mb-6">
-          <h2 className="text-lg font-bold text-white mb-5">Priority Actions</h2>
+          <h2 className="text-lg font-bold text-white mb-5 font-anton uppercase tracking-wide">Priority Actions</h2>
           <div className="space-y-3">
             {scores.priorityActions.map((action: any, i: number) => (
               <div key={i} className="flex items-start gap-4 bg-slate-700/30 rounded-xl p-4">

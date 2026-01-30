@@ -104,7 +104,7 @@ export default function GrowthOSGatePage() {
             height={160}
             className="mx-auto mb-6 w-24 h-auto"
           />
-          <h1 className="text-2xl font-extrabold text-white mb-3">Check your email</h1>
+          <h1 className="text-2xl font-extrabold text-white mb-3 font-anton uppercase tracking-wide">Check your email</h1>
           <p className="text-slate-400 mb-2">
             We sent a confirmation link to <span className="text-white font-medium">{email}</span>
           </p>
@@ -121,7 +121,7 @@ export default function GrowthOSGatePage() {
       <div className="max-w-lg w-full">
         {/* Hero */}
         <div className="text-center mb-10">
-          <h1 className="text-4xl sm:text-5xl font-extrabold text-white mb-4 leading-tight">
+          <h1 className="text-4xl sm:text-5xl font-extrabold text-white mb-4 leading-tight font-anton uppercase tracking-wide">
             Take the WTF Assessment.
             <br />
             <span className="bg-clip-text text-transparent" style={{ backgroundImage: 'linear-gradient(to right, #00D4FF, #E31B23)' }}>

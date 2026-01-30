@@ -924,6 +924,7 @@ async function checkLLMAwareness(
 ): Promise<LLMAwarenessCheck> {
   try {
     const prompts = await buildAwarenessPrompts(intakeData);
+    console.log(`[LLM-${provider}] Queries:`, prompts);
     const responses = await Promise.allSettled(prompts.map(p => apiCall(p)));
 
     const allText = responses
@@ -932,11 +933,14 @@ async function checkLLMAwareness(
       .join('\n');
 
     if (!allText) {
+      console.log(`[LLM-${provider}] No responses received`);
       return { provider, available: false, agencyMentioned: false, founderMentioned: false, competitorsMentioned: [], error: 'No responses' };
     }
 
+    console.log(`[LLM-${provider}] Response length: ${allText.length}, first 300: ${allText.substring(0, 300)}`);
     const mentions = checkMentions(allText, intakeData);
     const competitors = extractCompetitorNames(allText, intakeData);
+    console.log(`[LLM-${provider}] Mentions: agency=${mentions.agencyMentioned}, founder=${mentions.founderMentioned}, competitors=${competitors.join(', ')}`);
 
     return {
       provider,

@@ -342,17 +342,17 @@ export function buildAgencyContext(
     queries: [], // queries are built internally
     claude: {
       found: !!llm?.claude?.agencyMentioned,
-      context: llm?.claude?.rawResponse?.substring(0, 500) || '',
+      context: llm?.claude?.rawResponse?.substring(0, 1500) || '',
       recommended: extractRecommended(llm?.claude),
     },
     chatgpt: {
       found: !!llm?.chatgpt?.agencyMentioned,
-      context: llm?.chatgpt?.rawResponse?.substring(0, 500) || '',
+      context: llm?.chatgpt?.rawResponse?.substring(0, 1500) || '',
       recommended: extractRecommended(llm?.chatgpt),
     },
     perplexity: {
       found: !!llm?.perplexity?.agencyMentioned,
-      context: llm?.perplexity?.rawResponse?.substring(0, 500) || '',
+      context: llm?.perplexity?.rawResponse?.substring(0, 1500) || '',
       recommended: extractRecommended(llm?.perplexity),
     },
     foundInCount: aiFoundCount,
@@ -473,17 +473,126 @@ CONSTRAINTS:
 - Must reference specific data points from their context
 - Must include at least one calculation the founder hasn't done themselves
 - Must end with ONE specific, concrete recommended action
-- Never use generic phrases like "many agencies", "founders often", "typically should"`;
+- Never use generic phrases like "many agencies", "founders often", "typically should"
+
+CRITICAL — DATA ACCURACY:
+- Use ONLY the exact numbers provided in the AGENCY DATA section
+- NEVER invent, estimate, or round numbers that aren't in the data
+- When the data says "Current Active Clients: 6", use 6 — not 3, not 5, not 8
+- When calculating projections, show your math step by step so the founder can verify
+- If a data point says "Not available", acknowledge the gap — do not fabricate data
+- Double-check every number in your response against the source data before outputting`;
 
 // ============================================
 // REVELATION PROMPTS
 // ============================================
 
+function buildContextSummary(ctx: AgencyContext): string {
+  return `=== EXACT DATA (use ONLY these numbers — do NOT estimate or round) ===
+AGENCY: ${ctx.agencyName} | FOUNDER: ${ctx.founderName} | SEGMENT: ${ctx.segment}
+WEBSITE: ${ctx.website}
+
+FINANCIALS:
+- Annual Revenue: ${formatCurrency(ctx.annualRevenue)}
+- Monthly Revenue: ${formatCurrency(ctx.lastMonthRevenue)}
+- Target Revenue: ${formatCurrency(ctx.targetRevenue)} (${ctx.growthTarget}% growth target)
+- Net Profit Margin: ${ctx.netProfitMargin} (midpoint: ${ctx.marginMidpoint}%)
+- Revenue per FTE: ${formatCurrency(ctx.revenuePerFTE)}
+
+TEAM:
+- Team Size: ${ctx.teamSize} ${ctx.isSoloFounder ? '(SOLO FOUNDER)' : 'people'}
+
+CLIENTS:
+- Current Active Clients: ${ctx.currentClients} (THIS IS THE EXACT NUMBER — do not change it)
+- Clients Lost Per Year: ${ctx.clientsLostAnnual} range (midpoint: ${ctx.clientsLostMidpoint})
+- Clients Added Per Year: ${ctx.clientsAddedAnnual} range (midpoint: ${ctx.clientsAddedMidpoint})
+- Net Client Growth: +${ctx.netClientGrowth} per year
+- Net Growth Rate: ${ctx.netGrowthRate}%
+- Avg Client Value: ${formatCurrency(ctx.avgClientValue)}/year
+
+PIPELINE:
+- Monthly Leads: ${ctx.monthlyLeads}
+- Close Rate: ${ctx.closeRate} (midpoint: ${ctx.closeRateMidpoint}%)
+- Active Channels: ${ctx.activeChannels}
+- Lead Sources: Referral ${ctx.leadSources.referral}%, Inbound ${ctx.leadSources.inbound}%, Content ${ctx.leadSources.content}%, Paid ${ctx.leadSources.paid}%, Outbound ${ctx.leadSources.outbound}%, Partnership ${ctx.leadSources.partnership}%
+
+FOUNDER TIME:
+- Weekly Hours: ${ctx.founderWeeklyHours}
+- Strategy Hours/Week: ${ctx.strategyHoursPerWeek}
+- Operational Hours/Week: ${ctx.operationalHoursPerWeek}
+- Delegation Scores (1-5): Delivery=${ctx.delegation.delivery}, Account Mgmt=${ctx.delegation.accountMgmt}, Marketing=${ctx.delegation.marketing}, Sales=${ctx.delegation.sales} (avg: ${ctx.delegation.average.toFixed(1)})
+- Lowest Delegation Area: ${ctx.lowestDelegationArea}
+
+SYSTEMS:
+- SOPs: Sales=${ctx.sops.sales}, Delivery=${ctx.sops.delivery}, Account Mgmt=${ctx.sops.accountMgmt}, Marketing=${ctx.sops.marketing}
+- Documented Count: ${ctx.documentedCount}/4
+
+POSITIONING:
+- Stated ICP: ${ctx.statedICP}
+- Target Industry: ${ctx.targetIndustry.join(', ') || 'Not specified'}
+- Target Company Size: ${ctx.targetCompanySize || 'Not specified'}
+- Core Offer: ${ctx.coreOffer}
+- Differentiator: ${ctx.differentiator || 'Not stated'}
+
+CONTENT:
+- Founder Posts/Week: ${ctx.founderPostsPerWeek}
+- Team Posts/Week: ${ctx.teamPostsPerWeek}
+- Total Posts/Week: ${ctx.totalPostsPerWeek}
+- Case Studies: ${ctx.hasCaseStudies}
+- Named Clients: ${ctx.hasNamedClients ? 'Yes' : 'No'}
+
+WEBSITE DATA:
+- Headline: "${ctx.websiteHeadline || 'Not available'}"
+- Services: ${ctx.websiteServices.length ? ctx.websiteServices.join(', ') : 'Not available'}
+- Case Studies: ${ctx.websiteCaseStudies.length ? ctx.websiteCaseStudies.map(cs => `${cs.client} (${cs.industry})`).join('; ') : 'None detected'}
+- Testimonials: ${ctx.websiteTestimonials.length ? ctx.websiteTestimonials.map(t => `"${t.quote.substring(0, 80)}..." — ${t.attribution}`).join('; ') : 'None detected'}
+- Client Logos: ${ctx.websiteClientLogos.length ? ctx.websiteClientLogos.join(', ') : 'None detected'}
+
+LINKEDIN DATA:
+- Founder Headline: "${ctx.founderHeadline || 'Not available'}"
+- Founder About: "${ctx.founderAbout ? ctx.founderAbout.substring(0, 300) : 'Not available'}"
+- Founder Followers: ${ctx.founderFollowers || 'Unknown'}
+- Company Description: "${ctx.companyDescription ? ctx.companyDescription.substring(0, 300) : 'Not available'}"
+- Company Followers: ${ctx.companyFollowers || 'Unknown'}
+${ctx.founderRecentPosts.length ? '\nFOUNDER RECENT POSTS:\n' + ctx.founderRecentPosts.map((p, i) => `${i + 1}. "${p.content}" (${p.engagement} engagement)`).join('\n') : '\nFOUNDER RECENT POSTS: None available'}
+
+AI DISCOVERABILITY:
+- Claude: ${ctx.aiDiscoverability.claude.found ? 'FOUND' : 'Not found'}${ctx.aiDiscoverability.claude.recommended.length ? ` (competitors recommended: ${ctx.aiDiscoverability.claude.recommended.join(', ')})` : ''}
+- ChatGPT: ${ctx.aiDiscoverability.chatgpt.found ? 'FOUND' : 'Not found'}${ctx.aiDiscoverability.chatgpt.recommended.length ? ` (competitors recommended: ${ctx.aiDiscoverability.chatgpt.recommended.join(', ')})` : ''}
+- Perplexity: ${ctx.aiDiscoverability.perplexity.found ? 'FOUND' : 'Not found'}${ctx.aiDiscoverability.perplexity.recommended.length ? ` (competitors recommended: ${ctx.aiDiscoverability.perplexity.recommended.join(', ')})` : ''}
+- Found In: ${ctx.aiDiscoverability.foundInCount} of 3 LLMs
+
+ICP PROBLEMS (from market research):
+${ctx.icpProblems.length ? ctx.icpProblems.map(p => `- ${p}`).join('\n') : 'No data available'}
+
+COMPETITORS (from market research):
+${ctx.competitors.length ? ctx.competitors.map(c => `- ${c.name}: ${c.positioning?.substring(0, 100)}`).join('\n') : 'No data available'}
+
+SCORES (from WTF Zones):
+- Revenue Quality: ${ctx.scores.revenueQuality}/10
+- Profitability: ${ctx.scores.profitability}/10
+- Growth vs Churn: ${ctx.scores.growthVsChurn}/10
+- Lead Engine: ${ctx.scores.leadEngine}/10
+- Founder Load: ${ctx.scores.founderLoad}/10
+- Systems Readiness: ${ctx.scores.systemsReadiness}/10
+- Content & Positioning: ${ctx.scores.contentPositioning}/10
+- Team Visibility: ${ctx.scores.teamVisibility}/10
+- Overall: ${ctx.scores.overall}/10
+
+BENCHMARKS FOR ${ctx.segment.toUpperCase()} SEGMENT:
+- Revenue/FTE: Poor <${formatCurrency(ctx.benchmarks.revenuePerFTE.poor)}, Good >${formatCurrency(ctx.benchmarks.revenuePerFTE.good)}
+- Founder Hours: Typical ${ctx.benchmarks.founderHours.typical}/wk, Concerning >${ctx.benchmarks.founderHours.concerning}/wk
+- Net Growth Rate: Poor <${ctx.benchmarks.netGrowthRate.poor}%, Good >${ctx.benchmarks.netGrowthRate.good}%
+- Delegation Avg: Poor <${ctx.benchmarks.delegationAvg.poor}, Good >${ctx.benchmarks.delegationAvg.good}
+=== END EXACT DATA ===`;
+}
+
+
 function buildFounderTaxPrompt(ctx: AgencyContext): string {
   return `## REVELATION 1: THE FOUNDER TAX
 
-AGENCY CONTEXT:
-${JSON.stringify(ctx, null, 2)}
+AGENCY DATA:
+${buildContextSummary(ctx)}
 
 YOUR TASK:
 Diagnose the true cost of this founder's operational involvement.
@@ -518,8 +627,8 @@ WRITE THE DIAGNOSIS:
 function buildPipelinePrompt(ctx: AgencyContext): string {
   return `## REVELATION 2: THE PIPELINE PROBABILITY
 
-AGENCY CONTEXT:
-${JSON.stringify(ctx, null, 2)}
+AGENCY DATA:
+${buildContextSummary(ctx)}
 
 YOUR TASK:
 Diagnose the mathematical fragility of their current pipeline.
@@ -551,8 +660,8 @@ WRITE THE DIAGNOSIS:
 function buildAuthorityPrompt(ctx: AgencyContext): string {
   return `## REVELATION 3: THE AUTHORITY GAP
 
-AGENCY CONTEXT:
-${JSON.stringify(ctx, null, 2)}
+AGENCY DATA:
+${buildContextSummary(ctx)}
 
 YOUR TASK:
 Diagnose where this founder is invisible to buyers who are actively looking.
@@ -566,11 +675,18 @@ This Revelation connects three things:
 3. AI Discoverability: When their ICP asks AI for help, are they mentioned?
 
 AI DISCOVERABILITY DATA:
-- Claude: ${ctx.aiDiscoverability.claude.found ? 'Found' : 'Not found'} — recommended instead: ${ctx.aiDiscoverability.claude.recommended.join(', ') || 'N/A'}
-- ChatGPT: ${ctx.aiDiscoverability.chatgpt.found ? 'Found' : 'Not found'} — recommended instead: ${ctx.aiDiscoverability.chatgpt.recommended.join(', ') || 'N/A'}
-- Perplexity: ${ctx.aiDiscoverability.perplexity.found ? 'Found' : 'Not found'} — recommended instead: ${ctx.aiDiscoverability.perplexity.recommended.join(', ') || 'N/A'}
+- Claude: ${ctx.aiDiscoverability.claude.found ? 'FOUND' : 'Not found'} — recommended instead: ${ctx.aiDiscoverability.claude.recommended.join(', ') || 'N/A'}
+- ChatGPT: ${ctx.aiDiscoverability.chatgpt.found ? 'FOUND' : 'Not found'} — recommended instead: ${ctx.aiDiscoverability.chatgpt.recommended.join(', ') || 'N/A'}
+- Perplexity: ${ctx.aiDiscoverability.perplexity.found ? 'FOUND' : 'Not found'} — recommended instead: ${ctx.aiDiscoverability.perplexity.recommended.join(', ') || 'N/A'}
 
 Found in ${ctx.aiDiscoverability.foundInCount} of 3 LLMs.
+
+IMPORTANT: The AI discoverability data above reflects automated detection. If the data says "Not found" but raw responses below mention the founder or agency, the detection may have missed it. Use the RAW responses to make your own judgment about visibility.
+
+RAW AI RESPONSE EXCERPTS:
+Claude: "${ctx.aiDiscoverability.claude.context || 'No response captured'}"
+ChatGPT: "${ctx.aiDiscoverability.chatgpt.context || 'No response captured'}"
+Perplexity: "${ctx.aiDiscoverability.perplexity.context || 'No response captured'}"
 
 WHAT TO NOTICE:
 - If found in all 3: that's rare—acknowledge it
@@ -591,8 +707,8 @@ WRITE THE DIAGNOSIS:
 function buildPositioningPrompt(ctx: AgencyContext): string {
   return `## REVELATION 4: THE POSITIONING COLLISION
 
-AGENCY CONTEXT:
-${JSON.stringify(ctx, null, 2)}
+AGENCY DATA:
+${buildContextSummary(ctx)}
 
 YOUR TASK:
 Diagnose the gap between what this founder claims and what their proof demonstrates.
@@ -639,8 +755,8 @@ WRITE THE DIAGNOSIS:
 function buildTrajectoryPrompt(ctx: AgencyContext): string {
   return `## REVELATION 5: THE TRAJECTORY FORK
 
-AGENCY CONTEXT:
-${JSON.stringify(ctx, null, 2)}
+AGENCY DATA:
+${buildContextSummary(ctx)}
 
 YOUR TASK:
 Show this founder two concrete futures—their current trajectory vs. an intervention trajectory—with the valuation gap between them.

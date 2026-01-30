@@ -504,77 +504,92 @@ async function exaCompetitorSearch(intakeData: IntakeData): Promise<ExaSearchRes
 // LLM AWARENESS CHECKS (expanded - 3 queries per provider)
 // ============================================
 
-function buildAwarenessPrompts(intakeData: IntakeData): string[] {
-  // Build queries that match what the ASSESSMENT USER's ICP would actually search for.
-  // The user is the one being assessed — we want to see if THEY show up when
-  // their target clients search for help.
+async function buildAwarenessPrompts(intakeData: IntakeData): Promise<string[]> {
+  // Use Claude to generate the queries a real buyer would type.
+  // The user filled out what they do (coreOffer), who they serve (statedICP/targetMarket),
+  // and what industry/size. Claude reads all of this and produces 3 natural queries
+  // that the user's ICP would actually search for.
 
-  const coreOfferLines = (intakeData.coreOffer || '').split('\n').filter(l => l.trim());
-  const revenue = intakeData.lastYearRevenue || ((intakeData.lastMonthRevenue || 0) * 12) || 0;
-
-  // What the user does (their core offer determines the search context)
-  const offerKeywords = coreOfferLines.join(' ').toLowerCase();
-  const agencyName = intakeData.agencyName || '';
-  const founderName = intakeData.founderName || '';
-
-  // Parse what kind of business they serve
-  const icpDesc = intakeData.statedICP || intakeData.targetMarket || '';
-  const targetSize = intakeData.targetCompanySize || '';
-
-  // Determine what the user actually does — are they a coach, consultant, agency, etc.?
-  const isCoachOrConsultant = /coach|consult|adviso|mentor|train/i.test(offerKeywords + ' ' + agencyName);
-  const isAgencyServing = /agenc|shop|firm|studio/i.test(icpDesc);
-
-  // Build a revenue range label for the ICP
-  let icpRevLabel = 'under $10mm';
-  if (targetSize.includes('1-10') || targetSize.includes('1 to 10')) icpRevLabel = '$1mm-$5mm';
-  else if (targetSize.includes('11-50') || targetSize.includes('11 to 50')) icpRevLabel = '$2mm-$10mm';
-  else if (targetSize.includes('51-200')) icpRevLabel = '$5mm-$20mm';
-  else if (targetSize.includes('201-')) icpRevLabel = '$10mm-$50mm';
-
-  // Figure out the service category
-  let serviceCategory = 'growth';
-  if (/sales|salesos|close|pipeline|revenue/i.test(offerKeywords)) serviceCategory = 'sales';
-  else if (/position|brand|demand|market/i.test(offerKeywords)) serviceCategory = 'positioning and marketing';
-  else if (/content|social|visib|amplif/i.test(offerKeywords)) serviceCategory = 'content and visibility';
-  else if (/coach|mentor|lead|scale/i.test(offerKeywords)) serviceCategory = 'growth coaching';
-  else if (/team|hire|recruit|talent/i.test(offerKeywords)) serviceCategory = 'team building';
-  else if (/operation|system|process|sop/i.test(offerKeywords)) serviceCategory = 'operations';
-
-  // Determine what the ICP is (agency owner, marketing director, etc.)
-  let icpType = 'business';
-  if (isAgencyServing) icpType = 'agency';
-  else if (/saas|software|tech/i.test(icpDesc)) icpType = 'SaaS company';
-  else if (/ecomm|retail|shop/i.test(icpDesc)) icpType = 'ecommerce brand';
-  else if (/b2b|professional/i.test(icpDesc)) icpType = 'B2B company';
-
-  // Build 3 distinct queries that match how the user's ICP would actually search
-  const prompts: string[] = [];
-
-  if (isCoachOrConsultant && isAgencyServing) {
-    // User coaches/consults agencies — ICP is agency owners looking for coaches
-    prompts.push(
-      `Best ${icpType} coaches for ${icpType === 'agency' ? 'agencies' : `${icpType}s`} ${icpRevLabel} in revenue. I want specific names of people who specialize in helping ${icpType === 'agency' ? 'agency' : icpType} owners with ${serviceCategory}. Not generic business coaches.`,
-      `I run a ${icpRevLabel} ${icpType} and need help with ${serviceCategory}. Who are the best coaches or consultants that actually work with ${icpType === 'agency' ? 'agencies' : `${icpType}s`} my size? Give me names.`,
-      `Top ${serviceCategory} consultants for ${icpType === 'agency' ? 'marketing agencies' : `${icpType}s`} doing ${icpRevLabel}. Who has a real track record helping owners at this stage? I want someone who knows the ${icpType} world specifically.`,
-    );
-  } else if (isAgencyServing) {
-    // User is an agency that serves other agencies
-    prompts.push(
-      `Best ${serviceCategory} agencies for ${icpType === 'agency' ? 'agencies' : `${icpType}s`} ${icpRevLabel}. Looking for someone who specializes in this space. Names please.`,
-      `My ${icpType} needs help with ${serviceCategory}. We're doing ${icpRevLabel} in revenue. Who are the go-to firms or people for this?`,
-      `Who are the top ${serviceCategory} providers that work with ${icpType === 'agency' ? 'agencies' : `${icpType}s`} in the ${icpRevLabel} range? I want specific recommendations.`,
-    );
-  } else {
-    // General case — user serves non-agency businesses
-    prompts.push(
-      `Best ${serviceCategory} consultants for ${icpType}s doing ${icpRevLabel} in revenue. I need someone who specializes in ${icpType === 'business' ? 'companies' : `${icpType}s`} at my stage. Give me specific names.`,
-      `I run a ${icpRevLabel} ${icpType} and I need to improve our ${serviceCategory}. Who are the best people or firms to help with this? Looking for specialists, not generalists.`,
-      `Top ${serviceCategory} coaches or agencies for ${icpType}s in the ${icpRevLabel} range. Who has actually helped companies like mine? Specific names and recommendations please.`,
-    );
+  const apiKey = process.env.CLAUDE_API_KEY || process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) {
+    // Fallback: build simple queries from the data directly
+    return buildFallbackPrompts(intakeData);
   }
 
-  return prompts;
+  const context = `
+The person taking this assessment runs a business:
+- Business name: ${intakeData.agencyName || 'Unknown'}
+- What they do (core offer): ${intakeData.coreOffer || 'Unknown'}
+- Who they serve (ICP): ${intakeData.statedICP || intakeData.targetMarket || 'Unknown'}
+- Target industry: ${intakeData.targetIndustry || 'Not specified'}
+- Target company size: ${intakeData.targetCompanySize || 'Not specified'}
+- Their differentiator: ${intakeData.differentiator || 'Not stated'}
+`;
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'claude-3-5-haiku-20241022',
+        max_tokens: 500,
+        messages: [{
+          role: 'user',
+          content: `${context}
+
+Generate exactly 3 search queries that this person's IDEAL CUSTOMER would type into an AI assistant (ChatGPT, Claude, Perplexity) when looking for help.
+
+The queries should sound like a real person with a real problem — casual, specific, sometimes messy. Think about how someone actually talks when they need help:
+- "Good SEO agency for dental offices who need better local visibility"
+- "I need an amazon agency that can really scale my car parts biz"
+- "What agencies can help my business? I am a high-end cabinet maker that isn't getting good inquiries"
+- "Great web developer for SMB in Augusta"
+- "Best agency coaches for agencies under $10mm"
+
+The queries should:
+1. Describe what KIND of business/person they're looking for (agency, coach, consultant, developer, etc.)
+2. Mention the ICP's industry or business type naturally
+3. Reference the actual problem or need
+4. Sound like a real person typed them, not a template
+5. Each query should take a different angle (one direct, one problem-focused, one casual)
+
+Return ONLY the 3 queries, one per line. No numbering, no quotes, no explanation.`
+        }],
+      }),
+      signal: AbortSignal.timeout(15000),
+    });
+
+    if (!response.ok) return buildFallbackPrompts(intakeData);
+
+    const data = await response.json();
+    const text = data.content?.filter((c: any) => c.type === 'text').map((c: any) => c.text).join('\n') || '';
+
+    const queries = text.split('\n').map((l: string) => l.trim()).filter((l: string) => l.length > 10 && l.length < 300);
+    if (queries.length >= 2) return queries.slice(0, 3);
+
+    return buildFallbackPrompts(intakeData);
+  } catch {
+    return buildFallbackPrompts(intakeData);
+  }
+}
+
+function buildFallbackPrompts(intakeData: IntakeData): string[] {
+  // Simple fallback using the actual fields directly.
+  // Pattern: "good {what they do} for {who they serve}"
+  const offer = intakeData.coreOffer || 'marketing help';
+  const icp = intakeData.statedICP || intakeData.targetMarket || 'small businesses';
+  // Take just the first line of coreOffer for a cleaner query
+  const offerShort = offer.split('\n')[0].trim().substring(0, 80);
+
+  return [
+    `Best ${offerShort} for ${icp}. Who are the go-to people? Give me names.`,
+    `I need help with ${offerShort}. My business is ${icp}. Who should I talk to?`,
+    `Good ${offerShort} providers that specialize in ${icp}. Recommendations?`,
+  ];
 }
 
 function checkMentions(text: string, intakeData: IntakeData) {
@@ -648,7 +663,7 @@ async function checkLLMAwareness(
   intakeData: IntakeData
 ): Promise<LLMAwarenessCheck> {
   try {
-    const prompts = buildAwarenessPrompts(intakeData);
+    const prompts = await buildAwarenessPrompts(intakeData);
     const responses = await Promise.allSettled(prompts.map(p => apiCall(p)));
 
     const allText = responses

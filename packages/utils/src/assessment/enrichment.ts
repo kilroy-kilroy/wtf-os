@@ -484,7 +484,7 @@ function buildAwarenessPrompts(intakeData: IntakeData): string[] {
   // then generate the questions those ICP buyers would realistically type into AI.
 
   const coreOfferLines = (intakeData.coreOffer || '').split('\n').filter(l => l.trim());
-  const revenue = intakeData.lastYearRevenue || (intakeData.lastMonthRevenue * 12) || 0;
+  const revenue = intakeData.lastYearRevenue || ((intakeData.lastMonthRevenue || 0) * 12) || 0;
   const revLabel = revenue >= 1000000 ? `$${(revenue / 1000000).toFixed(0)}mm` : `$${Math.round(revenue / 1000)}K`;
 
   // Figure out what kind of business the ICP is

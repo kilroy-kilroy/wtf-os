@@ -20,9 +20,9 @@ export default function GrowthOSLayout({
             <Image
               src="/logos/growthostransparentsq.png"
               alt="GrowthOS"
-              width={140}
-              height={40}
-              className="h-8 w-auto"
+              width={200}
+              height={56}
+              className="h-12 w-auto"
             />
           </Link>
         </div>

@@ -179,6 +179,44 @@ function RadioField({ label, name, required, options, value, onChange }: {
   );
 }
 
+function CheckboxField({ label, name, required, options, values, onToggle, helpText }: {
+  label: string; name: string; required?: boolean;
+  options: Array<{ value: string; label: string }>;
+  values: string[]; onToggle: (name: string, value: string) => void;
+  helpText?: string;
+}) {
+  return (
+    <div className="mb-4">
+      <label className="block text-sm font-semibold text-white mb-2">
+        {label} {required && <span className="text-red-400">*</span>}
+      </label>
+      {helpText && <p className="text-xs text-slate-500 mb-2">{helpText}</p>}
+      <div className="space-y-2">
+        {options.map((opt) => (
+          <label
+            key={opt.value}
+            className={`flex items-center px-4 py-3 rounded-xl border-2 cursor-pointer transition-all text-sm ${
+              values.includes(opt.value)
+                ? 'border-[#00D4FF] bg-[#00D4FF]/10 text-white'
+                : 'border-slate-600 bg-slate-700/50 text-slate-400 hover:border-slate-500'
+            }`}
+          >
+            <input
+              type="checkbox"
+              name={name}
+              value={opt.value}
+              checked={values.includes(opt.value)}
+              onChange={() => onToggle(name, opt.value)}
+              className="w-4 h-4 mr-3 accent-[#00D4FF] rounded"
+            />
+            <span>{opt.label}</span>
+          </label>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function RatingField({ label, name, helpText, value, onChange }: {
   label: string; name: string; helpText?: string;
   value: string; onChange: (name: string, value: string) => void;
@@ -191,7 +229,7 @@ function RatingField({ label, name, helpText, value, onChange }: {
     { value: '5', label: '5 — Fully delegated' },
   ];
   return (
-    <div className="mb-4">
+    <div className="mb-4 bg-slate-800/50 border border-slate-700/50 rounded-xl p-4">
       <label className="block text-sm font-semibold text-white mb-2">
         {label} <span className="text-red-400">*</span>
       </label>
@@ -205,15 +243,15 @@ function RatingField({ label, name, helpText, value, onChange }: {
             title={r.label}
             className={`flex-1 py-3 rounded-xl border-2 text-sm font-bold transition-all ${
               value === r.value
-                ? 'border-[#00D4FF] bg-[#00D4FF]/10 text-[#00D4FF]'
-                : 'border-slate-600 bg-slate-700/50 text-slate-400 hover:border-slate-500'
+                ? 'border-[#00D4FF] bg-[#00D4FF]/20 text-[#00D4FF] shadow-[0_0_8px_rgba(0,212,255,0.3)]'
+                : 'border-slate-500 bg-slate-700/80 text-slate-300 hover:border-slate-400 hover:bg-slate-700'
             }`}
           >
             {r.value}
           </button>
         ))}
       </div>
-      <div className="flex justify-between mt-1 text-[10px] text-slate-600">
+      <div className="flex justify-between mt-1.5 text-[10px] text-slate-500">
         <span>I do everything</span>
         <span>Fully delegated</span>
       </div>
@@ -271,6 +309,17 @@ export default function AssessmentPage() {
 
   const handleChange = useCallback((name: string, value: string) => {
     setFormData(prev => ({ ...prev, [name]: value }));
+  }, []);
+
+  // For multiselect checkbox fields (stored as comma-separated string)
+  const handleToggle = useCallback((name: string, value: string) => {
+    setFormData(prev => {
+      const current = prev[name] ? prev[name].split(',').filter(Boolean) : [];
+      const updated = current.includes(value)
+        ? current.filter(v => v !== value)
+        : [...current, value];
+      return { ...prev, [name]: updated.join(',') };
+    });
   }, []);
 
   // Churn calculation for calibration display
@@ -560,15 +609,15 @@ export default function AssessmentPage() {
 
           {/* Section 7: Positioning & ICP */}
           <FormSection number={7} title="Positioning & ICP">
-            <RadioField label="Target Client Company Size" name="targetCompanySize" required options={[
+            <CheckboxField label="Target Client Company Size" name="targetCompanySize" required helpText="Select all that apply" options={[
               { value: '1-10', label: '1-10 employees' },
               { value: '11-50', label: '11-50 employees' },
               { value: '51-200', label: '51-200 employees' },
               { value: '201-1000', label: '201-1,000 employees' },
               { value: '1000+', label: '1,000+ employees' },
-            ]} value={formData.targetCompanySize || ''} onChange={handleChange} />
-            <RadioField label="Target Client Industry" name="targetIndustry" required options={INDUSTRY_OPTIONS} value={formData.targetIndustry || ''} onChange={handleChange} />
-            {formData.targetIndustry === 'Other' && (
+            ]} values={(formData.targetCompanySize || '').split(',').filter(Boolean)} onToggle={handleToggle} />
+            <CheckboxField label="Target Client Industry" name="targetIndustry" required helpText="Select all that apply" options={INDUSTRY_OPTIONS} values={(formData.targetIndustry || '').split(',').filter(Boolean)} onToggle={handleToggle} />
+            {(formData.targetIndustry || '').includes('Other') && (
               <TextField label="Specify Industry" name="targetIndustryOther" required placeholder="e.g., Crypto / Web3" value={formData.targetIndustryOther || ''} onChange={handleChange} />
             )}
             <TextAreaField label="Who is your ideal client?" name="statedICP" required placeholder="E.g., B2B SaaS companies with $5M-$20M ARR who need SEO and content" helpText="Be specific — 'everyone' is wrong." maxLength={500} value={formData.statedICP || ''} onChange={handleChange} />

@@ -29,9 +29,9 @@ export function SalesOSHeader({
         <Image
           src="/logos/salesosdemandossqtransparent.png"
           alt="SalesOS"
-          width={120}
-          height={120}
-          className="mb-2"
+          width={180}
+          height={180}
+          className="mb-2 h-12 w-auto"
         />
         <div className="font-anton text-sm uppercase tracking-wide mt-1">
           <span className="text-[#FFDE59]">{productName}</span>

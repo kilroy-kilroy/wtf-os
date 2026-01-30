@@ -355,8 +355,21 @@ async function bdScrapeLinkedInPosts(linkedinUrl: string | undefined): Promise<A
     if (!results.length) return null;
     console.log(`[BrightData] LinkedIn posts: got ${results.length} results`);
 
-    // Filter to only posts by the profile owner or their feed
-    const posts = results.slice(0, 20).map((item: any) => ({
+    // Filter to only posts authored by the profile owner (BD returns full feed including others' posts)
+    const profileSlug = url.split('/in/')[1]?.split('/')[0]?.split('?')[0]?.toLowerCase()
+      || url.split('/company/')[1]?.split('/')[0]?.split('?')[0]?.toLowerCase()
+      || '';
+    const ownPosts = profileSlug
+      ? results.filter((item: any) => {
+          const userId = (item.user_id || '').toLowerCase();
+          // Match by user_id slug, or if no user_id, include it (better to include than miss)
+          return !userId || userId === profileSlug;
+        })
+      : results;
+    const source = ownPosts.length > 0 ? ownPosts : results; // fallback to all if filter too aggressive
+    console.log(`[BrightData] LinkedIn posts: ${results.length} total, ${ownPosts.length} from owner (slug: ${profileSlug})`);
+
+    const posts = source.slice(0, 20).map((item: any) => ({
       text: (item.post_text || item.text || item.content || item.description || '').substring(0, 2000),
       date: item.date_posted || item.post_date || item.date || item.posted_at || '',
       likes: item.num_likes || item.likes || item.reactions || 0,
@@ -1367,20 +1380,20 @@ export async function runEnrichmentPipeline(intakeData: IntakeData): Promise<Enr
   const dataJobs: Promise<void>[] = [
     apifyScrapeWebsite(intakeData.website).then(d => { result.apify.website = d; }).catch(e => { result.meta.errors.push({ source: 'apify.website', error: e.message }); }),
     bdScrapeLinkedInProfile(intakeData.founderLinkedinUrl)
-      .then(d => { if (d) result.apify.founderLinkedin = d; })
+      .then(d => { if (d) result.apify.founderLinkedin = d; else throw new Error('BD returned null'); })
       .catch(() => apifyScrapeLinkedInProfile(intakeData.founderLinkedinUrl).then(d => { result.apify.founderLinkedin = d; }))
-      .catch(e => { result.meta.errors.push({ source: 'bd.founderProfile', error: e.message }); }),
+      .catch(e => { result.meta.errors.push({ source: 'founderProfile', error: e.message }); }),
     // BD posts: use sync /scrape endpoint with "discover by profile url" mode, Apify fallback
     bdScrapeLinkedInPosts(intakeData.founderLinkedinUrl)
-      .then(d => { if (d) result.apify.founderPosts = d; })
+      .then(d => { if (d) result.apify.founderPosts = d; else throw new Error('BD returned null'); })
       .catch(() => apifyScrapeLinkedInPosts(intakeData.founderLinkedinUrl).then(d => { result.apify.founderPosts = d; }))
-      .catch(e => { result.meta.errors.push({ source: 'bd.founderPosts', error: e.message }); }),
+      .catch(e => { result.meta.errors.push({ source: 'founderPosts', error: e.message }); }),
     bdScrapeLinkedInCompany(intakeData.companyLinkedinUrl)
-      .then(d => { if (d) result.apify.companyLinkedin = d; })
+      .then(d => { if (d) result.apify.companyLinkedin = d; else throw new Error('BD returned null'); })
       .catch(() => apifyScrapeLinkedInProfile(intakeData.companyLinkedinUrl).then(d => { result.apify.companyLinkedin = d; }))
-      .catch(e => { result.meta.errors.push({ source: 'bd.companyProfile', error: e.message }); }),
+      .catch(e => { result.meta.errors.push({ source: 'companyProfile', error: e.message }); }),
     bdScrapeLinkedInPosts(intakeData.companyLinkedinUrl)
-      .then(d => { if (d) result.apify.companyPosts = d; })
+      .then(d => { if (d) result.apify.companyPosts = d; else throw new Error('BD returned null'); })
       .catch(() => apifyScrapeLinkedInPosts(intakeData.companyLinkedinUrl).then(d => { result.apify.companyPosts = d; }))
       .catch(e => { result.meta.errors.push({ source: 'bd.companyPosts', error: e.message }); }),
     exaIcpProblemSearches(intakeData).then(d => { result.exa.icpProblems = d; }).catch(e => { result.meta.errors.push({ source: 'exa.icpProblems', error: e.message }); }),

@@ -167,7 +167,7 @@ export interface AnalysisResult {
 // APIFY SCRAPERS
 // ============================================
 
-const APIFY_TOKEN = process.env.APIFY_API_TOKEN;
+const APIFY_TOKEN = process.env.APIFY_API_KEY || process.env.APIFY_API_TOKEN;
 const APIFY_BASE = 'https://api.apify.com/v2';
 
 async function runApifyActor(actorId: string, input: any, waitMs: number = 15000): Promise<any[]> {
@@ -484,10 +484,14 @@ function buildAwarenessPrompts(intakeData: IntakeData): string[] {
     ? intakeData.targetIndustryOther || intakeData.targetMarket
     : intakeData.targetIndustry || intakeData.targetMarket;
 
+  // These prompts simulate how a real buyer would ask AI for help —
+  // problem-first, not "who is the best agency" (nobody searches that way).
+  const coreOfferShort = (intakeData.coreOffer || '').split('\n')[0].substring(0, 80);
+
   return [
-    `Who are the best agencies helping ${intakeData.targetMarket} with ${intakeData.coreOffer}? List the top agencies with their names and why they stand out.`,
-    `What are the top marketing agencies specializing in ${industry}? Name specific companies and their unique strengths.`,
-    `If I'm a ${intakeData.targetCompanySize || ''} ${industry} company looking for help with ${intakeData.coreOffer}, which agencies should I consider? List specific names.`,
+    `I run a ${industry} company and I'm struggling to grow. I need help with ${coreOfferShort}. Who should I talk to? Give me specific people or companies I should reach out to.`,
+    `What consultants or agencies help ${industry} businesses with ${coreOfferShort}? I want someone who actually specializes in this, not a generalist. Name names.`,
+    `I'm a ${intakeData.targetCompanySize || 'small'} employee ${industry} company. We're stuck at our current revenue and need outside help with growth strategy and ${coreOfferShort}. Who are the go-to experts for this?`,
   ];
 }
 
@@ -569,7 +573,7 @@ async function checkLLMAwareness(
 }
 
 async function callClaude(prompt: string): Promise<string> {
-  const apiKey = process.env.CLAUDE_API_KEY;
+  const apiKey = process.env.CLAUDE_API_KEY || process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error('Not configured');
 
   const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -686,7 +690,7 @@ async function runClaudeAnalysis(
   exaData: EnrichmentResult['exa'],
   llmData: LLMAwarenessResult | null,
 ): Promise<AnalysisResult | null> {
-  const apiKey = process.env.CLAUDE_API_KEY;
+  const apiKey = process.env.CLAUDE_API_KEY || process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return null;
 
   const websiteSummary = apifyData.website ? JSON.stringify({

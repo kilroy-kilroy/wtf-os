@@ -321,7 +321,7 @@ export default async function ResultsPage({ params }: { params: { id: string } }
             {aiScore === 0 ? (
               <div className="mb-4">
                 <p className="text-sm text-[#E31B23] font-medium mb-2">You don&apos;t exist to AI.</p>
-                <p className="text-sm text-slate-400">We asked Claude, ChatGPT, and Perplexity: &quot;Who are the best agencies for {intake.targetMarket}?&quot; You weren&apos;t mentioned. Not once.</p>
+                <p className="text-sm text-slate-400">We asked Claude, ChatGPT, and Perplexity questions your ICP would actually ask — like &quot;I run a {intake.targetIndustry || 'company'} and need help with growth. Who should I talk to?&quot; You weren&apos;t mentioned. Not once.</p>
               </div>
             ) : aiScore < 50 ? (
               <p className="text-sm text-slate-400 mb-4">
@@ -377,7 +377,7 @@ export default async function ResultsPage({ params }: { params: { id: string } }
                   <li>• Your competitors ARE showing up</li>
                   <li>• This gap will widen, not shrink</li>
                 </ul>
-                <p className="text-sm text-[#00D4FF] mt-3 font-medium">The fix: become the answer. Create content that directly answers the questions your ICP is asking AI.</p>
+                <p className="text-sm text-[#00D4FF] mt-3 font-medium">The fix: become the answer. Create content that directly answers the questions your ICP is asking AI. For example, if your ICP asks &quot;How do I fix my {intake.targetIndustry === 'Other' ? 'company' : intake.targetIndustry?.toLowerCase() || 'company'} pipeline?&quot; — you need a post, article, or video that answers that question so thoroughly that AI cites you.</p>
               </div>
             )}
           </div>
@@ -471,7 +471,7 @@ export default async function ResultsPage({ params }: { params: { id: string } }
           <h3 className="text-sm font-bold text-[#E31B23] mb-2">YOU&apos;RE INVISIBLE TO AI</h3>
           <p className="text-sm text-slate-300 mb-2">When your ICP asks ChatGPT or Claude for recommendations, you don&apos;t exist.</p>
           <p className="text-sm text-slate-400">This isn&apos;t a future problem. It&apos;s a now problem. The agencies showing up are getting mindshare you&apos;re not.</p>
-          <p className="text-sm text-[#00D4FF] mt-3 font-medium">Your content strategy needs to change. You need to become the answer.</p>
+          <p className="text-sm text-[#00D4FF] mt-3 font-medium">Your content strategy needs to change. You need to become the answer. Write the definitive post on the exact problem your ICP Googles at 2am — make it so good that AI has no choice but to reference you.</p>
         </div>
       )}
 

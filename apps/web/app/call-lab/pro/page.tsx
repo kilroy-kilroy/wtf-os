@@ -635,10 +635,10 @@ export default function CallLabProPage() {
       <header className="border-b border-[#333] px-4 py-6">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <Image
-            src="/logos/salesosdemandossqtransparent.png"
+            src="/logos/trios-logo-sq-transparent.png"
             width={200}
             height={200}
-            alt="DemandOS"
+            alt="TriOS"
             className="h-16 w-auto"
             priority
           />

@@ -300,8 +300,8 @@ export default function ProfileSetupPage() {
         {/* Header */}
         <div className="text-center mb-10">
           <Image
-            src="/logos/salesosdemandossqtransparent.png"
-            alt="SalesOS + DemandOS"
+            src="/logos/trios-logo-sq-transparent.png"
+            alt="TriOS"
             width={140}
             height={140}
             className="mx-auto mb-4"

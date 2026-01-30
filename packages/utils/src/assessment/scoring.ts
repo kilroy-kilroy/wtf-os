@@ -521,9 +521,10 @@ function calculateOverallScore(zones: WTFZones): number {
 // HELPERS
 // ============================================
 
-function extractRating(ratingString: string): number {
-  if (!ratingString) return 3;
-  const match = ratingString.match(/^(\d)/);
+function extractRating(ratingInput: string | number): number {
+  if (ratingInput === undefined || ratingInput === null || ratingInput === '') return 3;
+  if (typeof ratingInput === 'number') return Math.max(1, Math.min(5, Math.round(ratingInput)));
+  const match = ratingInput.match(/^(\d)/);
   return match ? parseInt(match[1]) : 3;
 }
 

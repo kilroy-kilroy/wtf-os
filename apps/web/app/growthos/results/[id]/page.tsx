@@ -62,7 +62,7 @@ function GapsList({ gaps }: { gaps: string[] }) {
   return (
     <div className="mb-3">
       <p className="text-xs text-slate-500 font-bold uppercase mb-1">Gaps</p>
-      <ul className="space-y-1">{gaps.map((g: string, i: number) => <li key={i} className="text-sm text-slate-400">• {g}</li>)}</ul>
+      <ul className="space-y-1">{gaps.map((g: string, i: number) => <li key={i} className="text-sm text-slate-400">&bull; {g}</li>)}</ul>
     </div>
   );
 }
@@ -72,30 +72,7 @@ function RecommendationsList({ recs }: { recs: string[] }) {
   return (
     <div>
       <p className="text-xs text-[#00D4FF] font-bold uppercase mb-1">Recommendations</p>
-      <ul className="space-y-1">{recs.map((r: string, i: number) => <li key={i} className="text-sm text-slate-300">• {r}</li>)}</ul>
-    </div>
-  );
-}
-
-function RevelationSection({ title, children, color = '#E31B23' }: {
-  title: string; children: React.ReactNode; color?: string;
-}) {
-  return (
-    <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 mb-6">
-      <div className="flex items-center gap-3 mb-5">
-        <div className="w-1.5 h-8 rounded-full" style={{ backgroundColor: color }} />
-        <h2 className="text-lg font-bold text-white">{title}</h2>
-      </div>
-      {children}
-    </div>
-  );
-}
-
-function BigNumber({ value, label, color = '#00D4FF' }: { value: string; label: string; color?: string }) {
-  return (
-    <div className="text-center">
-      <p className="text-3xl sm:text-4xl font-extrabold" style={{ color }}>{value}</p>
-      <p className="text-xs text-slate-500 mt-1">{label}</p>
+      <ul className="space-y-1">{recs.map((r: string, i: number) => <li key={i} className="text-sm text-slate-300">&bull; {r}</li>)}</ul>
     </div>
   );
 }
@@ -106,289 +83,137 @@ function fmtCurrency(amount: number): string {
   return '$' + Math.round(amount);
 }
 
-function FounderTaxSection({ data }: { data: any }) {
-  if (!data?.canRender) return null;
-  const taxLevel = data.totalFounderTax > 300000 ? 'high' : data.totalFounderTax > 100000 ? 'medium' : 'low';
-  const headlineColor = taxLevel === 'high' ? '#E31B23' : taxLevel === 'medium' ? '#f59e0b' : '#22c55e';
-  return (
-    <RevelationSection title="The Founder Tax" color={headlineColor}>
-      <BigNumber value={fmtCurrency(data.totalFounderTax) + '/yr'} label="Annual Founder Tax" color={headlineColor} />
-      <div className="mt-6 space-y-3">
-        <p className="text-sm text-slate-300">
-          You&apos;re billing at an implied rate of <strong className="text-white">{fmtCurrency(data.founderHourlyEquivalent)}/hr</strong>.
-          You spend <strong className="text-white">{data.totalOperationalHours} hrs/week</strong> on operational work.
-        </p>
-        <div className="bg-slate-700/30 rounded-xl overflow-hidden">
+// ============================================
+// MARKDOWN RENDERER for Claude diagnoses
+// ============================================
+
+function MarkdownContent({ content }: { content: string }) {
+  const lines = content.split('\n');
+  const elements: React.ReactNode[] = [];
+
+  let inTable = false;
+  let tableHeaders: string[] = [];
+  let tableRows: string[][] = [];
+
+  function flushTable() {
+    if (tableHeaders.length > 0 || tableRows.length > 0) {
+      elements.push(
+        <div key={`table-${elements.length}`} className="overflow-x-auto my-4">
           <table className="w-full text-sm">
-            <thead><tr className="border-b border-slate-600/50">
-              <th className="text-left text-slate-500 px-4 py-2 font-medium">Component</th>
-              <th className="text-right text-slate-500 px-4 py-2 font-medium">Cost</th>
-            </tr></thead>
+            {tableHeaders.length > 0 && (
+              <thead>
+                <tr className="border-b border-slate-600/50">
+                  {tableHeaders.map((h, i) => (
+                    <th key={i} className="text-left text-slate-500 px-3 py-2 font-medium">{h.trim()}</th>
+                  ))}
+                </tr>
+              </thead>
+            )}
             <tbody>
-              <tr className="border-b border-slate-700/50"><td className="px-4 py-2 text-slate-300">Labor arbitrage (overpaying yourself)</td><td className="px-4 py-2 text-right text-white">{fmtCurrency(data.laborArbitrage)}</td></tr>
-              <tr className="border-b border-slate-700/50"><td className="px-4 py-2 text-slate-300">Strategic opportunity cost</td><td className="px-4 py-2 text-right text-white">{fmtCurrency(data.strategicOpportunityCost)}</td></tr>
-              <tr className="font-bold"><td className="px-4 py-2 text-white">Total</td><td className="px-4 py-2 text-right" style={{ color: headlineColor }}>{fmtCurrency(data.totalFounderTax)}</td></tr>
+              {tableRows.map((row, ri) => (
+                <tr key={ri} className="border-b border-slate-700/50">
+                  {row.map((cell, ci) => (
+                    <td key={ci} className="px-3 py-2 text-slate-300">{renderInline(cell.trim())}</td>
+                  ))}
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
-          {Object.entries(data.breakdown).map(([area, info]: [string, any]) => (
-            <div key={area} className="bg-slate-700/30 rounded-lg p-3 text-center">
-              <p className="text-lg font-bold text-white">{info.hours}h</p>
-              <p className="text-[10px] text-slate-500 capitalize">{area.replace('accountMgmt', 'Acct Mgmt')}</p>
-              <p className="text-[10px] text-slate-600">Rating: {info.rating}/5</p>
-            </div>
-          ))}
-        </div>
-        <p className="text-sm text-[#00D4FF] mt-4">
-          <strong>The Fix:</strong> Your lowest delegation score is {data.biggestBottleneck}. That&apos;s your first hire.
+      );
+    }
+    tableHeaders = [];
+    tableRows = [];
+    inTable = false;
+  }
+
+  function renderInline(text: string): React.ReactNode {
+    const parts: React.ReactNode[] = [];
+    let remaining = text;
+    let key = 0;
+
+    while (remaining.length > 0) {
+      const boldMatch = remaining.match(/\*\*(.+?)\*\*/);
+      if (boldMatch && boldMatch.index !== undefined) {
+        if (boldMatch.index > 0) parts.push(remaining.slice(0, boldMatch.index));
+        parts.push(<strong key={key++} className="text-white font-semibold">{boldMatch[1]}</strong>);
+        remaining = remaining.slice(boldMatch.index + boldMatch[0].length);
+        continue;
+      }
+      parts.push(remaining);
+      break;
+    }
+
+    return parts.length === 1 ? parts[0] : <>{parts}</>;
+  }
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+
+    // Table detection
+    if (line.includes('|') && line.trim().startsWith('|')) {
+      const cells = line.split('|').slice(1, -1);
+      if (!inTable) {
+        inTable = true;
+        tableHeaders = cells;
+      } else if (cells.every(c => /^[\s\-:]+$/.test(c))) {
+        continue; // separator row
+      } else {
+        tableRows.push(cells);
+      }
+      continue;
+    } else if (inTable) {
+      flushTable();
+    }
+
+    if (line.startsWith('### ')) {
+      elements.push(<h4 key={i} className="text-sm font-bold text-[#00D4FF] uppercase tracking-wide mt-5 mb-2">{line.slice(4)}</h4>);
+    } else if (line.startsWith('## ')) {
+      elements.push(<h3 key={i} className="text-base font-bold text-white mt-5 mb-2">{line.slice(3)}</h3>);
+    } else if (line.startsWith('# ')) {
+      elements.push(<h2 key={i} className="text-lg font-bold text-white mt-4 mb-2">{line.slice(2)}</h2>);
+    } else if (/^---+$/.test(line.trim())) {
+      elements.push(<hr key={i} className="border-slate-700/50 my-4" />);
+    } else if (/^[\-\*]\s/.test(line.trim())) {
+      elements.push(<p key={i} className="text-sm text-slate-300 ml-4 mb-1">&bull; {renderInline(line.trim().slice(2))}</p>);
+    } else if (/^\d+\.\s/.test(line.trim())) {
+      const num = line.trim().match(/^(\d+)\.\s/)?.[1];
+      const text = line.trim().replace(/^\d+\.\s/, '');
+      elements.push(
+        <p key={i} className="text-sm text-slate-300 ml-4 mb-1">
+          <span className="text-[#00D4FF] font-bold mr-1">{num}.</span>
+          {renderInline(text)}
         </p>
+      );
+    } else if (line.trim() === '') {
+      // skip empty lines
+    } else {
+      elements.push(<p key={i} className="text-sm text-slate-300 mb-2">{renderInline(line)}</p>);
+    }
+  }
+
+  if (inTable) flushTable();
+
+  return <div className="space-y-0.5">{elements}</div>;
+}
+
+function DiagnosisSection({ title, content, color = '#E31B23' }: {
+  title: string; content: string; color?: string;
+}) {
+  return (
+    <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 mb-6">
+      <div className="flex items-center gap-3 mb-5">
+        <div className="w-1.5 h-8 rounded-full" style={{ backgroundColor: color }} />
+        <h2 className="text-lg font-bold text-white">{title}</h2>
       </div>
-    </RevelationSection>
+      <MarkdownContent content={content} />
+    </div>
   );
 }
 
-function PipelineProbabilitySection({ data }: { data: any }) {
-  if (!data?.canRender) return null;
-  const statusColor = data.referralDependencyStatus === 'critical' ? '#E31B23'
-    : data.referralDependencyStatus === 'high' ? '#f59e0b'
-    : data.referralDependencyStatus === 'moderate' ? '#f59e0b' : '#22c55e';
-  return (
-    <RevelationSection title="The Pipeline Probability" color={statusColor}>
-      <div className="grid grid-cols-3 gap-4 mb-6">
-        <BigNumber value={`${data.referralPercent}%`} label="Referral Dependency" color={statusColor} />
-        <BigNumber value={`${data.probabilityOfMajorDisruption}%`} label="3-Year Disruption Risk" color="#f59e0b" />
-        <BigNumber value={fmtCurrency(data.revenueAtRiskIn3Years)} label="Revenue at Risk" color="#E31B23" />
-      </div>
-      <div className="space-y-3">
-        <div className="bg-slate-700/30 rounded-xl p-4">
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <p className="text-slate-500">Net Client Growth</p>
-              <p className={`font-bold ${data.isGrowing ? 'text-emerald-400' : data.isShrinking ? 'text-red-400' : 'text-slate-400'}`}>
-                {data.netClientGrowth > 0 ? '+' : ''}{data.netClientGrowth}/year
-              </p>
-            </div>
-            <div>
-              <p className="text-slate-500">Referral Network Ceiling</p>
-              <p className="font-bold text-white">{data.referralNetworkCeiling} clients</p>
-            </div>
-            <div>
-              <p className="text-slate-500">Active Channels (10%+)</p>
-              <p className={`font-bold ${data.activeChannels >= 3 ? 'text-emerald-400' : 'text-amber-400'}`}>{data.activeChannels}</p>
-            </div>
-            {data.monthsToReferralCeiling && (
-              <div>
-                <p className="text-slate-500">Months to Ceiling</p>
-                <p className="font-bold text-amber-400">{data.monthsToReferralCeiling}</p>
-              </div>
-            )}
-          </div>
-        </div>
-        {data.referralDependencyStatus === 'critical' && (
-          <p className="text-sm text-red-300">This isn&apos;t fear-mongering. It&apos;s actuarial math. One retirement dinner away from crisis.</p>
-        )}
-        <p className="text-sm text-[#00D4FF]"><strong>The Fix:</strong> Build ONE channel you control. Content or outbound. Start this month.</p>
-      </div>
-    </RevelationSection>
-  );
-}
-
-function AuthorityGapSection({ data }: { data: any }) {
-  if (!data?.canRender) return null;
-  const scoreColor = data.overallAuthorityScore >= 60 ? '#22c55e' : data.overallAuthorityScore >= 30 ? '#f59e0b' : '#E31B23';
-  return (
-    <RevelationSection title="The Authority Gap" color={scoreColor}>
-      <BigNumber value={`${data.overallAuthorityScore}/100`} label="Overall Authority Score" color={scoreColor} />
-      <div className="grid grid-cols-3 gap-4 mt-6 mb-4">
-        <div className="bg-slate-700/30 rounded-lg p-3 text-center">
-          <p className="text-lg font-bold text-white">{data.contentVolumeScore}</p>
-          <p className="text-[10px] text-slate-500">Content Volume</p>
-        </div>
-        <div className="bg-slate-700/30 rounded-lg p-3 text-center">
-          <p className="text-lg font-bold text-white">{data.proofScore}</p>
-          <p className="text-[10px] text-slate-500">Proof Points</p>
-        </div>
-        <div className="bg-slate-700/30 rounded-lg p-3 text-center">
-          <p className="text-lg font-bold text-white">{data.aiDiscoverabilityScore}%</p>
-          <p className="text-[10px] text-slate-500">AI Discoverability</p>
-        </div>
-      </div>
-      <div className="grid grid-cols-3 gap-3 mb-4">
-        {['claude', 'chatgpt', 'perplexity'].map(platform => (
-          <div key={platform} className="bg-slate-700/30 rounded-xl p-3 text-center">
-            <p className="text-xs text-slate-500 capitalize mb-1">{platform}</p>
-            <p className={`text-sm font-bold ${data.aiResults[platform]?.found ? 'text-emerald-400' : 'text-red-400'}`}>
-              {data.aiResults[platform]?.found ? 'Found' : 'Not Found'}
-            </p>
-          </div>
-        ))}
-      </div>
-      {data.invisibleToBuyersCount > 0 && (
-        <div className="bg-red-500/5 border border-red-500/20 rounded-xl p-4 mb-4">
-          <p className="text-sm text-red-300">
-            <strong>{data.invisibleToBuyersCount * 12} invisible prospects per year.</strong>{' '}
-            {data.invisibleToBuyersCount} potential buyers/month who never see you in AI search results.
-          </p>
-        </div>
-      )}
-      {data.problemCoverage && (
-        <div className="text-sm text-slate-300 mb-3">
-          ICP Problem Coverage: <strong className="text-white">{data.problemCoverage.percentage}%</strong> ({data.problemCoverage.covered}/{data.problemCoverage.total})
-          {data.problemCoverage.gaps.length > 0 && (
-            <p className="text-xs text-slate-500 mt-1">Gaps: {data.problemCoverage.gaps.slice(0, 3).join(', ')}</p>
-          )}
-        </div>
-      )}
-      {data.competitorsRecommendedInstead?.length > 0 && (
-        <div className="mt-4">
-          <p className="text-xs text-slate-500 mb-2 font-semibold uppercase">Who&apos;s surfacing instead:</p>
-          <div className="flex flex-wrap gap-2">
-            {data.competitorsRecommendedInstead.map((name: string, i: number) => (
-              <span key={i} className="px-3 py-1 rounded-full bg-red-500/10 text-red-400 text-xs border border-red-500/20">{name}</span>
-            ))}
-          </div>
-        </div>
-      )}
-    </RevelationSection>
-  );
-}
-
-function PositioningCollisionSection({ data }: { data: any }) {
-  if (!data?.canRender) return null;
-  const severity = data.collisionScore > 60 ? 'severe' : data.collisionScore > 30 ? 'moderate' : 'aligned';
-  const color = severity === 'severe' ? '#E31B23' : severity === 'moderate' ? '#f59e0b' : '#22c55e';
-  return (
-    <RevelationSection title="The Positioning Collision" color={color}>
-      <BigNumber value={`${data.collisionScore}%`} label="Collision Score (higher = more misalignment)" color={color} />
-      <div className="mt-6 grid grid-cols-2 gap-4 mb-4">
-        <div className="bg-slate-700/30 rounded-xl p-4">
-          <p className="text-xs text-slate-500 font-semibold uppercase mb-2">What You Claim</p>
-          <p className="text-sm text-white mb-1">{data.stated.icp}</p>
-          <p className="text-xs text-slate-400">{data.stated.offer}</p>
-        </div>
-        <div className="bg-slate-700/30 rounded-xl p-4">
-          <p className="text-xs text-slate-500 font-semibold uppercase mb-2">What Your Website Proves</p>
-          <p className="text-sm text-white mb-1">{data.proof.websiteHeadline}</p>
-          <p className="text-xs text-slate-400">
-            {data.caseStudyAnalysis ? `${data.caseStudyAnalysis.length} case studies found` : 'No case studies detected'}
-          </p>
-        </div>
-      </div>
-      <div className="bg-slate-700/20 border-l-2 rounded-r-lg px-4 py-3 mb-4" style={{ borderColor: color }}>
-        <p className="text-xs text-slate-500 font-semibold uppercase mb-1">{data.prospectNarrative.headline}</p>
-        <p className="text-sm text-slate-300 italic">&quot;{data.prospectNarrative.story}&quot;</p>
-        <div className="flex gap-4 mt-2 text-xs">
-          <span className="text-slate-500">Time on site: <strong className="text-slate-300">{data.prospectNarrative.timeOnSite}</strong></span>
-          <span className="text-slate-500">Verdict: <strong style={{ color }}>{data.prospectNarrative.verdict}</strong></span>
-        </div>
-      </div>
-      {data.lostRevenueAnnual > 0 && (
-        <p className="text-sm text-red-300 mb-3">Annual cost of positioning/proof mismatch: <strong>~{fmtCurrency(data.lostRevenueAnnual)}</strong></p>
-      )}
-      {data.recommendations?.length > 0 && (
-        <div className="text-sm text-[#00D4FF]">
-          <strong>The Fix:</strong>
-          <ol className="list-decimal ml-5 mt-1 space-y-1 text-slate-300">
-            {data.recommendations.slice(0, 3).map((r: string, i: number) => <li key={i}>{r}</li>)}
-          </ol>
-        </div>
-      )}
-    </RevelationSection>
-  );
-}
-
-function TrajectoryForkSection({ data }: { data: any }) {
-  if (!data?.canRender) return null;
-  return (
-    <RevelationSection title="The Trajectory Fork" color="#00D4FF">
-      <div className="text-center mb-6">
-        <p className="text-sm text-slate-400 mb-1">Current Valuation</p>
-        <p className="text-2xl font-bold text-white">{fmtCurrency(data.currentValuation)}</p>
-        <p className="text-xs text-slate-500">{data.currentMultiple.toFixed(1)}x revenue</p>
-      </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead><tr className="border-b border-slate-600/50">
-            <th className="text-left text-slate-500 px-3 py-2">Metric</th>
-            <th className="text-center text-slate-500 px-3 py-2">Now</th>
-            <th className="text-center text-red-400/70 px-3 py-2">Y3 Current</th>
-            <th className="text-center text-emerald-400/70 px-3 py-2">Y3 Intervention</th>
-            <th className="text-center text-[#00D4FF]/70 px-3 py-2">Gap</th>
-          </tr></thead>
-          <tbody>
-            <tr className="border-b border-slate-700/50">
-              <td className="px-3 py-2 text-slate-300">Revenue</td>
-              <td className="px-3 py-2 text-center text-white">{fmtCurrency(data.currentValuation / data.currentMultiple)}</td>
-              <td className="px-3 py-2 text-center text-red-300">{fmtCurrency(data.trajectoryA.year3.revenue)}</td>
-              <td className="px-3 py-2 text-center text-emerald-300">{fmtCurrency(data.trajectoryB.year3.revenue)}</td>
-              <td className="px-3 py-2 text-center text-[#00D4FF]">+{fmtCurrency(data.gap.revenue)}</td>
-            </tr>
-            <tr className="border-b border-slate-700/50">
-              <td className="px-3 py-2 text-slate-300">Clients</td>
-              <td className="px-3 py-2 text-center text-white">{data.trajectoryA.year1.clients}</td>
-              <td className="px-3 py-2 text-center text-red-300">{data.trajectoryA.year3.clients}</td>
-              <td className="px-3 py-2 text-center text-emerald-300">{data.trajectoryB.year3.clients}</td>
-              <td className="px-3 py-2 text-center text-[#00D4FF]">+{data.gap.clients}</td>
-            </tr>
-            <tr className="border-b border-slate-700/50">
-              <td className="px-3 py-2 text-slate-300">Your Hours/Week</td>
-              <td className="px-3 py-2 text-center text-white">{data.trajectoryA.year1.founderHours}</td>
-              <td className="px-3 py-2 text-center text-red-300">{data.trajectoryA.year3.founderHours}</td>
-              <td className="px-3 py-2 text-center text-emerald-300">{data.trajectoryB.year3.founderHours}</td>
-              <td className="px-3 py-2 text-center text-[#00D4FF]">-{data.gap.founderHoursSaved}h</td>
-            </tr>
-            <tr className="border-b border-slate-700/50">
-              <td className="px-3 py-2 text-slate-300">Net Margin</td>
-              <td className="px-3 py-2 text-center text-white">{data.trajectoryA.year1.margin}%</td>
-              <td className="px-3 py-2 text-center text-red-300">{data.trajectoryA.year3.margin}%</td>
-              <td className="px-3 py-2 text-center text-emerald-300">{data.trajectoryB.year3.margin}%</td>
-              <td className="px-3 py-2 text-center text-[#00D4FF]">+{data.gap.marginPoints}pts</td>
-            </tr>
-            <tr className="font-bold">
-              <td className="px-3 py-2 text-white">Valuation</td>
-              <td className="px-3 py-2 text-center text-white">{fmtCurrency(data.currentValuation)}</td>
-              <td className="px-3 py-2 text-center text-red-400">{fmtCurrency(data.trajectoryA.year3.valuation)}</td>
-              <td className="px-3 py-2 text-center text-emerald-400">{fmtCurrency(data.trajectoryB.year3.valuation)}</td>
-              <td className="px-3 py-2 text-center text-[#00D4FF]">+{fmtCurrency(data.gap.valuationDifference)}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-      <div className="grid grid-cols-2 gap-4 mt-6">
-        <div className="bg-red-500/5 border border-red-500/20 rounded-xl p-4">
-          <p className="text-xs text-red-400 font-semibold uppercase mb-2">Current Path</p>
-          <p className="text-sm text-slate-300">{data.trajectoryA.narrative}</p>
-        </div>
-        <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-xl p-4">
-          <p className="text-xs text-emerald-400 font-semibold uppercase mb-2">Intervention Path</p>
-          <p className="text-sm text-slate-300">{data.trajectoryB.narrative}</p>
-        </div>
-      </div>
-      {data.keyInterventions?.length > 0 && (
-        <div className="mt-4">
-          <p className="text-xs text-slate-500 font-semibold uppercase mb-2">Key Interventions:</p>
-          <div className="space-y-2">
-            {data.keyInterventions.map((intervention: any, i: number) => (
-              <div key={i} className="flex items-start gap-2 text-sm">
-                <span className="text-[#00D4FF] font-bold mt-0.5">{i + 1}.</span>
-                <div>
-                  <span className="text-white font-medium">{intervention.action}</span>
-                  <span className="text-slate-500"> — {intervention.impact}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-      <div className="mt-6 text-center">
-        <p className="text-lg font-bold" style={{ color: '#00D4FF' }}>
-          {fmtCurrency(data.gap.valuationDifference)} in enterprise value. Same 3 years. Same founder.
-        </p>
-      </div>
-    </RevelationSection>
-  );
-}
+// ============================================
+// MAIN RESULTS PAGE
+// ============================================
 
 export default async function ResultsPage({ params }: { params: { id: string } }) {
   const supabase = createServerComponentClient({ cookies });
@@ -411,6 +236,7 @@ export default async function ResultsPage({ params }: { params: { id: string } }
   const zones = scores?.wtfZones;
   const narratives = scores?.narratives || {};
   const analysis = enrichment?.analysis;
+  const diagnoses = scores?.diagnoses;
   const revelations = scores?.revelations;
 
   if (!scores || !zones) {
@@ -426,6 +252,12 @@ export default async function ResultsPage({ params }: { params: { id: string } }
   }
 
   const overallColor = scores.overall >= 4 ? '#22c55e' : scores.overall >= 2.5 ? '#f59e0b' : '#E31B23';
+
+  // Determine whether we have Claude diagnoses or need to fall back to calculated revelations
+  const hasDiagnoses = !!(diagnoses?.founderTax || diagnoses?.pipeline || diagnoses?.authority || diagnoses?.positioning || diagnoses?.trajectory);
+
+  // Diagnosis CTA (from Claude) or fallback to revelations CTA
+  const ctaData = diagnoses?.cta || revelations?.cta;
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -469,7 +301,7 @@ export default async function ResultsPage({ params }: { params: { id: string } }
         </div>
       </div>
 
-      {/* ===== 3. POSITIONING ANALYSIS ===== */}
+      {/* ===== 3-6. ENRICHMENT ANALYSIS SECTIONS ===== */}
       {analysis?.positioningCoherence && (() => {
         const pos = analysis.positioningCoherence;
         const alignColor = pos.alignment === 'aligned' ? 'text-[#00D4FF]' : pos.alignment === 'partial' ? 'text-amber-400' : 'text-[#E31B23]';
@@ -493,7 +325,6 @@ export default async function ResultsPage({ params }: { params: { id: string } }
         );
       })()}
 
-      {/* ===== 4. CONTENT-MARKET FIT ===== */}
       {analysis?.contentMarketFit && (() => {
         const cmf = analysis.contentMarketFit;
         return (
@@ -536,7 +367,6 @@ export default async function ResultsPage({ params }: { params: { id: string } }
         );
       })()}
 
-      {/* ===== 5. SOCIAL PROOF ALIGNMENT ===== */}
       {analysis?.socialProofAlignment && (() => {
         const sp = analysis.socialProofAlignment;
         return (
@@ -562,7 +392,6 @@ export default async function ResultsPage({ params }: { params: { id: string } }
         );
       })()}
 
-      {/* ===== 6. ICP PROBLEM AWARENESS ===== */}
       {analysis?.icpProblemAwareness && (() => {
         const ipa = analysis.icpProblemAwareness;
         return (
@@ -584,7 +413,7 @@ export default async function ResultsPage({ params }: { params: { id: string } }
                         <td className="py-2 text-slate-300">{row.problem}</td>
                         <td className="py-2 text-center">
                           <span className={row.addressed ? 'text-[#00D4FF]' : 'text-[#E31B23]'}>
-                            {row.addressed ? '✓' : '✗'}
+                            {row.addressed ? '\u2713' : '\u2717'}
                           </span>
                         </td>
                         <td className="py-2 text-slate-400 text-xs">{row.where}</td>
@@ -608,13 +437,13 @@ export default async function ResultsPage({ params }: { params: { id: string } }
             {ipa.missingProblems?.length > 0 && (
               <div className="mb-3">
                 <p className="text-xs text-[#E31B23] font-bold uppercase mb-1">Problems You&apos;re Not Addressing</p>
-                <ul className="space-y-1">{ipa.missingProblems.map((p: string, i: number) => <li key={i} className="text-sm text-slate-400">• {p}</li>)}</ul>
+                <ul className="space-y-1">{ipa.missingProblems.map((p: string, i: number) => <li key={i} className="text-sm text-slate-400">&bull; {p}</li>)}</ul>
               </div>
             )}
             {ipa.contentOpportunities?.length > 0 && (
               <div className="mb-3">
                 <p className="text-xs text-[#00D4FF] font-bold uppercase mb-1">Content Opportunities</p>
-                <ul className="space-y-1">{ipa.contentOpportunities.map((c: string, i: number) => <li key={i} className="text-sm text-slate-300">• {c}</li>)}</ul>
+                <ul className="space-y-1">{ipa.contentOpportunities.map((c: string, i: number) => <li key={i} className="text-sm text-slate-300">&bull; {c}</li>)}</ul>
               </div>
             )}
             <RecommendationsList recs={ipa.recommendations} />
@@ -635,7 +464,7 @@ export default async function ResultsPage({ params }: { params: { id: string } }
             {aiScore === 0 ? (
               <div className="mb-4">
                 <p className="text-sm text-[#E31B23] font-medium mb-2">You don&apos;t exist to AI.</p>
-                <p className="text-sm text-slate-400">We asked Claude, ChatGPT, and Perplexity the kinds of questions your ICP would actually type — real problems, real revenue numbers, asking for specific help. You weren&apos;t mentioned. Not once.</p>
+                <p className="text-sm text-slate-400">We asked Claude, ChatGPT, and Perplexity the kinds of questions your ICP would actually type &mdash; real problems, real revenue numbers, asking for specific help. You weren&apos;t mentioned. Not once.</p>
               </div>
             ) : aiScore < 50 ? (
               <p className="text-sm text-slate-400 mb-4">
@@ -657,7 +486,7 @@ export default async function ResultsPage({ params }: { params: { id: string } }
                     ) : (
                       <>
                         <p className={`text-lg font-bold ${check.agencyMentioned ? 'text-[#00D4FF]' : 'text-[#E31B23]'}`}>
-                          {check.agencyMentioned ? '✓ Found' : '✗ Not Found'}
+                          {check.agencyMentioned ? '\u2713 Found' : '\u2717 Not Found'}
                         </p>
                         {check.founderMentioned && <p className="text-xs text-slate-500 mt-1">Founder mentioned</p>}
                       </>
@@ -687,18 +516,105 @@ export default async function ResultsPage({ params }: { params: { id: string } }
               <div className="mt-4 bg-slate-700/30 rounded-xl p-4">
                 <p className="text-xs text-slate-500 font-bold uppercase mb-2">Why This Matters</p>
                 <ul className="space-y-1 text-sm text-slate-400">
-                  <li>• AI is increasingly how people research purchases</li>
-                  <li>• Your competitors ARE showing up</li>
-                  <li>• This gap will widen, not shrink</li>
+                  <li>&bull; AI is increasingly how people research purchases</li>
+                  <li>&bull; Your competitors ARE showing up</li>
+                  <li>&bull; This gap will widen, not shrink</li>
                 </ul>
-                <p className="text-sm text-[#00D4FF] mt-3 font-medium">The fix: become the answer. Your ICP is asking AI real questions about their real problems right now. You need content that answers those exact questions — not thought leadership, not brand awareness. Specific, tactical answers to specific problems. That&apos;s how you get cited.</p>
+                <p className="text-sm text-[#00D4FF] mt-3 font-medium">The fix: become the answer. Your ICP is asking AI real questions about their real problems right now. You need content that answers those exact questions &mdash; not thought leadership, not brand awareness. Specific, tactical answers to specific problems. That&apos;s how you get cited.</p>
               </div>
             )}
           </div>
         );
       })()}
 
-      {/* ===== 8. GROWTH LEVERS ===== */}
+      {/* ===== 8. REALITY CHECKS ===== */}
+      {((scores.realityChecks?.length > 0) || (scores.impossibilities?.length > 0)) && (
+        <div className="bg-[#E31B23]/5 border border-[#E31B23]/20 rounded-2xl p-6 mb-6">
+          <h2 className="text-lg font-bold text-[#E31B23] mb-5">Reality Checks</h2>
+          <div className="space-y-6">
+            {scores.realityChecks?.map((check: any, i: number) => (
+              <div key={check.id || i}>
+                <h3 className="text-sm font-bold text-[#E31B23] mb-2">{check.title}</h3>
+                {check.body.split('\n').map((line: string, j: number) => {
+                  if (!line.trim()) return null;
+                  if (line.startsWith('\u2022')) return <p key={j} className="text-sm text-slate-400 ml-4">{line}</p>;
+                  if (/^\d+\./.test(line)) return <p key={j} className="text-sm text-slate-300 ml-4">{line}</p>;
+                  return <p key={j} className="text-sm text-slate-300 mb-1">{line}</p>;
+                })}
+              </div>
+            ))}
+            {(!scores.realityChecks || scores.realityChecks.length === 0) && scores.impossibilities?.map((item: string, i: number) => (
+              <div key={i} className="flex items-start gap-3">
+                <span className="text-[#E31B23] mt-0.5 font-bold text-lg">!</span>
+                <p className="text-sm text-slate-300">{item}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ===== REVELATIONS: Claude Diagnoses (primary) or Calculated Fallback ===== */}
+      {hasDiagnoses ? (
+        <>
+          {diagnoses.founderTax && (
+            <DiagnosisSection title="The Founder Tax" content={diagnoses.founderTax} color="#E31B23" />
+          )}
+          {diagnoses.pipeline && (
+            <DiagnosisSection title="The Pipeline Probability" content={diagnoses.pipeline} color="#f59e0b" />
+          )}
+          {diagnoses.authority && (
+            <DiagnosisSection title="The Authority Gap" content={diagnoses.authority} color="#E31B23" />
+          )}
+          {diagnoses.positioning && (
+            <DiagnosisSection title="The Positioning Collision" content={diagnoses.positioning} color="#f59e0b" />
+          )}
+          {diagnoses.trajectory && (
+            <DiagnosisSection title="The Trajectory Fork" content={diagnoses.trajectory} color="#00D4FF" />
+          )}
+        </>
+      ) : (
+        <>
+          {/* Fallback: show calculated revelation data if no Claude diagnoses */}
+          {revelations?.founderTax?.canRender && (
+            <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 mb-6">
+              <div className="flex items-center gap-3 mb-5">
+                <div className="w-1.5 h-8 rounded-full bg-[#E31B23]" />
+                <h2 className="text-lg font-bold text-white">The Founder Tax</h2>
+              </div>
+              <p className="text-3xl font-extrabold text-[#E31B23] text-center mb-4">{fmtCurrency(revelations.founderTax.totalFounderTax)}/yr</p>
+              <p className="text-sm text-slate-300 mb-2">
+                Implied hourly rate: <strong className="text-white">{fmtCurrency(revelations.founderTax.founderHourlyEquivalent)}/hr</strong>.
+                Operational hours: <strong className="text-white">{revelations.founderTax.totalOperationalHours}h/week</strong>.
+                Biggest bottleneck: <strong className="text-white">{revelations.founderTax.biggestBottleneck}</strong>.
+              </p>
+            </div>
+          )}
+          {revelations?.trajectoryFork?.canRender && (
+            <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 mb-6">
+              <div className="flex items-center gap-3 mb-5">
+                <div className="w-1.5 h-8 rounded-full bg-[#00D4FF]" />
+                <h2 className="text-lg font-bold text-white">The Trajectory Fork</h2>
+              </div>
+              <p className="text-lg font-bold text-center" style={{ color: '#00D4FF' }}>
+                {fmtCurrency(revelations.trajectoryFork.gap.valuationDifference)} gap in enterprise value over 3 years.
+              </p>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Diagnosis CTA */}
+      {ctaData?.headline && (
+        <div className="bg-gradient-to-r from-[#00D4FF]/10 to-[#E31B23]/10 border border-slate-700/50 rounded-2xl p-6 mb-6 text-center">
+          <p className="text-lg font-bold text-white mb-4">{ctaData.headline}</p>
+          <a href="[ROADMAP_URL]" className="inline-block px-6 py-3 rounded-xl bg-[#E31B23] text-white font-bold text-sm hover:shadow-lg hover:shadow-[#E31B23]/25 transition-all">
+            {ctaData.buttonText} &rarr;
+          </a>
+          <p className="text-sm text-slate-500 mt-3">{ctaData.subtext}</p>
+        </div>
+      )}
+
+      {/* ===== GROWTH LEVERS ===== */}
       {scores.growthLevers?.length > 0 && (
         <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 mb-6">
           <h2 className="text-lg font-bold text-white mb-5">Growth Levers</h2>
@@ -710,7 +626,7 @@ export default async function ResultsPage({ params }: { params: { id: string } }
         </div>
       )}
 
-      {/* ===== 9. FOUNDER OPERATING SYSTEM ===== */}
+      {/* ===== FOUNDER OPERATING SYSTEM ===== */}
       {scores.founderOS && (
         <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 mb-6">
           <h2 className="text-lg font-bold text-white mb-5">Founder Operating System</h2>
@@ -752,62 +668,7 @@ export default async function ResultsPage({ params }: { params: { id: string } }
         </div>
       )}
 
-      {/* ===== 10. REALITY CHECKS ===== */}
-      {((scores.realityChecks?.length > 0) || (scores.impossibilities?.length > 0)) && (
-        <div className="bg-[#E31B23]/5 border border-[#E31B23]/20 rounded-2xl p-6 mb-6">
-          <h2 className="text-lg font-bold text-[#E31B23] mb-5">Reality Checks</h2>
-          <div className="space-y-6">
-            {scores.realityChecks?.map((check: any, i: number) => (
-              <div key={check.id || i}>
-                <h3 className="text-sm font-bold text-[#E31B23] mb-2">{check.title}</h3>
-                {check.body.split('\n').map((line: string, j: number) => {
-                  if (!line.trim()) return null;
-                  if (line.startsWith('•')) return <p key={j} className="text-sm text-slate-400 ml-4">{line}</p>;
-                  if (/^\d+\./.test(line)) return <p key={j} className="text-sm text-slate-300 ml-4">{line}</p>;
-                  return <p key={j} className="text-sm text-slate-300 mb-1">{line}</p>;
-                })}
-              </div>
-            ))}
-            {/* Legacy impossibilities fallback */}
-            {(!scores.realityChecks || scores.realityChecks.length === 0) && scores.impossibilities?.map((item: string, i: number) => (
-              <div key={i} className="flex items-start gap-3">
-                <span className="text-[#E31B23] mt-0.5 font-bold text-lg">!</span>
-                <p className="text-sm text-slate-300">{item}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* AI Invisibility Reality Check (from enrichment data) */}
-      {enrichment?.llmAwareness?.summary?.score <= 20 && enrichment?.llmAwareness?.summary?.totalChecked > 0 && (
-        <div className="bg-[#E31B23]/5 border border-[#E31B23]/20 rounded-2xl p-6 mb-6">
-          <h3 className="text-sm font-bold text-[#E31B23] mb-2">YOU&apos;RE INVISIBLE TO AI</h3>
-          <p className="text-sm text-slate-300 mb-2">When your ICP asks ChatGPT or Claude for recommendations, you don&apos;t exist.</p>
-          <p className="text-sm text-slate-400">This isn&apos;t a future problem. It&apos;s a now problem. The agencies showing up are getting mindshare you&apos;re not.</p>
-          <p className="text-sm text-[#00D4FF] mt-3 font-medium">Your content strategy needs to change. When your ICP asks AI &quot;who can help me grow my agency?&quot; — you need to be the answer that comes back. That means publishing content that solves their exact problems, not generic thought leadership.</p>
-        </div>
-      )}
-
-      {/* ===== REVELATIONS ===== */}
-      {revelations?.founderTax && <FounderTaxSection data={revelations.founderTax} />}
-      {revelations?.pipelineProbability && <PipelineProbabilitySection data={revelations.pipelineProbability} />}
-      {revelations?.authorityGap && <AuthorityGapSection data={revelations.authorityGap} />}
-      {revelations?.positioningCollision && <PositioningCollisionSection data={revelations.positioningCollision} />}
-      {revelations?.trajectoryFork && <TrajectoryForkSection data={revelations.trajectoryFork} />}
-
-      {/* Revelation CTA */}
-      {revelations?.cta?.headline && (
-        <div className="bg-gradient-to-r from-[#00D4FF]/10 to-[#E31B23]/10 border border-slate-700/50 rounded-2xl p-6 mb-6 text-center">
-          <p className="text-lg font-bold text-white mb-4">{revelations.cta.headline}</p>
-          <a href="[ROADMAP_URL]" className="inline-block px-6 py-3 rounded-xl bg-[#E31B23] text-white font-bold text-sm hover:shadow-lg hover:shadow-[#E31B23]/25 transition-all">
-            {revelations.cta.buttonText} &rarr;
-          </a>
-          <p className="text-sm text-slate-500 mt-3">{revelations.cta.subtext}</p>
-        </div>
-      )}
-
-      {/* ===== 11. PRIORITY ACTIONS ===== */}
+      {/* ===== PRIORITY ACTIONS ===== */}
       {scores.priorityActions?.length > 0 && (
         <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 mb-6">
           <h2 className="text-lg font-bold text-white mb-5">Priority Actions</h2>
@@ -835,7 +696,7 @@ export default async function ResultsPage({ params }: { params: { id: string } }
         </div>
       )}
 
-      {/* ===== 12. NEXT STEPS CTA ===== */}
+      {/* ===== NEXT STEPS CTA ===== */}
       <div className="bg-gradient-to-br from-slate-800/80 to-slate-900/80 border border-slate-700/50 rounded-2xl p-8 mb-6">
         <h2 className="text-xl font-bold text-white mb-6 text-center">Next Steps</h2>
 
@@ -843,9 +704,9 @@ export default async function ResultsPage({ params }: { params: { id: string } }
           <h3 className="text-lg font-bold text-white mb-2">60-Minute Roadmap Consultation</h3>
           <p className="text-sm text-slate-400 mb-3">Let&apos;s fix this together. In 60 minutes, we&apos;ll:</p>
           <ul className="text-sm text-slate-300 space-y-1 mb-4">
-            <li>• Prioritize your positioning fix</li>
-            <li>• Map your founder escape route</li>
-            <li>• Build your 90-day action plan</li>
+            <li>&bull; Prioritize your positioning fix</li>
+            <li>&bull; Map your founder escape route</li>
+            <li>&bull; Build your 90-day action plan</li>
           </ul>
           <a
             href="[ROADMAP_URL]"
@@ -860,7 +721,7 @@ export default async function ResultsPage({ params }: { params: { id: string } }
             href="[COACHING_URL]"
             className="bg-slate-700/30 rounded-xl p-5 border border-slate-700/50 hover:border-[#00D4FF]/30 transition-all block"
           >
-            <h4 className="font-bold text-white mb-1">Coaching & Consulting</h4>
+            <h4 className="font-bold text-white mb-1">Coaching &amp; Consulting</h4>
             <p className="text-xs text-slate-400">Explore our programs &rarr;</p>
           </a>
           <a

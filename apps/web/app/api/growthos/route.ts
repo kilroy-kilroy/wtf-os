@@ -47,33 +47,124 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Ensure user record exists in users table (GrowthOS skips onboarding)
+    // Ensure user + org records exist, populated from assessment intake data.
+    // This unifies the data stack so assessment users don't repeat onboarding.
+    const PUBLIC_EMAIL_DOMAINS = [
+      'gmail.com', 'googlemail.com', 'yahoo.com', 'yahoo.co.uk',
+      'hotmail.com', 'hotmail.co.uk', 'outlook.com', 'live.com',
+      'msn.com', 'icloud.com', 'me.com', 'mac.com', 'aol.com',
+      'protonmail.com', 'proton.me', 'zoho.com', 'mail.com',
+      'gmx.com', 'yandex.com', 'fastmail.com'
+    ];
+
     const { data: existingUser } = await supabase
       .from('users')
-      .select('id')
+      .select('id, org_id, onboarding_completed')
       .eq('id', userId)
       .single();
 
-    if (!existingUser) {
-      const nameParts = (intakeData.founderName || '').split(' ');
-      const { error: userError } = await supabase
-        .from('users')
-        .insert({
-          id: userId,
-          email: user.email || intakeData.email,
-          first_name: nameParts[0] || null,
-          last_name: nameParts.slice(1).join(' ') || null,
-          full_name: intakeData.founderName || null,
-          subscription_tier: 'lead',
-        });
+    const nameParts = (intakeData.founderName || '').split(' ');
+    const userEmail = user.email || intakeData.email;
+    const domain = userEmail.split('@')[1]?.toLowerCase();
+    const isPublicDomain = domain ? PUBLIC_EMAIL_DOMAINS.includes(domain) : true;
 
-      if (userError) {
-        console.error('[GrowthOS] Failed to create user record:', userError);
-        return NextResponse.json(
-          { success: false, message: 'Failed to create user record' },
-          { status: 500 }
-        );
+    // Map assessment teamSize to company size range
+    const teamSize = intakeData.teamSize;
+    let companySizeEstimate = '';
+    if (teamSize !== undefined && teamSize !== null) {
+      const ts = Number(teamSize);
+      if (ts <= 1) companySizeEstimate = '1';
+      else if (ts <= 5) companySizeEstimate = '2-5';
+      else if (ts <= 10) companySizeEstimate = '6-10';
+      else if (ts <= 25) companySizeEstimate = '11-25';
+      else if (ts <= 50) companySizeEstimate = '26-50';
+      else if (ts <= 100) companySizeEstimate = '51-100';
+      else companySizeEstimate = '100+';
+    }
+
+    // Map assessment revenue to revenue range
+    let revenueEstimate = '';
+    const rev = Number(intakeData.lastYearRevenue || intakeData.monthlyRevenue && Number(intakeData.monthlyRevenue) * 12 || 0);
+    if (rev > 0) {
+      if (rev < 100000) revenueEstimate = '$0 - $100K';
+      else if (rev < 500000) revenueEstimate = '$100K - $500K';
+      else if (rev < 1000000) revenueEstimate = '$500K - $1M';
+      else if (rev < 5000000) revenueEstimate = '$1M - $5M';
+      else if (rev < 10000000) revenueEstimate = '$5M - $10M';
+      else revenueEstimate = '$10M+';
+    }
+
+    let orgId: string | null = existingUser?.org_id || null;
+
+    // Create or find org if user doesn't have one yet
+    if (!orgId && intakeData.agencyName) {
+      if (!isPublicDomain && domain) {
+        // Check for existing org on this domain
+        const { data: existingOrg } = await supabase
+          .from('orgs')
+          .select('id')
+          .eq('primary_domain', domain)
+          .single();
+
+        if (existingOrg) {
+          orgId = existingOrg.id;
+        } else {
+          const { data: newOrg, error: orgError } = await supabase
+            .from('orgs')
+            .insert({
+              name: intakeData.agencyName,
+              primary_domain: domain,
+              company_size: companySizeEstimate || null,
+              company_revenue: revenueEstimate || null,
+              personal: false,
+              mode: (teamSize && Number(teamSize) > 1) ? 'team' : 'solo',
+              created_by_user_id: userId,
+            })
+            .select('id')
+            .single();
+
+          if (!orgError && newOrg) orgId = newOrg.id;
+        }
+      } else {
+        // Personal workspace
+        const { data: newOrg, error: orgError } = await supabase
+          .from('orgs')
+          .insert({
+            name: intakeData.agencyName,
+            company_size: companySizeEstimate || null,
+            company_revenue: revenueEstimate || null,
+            personal: true,
+            mode: 'solo',
+            created_by_user_id: userId,
+          })
+          .select('id')
+          .single();
+
+        if (!orgError && newOrg) orgId = newOrg.id;
       }
+    }
+
+    // Upsert user record with assessment data and mark onboarding complete
+    const { error: userError } = await supabase
+      .from('users')
+      .upsert({
+        id: userId,
+        email: userEmail,
+        first_name: nameParts[0] || null,
+        last_name: nameParts.slice(1).join(' ') || null,
+        full_name: intakeData.founderName || null,
+        subscription_tier: existingUser ? undefined : 'lead',
+        org_id: orgId,
+        is_org_owner: orgId && !existingUser?.org_id ? true : undefined,
+        onboarding_completed: true,
+      });
+
+    if (userError) {
+      console.error('[GrowthOS] Failed to upsert user record:', userError);
+      return NextResponse.json(
+        { success: false, message: 'Failed to create user record' },
+        { status: 500 }
+      );
     }
 
     // Create assessment record in pending state

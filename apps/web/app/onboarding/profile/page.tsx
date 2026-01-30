@@ -45,6 +45,16 @@ const REVENUE_OPTIONS = [
   '$10M+'
 ];
 
+function mapRevenueToRange(rev: number): string {
+  if (rev <= 0) return '';
+  if (rev < 100000) return '$0 - $100K';
+  if (rev < 500000) return '$100K - $500K';
+  if (rev < 1000000) return '$500K - $1M';
+  if (rev < 5000000) return '$1M - $5M';
+  if (rev < 10000000) return '$5M - $10M';
+  return '$10M+';
+}
+
 export default function ProfileSetupPage() {
   const [formData, setFormData] = useState({
     fullName: '',
@@ -67,22 +77,48 @@ export default function ProfileSetupPage() {
   const router = useRouter();
   const supabase = createClientComponentClient();
 
-  // Pre-fill email from auth
+  // Pre-fill from auth and any existing assessment data
   useEffect(() => {
     const getUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (user?.email) {
-        setFormData(prev => ({
-          ...prev,
-          email: user.email || '',
-          fullName: user.user_metadata?.full_name || '',
-        }));
-        // Check domain when email is loaded
-        checkDomain(user.email);
+      if (!user?.email) return;
+
+      // Check if user already completed onboarding (e.g. via assessment)
+      const { data: userData } = await supabase
+        .from('users')
+        .select('onboarding_completed, org_id, full_name')
+        .eq('id', user.id)
+        .single();
+
+      if (userData?.onboarding_completed) {
+        // Already onboarded (likely via assessment) — skip to labs
+        router.push('/labs');
+        return;
       }
+
+      // Try to pre-fill from most recent assessment intake data
+      const { data: latestAssessment } = await supabase
+        .from('assessments')
+        .select('intake_data')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      const intake = latestAssessment?.intake_data as Record<string, any> | null;
+
+      setFormData(prev => ({
+        ...prev,
+        email: user.email || '',
+        fullName: intake?.founderName || userData?.full_name || user.user_metadata?.full_name || '',
+        companyName: intake?.agencyName || '',
+        companyRevenue: intake?.lastYearRevenue ? mapRevenueToRange(Number(intake.lastYearRevenue)) : '',
+      }));
+
+      checkDomain(user.email);
     };
     getUser();
-  }, [supabase.auth]);
+  }, [supabase, router]);
 
   const checkDomain = async (email: string) => {
     const domain = email.split('@')[1]?.toLowerCase();

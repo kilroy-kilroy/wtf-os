@@ -784,12 +784,13 @@ function projectTrajectory(
     let nextYear: any = {};
 
     if (type === 'current') {
-      const effectiveGrowth = baseline.netClientGrowth * Math.pow(assumptions.clientGrowthDecay, i);
+      const curAssumptions = assumptions as typeof TRAJECTORY_ASSUMPTIONS.currentPath;
+      const effectiveGrowth = baseline.netClientGrowth * Math.pow(curAssumptions.clientGrowthDecay, i);
       nextYear.clients = Math.max(5, Math.round(prevYear.clients + effectiveGrowth));
       nextYear.revenue = nextYear.clients * baseline.avgClientValue;
-      nextYear.founderHours = Math.min(70, prevYear.founderHours + (assumptions as any).founderHoursIncrease);
-      nextYear.margin = Math.max(0.02, prevYear.margin - (assumptions as any).marginCompression);
-      nextYear.multiple = Math.max(0.2, prevYear.multiple * (assumptions as any).valuationMultipleDecay);
+      nextYear.founderHours = Math.min(70, prevYear.founderHours + curAssumptions.founderHoursIncrease);
+      nextYear.margin = Math.max(0.02, prevYear.margin - curAssumptions.marginCompression);
+      nextYear.multiple = Math.max(0.2, prevYear.multiple * curAssumptions.valuationMultipleDecay);
 
       if (effectiveGrowth < 0) {
         nextYear.founderHours = Math.min(70, nextYear.founderHours + 3);

@@ -182,7 +182,7 @@ async function bdTrigger(datasetId: string, input: any[]): Promise<string | null
   if (!BRIGHT_DATA_API) return null;
 
   try {
-    const response = await fetch(`${BRIGHT_DATA_BASE}/trigger?dataset_id=${datasetId}`, {
+    const response = await fetch(`${BRIGHT_DATA_BASE}/trigger?dataset_id=${datasetId}&format=json&uncompressed_webhook=true`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${BRIGHT_DATA_API}`,
@@ -193,7 +193,8 @@ async function bdTrigger(datasetId: string, input: any[]): Promise<string | null
     });
 
     if (!response.ok) {
-      console.error(`[BrightData] Trigger failed for ${datasetId}: ${response.status}`);
+      const body = await response.text().catch(() => '');
+      console.error(`[BrightData] Trigger failed for ${datasetId}: ${response.status} - ${body}`);
       return null;
     }
 
@@ -246,7 +247,10 @@ async function bdScrapeLinkedInProfile(linkedinUrl: string | undefined): Promise
   if (!BRIGHT_DATA_API || !linkedinUrl) return null;
 
   try {
-    const snapshotId = await bdTrigger(BD_DATASETS.linkedinProfile, [{ url: linkedinUrl }]);
+    // Normalize LinkedIn URL
+    const url = linkedinUrl.trim().replace(/\/$/, '');
+    console.log(`[BrightData] Scraping LinkedIn profile: ${url}`);
+    const snapshotId = await bdTrigger(BD_DATASETS.linkedinProfile, [{ url }]);
     if (!snapshotId) return null;
 
     const results = await bdPollAndDownload(snapshotId, 45000);
@@ -270,7 +274,9 @@ async function bdScrapeLinkedInCompany(linkedinUrl: string | undefined): Promise
   if (!BRIGHT_DATA_API || !linkedinUrl) return null;
 
   try {
-    const snapshotId = await bdTrigger(BD_DATASETS.linkedinCompany, [{ url: linkedinUrl }]);
+    const url = linkedinUrl.trim().replace(/\/$/, '');
+    console.log(`[BrightData] Scraping LinkedIn company: ${url}`);
+    const snapshotId = await bdTrigger(BD_DATASETS.linkedinCompany, [{ url }]);
     if (!snapshotId) return null;
 
     const results = await bdPollAndDownload(snapshotId, 45000);
@@ -796,6 +802,7 @@ function checkMentions(text: string, intakeData: IntakeData) {
 
 function extractCompetitorNames(text: string, intakeData: IntakeData): string[] {
   const agencyName = (intakeData.agencyName || '').toLowerCase();
+  const founderName = (intakeData.founderName || '').toLowerCase();
   const lines = text.split('\n');
   const names: string[] = [];
 
@@ -805,6 +812,9 @@ function extractCompetitorNames(text: string, intakeData: IntakeData): string[] 
     'management', 'strategy', 'marketing', 'digital', 'growth', 'revenue',
     'advisory', 'partners', 'network', 'platform', 'institute', 'association',
   ];
+
+  // Business suffixes that indicate a company name
+  const businessSuffixes = /\b(inc|llc|ltd|co|corp|group|agency|media|labs|studios?|digital|creative|consulting|partners|associates|solutions|enterprises)\b/i;
 
   for (const line of lines) {
     const patterns = [
@@ -817,15 +827,23 @@ function extractCompetitorNames(text: string, intakeData: IntakeData): string[] 
         const name = match[1].trim();
         if (name.length < 3 || name.length > 40) continue;
         if (name.toLowerCase().includes(agencyName)) continue;
+        if (founderName && name.toLowerCase().includes(founderName)) continue;
 
-        // Filter out generic category descriptions:
-        // If ALL words in the name are generic terms, it's a category not a business
+        // Filter out generic category descriptions
         const words = name.toLowerCase().split(/\s+/).filter(w => w.length > 2);
         const genericWordCount = words.filter(w => genericTerms.some(t => w.includes(t))).length;
         if (words.length > 0 && genericWordCount === words.length) continue;
 
-        // Skip names that start with "The" followed by a single generic word
         if (/^The\s+\w+$/i.test(name) && genericTerms.some(t => name.toLowerCase().includes(t))) continue;
+
+        // Filter out individual people's names (2-3 words, all capitalized, no business suffix)
+        // e.g. "Jeb Blount", "Marcus Sheridan" — these are people, not companies
+        const nameWords = name.split(/\s+/);
+        if (nameWords.length >= 2 && nameWords.length <= 3 &&
+            nameWords.every(w => /^[A-Z][a-z]+$/.test(w)) &&
+            !businessSuffixes.test(name)) {
+          continue;
+        }
 
         names.push(name);
       }
@@ -1145,13 +1163,17 @@ async function callClaudeAnalysis(apiKey: string, prompt: string): Promise<strin
 function parseAnalysisResult(result: PromiseSettledResult<string>): any {
   if (result.status !== 'fulfilled') return null;
   try {
-    // Extract JSON from the response (handle markdown code blocks)
     let text = result.value;
-    const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/) || text.match(/(\{[\s\S]*\})/);
+    // Try multiple extraction strategies
+    const jsonMatch =
+      text.match(/```(?:json)?\s*([\s\S]*?)```/) ||
+      text.match(/(\{[\s\S]*\})/);
     if (jsonMatch) text = jsonMatch[1];
-    return JSON.parse(text.trim());
+    // Strip any leading/trailing non-JSON characters
+    text = text.trim().replace(/^[^{]*/, '').replace(/[^}]*$/, '');
+    return JSON.parse(text);
   } catch {
-    console.error('[Analysis] Failed to parse Claude response');
+    console.error('[Analysis] Failed to parse Claude response:', result.value?.substring(0, 200));
     return null;
   }
 }
@@ -1198,18 +1220,14 @@ export async function runEnrichmentPipeline(intakeData: IntakeData): Promise<Enr
       .then(d => { if (d) result.apify.founderLinkedin = d; })
       .catch(() => apifyScrapeLinkedInProfile(intakeData.founderLinkedinUrl).then(d => { result.apify.founderLinkedin = d; }))
       .catch(e => { result.meta.errors.push({ source: 'bd.founderProfile', error: e.message }); }),
-    bdScrapeLinkedInPosts(intakeData.founderLinkedinUrl)
-      .then(d => { if (d) result.apify.founderPosts = d; })
-      .catch(() => apifyScrapeLinkedInPosts(intakeData.founderLinkedinUrl).then(d => { result.apify.founderPosts = d; }))
-      .catch(e => { result.meta.errors.push({ source: 'bd.founderPosts', error: e.message }); }),
+    // Posts scraper requires individual post URLs, not profile URLs — use Apify for now
+    apifyScrapeLinkedInPosts(intakeData.founderLinkedinUrl).then(d => { result.apify.founderPosts = d; }).catch(e => { result.meta.errors.push({ source: 'apify.founderPosts', error: e.message }); }),
     bdScrapeLinkedInCompany(intakeData.companyLinkedinUrl)
       .then(d => { if (d) result.apify.companyLinkedin = d; })
       .catch(() => apifyScrapeLinkedInProfile(intakeData.companyLinkedinUrl).then(d => { result.apify.companyLinkedin = d; }))
       .catch(e => { result.meta.errors.push({ source: 'bd.companyProfile', error: e.message }); }),
-    bdScrapeLinkedInPosts(intakeData.companyLinkedinUrl)
-      .then(d => { if (d) result.apify.companyPosts = d; })
-      .catch(() => apifyScrapeLinkedInPosts(intakeData.companyLinkedinUrl).then(d => { result.apify.companyPosts = d; }))
-      .catch(e => { result.meta.errors.push({ source: 'bd.companyPosts', error: e.message }); }),
+    // Posts scraper requires individual post URLs, not profile URLs — use Apify for now
+    apifyScrapeLinkedInPosts(intakeData.companyLinkedinUrl).then(d => { result.apify.companyPosts = d; }).catch(e => { result.meta.errors.push({ source: 'apify.companyPosts', error: e.message }); }),
     exaIcpProblemSearches(intakeData).then(d => { result.exa.icpProblems = d; }).catch(e => { result.meta.errors.push({ source: 'exa.icpProblems', error: e.message }); }),
     exaCompetitorSearch(intakeData).then(d => { result.exa.competitors = d; }).catch(e => { result.meta.errors.push({ source: 'exa.competitors', error: e.message }); }),
     runLLMAwarenessChecks(intakeData).then(d => { result.llmAwareness = d; }).catch(e => { result.meta.errors.push({ source: 'llm', error: e.message }); })

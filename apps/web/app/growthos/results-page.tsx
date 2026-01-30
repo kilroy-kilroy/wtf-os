@@ -629,6 +629,237 @@ export default async function ResultsPage({ params }: { params: { id: string } }
         </div>
       )}
 
+      {/* ENRICHMENT ANALYSIS SECTIONS */}
+
+      {/* Positioning Analysis */}
+      {enrichment?.analysis?.positioningCoherence && (
+        <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 mb-6">
+          <h2 className="text-lg font-bold text-white mb-4">Positioning Analysis</h2>
+          <div className="flex items-center gap-4 mb-4">
+            <div className="text-2xl font-bold" style={{ color: enrichment.analysis.positioningCoherence.score >= 7 ? '#22c55e' : enrichment.analysis.positioningCoherence.score >= 4 ? '#f59e0b' : '#E31B23' }}>
+              {enrichment.analysis.positioningCoherence.score}/10
+            </div>
+            <div>
+              <span className={`text-xs font-bold uppercase px-2 py-0.5 rounded-full border ${
+                enrichment.analysis.positioningCoherence.alignment === 'aligned' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                : enrichment.analysis.positioningCoherence.alignment === 'partial' ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
+                : 'bg-red-500/10 text-red-400 border-red-500/30'
+              }`}>
+                {enrichment.analysis.positioningCoherence.alignment}
+              </span>
+            </div>
+          </div>
+          <p className="text-sm text-slate-300 mb-3">{enrichment.analysis.positioningCoherence.verdict}</p>
+          <div className="grid grid-cols-2 gap-4 mb-4">
+            <div className="bg-slate-700/30 rounded-xl p-4">
+              <p className="text-xs text-slate-500 font-semibold uppercase mb-1">Website Message</p>
+              <p className="text-sm text-slate-300">{enrichment.analysis.positioningCoherence.websiteMessage}</p>
+            </div>
+            <div className="bg-slate-700/30 rounded-xl p-4">
+              <p className="text-xs text-slate-500 font-semibold uppercase mb-1">LinkedIn Message</p>
+              <p className="text-sm text-slate-300">{enrichment.analysis.positioningCoherence.linkedinMessage}</p>
+            </div>
+          </div>
+          {enrichment.analysis.positioningCoherence.gaps?.length > 0 && (
+            <div className="mb-3">
+              <p className="text-xs text-slate-500 font-semibold uppercase mb-1">Gaps</p>
+              <ul className="space-y-1">
+                {enrichment.analysis.positioningCoherence.gaps.map((gap: string, i: number) => (
+                  <li key={i} className="text-sm text-red-300 flex items-start gap-2">
+                    <span className="text-red-500 mt-0.5">•</span>{gap}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {enrichment.analysis.positioningCoherence.recommendations?.length > 0 && (
+            <div>
+              <p className="text-xs text-slate-500 font-semibold uppercase mb-1">Recommendations</p>
+              <ul className="space-y-1">
+                {enrichment.analysis.positioningCoherence.recommendations.map((rec: string, i: number) => (
+                  <li key={i} className="text-sm text-[#00D4FF] flex items-start gap-2">
+                    <span className="mt-0.5">→</span>{rec}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Content-Market Fit */}
+      {enrichment?.analysis?.contentMarketFit && (
+        <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 mb-6">
+          <h2 className="text-lg font-bold text-white mb-4">Content-Market Fit</h2>
+          <div className="flex items-center gap-4 mb-4">
+            <div className="text-2xl font-bold" style={{ color: enrichment.analysis.contentMarketFit.score >= 7 ? '#22c55e' : enrichment.analysis.contentMarketFit.score >= 4 ? '#f59e0b' : '#E31B23' }}>
+              {enrichment.analysis.contentMarketFit.score}/10
+            </div>
+            <p className="text-sm text-slate-300">{enrichment.analysis.contentMarketFit.verdict}</p>
+          </div>
+          {enrichment.analysis.contentMarketFit.topicsVsIcpProblems && (
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              <div className="bg-slate-700/30 rounded-xl p-4">
+                <p className="text-xs text-slate-500 font-semibold uppercase mb-2">Your Content Topics</p>
+                {enrichment.analysis.contentMarketFit.topicsVsIcpProblems.topContentTopics?.map((t: string, i: number) => (
+                  <p key={i} className="text-sm text-slate-300">• {t}</p>
+                ))}
+              </div>
+              <div className="bg-slate-700/30 rounded-xl p-4">
+                <p className="text-xs text-slate-500 font-semibold uppercase mb-2">ICP Problems</p>
+                {enrichment.analysis.contentMarketFit.topicsVsIcpProblems.topIcpProblems?.map((p: string, i: number) => (
+                  <p key={i} className="text-sm text-slate-300">• {p}</p>
+                ))}
+              </div>
+            </div>
+          )}
+          {enrichment.analysis.contentMarketFit.topicsVsIcpProblems?.overlap !== undefined && (
+            <p className="text-sm text-slate-400 mb-3">
+              Topic-Problem Overlap: <strong className="text-white">{enrichment.analysis.contentMarketFit.topicsVsIcpProblems.overlap}%</strong>
+            </p>
+          )}
+          {enrichment.analysis.contentMarketFit.gaps?.length > 0 && (
+            <div className="mb-3">
+              <p className="text-xs text-slate-500 font-semibold uppercase mb-1">Gaps</p>
+              <ul className="space-y-1">
+                {enrichment.analysis.contentMarketFit.gaps.map((gap: string, i: number) => (
+                  <li key={i} className="text-sm text-red-300 flex items-start gap-2">
+                    <span className="text-red-500 mt-0.5">•</span>{gap}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {enrichment.analysis.contentMarketFit.recommendations?.length > 0 && (
+            <div>
+              <p className="text-xs text-slate-500 font-semibold uppercase mb-1">Recommendations</p>
+              <ul className="space-y-1">
+                {enrichment.analysis.contentMarketFit.recommendations.map((rec: string, i: number) => (
+                  <li key={i} className="text-sm text-[#00D4FF] flex items-start gap-2">
+                    <span className="mt-0.5">→</span>{rec}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Social Proof Alignment */}
+      {enrichment?.analysis?.socialProofAlignment && (
+        <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 mb-6">
+          <h2 className="text-lg font-bold text-white mb-4">Social Proof Alignment</h2>
+          <div className="flex items-center gap-4 mb-4">
+            <div className="text-2xl font-bold" style={{ color: enrichment.analysis.socialProofAlignment.score >= 7 ? '#22c55e' : enrichment.analysis.socialProofAlignment.score >= 4 ? '#f59e0b' : '#E31B23' }}>
+              {enrichment.analysis.socialProofAlignment.score}/10
+            </div>
+            <p className="text-sm text-slate-300">{enrichment.analysis.socialProofAlignment.verdict}</p>
+          </div>
+          <div className="grid grid-cols-3 gap-4 mb-4">
+            <div className="bg-slate-700/30 rounded-xl p-4 text-center">
+              <p className="text-xs text-slate-500 mb-1">Case Studies</p>
+              <p className="text-sm text-white font-medium">{enrichment.analysis.socialProofAlignment.caseStudyRelevance}</p>
+            </div>
+            <div className="bg-slate-700/30 rounded-xl p-4 text-center">
+              <p className="text-xs text-slate-500 mb-1">Testimonials</p>
+              <p className="text-sm text-white font-medium">{enrichment.analysis.socialProofAlignment.testimonialStrength}</p>
+            </div>
+            <div className="bg-slate-700/30 rounded-xl p-4 text-center">
+              <p className="text-xs text-slate-500 mb-1">Logo Signal</p>
+              <p className="text-sm text-white font-medium">{enrichment.analysis.socialProofAlignment.logoSignalStrength}</p>
+            </div>
+          </div>
+          {enrichment.analysis.socialProofAlignment.gaps?.length > 0 && (
+            <div className="mb-3">
+              <p className="text-xs text-slate-500 font-semibold uppercase mb-1">Gaps</p>
+              <ul className="space-y-1">
+                {enrichment.analysis.socialProofAlignment.gaps.map((gap: string, i: number) => (
+                  <li key={i} className="text-sm text-red-300 flex items-start gap-2">
+                    <span className="text-red-500 mt-0.5">•</span>{gap}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {enrichment.analysis.socialProofAlignment.recommendations?.length > 0 && (
+            <div>
+              <p className="text-xs text-slate-500 font-semibold uppercase mb-1">Recommendations</p>
+              <ul className="space-y-1">
+                {enrichment.analysis.socialProofAlignment.recommendations.map((rec: string, i: number) => (
+                  <li key={i} className="text-sm text-[#00D4FF] flex items-start gap-2">
+                    <span className="mt-0.5">→</span>{rec}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ICP Problem Awareness */}
+      {enrichment?.analysis?.icpProblemAwareness && (
+        <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 mb-6">
+          <h2 className="text-lg font-bold text-white mb-4">ICP Problem Awareness</h2>
+          <div className="flex items-center gap-4 mb-4">
+            <div className="text-2xl font-bold" style={{ color: enrichment.analysis.icpProblemAwareness.score >= 7 ? '#22c55e' : enrichment.analysis.icpProblemAwareness.score >= 4 ? '#f59e0b' : '#E31B23' }}>
+              {enrichment.analysis.icpProblemAwareness.score}/10
+            </div>
+            <p className="text-sm text-slate-300">{enrichment.analysis.icpProblemAwareness.verdict}</p>
+          </div>
+          <p className="text-sm text-slate-400 mb-4">
+            Problem Coverage: <strong className="text-white">{enrichment.analysis.icpProblemAwareness.coveragePercent}%</strong>
+          </p>
+          {enrichment.analysis.icpProblemAwareness.problemCoverage?.length > 0 && (
+            <div className="bg-slate-700/30 rounded-xl overflow-hidden mb-4">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-slate-600/50">
+                    <th className="text-left text-slate-500 px-4 py-2 font-medium">Problem</th>
+                    <th className="text-center text-slate-500 px-4 py-2 font-medium">Addressed</th>
+                    <th className="text-left text-slate-500 px-4 py-2 font-medium">Where</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {enrichment.analysis.icpProblemAwareness.problemCoverage.map((p: any, i: number) => (
+                    <tr key={i} className="border-b border-slate-700/50">
+                      <td className="px-4 py-2 text-slate-300">{p.problem}</td>
+                      <td className="px-4 py-2 text-center">
+                        <span className={p.addressed ? 'text-emerald-400' : 'text-red-400'}>{p.addressed ? '✓' : '✗'}</span>
+                      </td>
+                      <td className="px-4 py-2 text-slate-400 text-xs">{p.where || '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {enrichment.analysis.icpProblemAwareness.missingProblems?.length > 0 && (
+            <div className="mb-3">
+              <p className="text-xs text-slate-500 font-semibold uppercase mb-1">Missing Problems</p>
+              <ul className="space-y-1">
+                {enrichment.analysis.icpProblemAwareness.missingProblems.map((p: string, i: number) => (
+                  <li key={i} className="text-sm text-red-300 flex items-start gap-2">
+                    <span className="text-red-500 mt-0.5">•</span>{p}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {enrichment.analysis.icpProblemAwareness.contentOpportunities?.length > 0 && (
+            <div>
+              <p className="text-xs text-slate-500 font-semibold uppercase mb-1">Content Opportunities</p>
+              <ul className="space-y-1">
+                {enrichment.analysis.icpProblemAwareness.contentOpportunities.map((opp: string, i: number) => (
+                  <li key={i} className="text-sm text-[#00D4FF] flex items-start gap-2">
+                    <span className="mt-0.5">→</span>{opp}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* LLM Awareness */}
       {enrichment?.llmAwareness?.summary && (
         <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 mb-6">
@@ -658,6 +889,26 @@ export default async function ResultsPage({ params }: { params: { id: string } }
           <p className="text-xs text-slate-500 mt-3">
             Awareness score: {enrichment.llmAwareness.summary.score}% — Agency mentioned in {enrichment.llmAwareness.summary.agencyMentionedIn}/{enrichment.llmAwareness.summary.totalChecked} LLMs
           </p>
+        </div>
+      )}
+
+      {/* Priority Actions */}
+      {scores.priorityActions && scores.priorityActions.length > 0 && (
+        <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 mb-6">
+          <h2 className="text-lg font-bold text-white mb-5">Priority Actions</h2>
+          <div className="space-y-3">
+            {scores.priorityActions.map((action: any, i: number) => (
+              <div key={i} className="flex items-start gap-4 bg-slate-700/30 rounded-xl p-4">
+                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-[#E31B23]/10 border border-[#E31B23]/30 flex items-center justify-center">
+                  <span className="text-sm font-bold text-[#E31B23]">{action.priority}</span>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-white">{action.action}</p>
+                  <p className="text-xs text-slate-400 mt-1">{action.why}</p>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

@@ -480,18 +480,72 @@ async function exaCompetitorSearch(intakeData: IntakeData): Promise<ExaSearchRes
 // ============================================
 
 function buildAwarenessPrompts(intakeData: IntakeData): string[] {
-  // Use statedICP or targetMarket — these are the actual client descriptions
-  // that matter, not the generic industry dropdown
-  const icp = intakeData.statedICP || intakeData.targetMarket || '';
-  const coreOfferShort = (intakeData.coreOffer || '').split('\n')[0].substring(0, 100);
+  // Parse the intake data to understand what the user's ICP actually struggles with,
+  // then generate the questions those ICP buyers would realistically type into AI.
 
-  // These prompts are written FROM the ICP's perspective — the question
-  // a potential buyer would actually type into ChatGPT/Claude/Perplexity.
-  return [
-    `I'm a ${icp}. I need help with ${coreOfferShort}. Who should I hire or talk to? Give me specific names of consultants, coaches, or agencies.`,
-    `Who are the best consultants or coaches for ${icp}? I want someone who specializes in ${coreOfferShort}. List specific people and companies, not categories.`,
-    `I own a ${icp.toLowerCase().replace(/^(i'm a |i run a |i own a )/i, '')} and I'm looking for help with growth. Who are the recognized experts that work specifically with businesses like mine?`,
+  const coreOfferLines = (intakeData.coreOffer || '').split('\n').filter(l => l.trim());
+  const revenue = intakeData.lastYearRevenue || (intakeData.lastMonthRevenue * 12) || 0;
+  const revLabel = revenue >= 1000000 ? `$${(revenue / 1000000).toFixed(0)}mm` : `$${Math.round(revenue / 1000)}K`;
+
+  // Figure out what kind of business the ICP is
+  const icpDesc = intakeData.statedICP || intakeData.targetMarket || '';
+  // Extract the business type (e.g., "marketing agency" from "Marketing agencies between $1mm...")
+  const bizType = icpDesc
+    .replace(/between.*$/i, '')
+    .replace(/struggling.*$/i, '')
+    .replace(/\$[\d.,]+[kmb]*/gi, '')
+    .replace(/\d+\s*-\s*\d+/g, '')
+    .trim()
+    .replace(/ies$/i, 'y')  // "agencies" -> "agency"
+    .replace(/\s+/g, ' ')
+    .trim() || 'agency';
+
+  // Figure out what problems the ICP has based on the user's core offer
+  const offerKeywords = coreOfferLines.join(' ').toLowerCase();
+  const problems: string[] = [];
+
+  if (offerKeywords.includes('sales') || offerKeywords.includes('salesos')) {
+    problems.push('improve my sales process');
+    problems.push('close more deals');
+  }
+  if (offerKeywords.includes('positioning') || offerKeywords.includes('demandos')) {
+    problems.push('fix my positioning');
+    problems.push('generate more inbound leads');
+  }
+  if (offerKeywords.includes('content') || offerKeywords.includes('social')) {
+    problems.push('build a content strategy that generates leads');
+  }
+  if (offerKeywords.includes('coaching') || offerKeywords.includes('growth')) {
+    problems.push('grow my business');
+    problems.push('scale past my current revenue');
+  }
+  if (offerKeywords.includes('team') || offerKeywords.includes('amplification')) {
+    problems.push('get my team to help with business development');
+  }
+  if (problems.length === 0) {
+    problems.push('grow my business', 'get more clients');
+  }
+
+  // Pick a realistic revenue for the ICP (use target company size context)
+  const sizeContext = intakeData.targetCompanySize || '';
+  let icpRevExample = '$3mm';
+  if (sizeContext.includes('1-10')) icpRevExample = '$1.5mm';
+  else if (sizeContext.includes('51-200')) icpRevExample = '$8mm';
+  else if (sizeContext.includes('201-')) icpRevExample = '$15mm';
+
+  // Build 3 distinct, realistic queries an ICP buyer would actually type
+  const prompts = [
+    // Query 1: Specific operational problem
+    `I run a ${icpRevExample} ${bizType} and I need to ${problems[0]}${problems[1] ? ` and ${problems[1]}` : ''}. Who are the best consultants or coaches that specialize in this? I want names, not generic advice.`,
+
+    // Query 2: Growth-focused, different angle
+    `My ${bizType} is stuck at ${icpRevExample} in revenue. I need outside help to ${problems[Math.min(2, problems.length - 1)]}. Who are the go-to people for ${bizType} growth? Looking for someone who's actually done this, not a generalist.`,
+
+    // Query 3: Hiring/resource focused
+    `Who are the top coaches or consultants that help ${bizType} owners ${problems[Math.min(3, problems.length - 1)]}? I want someone who works specifically with ${bizType.endsWith('y') ? bizType.slice(0, -1) + 'ies' : bizType + 's'} in the $1mm-$20mm range. Give me specific names.`,
   ];
+
+  return prompts;
 }
 
 function checkMentions(text: string, intakeData: IntakeData) {

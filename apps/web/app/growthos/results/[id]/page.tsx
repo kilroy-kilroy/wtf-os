@@ -635,7 +635,7 @@ export default async function ResultsPage({ params }: { params: { id: string } }
             {aiScore === 0 ? (
               <div className="mb-4">
                 <p className="text-sm text-[#E31B23] font-medium mb-2">You don&apos;t exist to AI.</p>
-                <p className="text-sm text-slate-400">We asked Claude, ChatGPT, and Perplexity the question your ICP would ask: &quot;I&apos;m a {intake.statedICP || intake.targetMarket || 'company looking for help'}. Who should I hire?&quot; You weren&apos;t mentioned. Not once.</p>
+                <p className="text-sm text-slate-400">We asked Claude, ChatGPT, and Perplexity the kinds of questions your ICP would actually type — real problems, real revenue numbers, asking for specific help. You weren&apos;t mentioned. Not once.</p>
               </div>
             ) : aiScore < 50 ? (
               <p className="text-sm text-slate-400 mb-4">
@@ -691,7 +691,7 @@ export default async function ResultsPage({ params }: { params: { id: string } }
                   <li>• Your competitors ARE showing up</li>
                   <li>• This gap will widen, not shrink</li>
                 </ul>
-                <p className="text-sm text-[#00D4FF] mt-3 font-medium">The fix: become the answer. Your ICP ({intake.statedICP || intake.targetMarket || 'your target market'}) is typing questions into ChatGPT right now. Write the definitive guide to solving their exact problem — a post like &quot;How {intake.statedICP || intake.targetMarket || 'companies like yours'} can fix {(intake.coreOffer || 'growth').split('\n')[0].substring(0, 60)}&quot; — so detailed and useful that AI has no choice but to cite you.</p>
+                <p className="text-sm text-[#00D4FF] mt-3 font-medium">The fix: become the answer. Your ICP is asking AI real questions about their real problems right now. You need content that answers those exact questions — not thought leadership, not brand awareness. Specific, tactical answers to specific problems. That&apos;s how you get cited.</p>
               </div>
             )}
           </div>
@@ -785,7 +785,7 @@ export default async function ResultsPage({ params }: { params: { id: string } }
           <h3 className="text-sm font-bold text-[#E31B23] mb-2">YOU&apos;RE INVISIBLE TO AI</h3>
           <p className="text-sm text-slate-300 mb-2">When your ICP asks ChatGPT or Claude for recommendations, you don&apos;t exist.</p>
           <p className="text-sm text-slate-400">This isn&apos;t a future problem. It&apos;s a now problem. The agencies showing up are getting mindshare you&apos;re not.</p>
-          <p className="text-sm text-[#00D4FF] mt-3 font-medium">Your content strategy needs to change. You need to become the answer. When a {intake.statedICP || intake.targetMarket || 'potential client'} asks AI for help, your name should come up. That means publishing content that directly solves their problems — not thought leadership fluff, but specific, actionable answers.</p>
+          <p className="text-sm text-[#00D4FF] mt-3 font-medium">Your content strategy needs to change. When your ICP asks AI &quot;who can help me grow my agency?&quot; — you need to be the answer that comes back. That means publishing content that solves their exact problems, not generic thought leadership.</p>
         </div>
       )}
 

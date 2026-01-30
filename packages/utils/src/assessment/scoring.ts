@@ -252,7 +252,7 @@ function scoreLeadEngine(data: IntakeData): ZoneScore {
 
   if (data.referralPercent > 60) score -= 1; // Over-dependent on referrals
   if (activeChannels >= 3) score += 1;
-  if (data.monthlyLeads >= 20 && data.closeRate >= 25) score += 1;
+  if (data.monthlyLeads >= 20 && Number(data.closeRate) >= 25) score += 1;
   if (data.monthlyLeads < 5) score -= 1;
 
   score = Math.max(1, Math.min(5, score));

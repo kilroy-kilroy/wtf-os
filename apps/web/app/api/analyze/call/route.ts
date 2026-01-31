@@ -12,8 +12,6 @@ import {
   runModel,
   parseModelJSON,
   retryWithBackoff,
-  calculateAverageScore,
-  scoreToGrade5,
 } from '@repo/utils';
 import {
   CALL_LAB_LITE_SYSTEM,

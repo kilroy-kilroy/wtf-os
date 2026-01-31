@@ -8,8 +8,8 @@ export default function Home() {
         {/* Logo */}
         <div className="flex justify-center">
           <Image
-            src="/logos/salesosdemandossqtransparent.png"
-            alt="SalesOS + DemandOS"
+            src="/logos/trios-logo-sq-transparent.png"
+            alt="TriOS"
             width={180}
             height={180}
             priority

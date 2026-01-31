@@ -49,17 +49,25 @@ function AuthCallbackContent() {
         const { data: { user } } = await supabase.auth.getUser();
 
         if (user) {
-          // Check if user has completed onboarding
-          const { data: userData } = await supabase
-            .from('users')
-            .select('onboarding_completed')
-            .eq('id', user.id)
-            .single();
+          // Check for a `next` destination (e.g. from growthos assessment flow)
+          const next = searchParams.get('next');
 
-          if (!userData || !userData.onboarding_completed) {
-            router.push('/onboarding/profile');
+          if (next && next.startsWith('/')) {
+            // Respect the intended destination — skip onboarding for known flows
+            router.push(next);
           } else {
-            router.push('/labs');
+            // Default: check onboarding status
+            const { data: userData } = await supabase
+              .from('users')
+              .select('onboarding_completed')
+              .eq('id', user.id)
+              .single();
+
+            if (!userData || !userData.onboarding_completed) {
+              router.push('/onboarding/profile');
+            } else {
+              router.push('/labs');
+            }
           }
           router.refresh();
         } else {

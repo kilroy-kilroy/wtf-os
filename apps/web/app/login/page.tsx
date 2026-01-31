@@ -1,11 +1,23 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 
 export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="animate-spin w-8 h-8 border-2 border-[#E51B23] border-t-transparent rounded-full" />
+      </div>
+    }>
+      <LoginContent />
+    </Suspense>
+  );
+}
+
+function LoginContent() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -14,7 +26,11 @@ export default function LoginPage() {
   const [resetSent, setResetSent] = useState(false);
 
   const router = useRouter();
+  const searchParams = useSearchParams();
   const supabase = createClientComponentClient();
+
+  // Read `next` param so we can route back after login
+  const nextPath = searchParams.get('next');
 
   // Check for auth tokens in URL hash (recovery, signup confirmation, magic link)
   useEffect(() => {
@@ -47,19 +63,23 @@ export default function LoginPage() {
               return;
             }
 
-            // Get user and check onboarding status
+            // Get user and route to intended destination
             const { data: { user } } = await supabase.auth.getUser();
             if (user) {
-              const { data: userData } = await supabase
-                .from('users')
-                .select('onboarding_completed')
-                .eq('id', user.id)
-                .single();
-
-              if (!userData || !userData.onboarding_completed) {
-                router.push('/onboarding/profile');
+              if (nextPath && nextPath.startsWith('/')) {
+                router.push(nextPath);
               } else {
-                router.push('/labs');
+                const { data: userData } = await supabase
+                  .from('users')
+                  .select('onboarding_completed')
+                  .eq('id', user.id)
+                  .single();
+
+                if (!userData || !userData.onboarding_completed) {
+                  router.push('/onboarding/profile');
+                } else {
+                  router.push('/labs');
+                }
               }
               router.refresh();
             }
@@ -72,7 +92,7 @@ export default function LoginPage() {
     };
 
     handleAuthTokens();
-  }, [router, supabase]);
+  }, [router, supabase, nextPath]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -88,11 +108,14 @@ export default function LoginPage() {
         setResetSent(true);
         setError('Check your email for the password reset link. If you don\'t see it, check your spam folder.');
       } else if (mode === 'signup') {
+        const signupCallbackUrl = nextPath
+          ? `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath)}`
+          : `${window.location.origin}/auth/callback`;
         const { error } = await supabase.auth.signUp({
           email,
           password,
           options: {
-            emailRedirectTo: `${window.location.origin}/auth/callback`,
+            emailRedirectTo: signupCallbackUrl,
           },
         });
         if (error) throw error;
@@ -104,21 +127,22 @@ export default function LoginPage() {
         });
         if (error) throw error;
 
-        // Check user's onboarding status and route accordingly
+        // Route to intended destination, or fall back to onboarding check
         if (authData.user) {
-          // Check if user has completed onboarding
-          const { data: userData } = await supabase
-            .from('users')
-            .select('onboarding_completed, org_id')
-            .eq('id', authData.user.id)
-            .single();
-
-          if (!userData || !userData.onboarding_completed) {
-            // New user or hasn't completed onboarding
-            router.push('/onboarding/profile');
+          if (nextPath && nextPath.startsWith('/')) {
+            router.push(nextPath);
           } else {
-            // Onboarding complete - go to labs home
-            router.push('/labs');
+            const { data: userData } = await supabase
+              .from('users')
+              .select('onboarding_completed, org_id')
+              .eq('id', authData.user.id)
+              .single();
+
+            if (!userData || !userData.onboarding_completed) {
+              router.push('/onboarding/profile');
+            } else {
+              router.push('/labs');
+            }
           }
         } else {
           router.push('/onboarding/profile');
@@ -134,10 +158,13 @@ export default function LoginPage() {
 
   const handleGoogleSignIn = async () => {
     try {
+      const callbackUrl = nextPath
+        ? `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath)}`
+        : `${window.location.origin}/auth/callback`;
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: callbackUrl,
         },
       });
       if (error) throw error;
@@ -173,8 +200,8 @@ export default function LoginPage() {
         {/* Header */}
         <div className="text-center mb-10">
           <Image
-            src="/logos/salesosdemandossqtransparent.png"
-            alt="SalesOS"
+            src="/logos/trios-logo-sq-transparent.png"
+            alt="TriOS"
             width={140}
             height={140}
             className="mx-auto mb-4"

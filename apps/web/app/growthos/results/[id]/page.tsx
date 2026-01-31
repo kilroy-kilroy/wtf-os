@@ -703,15 +703,15 @@ export default async function ResultsPage({ params }: { params: { id: string } }
         <h2 className="text-xl font-bold text-white mb-6 text-center">Next Steps</h2>
 
         <div className="bg-slate-700/30 rounded-xl p-6 mb-4 border border-[#00D4FF]/20">
-          <h3 className="text-lg font-bold text-white mb-2">60-Minute Roadmap Consultation</h3>
-          <p className="text-sm text-slate-400 mb-3">Let&apos;s fix this together. In 60 minutes, we&apos;ll:</p>
+          <h3 className="text-lg font-bold text-white mb-2">45-Minute Roadmap Consultation</h3>
+          <p className="text-sm text-slate-400 mb-3">Let&apos;s fix this together. In 45 minutes, we&apos;ll:</p>
           <ul className="text-sm text-slate-300 space-y-1 mb-4">
             <li>&bull; Prioritize your positioning fix</li>
             <li>&bull; Map your founder escape route</li>
             <li>&bull; Build your 90-day action plan</li>
           </ul>
           <a
-            href="[ROADMAP_URL]"
+            href="https://zcal.co/timkilroy/growthos"
             className="inline-block px-6 py-3 rounded-xl bg-[#E31B23] text-white font-bold text-sm hover:shadow-lg hover:shadow-[#E31B23]/25 transition-all"
           >
             Book Your Roadmap Call &rarr;

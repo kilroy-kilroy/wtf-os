@@ -9,6 +9,7 @@ import { generateDiagnoses } from '@repo/utils/src/assessment/diagnosis';
 import type { IntakeData } from '@repo/utils/src/assessment/scoring';
 import type { RevelationIntakeData } from '@repo/utils/src/assessment/revelations';
 import { addAssessmentSubscriber } from '@/lib/beehiiv';
+import { onAssessmentCompleted } from '@/lib/loops';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -275,6 +276,17 @@ export async function POST(request: NextRequest) {
         console.error('[GrowthOS] Failed to update org with assessment data:', orgUpdateError);
       }
     }
+
+    // Trigger Loops email sequence (fire-and-forget)
+    onAssessmentCompleted(
+      intakeData.email,
+      nameParts[0] || '',
+      intakeData.agencyName,
+      assessmentId,
+      scores.overall
+    ).catch((err) => {
+      console.error('[GrowthOS] Loops assessment email trigger failed:', err);
+    });
 
     // Add to Agency Inner Circle newsletter list (fire-and-forget)
     addAssessmentSubscriber(

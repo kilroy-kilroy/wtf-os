@@ -6,6 +6,7 @@ import { calculateAssessment } from '@repo/utils/src/assessment/scoring';
 import { runEnrichmentPipeline } from '@repo/utils/src/assessment/enrichment';
 import { calculateRevelations } from '@repo/utils/src/assessment/revelations';
 import { generateDiagnoses } from '@repo/utils/src/assessment/diagnosis';
+import { generateFollowUpQuestions, calculateLTVMetrics } from '@repo/utils/src/assessment/follow-up';
 import type { IntakeData } from '@repo/utils/src/assessment/scoring';
 import type { RevelationIntakeData } from '@repo/utils/src/assessment/revelations';
 import { addAssessmentSubscriber } from '@/lib/beehiiv';
@@ -230,6 +231,22 @@ export async function POST(request: NextRequest) {
       (scores as any).diagnoses = diagnoses;
     } catch (diagError: any) {
       console.error('[GrowthOS] Diagnosis generation failed (continuing):', diagError.message);
+    }
+
+    // Calculate LTV metrics from existing intake data (no new fields needed)
+    try {
+      const ltvMetrics = calculateLTVMetrics(intakeData);
+      if (ltvMetrics) (scores as any).ltvMetrics = ltvMetrics;
+    } catch (ltvError: any) {
+      console.error('[GrowthOS] LTV calculation failed (continuing):', ltvError.message);
+    }
+
+    // Generate follow-up questions based on scored zones
+    try {
+      const followUpQuestions = generateFollowUpQuestions(intakeData, scores);
+      (scores as any).followUpQuestions = followUpQuestions;
+    } catch (fuError: any) {
+      console.error('[GrowthOS] Follow-up question generation failed (continuing):', fuError.message);
     }
 
     // Update assessment with results

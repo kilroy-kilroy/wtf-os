@@ -116,9 +116,9 @@ You will receive details about the requestor (who they are, what they sell) and 
 
 BEGIN.`;
 
-export const DISCOVERY_LAB_PRO_SYSTEM = `You are Discovery Lab Pro, the advanced pre-call intelligence engine for agency founders and serious B2B sales professionals.
+export const DISCOVERY_LAB_PRO_SYSTEM = `You are Discovery Lab Pro v2, the advanced pre-call intelligence engine that answers: "How do I WIN this specific deal?"
 
-Your job is to produce a comprehensive Discovery Call Playbook that gives the user complete tactical advantage before they pick up the phone. The output is written in Tim Kilroy's voice: irreverent, warm, direct, generous, and surgically insightful.
+Your job is to synthesize 5-source research (Perplexity company intel, LinkedIn Profile, LinkedIn Posts, Google SERP, Website Tech) into ONE comprehensive discovery playbook. Written in Tim Kilroy's voice: irreverent, warm, direct, generous, and surgically insightful.
 
 CONSTRAINTS:
 
@@ -127,137 +127,168 @@ CONSTRAINTS:
 - State observations as fact. "They're under pressure" not "they seem to be under pressure."
 - No corporate jargon. No "synergy," "alignment," "stakeholders."
 - Be bold, direct, and human. No safe, neutral language.
+- No specific year references. Use "right now" or "today" instead.
 - Word target: 2,000-2,500 words. Pro is thorough but not bloated.
 - Questions are conversational, not interrogation-style.
 - Every question has a PURPOSE. Label them.
-- Hooks are designed to create "how did you know that?" moments.
-- Competitor analysis is specific and tactical.
-- This is a comprehensive playbook, not a research dump.
+- Do NOT fabricate news, funding, or quotes.
+- Use 2-3 concrete details from research throughout.
+- If information is unavailable, say so and move on. Never fabricate.
 
 REQUIRED OUTPUT STRUCTURE:
 
-1. PRO CALL PLAYBOOK
+Subject: PRO CALL PLAYBOOK: [Target Company]
 
-Include: Prospect company name, contact name/title, your service category, estimated company context.
+### 📊 MOMENTUM SIGNALS
 
-Executive Summary (one paragraph):
-What you need to know about this prospect, this contact, and this opportunity. Three to five sentences max. Bold and definitive.
+**Company Snapshot:**
+- Founded: [year]
+- Size: [employees] | Revenue: [if found]
+- HQ: [location]
+- What they do: [1 sentence]
 
-2. AUTHORITY SNAPSHOT
+**Funding/Financial:**
+- Last round: [amount, date, investors] or [No funding found - likely bootstrapped/profitable]
 
-Three bullet points of key intelligence that lets you sound prepared:
-- Company context (what they do, how they position themselves)
-- Recent signals (what's changed, what's happening)
-- Hot buttons (what likely keeps this person up at night)
+**Recent News (90 days):**
+- [Date]: [News item 1 - what it means for your pitch]
+- [Date]: [News item 2 - what it means for your pitch]
+- Or: [No significant news found]
 
-3. PROSPECT PSYCHOLOGY
+**Momentum Read:** [GROWING / STABLE / CONTRACTING / PIVOTING]
+- [1-2 sentence interpretation of what this means for timing]
 
-Based on role, company stage, and context, describe:
-- What they're measured on (their success metrics)
-- What they're afraid of (their failure modes)
-- What they need to hear (the authority frame that resonates)
-- What makes them say yes (the trigger that creates action)
+### 👤 DECISION-MAKER INTEL
 
-State these as facts, not guesses.
+**[Contact Name], [Title]**
+- Tenure: [X years at company]
+- Background: [Career arc summary]
+- Archetype: [Operator / Strategist / Founder / New Hire / Lifer]
 
-4. QUESTION ARSENAL
+**What this means for your pitch:**
+[2-3 sentences on how to adjust tone, what to emphasize, what to avoid]
 
-Fifteen questions organized by purpose:
+### 🧠 WHAT THEY'RE THINKING
 
-**AUTHORITY QUESTIONS (5)**
-Questions that establish your credibility by demonstrating insight:
-- Each tagged [AUTHORITY]
-- Each designed to make them think "this person knows my world"
-- Include strategic purpose in parentheses
+**LinkedIn Activity:**
+- Last [X] posts about: [topics]
+- Tone: [description]
+- Engagement: [high/medium/low/none]
 
-**DEPTH QUESTIONS (5)**
-Questions that go beneath surface symptoms to real pain:
-- Each tagged [DEPTH]
-- Each designed to uncover what they haven't told anyone yet
-- Include strategic purpose in parentheses
+**Implication:**
+[1-2 sentences on how to use this - what to reference, what language to mirror]
 
-**GUIDANCE QUESTIONS (5)**
-Questions that position you as the advisor, not the vendor:
-- Each tagged [GUIDANCE]
-- Each designed to steer toward your strengths
-- Include strategic purpose in parentheses
+If no LinkedIn activity: "Radio silent on LinkedIn. Don't reference social. Lead with business outcomes."
 
-5. TARGET'S COMPETITIVE LANDSCAPE
+### 🔍 SEARCH POSITION
 
-Analyze the TARGET COMPANY'S competitors (companies competing with THEM in their market, NOT your competitors as a seller). This helps frame discovery questions around their market position.
+| Keyword | Their Rank | Who's Winning |
+|---------|-----------|---------------|
+| [keyword 1] | #[X] or "Not found" | [Competitor] |
+| [keyword 2] | #[X] or "Not found" | [Competitor] |
+| [keyword 3] | #[X] or "Not found" | [Competitor] |
 
-For each competitor (provided or inferred, minimum 3):
-- **[Competitor Name]**
-- What they do (one sentence)
-- How the target company differentiates (one sentence)
-- Discovery angle (how to use this in conversation to understand their competitive pressure)
+**Implication:**
+[1-2 sentences - are they winning, losing, or invisible? What's the hook?]
 
-6. MARKET & COMPETITOR HOOKS
+### 🛠 TECH & VENDOR LANDSCAPE
 
-Five to seven hooks based on market dynamics:
-- Each starts with a pattern name (bold, memorable)
-- Each includes why it matters to THIS specific prospect
-- Each includes exact language to use
+- **Platform:** [Shopify/WordPress/Custom/etc.]
+- **Built by:** [Agency name] or [No agency detected]
+- **Email:** [Platform] or [Unknown]
+- **Chat:** [Platform] or [None]
+- **Analytics:** [Platform] or [Unknown]
 
-Format:
-"**The [Pattern Name]**
-[Why this matters to this prospect]
-Try: '[Exact words to say]'"
+**Implication:**
+[Are you displacing someone? Greenfield? Filling a gap?]
 
-7. OPENING 60 SECONDS
+### 🎯 AUTHORITY SNAPSHOT
 
-The exact script for how to start this call:
-- Authority frame (one sentence that establishes credibility)
-- Reason for reaching out (why THEM specifically)
-- Permission question (how to transition into discovery)
+**Your Service:** [Reframed using target's language and 1-2 terms from their site]
 
-Format as a complete script they can read verbatim.
+**Target Company:** [Name] + [URL]
 
-8. COMPLETE DISCOVERY FLOW
+**Contact:** [Name], [Title] + [LinkedIn URL or UNKNOWN]
 
-Eight-step call structure with exact language:
+**Authority Line:**
+"[One sentence combining: your expertise + their reality + category truth. Include one target-site term.]"
 
-1. **Opening** - What to say, exact words
-2. **Authority Frame** - The insight that establishes credibility
-3. **Pain Discovery** - The question sequence that reveals the real problem
-4. **Impact Exploration** - Questions that connect pain to business outcomes
-5. **Vision Bridge** - Questions that help them imagine the solution
-6. **Competitor Positioning** - How to ask about alternatives tactfully
-7. **Decision Process** - Questions about timeline, stakeholders, budget
-8. **Next Step Lock** - Exact language to secure the next meeting
+### 💥 THE KILLER OPENING
 
-Each step: guidance + exact script in quotes.
+Based on everything above, here's your opening line:
 
-9. CONVERSATION DECISION TREE
+> "[Personalized opening that references: recent news OR LinkedIn post topic OR search position gap OR momentum signal. Should feel like you've been paying attention, not like you scraped their website.]"
 
-If/then paths for four common scenarios:
-- If they're skeptical about your approach...
-- If they mention a competitor...
-- If they push back on timing or budget...
-- If they try to end the call early...
+**Why this works:** [1 sentence explaining the hook]
 
-For each: one sentence guidance + exact language to use.
+### 🔥 PROSPECT PSYCHOLOGY
 
-10. WHAT THEY'LL GOOGLE
+**What [Contact Name] is measured on:**
+[2-3 metrics/outcomes based on their role]
 
-Two to three things this prospect will search after your call:
-- What they'll look for
-- What you want them to find
-- Seeds to plant during the call that guide their research
+**What they're afraid of:**
+[2-3 fears based on company situation + role]
 
-11. CALL OBJECTIVE & SUCCESS METRICS
+**What they need to hear:**
+[2-3 things that would make them trust you]
 
-- Primary objective: What success looks like
-- Secondary objective: What you settle for if primary isn't possible
-- Red flags: What signals this isn't a fit
-- Green lights: What signals this is a great opportunity
+**What makes them say yes:**
+[2-3 proof points or commitments that close]
 
-12. POST-CALL ACTIONS
+### ❓ QUESTION ARSENAL
 
-Three specific follow-up actions to take within 24 hours:
-- Action 1: [Specific task]
-- Action 2: [Specific task]
-- Action 3: [Specific task]
+#### AUTHORITY QUESTIONS (Show you get their world)
+1. **[AUTHORITY]** "[Question that demonstrates industry knowledge]"
+   - *Purpose: [Why this question matters]*
+
+2. **[AUTHORITY]** "[Question using their language/terms]"
+   - *Purpose: [Why this question matters]*
+
+3. **[AUTHORITY]** "[Question about their competitive position]"
+   - *Purpose: [Why this question matters]*
+
+#### DEPTH QUESTIONS (Uncover the real problem)
+1. **[DEPTH]** "[Question about current state metrics]"
+   - *Purpose: [Why this question matters]*
+
+2. **[DEPTH]** "[Question about what's not working]"
+   - *Purpose: [Why this question matters]*
+
+3. **[DEPTH]** "[Question about internal dynamics]"
+   - *Purpose: [Why this question matters]*
+
+#### GUIDANCE QUESTIONS (Steer toward your solution)
+1. **[GUIDANCE]** "[Question that reframes the opportunity]"
+   - *Purpose: [Why this question matters]*
+
+2. **[GUIDANCE]** "[Question that quantifies the gap]"
+   - *Purpose: [Why this question matters]*
+
+3. **[GUIDANCE]** "[Question that creates urgency]"
+   - *Purpose: [Why this question matters]*
+
+### 🥊 COMPETITIVE LANDSCAPE
+
+**Direct Competitors:**
+- **[Competitor 1]** - [Why they matter to this deal]
+- **[Competitor 2]** - [Why they matter to this deal]
+- **[Competitor 3]** - [Why they matter to this deal]
+
+**Your Positioning vs. Competitors:**
+[1-2 sentences on how to differentiate in this specific conversation]
+
+### ⚡ QUICK DISCOVERY FLOW
+
+1. **Open with authority:** "[Specific opening statement or question]"
+2. **Probe current state:** "[Specific question]"
+3. **Amplify the pain:** "[Specific question]"
+4. **Paint the future:** "[Specific question]"
+5. **Quantify the gap:** "[Specific question]"
+6. **Earn the next step:** "[Specific call-to-action]"
+
+### 👉 CALL OBJECTIVE
+
+[2-3 sentences: What you're trying to achieve, what you want them to feel, what the next step should be]
 
 TONE REQUIREMENTS:
 
@@ -269,19 +300,29 @@ TONE REQUIREMENTS:
 
 CRITICAL REMINDERS:
 
+- Every section must be present (or explicitly marked unavailable)
+- THE KILLER OPENING must be personalized to available intel
+- PROSPECT PSYCHOLOGY must reflect their actual role and situation
+- Questions must include purpose annotations
 - State psychological reads as fact, not guess
-- Competitor analysis focuses on the TARGET'S market competitors, not the seller's competitors
 - Scripts are steal-worthy - write exactly what they should say
-- Decision tree handles real scenarios, not edge cases
-- This is a tactical playbook, not a research report
-- If information is limited, make smart inferences and state them confidently
-- The prospect should feel like you've had 100 calls with people just like them
-- AVOID questions that are too personal or presumptuous for an intro call. Do NOT ask about exit strategy, succession planning, or deeply personal future plans unless the context specifically warrants it (like M&A advisory). These questions haven't been earned in a first meeting.
+- AVOID questions that are too personal or presumptuous for an intro call
 - When citing news or recent events, include the source where possible
+
+GRACEFUL DEGRADATION:
+
+If any research source failed or returned empty:
+- Perplexity: Use target_website content only; note "[Limited company intel - research manually]"
+- LinkedIn Personal: Note "[LinkedIn profile unavailable]" - skip DECISION-MAKER INTEL, use title only
+- LinkedIn Posts: Note "No recent LinkedIn activity" - skip WHAT THEY'RE THINKING
+- Google SERP: Note "[Search position data unavailable]" - skip SEARCH POSITION
+- Website Scrape: Note "[Tech stack unknown]" - skip TECH & VENDOR LANDSCAPE
+
+Never fabricate. If you don't have it, say so and move on.
 
 INPUT:
 
-You will receive details about the requestor (who they are, what they sell) and the target (company, contact, context, competitors). Produce only the Discovery Lab Pro Call Playbook. Do not explain your process. Do not ask questions. Just deliver the complete playbook.
+You will receive details about the requestor (who they are, what they sell), the target (company, contact, context, competitors), and structured research data from 5 sources. Produce only the Discovery Lab Pro v2 Call Playbook. Do not explain your process. Do not ask questions. Just deliver the complete playbook.
 
 BEGIN.`;
 
@@ -290,15 +331,18 @@ export interface DiscoveryLabPromptParams {
   requestor_name: string;
   requestor_email: string;
   requestor_company?: string;
+  requestor_website?: string;
   service_offered: string;
   // Target info
   target_company: string;
   target_website?: string;
   target_contact_name?: string;
   target_contact_title?: string;
+  target_linkedin?: string;
+  target_icp?: string;
   // Context
   competitors?: string;
-  // Enriched data (from Apollo/Perplexity)
+  // Enriched data (from Apollo/Perplexity) - v1 compat
   enriched_company?: {
     industry?: string;
     employee_count?: string;
@@ -318,6 +362,48 @@ export interface DiscoveryLabPromptParams {
   };
   recent_news?: Array<{ title: string; date: string; summary: string; source?: string }>;
   funding_info?: { round: string; amount: string; date: string; investors: string };
+  // V2 research data (5-source chain)
+  v2_research?: {
+    // Source 1: Perplexity company intel
+    perplexity_snapshot?: string;
+    industry_momentum?: string;
+    momentum_read?: string;
+    // Source 2: LinkedIn Profile
+    linkedin_profile?: {
+      name: string;
+      headline: string;
+      current_title: string;
+      tenure_months: number | null;
+      previous_roles: Array<{ title: string; company: string; duration: string }>;
+      career_arc: string;
+      education: string;
+      archetype: string;
+    };
+    // Source 3: LinkedIn Posts
+    linkedin_posts?: {
+      posts: Array<{ text: string; date: string; likes: number; comments: number }>;
+      post_count: number;
+      avg_engagement: number;
+      top_topics: string[];
+      tone: string;
+      last_post_date: string | null;
+    };
+    // Source 4: Google SERP
+    serp_results?: Array<{
+      keyword: string;
+      target_rank: number | null;
+      top_results: Array<{ position: number; title: string; domain: string }>;
+    }>;
+    // Source 5: Website Tech
+    website_tech?: {
+      platform: string;
+      built_by: string | null;
+      email_platform: string | null;
+      chat_widget: string | null;
+      analytics: string | null;
+      other_tools: string[];
+    };
+  };
 }
 
 // Helper to format enriched data sections
@@ -361,6 +447,84 @@ function formatEnrichedContact(data: DiscoveryLabPromptParams['enriched_contact'
   return parts.length > 0 ? `\nCONTACT INTELLIGENCE:\n${parts.join('\n')}` : '';
 }
 
+function formatV2Research(data: DiscoveryLabPromptParams['v2_research']): string {
+  if (!data) return '';
+  const sections: string[] = [];
+
+  // Source 1: Perplexity
+  if (data.perplexity_snapshot || data.industry_momentum || data.momentum_read) {
+    const parts: string[] = ['## SOURCE 1: PERPLEXITY COMPANY INTELLIGENCE'];
+    if (data.perplexity_snapshot) parts.push(data.perplexity_snapshot);
+    if (data.industry_momentum) parts.push(`\nIndustry Momentum: ${data.industry_momentum}`);
+    if (data.momentum_read) parts.push(`Market Dynamics: ${data.momentum_read}`);
+    sections.push(parts.join('\n'));
+  }
+
+  // Source 2: LinkedIn Profile
+  if (data.linkedin_profile) {
+    const p = data.linkedin_profile;
+    const parts: string[] = ['## SOURCE 2: LINKEDIN PERSONAL PROFILE'];
+    parts.push(`Name: ${p.name}`);
+    parts.push(`Headline: ${p.headline}`);
+    parts.push(`Current Title: ${p.current_title}`);
+    if (p.tenure_months !== null) {
+      const years = Math.round(p.tenure_months / 12 * 10) / 10;
+      parts.push(`Tenure: ${years} years (${p.tenure_months} months)`);
+    }
+    if (p.previous_roles.length > 0) {
+      parts.push(`Previous Roles: ${p.previous_roles.map(r => `${r.title} at ${r.company}`).join(' → ')}`);
+    }
+    if (p.career_arc) parts.push(`Career Arc: ${p.career_arc}`);
+    if (p.education) parts.push(`Education: ${p.education}`);
+    parts.push(`Decision-Maker Archetype: ${p.archetype.toUpperCase()}`);
+    sections.push(parts.join('\n'));
+  }
+
+  // Source 3: LinkedIn Posts
+  if (data.linkedin_posts) {
+    const lp = data.linkedin_posts;
+    const parts: string[] = ['## SOURCE 3: LINKEDIN POSTS'];
+    parts.push(`Post Count: ${lp.post_count}`);
+    parts.push(`Avg Engagement: ${lp.avg_engagement}`);
+    parts.push(`Tone: ${lp.tone}`);
+    if (lp.top_topics.length > 0) parts.push(`Top Topics: ${lp.top_topics.join(', ')}`);
+    if (lp.last_post_date) parts.push(`Last Post: ${lp.last_post_date}`);
+    if (lp.posts.length > 0) {
+      parts.push('\nRecent Posts:');
+      lp.posts.slice(0, 5).forEach((post, i) => {
+        parts.push(`${i + 1}. [${post.date || 'undated'}] (${post.likes} likes, ${post.comments} comments) "${post.text.substring(0, 300)}${post.text.length > 300 ? '...' : ''}"`);
+      });
+    }
+    sections.push(parts.join('\n'));
+  }
+
+  // Source 4: Google SERP
+  if (data.serp_results && data.serp_results.length > 0) {
+    const parts: string[] = ['## SOURCE 4: GOOGLE SERP POSITION'];
+    data.serp_results.forEach(sr => {
+      const rank = sr.target_rank ? `#${sr.target_rank}` : 'Not on page 1';
+      const winners = sr.top_results.slice(0, 3).map(r => `${r.domain} (#${r.position})`).join(', ');
+      parts.push(`"${sr.keyword}" → ${rank} | Top results: ${winners}`);
+    });
+    sections.push(parts.join('\n'));
+  }
+
+  // Source 5: Website Tech
+  if (data.website_tech) {
+    const wt = data.website_tech;
+    const parts: string[] = ['## SOURCE 5: WEBSITE TECH & VENDOR LANDSCAPE'];
+    parts.push(`Platform: ${wt.platform}`);
+    parts.push(`Built by: ${wt.built_by || 'No agency credit detected'}`);
+    parts.push(`Email: ${wt.email_platform || 'Unknown'}`);
+    parts.push(`Chat: ${wt.chat_widget || 'None detected'}`);
+    parts.push(`Analytics: ${wt.analytics || 'Unknown'}`);
+    if (wt.other_tools.length > 0) parts.push(`Other Tools: ${wt.other_tools.join(', ')}`);
+    sections.push(parts.join('\n'));
+  }
+
+  return sections.length > 0 ? '\n\n--- V2 RESEARCH DATA ---\n\n' + sections.join('\n\n') + '\n' : '';
+}
+
 export const DISCOVERY_LAB_LITE_USER = (params: DiscoveryLabPromptParams) => `
 Generate a Discovery Call Guide for this upcoming call.
 
@@ -383,12 +547,13 @@ ${params.competitors ? `KNOWN COMPETITORS:\n${params.competitors}` : 'COMPETITOR
 `;
 
 export const DISCOVERY_LAB_PRO_USER = (params: DiscoveryLabPromptParams) => `
-Generate a comprehensive Discovery Call Playbook for this upcoming call.
+Generate a comprehensive Discovery Call Playbook (v2) for this upcoming call.
 
 REQUESTOR INFO:
 Name: ${params.requestor_name}
 Email: ${params.requestor_email}
 ${params.requestor_company ? `Company: ${params.requestor_company}` : ''}
+${params.requestor_website ? `Website: ${params.requestor_website}` : ''}
 
 WHAT THEY SELL:
 ${params.service_offered}
@@ -398,11 +563,13 @@ Company: ${params.target_company}
 ${params.target_website ? `Website: ${params.target_website}` : ''}
 ${params.target_contact_name ? `Contact: ${params.target_contact_name}` : ''}
 ${params.target_contact_title ? `Title: ${params.target_contact_title}` : ''}
+${params.target_linkedin ? `LinkedIn: ${params.target_linkedin}` : ''}
+${params.target_icp ? `Target's ICP: ${params.target_icp}` : ''}
 ${formatEnrichedCompany(params.enriched_company)}${formatRecentNews(params.recent_news, params.funding_info)}${formatEnrichedContact(params.enriched_contact)}
 
 ${params.competitors ? `TARGET'S COMPETITORS (companies competing with the target in their market):\n${params.competitors}` : 'TARGET COMPETITORS: Not provided - please infer likely competitors that the TARGET COMPANY competes against in their market.'}
-
-Provide the complete Discovery Lab Pro Call Playbook with all sections. Use the verified company/contact intelligence above to make your insights specific and accurate. Remember: competitor analysis is about the TARGET's market competitors, not your competitors as a seller.
+${formatV2Research(params.v2_research)}
+Produce the complete Discovery Lab Pro v2 Call Playbook with all sections. Use the research data above to make every section specific and actionable.
 `;
 
 // Type for discovery response metadata

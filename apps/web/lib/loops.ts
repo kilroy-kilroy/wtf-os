@@ -322,6 +322,43 @@ export async function onOutcomeNudge(
 }
 
 /**
+ * Fire when a GrowthOS assessment is completed
+ * Triggers post-assessment email sequence (results + roadmap call CTA)
+ */
+export async function onAssessmentCompleted(
+  email: string,
+  firstName: string,
+  agencyName: string,
+  assessmentId: string,
+  overallScore: number
+): Promise<{ success: boolean; error?: string }> {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.timkilroy.com';
+  const resultsUrl = `${appUrl}/growthos/results/${assessmentId}`;
+
+  // Create/update contact so Loops knows this person
+  await createOrUpdateContact({
+    email,
+    firstName,
+    source: 'growthos_assessment',
+    subscribed: true,
+    userGroup: 'growthos_assessment',
+    companyName: agencyName,
+  });
+
+  return sendEvent({
+    email,
+    eventName: 'assessment_completed',
+    eventProperties: {
+      firstName: firstName || '',
+      agencyName: agencyName || '',
+      assessmentId,
+      overallScore,
+      resultsUrl,
+    },
+  });
+}
+
+/**
  * Fire when a coaching report is ready (weekly, monthly, quarterly)
  * Triggers email with link to coaching report
  */

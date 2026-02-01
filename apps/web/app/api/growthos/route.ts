@@ -249,34 +249,6 @@ export async function POST(request: NextRequest) {
       console.error('[GrowthOS] Failed to update assessment:', updateError);
     }
 
-    // Persist assessment data to org profile for future product onboarding
-    if (orgId) {
-      const { error: orgUpdateError } = await supabase
-        .from('orgs')
-        .update({
-          website: intakeData.website || undefined,
-          founder_linkedin_url: intakeData.founderLinkedinUrl || undefined,
-          company_linkedin_url: intakeData.companyLinkedinUrl || undefined,
-          annual_revenue: Number(intakeData.annualRevenue || intakeData.lastYearRevenue || (intakeData.lastMonthRevenue ? Number(intakeData.lastMonthRevenue) * 12 : 0)) || undefined,
-          avg_client_value: Number(intakeData.avgClientValue) || undefined,
-          client_count: Number(intakeData.clientCount || intakeData.currentClients) || undefined,
-          target_industry: Array.isArray(intakeData.targetIndustry)
-            ? intakeData.targetIndustry.join(', ')
-            : intakeData.targetIndustry || undefined,
-          target_company_size: intakeData.targetCompanySize || undefined,
-          target_market: intakeData.targetMarket || undefined,
-          core_offer: intakeData.coreOffer || undefined,
-          differentiator: intakeData.differentiator || undefined,
-          enrichment_data: enrichmentData || undefined,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', orgId);
-
-      if (orgUpdateError) {
-        console.error('[GrowthOS] Failed to update org with assessment data:', orgUpdateError);
-      }
-    }
-
     // Trigger Loops email sequence (fire-and-forget)
     onAssessmentCompleted(
       intakeData.email,

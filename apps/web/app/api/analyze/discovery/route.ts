@@ -197,6 +197,7 @@ export async function POST(request: NextRequest) {
             perplexity_snapshot: v2Research.perplexity?.company_snapshot,
             industry_momentum: v2Research.perplexity?.industry_momentum,
             momentum_read: v2Research.perplexity?.momentum_read,
+            job_postings: v2Research.job_postings || undefined,
             linkedin_profile: v2Research.linkedin_profile
               ? {
                   name: v2Research.linkedin_profile.name,

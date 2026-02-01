@@ -432,6 +432,94 @@ const HTML_TEMPLATE = `
             color: var(--text-gray);
         }
 
+        /* Top 5 Findings */
+        .finding-item {
+            background: linear-gradient(135deg, var(--dark-gray) 0%, #2a1a1a 100%);
+            border: 2px solid var(--red);
+            padding: 14px;
+            margin-bottom: 12px;
+        }
+
+        .finding-number {
+            font-family: 'Anton', Impact, sans-serif;
+            font-size: 14pt;
+            color: var(--red);
+            margin-bottom: 4px;
+        }
+
+        .finding-title {
+            font-weight: 700;
+            color: var(--yellow);
+            font-size: 10pt;
+            margin-bottom: 8px;
+        }
+
+        .finding-detail {
+            font-size: 8pt;
+            color: var(--text-gray);
+            margin-bottom: 4px;
+        }
+
+        .finding-detail strong {
+            color: var(--white);
+        }
+
+        .finding-confidence {
+            font-size: 7pt;
+            color: var(--light-gray);
+            font-style: italic;
+            margin-top: 4px;
+        }
+
+        /* Objection Handles */
+        .objection-item {
+            margin-bottom: 12px;
+            background: var(--dark-gray);
+            border: 1px solid var(--mid-gray);
+            padding: 10px;
+        }
+
+        .objection-label {
+            font-size: 9pt;
+            color: var(--red);
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+
+        .objection-handle {
+            font-size: 8pt;
+            color: var(--white);
+            background: var(--mid-gray);
+            padding: 6px 10px;
+            font-style: italic;
+            border-left: 3px solid var(--yellow);
+        }
+
+        /* What We Don't Know */
+        .gaps-section {
+            background: var(--dark-gray);
+            border: 1px solid var(--mid-gray);
+            padding: 12px;
+            margin-bottom: 10px;
+        }
+
+        .gaps-label {
+            font-size: 8pt;
+            color: var(--yellow);
+            font-weight: 700;
+            letter-spacing: 1px;
+            margin-bottom: 6px;
+        }
+
+        .gaps-list {
+            font-size: 8pt;
+            color: var(--text-gray);
+        }
+
+        .gaps-list li {
+            margin-bottom: 4px;
+        }
+
         /* Post-Call Actions */
         .action-item {
             display: flex;
@@ -509,6 +597,10 @@ const HTML_TEMPLATE = `
     </div>
 </div>
 
+<!-- TOP 5 FINDINGS -->
+<div class="section-header"><span class="section-icon">🎯</span> TOP 5 FINDINGS <span class="pro-badge">PRO</span></div>
+{{findings_html}}
+
 <!-- EXECUTIVE SUMMARY -->
 <div class="section-header"><span class="section-icon">📊</span> EXECUTIVE SUMMARY <span class="pro-badge">PRO</span></div>
 <div class="executive-summary">
@@ -585,25 +677,44 @@ const HTML_TEMPLATE = `
 <div class="section-header"><span class="section-icon">🎬</span> OPENING 60 SECONDS <span class="pro-badge">PRO</span></div>
 {{opening_html}}
 
+<!-- OBJECTION HANDLES -->
+<div class="section-header"><span class="section-icon">🛡</span> OBJECTION HANDLES <span class="pro-badge">PRO</span></div>
+{{objections_html}}
+
 <!-- CALL OBJECTIVE & SUCCESS METRICS -->
 <div class="section-header"><span class="section-icon">👉</span> CALL OBJECTIVE & SUCCESS METRICS</div>
 <div class="objective-grid">
     <div class="objective-item">
-        <div class="objective-label">PRIMARY OBJECTIVE</div>
+        <div class="objective-label">PRIMARY GOAL</div>
         <div class="objective-value">{{primary_objective}}</div>
     </div>
     <div class="objective-item">
-        <div class="objective-label">SECONDARY OBJECTIVE</div>
-        <div class="objective-value">{{secondary_objective}}</div>
+        <div class="objective-label green">SUCCESS LOOKS LIKE</div>
+        <div class="objective-value">{{success_criteria}}</div>
+    </div>
+    <div class="objective-item">
+        <div class="objective-label">MINIMUM VIABLE OUTCOME</div>
+        <div class="objective-value">{{minimum_viable_outcome}}</div>
     </div>
     <div class="objective-item">
         <div class="objective-label">RED FLAGS</div>
         <div class="objective-value">{{red_flags}}</div>
     </div>
-    <div class="objective-item">
-        <div class="objective-label green">GREEN LIGHTS</div>
-        <div class="objective-value">{{green_lights}}</div>
-    </div>
+</div>
+
+<!-- WHAT WE DON'T KNOW -->
+<div class="section-header"><span class="section-icon">⚠️</span> WHAT WE DON'T KNOW <span class="pro-badge">PRO</span></div>
+<div class="gaps-section">
+    <div class="gaps-label">INFORMATION GAPS</div>
+    <div class="gaps-list">{{gaps_html}}</div>
+</div>
+<div class="gaps-section">
+    <div class="gaps-label">ASSUMPTIONS TO VALIDATE</div>
+    <div class="gaps-list">{{assumptions_html}}</div>
+</div>
+<div class="gaps-section">
+    <div class="gaps-label">RED FLAGS TO WATCH</div>
+    <div class="gaps-list">{{red_flags_to_watch_html}}</div>
 </div>
 
 <!-- POST-CALL ACTIONS -->
@@ -672,6 +783,24 @@ const OPENING_PART_TEMPLATE = `
 </div>
 `;
 
+const FINDING_TEMPLATE = `
+<div class="finding-item">
+    <div class="finding-number">{{number}}</div>
+    <div class="finding-title">{{title}}</div>
+    <div class="finding-detail"><strong>What it is:</strong> {{what}}</div>
+    <div class="finding-detail"><strong>Why it matters:</strong> {{why}}</div>
+    <div class="finding-detail"><strong>What to do:</strong> {{action}}</div>
+    <div class="finding-confidence">Confidence: {{confidence}}</div>
+</div>
+`;
+
+const OBJECTION_TEMPLATE = `
+<div class="objection-item">
+    <div class="objection-label">{{objection}}</div>
+    <div class="objection-handle">"{{handle}}"</div>
+</div>
+`;
+
 const ACTION_TEMPLATE = `
 <div class="action-item">
     <div class="action-number">{{number}}</div>
@@ -728,6 +857,19 @@ export interface ActionData {
   action: string;
 }
 
+export interface FindingData {
+  title: string;
+  what: string;
+  why: string;
+  action: string;
+  confidence: string;
+}
+
+export interface ObjectionData {
+  objection: string;
+  handle: string;
+}
+
 export interface DiscoveryLabProReportData {
   // Meta
   date: string;
@@ -754,6 +896,9 @@ export interface DiscoveryLabProReportData {
   psychology_need: string;
   psychology_yes: string;
 
+  // Top 5 Findings
+  findings: FindingData[];
+
   // Content sections
   primary_probes: ProbeData[];
   secondary_probes: ProbeData[];
@@ -766,12 +911,18 @@ export interface DiscoveryLabProReportData {
   decision_branches: DecisionBranchData[];
   google_items: GoogleItemData[];
   opening_parts: OpeningPartData[];
+  objections: ObjectionData[];
 
   // Objectives
   primary_objective: string;
-  secondary_objective: string;
+  success_criteria: string;
+  minimum_viable_outcome: string;
   red_flags: string;
-  green_lights: string;
+
+  // What We Don't Know
+  gaps: string[];
+  assumptions: string[];
+  red_flags_to_watch: string[];
 
   // Post-call actions
   actions: ActionData[];
@@ -819,9 +970,23 @@ export function generateDiscoveryLabProHTML(data: DiscoveryLabProReportData): st
 
   // Objectives
   html = html.replace(/\{\{primary_objective\}\}/g, escapeHtml(data.primary_objective));
-  html = html.replace(/\{\{secondary_objective\}\}/g, escapeHtml(data.secondary_objective));
+  html = html.replace(/\{\{success_criteria\}\}/g, escapeHtml(data.success_criteria || ''));
+  html = html.replace(/\{\{minimum_viable_outcome\}\}/g, escapeHtml(data.minimum_viable_outcome || ''));
   html = html.replace(/\{\{red_flags\}\}/g, escapeHtml(data.red_flags));
-  html = html.replace(/\{\{green_lights\}\}/g, escapeHtml(data.green_lights));
+
+  // Generate Top 5 Findings HTML
+  let findingsHtml = '';
+  for (const [index, finding] of (data.findings || []).entries()) {
+    let findingHtml = FINDING_TEMPLATE;
+    findingHtml = findingHtml.replace('{{number}}', String(index + 1));
+    findingHtml = findingHtml.replace('{{title}}', escapeHtml(finding.title));
+    findingHtml = findingHtml.replace('{{what}}', escapeHtml(finding.what));
+    findingHtml = findingHtml.replace('{{why}}', escapeHtml(finding.why));
+    findingHtml = findingHtml.replace('{{action}}', escapeHtml(finding.action));
+    findingHtml = findingHtml.replace('{{confidence}}', escapeHtml(finding.confidence));
+    findingsHtml += findingHtml;
+  }
+  html = html.replace('{{findings_html}}', findingsHtml);
 
   // Generate primary probes HTML
   let primaryProbesHtml = '';
@@ -909,6 +1074,24 @@ export function generateDiscoveryLabProHTML(data: DiscoveryLabProReportData): st
     openingHtml += partHtml;
   }
   html = html.replace('{{opening_html}}', openingHtml);
+
+  // Generate objection handles HTML
+  let objectionsHtml = '';
+  for (const objection of (data.objections || [])) {
+    let objHtml = OBJECTION_TEMPLATE;
+    objHtml = objHtml.replace('{{objection}}', escapeHtml(objection.objection));
+    objHtml = objHtml.replace('{{handle}}', escapeHtml(objection.handle));
+    objectionsHtml += objHtml;
+  }
+  html = html.replace('{{objections_html}}', objectionsHtml);
+
+  // Generate What We Don't Know HTML
+  const gapsHtml = (data.gaps || []).map(g => `<li>${escapeHtml(g)}</li>`).join('');
+  html = html.replace('{{gaps_html}}', gapsHtml);
+  const assumptionsHtml = (data.assumptions || []).map(a => `<li>${escapeHtml(a)}</li>`).join('');
+  html = html.replace('{{assumptions_html}}', assumptionsHtml);
+  const redFlagsToWatchHtml = (data.red_flags_to_watch || []).map(r => `<li>${escapeHtml(r)}</li>`).join('');
+  html = html.replace('{{red_flags_to_watch_html}}', redFlagsToWatchHtml);
 
   // Generate actions HTML
   let actionsHtml = '';

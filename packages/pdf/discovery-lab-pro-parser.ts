@@ -13,6 +13,8 @@ import type {
   GoogleItemData,
   OpeningPartData,
   ActionData,
+  FindingData,
+  ObjectionData,
 } from './discovery-lab-pro-html-report';
 
 /**
@@ -39,6 +41,7 @@ export function parseDiscoveryLabProMarkdown(markdown: string): DiscoveryLabProR
     psychology_fears: '',
     psychology_need: '',
     psychology_yes: '',
+    findings: [],
     primary_probes: [],
     secondary_probes: [],
     hooks: [],
@@ -48,16 +51,28 @@ export function parseDiscoveryLabProMarkdown(markdown: string): DiscoveryLabProR
     decision_branches: [],
     google_items: [],
     opening_parts: [],
+    objections: [],
     primary_objective: '',
-    secondary_objective: '',
+    success_criteria: '',
+    minimum_viable_outcome: '',
     red_flags: '',
-    green_lights: '',
+    gaps: [],
+    assumptions: [],
+    red_flags_to_watch: [],
     actions: [],
   };
 
+  // Extract Top 5 Findings
+  const findingsMatch = markdown.match(
+    /(?:🎯\s*)?TOP 5 FINDINGS\s*\(?PRO\)?\s*([\s\S]+?)(?=(?:📊|##\s*(?:MOMENTUM|Executive)|$))/i
+  );
+  if (findingsMatch) {
+    data.findings = extractFindings(findingsMatch[1]);
+  }
+
   // Extract Executive Summary
   const execMatch = markdown.match(
-    /(?:📊\s*)?Executive Summary\s*\(?PRO\)?\s*([\s\S]+?)(?=(?:🎯|##\s*Authority|$))/i
+    /(?:📊\s*)?(?:Executive Summary|MOMENTUM SIGNALS)\s*\(?PRO\)?\s*([\s\S]+?)(?=(?:🎯|##\s*Authority|$))/i
   );
   if (execMatch) {
     data.executive_summary = execMatch[1].trim();
@@ -198,24 +213,49 @@ export function parseDiscoveryLabProMarkdown(markdown: string): DiscoveryLabProR
     data.opening_parts = extractOpeningParts(openingMatch[1]);
   }
 
+  // Extract Objection Handles
+  const objectionsMatch = markdown.match(
+    /(?:🛡\s*)?Objection Handles?\s*\(?PRO\)?\s*([\s\S]+?)(?=(?:👉|##\s*Call Objective|$))/i
+  );
+  if (objectionsMatch) {
+    data.objections = extractObjections(objectionsMatch[1]);
+  }
+
   // Extract Call Objective & Success Metrics
   const objectivesMatch = markdown.match(
-    /(?:👉\s*)?Call Objective\s*&?\s*Success Metrics?\s*\(?PRO\)?\s*([\s\S]+?)(?=(?:📋|##\s*Post-?Call|$))/i
+    /(?:👉\s*)?Call Objective\s*&?\s*Success Metrics?\s*\(?PRO\)?\s*([\s\S]+?)(?=(?:⚠️|##\s*(?:What We Don|Post-?Call)|$))/i
   );
   if (objectivesMatch) {
     const objText = objectivesMatch[1];
 
-    const primaryMatch = objText.match(/\*?\*?Primary Objective:?\*?\*?\s*:?\s*(.+?)(?:\n|$)/i);
+    const primaryMatch = objText.match(/\*?\*?Primary (?:Objective|goal):?\*?\*?\s*:?\s*(.+?)(?:\n|$)/i);
     if (primaryMatch) data.primary_objective = primaryMatch[1].trim();
 
-    const secondaryMatch = objText.match(/\*?\*?Secondary Objective:?\*?\*?\s*:?\s*(.+?)(?:\n|$)/i);
-    if (secondaryMatch) data.secondary_objective = secondaryMatch[1].trim();
+    const successMatch = objText.match(/\*?\*?(?:What )?success looks like:?\*?\*?\s*:?\s*(.+?)(?:\n|$)/i);
+    if (successMatch) data.success_criteria = successMatch[1].trim();
+
+    const mvoMatch = objText.match(/\*?\*?Minimum viable outcome:?\*?\*?\s*:?\s*(.+?)(?:\n|$)/i);
+    if (mvoMatch) data.minimum_viable_outcome = mvoMatch[1].trim();
 
     const redMatch = objText.match(/\*?\*?Red Flags:?\*?\*?\s*:?\s*(.+?)(?:\n|$)/i);
     if (redMatch) data.red_flags = redMatch[1].trim();
+  }
 
-    const greenMatch = objText.match(/\*?\*?Green Lights:?\*?\*?\s*:?\s*(.+?)(?:\n|$)/i);
-    if (greenMatch) data.green_lights = greenMatch[1].trim();
+  // Extract What We Don't Know
+  const dontKnowMatch = markdown.match(
+    /(?:⚠️\s*)?What We Don['']t Know\s*\(?PRO\)?\s*([\s\S]+?)(?=(?:📋|##\s*Post-?Call|$))/i
+  );
+  if (dontKnowMatch) {
+    const dkText = dontKnowMatch[1];
+
+    const gapsSection = dkText.match(/\*?\*?Gaps:?\*?\*?\s*([\s\S]+?)(?=\*?\*?Assumptions|$)/i);
+    if (gapsSection) data.gaps = extractBulletItems(gapsSection[1]);
+
+    const assumptionsSection = dkText.match(/\*?\*?Assumptions to validate:?\*?\*?\s*([\s\S]+?)(?=\*?\*?Red flags to watch|$)/i);
+    if (assumptionsSection) data.assumptions = extractBulletItems(assumptionsSection[1]);
+
+    const rfSection = dkText.match(/\*?\*?Red flags to watch(?: for)?:?\*?\*?\s*([\s\S]+?)$/i);
+    if (rfSection) data.red_flags_to_watch = extractBulletItems(rfSection[1]);
   }
 
   // Extract Post-Call Actions
@@ -452,4 +492,71 @@ function extractActions(text: string): ActionData[] {
   }
 
   return actions;
+}
+
+/**
+ * Extract Top 5 Findings
+ */
+function extractFindings(text: string): FindingData[] {
+  const findings: FindingData[] = [];
+
+  // Split by numbered findings: **1. TITLE** or **1. [TITLE]**
+  const findingBlocks = text.split(/\*\*\d+\.\s*/g).filter(Boolean);
+
+  for (const block of findingBlocks) {
+    const titleMatch = block.match(/^(.+?)\*\*\s*([\s\S]*)/);
+    if (!titleMatch) continue;
+
+    const title = titleMatch[1].trim();
+    const content = titleMatch[2];
+
+    const whatMatch = content.match(/\*?\*?What it is:?\*?\*?\s*:?\s*(.+?)(?:\n|$)/i);
+    const whyMatch = content.match(/\*?\*?Why it matters:?\*?\*?\s*:?\s*(.+?)(?:\n|$)/i);
+    const doMatch = content.match(/\*?\*?What to do:?\*?\*?\s*:?\s*(.+?)(?:\n|$)/i);
+    const confMatch = content.match(/\*?\*?Confidence:?\*?\*?\s*:?\s*(.+?)(?:\n|$)/i);
+
+    findings.push({
+      title: title.replace(/[\[\]]/g, ''),
+      what: whatMatch?.[1]?.trim() || '',
+      why: whyMatch?.[1]?.trim() || '',
+      action: doMatch?.[1]?.trim() || '',
+      confidence: confMatch?.[1]?.trim() || '',
+    });
+  }
+
+  return findings.slice(0, 5);
+}
+
+/**
+ * Extract Objection Handles
+ */
+function extractObjections(text: string): ObjectionData[] {
+  const objections: ObjectionData[] = [];
+
+  const objRegex = /\*\*Objection \d+:\s*[""]?(.+?)[""]?\*\*\s*>\s*Handle:\s*[""]?(.+?)[""]?(?=\n\n|\*\*Objection|$)/gis;
+
+  let match;
+  while ((match = objRegex.exec(text)) !== null) {
+    objections.push({
+      objection: match[1].trim(),
+      handle: match[2].trim(),
+    });
+  }
+
+  return objections;
+}
+
+/**
+ * Extract bullet items from a text section
+ */
+function extractBulletItems(text: string): string[] {
+  const items: string[] = [];
+  const lines = text.split('\n');
+  for (const line of lines) {
+    const match = line.match(/^[-•*]\s*(.+)/);
+    if (match) {
+      items.push(match[1].trim());
+    }
+  }
+  return items;
 }

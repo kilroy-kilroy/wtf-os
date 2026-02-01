@@ -33,12 +33,20 @@ interface NegativePattern {
   counterRationale: string;
 }
 
-interface Framework {
-  name: string;
+interface CallStageScore {
+  stage: string;
   score: number;
-  used: string;
-  howItHelped: string;
-  tacticalNote: string;
+  whatHappened: string;
+  whatGoodLooksLike: string;
+  gap: string;
+}
+
+interface OneThingFocus {
+  behavior: string;
+  whatHappened: string;
+  whatGoodLooksLike: string;
+  drill: string;
+  whyItMatters: string;
 }
 
 interface TacticalRewrite {
@@ -79,8 +87,11 @@ interface ParsedReport {
   // Buyer Arc
   buyerArc: string;
 
-  // Frameworks
-  frameworks: Framework[];
+  // Call Stage Scorecard
+  callStageScores: CallStageScore[];
+
+  // The One Thing
+  oneThing: OneThingFocus | null;
 
   // Tactical Rewrites
   tacticalRewrites: TacticalRewrite[];
@@ -107,7 +118,8 @@ function parseReport(content: string): ParsedReport {
     negativePatterns: [],
     trustPhases: [],
     buyerArc: '',
-    frameworks: [],
+    callStageScores: [],
+    oneThing: null,
     tacticalRewrites: [],
     nextCallBlueprint: [],
     bottomLineInsight: '',
@@ -265,6 +277,102 @@ function parseReport(content: string): ParsedReport {
     });
   }
 
+  // Extract Call Stage Scorecard
+  const stageSection = content.match(/(?:4\.|##)\s*CALL STAGE SCORECARD([\s\S]*?)(?=(?:5\.|##\s*PATTERN|$))/i);
+  if (stageSection) {
+    const stageBlocks = stageSection[1].split(/###\s*/);
+    stageBlocks.forEach(block => {
+      if (block.trim()) {
+        const stageMatch = block.match(/^([^\n:]+)/);
+        if (stageMatch) {
+          const stage: CallStageScore = {
+            stage: stageMatch[1].trim().replace(/[-•]\s*\*?\*?/, '').replace(/\*?\*?\s*$/, ''),
+            score: 0,
+            whatHappened: '',
+            whatGoodLooksLike: '',
+            gap: '',
+          };
+
+          const scoreMatch = block.match(/Score[:\s]*(\d+)\s*\/\s*10/i);
+          if (scoreMatch) stage.score = parseInt(scoreMatch[1]);
+
+          const happenedMatch = block.match(/What happened[:\s]*([^\n]+)/i);
+          if (happenedMatch) stage.whatHappened = happenedMatch[1].trim();
+
+          const goodMatch = block.match(/What good looks like[:\s]*([^\n]+)/i);
+          if (goodMatch) stage.whatGoodLooksLike = goodMatch[1].trim();
+
+          const gapMatch = block.match(/Gap[:\s]*([^\n]+)/i);
+          if (gapMatch) stage.gap = gapMatch[1].trim();
+
+          if (stage.score > 0 || stage.whatHappened) {
+            report.callStageScores.push(stage);
+          }
+        }
+      }
+    });
+
+    // Fallback: try line-by-line parsing for non-### format
+    if (report.callStageScores.length === 0) {
+      const lineBlocks = stageSection[1].split(/(?=[-•]\s*\*\*)/);
+      lineBlocks.forEach(block => {
+        const nameMatch = block.match(/\*\*([^*]+)\*\*/);
+        const scoreMatch = block.match(/Score[:\s]*(\d+)\s*\/\s*10/i);
+        if (nameMatch && scoreMatch) {
+          const stage: CallStageScore = {
+            stage: nameMatch[1].trim(),
+            score: parseInt(scoreMatch[1]),
+            whatHappened: '',
+            whatGoodLooksLike: '',
+            gap: '',
+          };
+
+          const happenedMatch = block.match(/What happened[:\s]*([^\n]+)/i);
+          if (happenedMatch) stage.whatHappened = happenedMatch[1].trim();
+
+          const goodMatch = block.match(/What good looks like[:\s]*([^\n]+)/i);
+          if (goodMatch) stage.whatGoodLooksLike = goodMatch[1].trim();
+
+          const gapMatch = block.match(/Gap[:\s]*([^\n]+)/i);
+          if (gapMatch) stage.gap = gapMatch[1].trim();
+
+          report.callStageScores.push(stage);
+        }
+      });
+    }
+  }
+
+  // Extract The One Thing
+  const oneThingSection = content.match(/(?:9\.|##)\s*THE ONE THING([\s\S]*?)(?=(?:10\.|##\s*BOTTOM|$))/i);
+  if (oneThingSection) {
+    const ot: OneThingFocus = {
+      behavior: '',
+      whatHappened: '',
+      whatGoodLooksLike: '',
+      drill: '',
+      whyItMatters: '',
+    };
+
+    const behaviorMatch = oneThingSection[1].match(/THE BEHAVIOR[:\s]*([^\n]+)/i);
+    if (behaviorMatch) ot.behavior = behaviorMatch[1].trim();
+
+    const happenedMatch = oneThingSection[1].match(/WHAT HAPPENED[:\s]*([^\n]+)/i);
+    if (happenedMatch) ot.whatHappened = happenedMatch[1].trim();
+
+    const goodMatch = oneThingSection[1].match(/WHAT GOOD LOOKS LIKE[:\s]*([^\n]+)/i);
+    if (goodMatch) ot.whatGoodLooksLike = goodMatch[1].trim();
+
+    const drillMatch = oneThingSection[1].match(/THE DRILL[:\s]*([^\n]+(?:\n[^\n#*]+)*)/i);
+    if (drillMatch) ot.drill = drillMatch[1].trim();
+
+    const whyMatch = oneThingSection[1].match(/WHY THIS MATTERS[^:]*[:\s]*([^\n]+)/i);
+    if (whyMatch) ot.whyItMatters = whyMatch[1].trim();
+
+    if (ot.behavior || ot.drill) {
+      report.oneThing = ot;
+    }
+  }
+
   // Extract Tactical Rewrites
   const tacticalSection = content.match(/(?:6\.|##)\s*TACTICAL MOMENT REWRITE([\s\S]*?)(?=(?:7\.|##\s*NEXT|$))/i);
   if (tacticalSection) {
@@ -312,7 +420,7 @@ function parseReport(content: string): ParsedReport {
   }
 
   // Extract Bottom Line Insight
-  const bottomSection = content.match(/(?:9\.|##)\s*BOTTOM LINE INSIGHT([\s\S]*?)(?=(?:10\.|##\s*PRO VALUE|$))/i);
+  const bottomSection = content.match(/(?:10\.|##)\s*BOTTOM LINE INSIGHT([\s\S]*?)(?=(?:11\.|##\s*PRO VALUE|$))/i);
   if (bottomSection) {
     report.bottomLineInsight = bottomSection[1].trim().replace(/^["']|["']$/g, '');
   }
@@ -601,6 +709,51 @@ export function CallLabProReport({ content }: CallLabProReportProps) {
         </div>
       )}
 
+      {/* SECTION: Call Stage Scorecard */}
+      {report.callStageScores.length > 0 && (
+        <div>
+          <h2 className="font-anton text-xl text-[#FFDE59] mb-4">CALL STAGE SCORECARD</h2>
+          <div className="space-y-3">
+            {report.callStageScores.map((stage, i) => {
+              const scoreColor = stage.score >= 8 ? '#4CAF50' : stage.score >= 5 ? '#FFDE59' : '#E51B23';
+              return (
+                <div key={i} className="bg-[#1A1A1A] p-4 rounded">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-white font-bold text-sm uppercase">{stage.stage}</h4>
+                    <div className="flex items-center gap-2">
+                      <div className="h-2 w-24 bg-[#333] rounded-full overflow-hidden">
+                        <div
+                          className="h-full rounded-full"
+                          style={{ width: `${stage.score * 10}%`, backgroundColor: scoreColor }}
+                        />
+                      </div>
+                      <span className="font-anton text-lg min-w-[32px] text-right" style={{ color: scoreColor }}>
+                        {stage.score}
+                      </span>
+                    </div>
+                  </div>
+                  {stage.whatHappened && (
+                    <p className="text-sm text-[#B3B3B3] mb-1">{stage.whatHappened}</p>
+                  )}
+                  {stage.gap && (
+                    <div className="mt-2 p-2 bg-[#0a0a0a] rounded border-l-2 border-[#E51B23]">
+                      <span className="text-xs font-semibold text-[#E51B23] uppercase">Gap: </span>
+                      <span className="text-xs text-white">{stage.gap}</span>
+                    </div>
+                  )}
+                  {stage.whatGoodLooksLike && !stage.gap && (
+                    <div className="mt-2 p-2 bg-[#0a0a0a] rounded border-l-2 border-[#4CAF50]">
+                      <span className="text-xs font-semibold text-[#4CAF50] uppercase">Benchmark: </span>
+                      <span className="text-xs text-white">{stage.whatGoodLooksLike}</span>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* SECTION 3: What You're Doing Right (Positive Patterns) */}
       {report.positivePatterns.length > 0 && (
         <div>
@@ -683,6 +836,45 @@ export function CallLabProReport({ content }: CallLabProReportProps) {
               </li>
             ))}
           </ol>
+        </div>
+      )}
+
+      {/* SECTION: The One Thing */}
+      {report.oneThing && (
+        <div className="bg-[#1A1A1A] border-2 border-[#FFDE59] p-6 rounded">
+          <h2 className="font-anton text-xl text-[#FFDE59] mb-1">THE ONE THING</h2>
+          <p className="text-xs text-[#666] mb-4 uppercase tracking-wider">The single highest-leverage change for your next call</p>
+
+          {report.oneThing.behavior && (
+            <div className="bg-[#FFDE59] p-4 rounded mb-4">
+              <p className="font-anton text-xl text-black">{report.oneThing.behavior}</p>
+            </div>
+          )}
+
+          {report.oneThing.whatHappened && (
+            <div className="mb-3">
+              <span className="text-xs font-semibold text-[#E51B23] uppercase">What you did: </span>
+              <p className="text-sm text-[#B3B3B3] mt-1">{report.oneThing.whatHappened}</p>
+            </div>
+          )}
+
+          {report.oneThing.whatGoodLooksLike && (
+            <div className="mb-3">
+              <span className="text-xs font-semibold text-[#4CAF50] uppercase">What good looks like: </span>
+              <p className="text-sm text-white mt-1">{report.oneThing.whatGoodLooksLike}</p>
+            </div>
+          )}
+
+          {report.oneThing.drill && (
+            <div className="bg-[#0a0a0a] border border-[#FFDE59] p-4 rounded mb-3">
+              <span className="text-xs font-semibold text-[#FFDE59] uppercase block mb-2">Your Drill</span>
+              <p className="text-sm text-white">{report.oneThing.drill}</p>
+            </div>
+          )}
+
+          {report.oneThing.whyItMatters && (
+            <p className="text-xs text-[#666] italic">{report.oneThing.whyItMatters}</p>
+          )}
         </div>
       )}
 

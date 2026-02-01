@@ -12,6 +12,17 @@ interface CoachingReportFull {
   period_end: string;
   call_ids: string[];
   full_report: {
+    the_one_thing?: {
+      behavior: string;
+      why: string;
+      drill: string;
+      last_period_check: string | null;
+    };
+    outcome_patterns?: {
+      wins_driven_by: string;
+      losses_driven_by: string;
+      key_insight: string;
+    };
     wtf_trends: {
       dimension: string;
       trend: "up" | "down" | "stable";
@@ -171,6 +182,57 @@ export default async function CoachingReportPage({
             </div>
           )}
         </div>
+
+        {/* The One Thing */}
+        {fullReport?.the_one_thing && (
+          <section className="border-2 border-[#FFDE59] rounded-lg px-6 py-4 space-y-4">
+            <h2 className="font-anton text-lg uppercase tracking-wide text-[#FFDE59]">
+              The One Thing
+            </h2>
+            <p className="text-[#666] text-xs uppercase tracking-wider">
+              The single highest-leverage change for this period
+            </p>
+            <div className="bg-[#FFDE59] rounded-lg p-4">
+              <p className="font-anton text-xl text-black">
+                {fullReport.the_one_thing.behavior}
+              </p>
+            </div>
+            <p className="text-[#B3B3B3] text-sm">{fullReport.the_one_thing.why}</p>
+            <div className="bg-[#1A1A1A] border border-[#FFDE59] rounded-lg p-4">
+              <h4 className="text-[#FFDE59] text-xs uppercase mb-2">Your Drill</h4>
+              <p className="text-white text-sm">{fullReport.the_one_thing.drill}</p>
+            </div>
+            {fullReport.the_one_thing.last_period_check && (
+              <div className="bg-[#1A1A1A] border border-[#333] rounded-lg p-4">
+                <h4 className="text-[#666] text-xs uppercase mb-1">Last Period Check-In</h4>
+                <p className="text-white text-sm">{fullReport.the_one_thing.last_period_check}</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* Outcome Patterns */}
+        {fullReport?.outcome_patterns && (
+          <section className="border border-[#E51B23] rounded-lg px-6 py-4 space-y-4">
+            <h2 className="font-anton text-lg uppercase tracking-wide text-[#FFDE59]">
+              Win/Loss Patterns
+            </h2>
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="bg-[#1A1A1A] border border-green-900 rounded-lg p-4">
+                <h4 className="text-green-400 text-xs uppercase mb-2">Wins Driven By</h4>
+                <p className="text-white text-sm">{fullReport.outcome_patterns.wins_driven_by}</p>
+              </div>
+              <div className="bg-[#1A1A1A] border border-red-900 rounded-lg p-4">
+                <h4 className="text-red-400 text-xs uppercase mb-2">Losses Driven By</h4>
+                <p className="text-white text-sm">{fullReport.outcome_patterns.losses_driven_by}</p>
+              </div>
+            </div>
+            <div className="bg-[#1A1A1A] border border-[#E51B23] rounded-lg p-4">
+              <h4 className="text-[#E51B23] text-xs uppercase mb-1">The Uncomfortable Truth</h4>
+              <p className="text-white text-sm italic">{fullReport.outcome_patterns.key_insight}</p>
+            </div>
+          </section>
+        )}
 
         {/* WTF Trends */}
         {fullReport?.wtf_trends && fullReport.wtf_trends.length > 0 && (

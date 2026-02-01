@@ -102,9 +102,28 @@ export async function POST(request: NextRequest) {
     }));
 
     // Fetch previous reports for context (for monthly/quarterly)
-    let previousReports: { type: ReportType; period: string; summary: string }[] = [];
+    let previousReports: { type: ReportType; period: string; summary: string; one_thing?: string }[] = [];
 
-    if (report_type === 'monthly') {
+    if (report_type === 'weekly') {
+      // Get the previous weekly report for continuity
+      const { data: prevWeekly } = await supabase
+        .from('coaching_reports')
+        .select('report_type, period_start, period_end, content')
+        .eq('user_id', user_id)
+        .eq('report_type', 'weekly')
+        .lt('period_end', period_start)
+        .order('period_end', { ascending: false })
+        .limit(1);
+
+      if (prevWeekly && prevWeekly.length > 0) {
+        previousReports = prevWeekly.map(r => ({
+          type: r.report_type as ReportType,
+          period: `${r.period_start} to ${r.period_end}`,
+          summary: r.content?.wrap_up || 'No summary available',
+          one_thing: r.content?.the_one_thing?.behavior || undefined,
+        }));
+      }
+    } else if (report_type === 'monthly') {
       // Get weekly reports for context
       const { data: weeklyReports } = await supabase
         .from('coaching_reports')
@@ -120,6 +139,7 @@ export async function POST(request: NextRequest) {
           type: r.report_type as ReportType,
           period: `${r.period_start} to ${r.period_end}`,
           summary: r.content?.wrap_up || 'No summary available',
+          one_thing: r.content?.the_one_thing?.behavior || undefined,
         }));
       }
     } else if (report_type === 'quarterly') {
@@ -138,6 +158,7 @@ export async function POST(request: NextRequest) {
           type: r.report_type as ReportType,
           period: `${r.period_start} to ${r.period_end}`,
           summary: r.content?.wrap_up || 'No summary available',
+          one_thing: r.content?.the_one_thing?.behavior || undefined,
         }));
       }
     }

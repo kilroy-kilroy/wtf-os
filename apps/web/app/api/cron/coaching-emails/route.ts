@@ -29,6 +29,7 @@ export async function GET(request: NextRequest) {
         report_type,
         period_start,
         period_end,
+        content,
         users!inner (
           email,
           first_name
@@ -63,6 +64,11 @@ export async function GET(request: NextRequest) {
           continue;
         }
 
+        // Extract the one-thing from report content for inline email value
+        const content = report.content as { the_one_thing?: { behavior?: string; drill?: string } } | null;
+        const oneThingBehavior = content?.the_one_thing?.behavior;
+        const oneThingDrill = content?.the_one_thing?.drill;
+
         // Send via Loops event (email template managed in Loops dashboard)
         const loopsResult = await onCoachingReportReady(
           user.email,
@@ -70,7 +76,9 @@ export async function GET(request: NextRequest) {
           report.id,
           report.period_start,
           report.period_end,
-          user.first_name
+          user.first_name,
+          oneThingBehavior,
+          oneThingDrill
         );
 
         if (!loopsResult.success) {

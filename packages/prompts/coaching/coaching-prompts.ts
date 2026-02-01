@@ -31,6 +31,7 @@ export interface CoachingReportInput {
     type: ReportType;
     period: string;
     summary: string;
+    one_thing?: string;
   }[];
 }
 
@@ -105,9 +106,20 @@ This positions other frameworks as validation, not standards.
 
 ## REPORT OUTPUT STRUCTURE
 
-Generate a JSON object with these six sections:
+Generate a JSON object with these sections:
 
 {
+  "the_one_thing": {
+    "behavior": "string - the single most important behavior to change this period, named in 5-10 words",
+    "why": "string - one sentence connecting this to wins/losses or pipeline impact",
+    "drill": "string - specific micro-exercise: 'On your next call, [do X] at [moment Y]. Track whether you did it.'",
+    "last_period_check": "string | null - if previous reports provided a focus area, state whether it improved, regressed, or stayed flat. Be honest. Null if no prior context."
+  },
+  "outcome_patterns": {
+    "wins_driven_by": "string - which behaviors or patterns correlated with won/next_step outcomes",
+    "losses_driven_by": "string - which behaviors or patterns correlated with lost/ghosted outcomes",
+    "key_insight": "string - the one uncomfortable truth about what separates their wins from their losses"
+  },
   "wtf_trends": [
     {
       "dimension": "string - one of the 7 scoring dimensions",
@@ -149,6 +161,20 @@ Generate a JSON object with these six sections:
   ],
   "wrap_up": "string - tough love uncle summary (3-5 sentences)"
 }
+
+## CRITICAL: THE ONE THING
+
+The "the_one_thing" section is the most important part of the report. It must:
+- Be ONE behavior, not a category. "Set the agenda in the first 90 seconds" not "improve your openings."
+- Connect to outcome data when available. If they won calls where they did X and lost calls where they didn't, say so.
+- Include a concrete drill, not advice. "On your next call, do X at moment Y" not "try to be more deliberate."
+- Check continuity: if previous reports mention a focus area, evaluate whether it improved.
+
+## CRITICAL: OUTCOME PATTERNS
+
+When call data includes outcomes (won/lost/ghosted/next_step), you MUST analyze which behaviors and patterns correlate with wins vs losses. This is not optional. If all outcomes are "unknown", note that outcome tracking would make coaching dramatically more useful.
+
+Do NOT invent correlations. If there aren't enough calls to see a pattern, say so honestly.
 
 ## REPORT TYPE VARIATIONS
 
@@ -201,8 +227,8 @@ Call ${i + 1}:
 
   const previousContext = input.previous_reports?.length
     ? `\nPREVIOUS REPORTS FOR CONTEXT:\n${input.previous_reports.map(r =>
-        `${r.type} (${r.period}): ${r.summary}`
-      ).join('\n')}\n`
+        `${r.type} (${r.period}): ${r.summary}${r.one_thing ? `\nFOCUS AREA FROM THIS PERIOD: "${r.one_thing}"` : ''}`
+      ).join('\n')}\n\nIMPORTANT: Check whether the focus area(s) from previous reports improved this period. Report this honestly in the_one_thing.last_period_check.\n`
     : '';
 
   return `Generate a ${input.review_type.toUpperCase()} coaching report for ${input.rep_name}.
@@ -294,17 +320,21 @@ export function aggregateCallScores(calls: CallData[]): AggregatedScores {
 export const EMAIL_TEMPLATES = {
   weekly: {
     subject: 'Your Weekly Sales Coaching is Ready',
-    preview: 'Trends, wins, fixes. Your week in one clean hit.',
-    body: (startDate: string, endDate: string, viewUrl: string) => `
-Your coaching session for last week is ready.
+    preview: 'One thing to change this week.',
+    body: (startDate: string, endDate: string, viewUrl: string, oneThingBehavior?: string, oneThingDrill?: string) => {
+      const oneThingBlock = oneThingBehavior
+        ? `\nYOUR ONE THING THIS WEEK:\n${oneThingBehavior}\n${oneThingDrill ? `\nThe drill: ${oneThingDrill}` : ''}\n`
+        : '';
 
-I pulled your calls, spotted the patterns, and turned them into a plan.
-
-View Your Coaching for ${startDate} - ${endDate}:
+      return `
+Your coaching session for ${startDate} - ${endDate} is ready.
+${oneThingBlock}
+Full report with trends, wins, and patterns:
 ${viewUrl}
 
-Go get better this week.
-    `.trim(),
+One behavior. One week. That's how you get better.
+      `.trim();
+    },
   },
   monthly: {
     subject: (month: string) => `${month} Sales Performance - Your Monthly Coaching Summary`,

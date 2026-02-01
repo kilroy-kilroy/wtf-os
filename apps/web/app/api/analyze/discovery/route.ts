@@ -6,6 +6,8 @@ import {
   enrichCompanyWithApollo,
   enrichContactWithApollo,
   fetchCompanyNews,
+  runV2DiscoveryResearch,
+  type V2ResearchResult,
 } from '@repo/utils';
 import {
   DISCOVERY_LAB_LITE_SYSTEM,
@@ -38,11 +40,14 @@ export async function POST(request: NextRequest) {
       requestor_name,
       requestor_email,
       requestor_company,
+      requestor_website,
       service_offered,
       target_company,
       target_website,
       target_contact_name,
       target_contact_title,
+      target_linkedin,
+      target_icp,
       competitors,
       version = 'lite', // 'lite' or 'pro'
       send_email = false, // Whether to email the report to the user
@@ -59,48 +64,97 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Fetch enriched data in parallel (non-blocking - continue even if some fail)
-    console.log('Fetching enriched data for:', { target_company, domain, target_contact_name });
+    // For Pro v2: run 5-source research chain
+    // For Lite: run lightweight enrichment (Apollo + Perplexity news)
+    let v2Research: V2ResearchResult | null = null;
+    let apolloCompany: Awaited<ReturnType<typeof enrichCompanyWithApollo>> = null;
+    let apolloContact: Awaited<ReturnType<typeof enrichContactWithApollo>> = null;
+    let newsData: Awaited<ReturnType<typeof fetchCompanyNews>> = { recent_news: [], funding_info: null, raw_response: '' };
 
-    const [apolloCompany, apolloContact, newsData] = await Promise.all([
-      // Company data from Apollo
-      domain
-        ? enrichCompanyWithApollo(domain).catch((e) => {
-            console.warn('Apollo company enrichment failed:', e.message);
-            return null;
-          })
-        : Promise.resolve(null),
-      // Contact data from Apollo
-      domain && target_contact_name
-        ? enrichContactWithApollo(target_contact_name, domain).catch((e) => {
-            console.warn('Apollo contact enrichment failed:', e.message);
-            return null;
-          })
-        : Promise.resolve(null),
-      // News/funding from Perplexity
-      fetchCompanyNews(target_company, domain).catch((e) => {
-        console.warn('Perplexity news fetch failed:', e.message);
-        return { recent_news: [], funding_info: null, raw_response: '' };
-      }),
-    ]);
+    if (version === 'pro') {
+      // V2: Run full 5-source research chain (parallel)
+      console.log('Running v2 research chain for:', { target_company, domain, target_contact_name, target_linkedin });
+      v2Research = await runV2DiscoveryResearch({
+        requestor_name,
+        requestor_company,
+        requestor_website,
+        service_offered,
+        target_company,
+        target_website,
+        target_contact: target_contact_name || '',
+        target_title: target_contact_title,
+        target_linkedin,
+        target_icp,
+        competitors,
+      });
 
-    console.log('Enrichment results:', {
-      hasApolloCompany: !!apolloCompany,
-      hasApolloContact: !!apolloContact,
-      newsCount: newsData.recent_news.length,
-      hasFunding: !!newsData.funding_info,
-    });
+      // Use Apollo/Perplexity results from v2 chain
+      apolloCompany = v2Research.apollo_company;
+      apolloContact = v2Research.apollo_contact;
+      if (v2Research.perplexity) {
+        newsData = {
+          recent_news: v2Research.perplexity.recent_news,
+          funding_info: v2Research.perplexity.funding_info,
+          raw_response: v2Research.perplexity.raw_response,
+        };
+      }
+
+      console.log('V2 research results:', {
+        hasPerplexity: !!v2Research.perplexity,
+        hasLinkedInProfile: !!v2Research.linkedin_profile,
+        hasLinkedInPosts: !!v2Research.linkedin_posts,
+        hasSerp: !!v2Research.google_serp,
+        hasWebsiteTech: !!v2Research.website_tech,
+        hasApolloCompany: !!v2Research.apollo_company,
+        hasApolloContact: !!v2Research.apollo_contact,
+        errors: v2Research.errors,
+      });
+    } else {
+      // Lite: lightweight enrichment
+      console.log('Fetching enriched data for:', { target_company, domain, target_contact_name });
+      const results = await Promise.all([
+        domain
+          ? enrichCompanyWithApollo(domain).catch((e) => {
+              console.warn('Apollo company enrichment failed:', e.message);
+              return null;
+            })
+          : Promise.resolve(null),
+        domain && target_contact_name
+          ? enrichContactWithApollo(target_contact_name, domain).catch((e) => {
+              console.warn('Apollo contact enrichment failed:', e.message);
+              return null;
+            })
+          : Promise.resolve(null),
+        fetchCompanyNews(target_company, domain).catch((e) => {
+          console.warn('Perplexity news fetch failed:', e.message);
+          return { recent_news: [] as any[], funding_info: null, raw_response: '' };
+        }),
+      ]);
+      apolloCompany = results[0];
+      apolloContact = results[1];
+      newsData = results[2];
+
+      console.log('Enrichment results:', {
+        hasApolloCompany: !!apolloCompany,
+        hasApolloContact: !!apolloContact,
+        newsCount: newsData.recent_news.length,
+        hasFunding: !!newsData.funding_info,
+      });
+    }
 
     // Prepare prompt parameters with enriched data
     const promptParams: DiscoveryLabPromptParams = {
       requestor_name,
       requestor_email,
       requestor_company,
+      requestor_website,
       service_offered,
       target_company,
       target_website,
       target_contact_name,
       target_contact_title,
+      target_linkedin,
+      target_icp,
       competitors,
       // Add enriched company data
       enriched_company: apolloCompany
@@ -135,6 +189,60 @@ export async function POST(request: NextRequest) {
       // Add news and funding
       recent_news: newsData.recent_news.length > 0 ? newsData.recent_news : undefined,
       funding_info: newsData.funding_info || undefined,
+      // V2 research data (Pro only)
+      v2_research: v2Research
+        ? {
+            perplexity_snapshot: v2Research.perplexity?.company_snapshot,
+            industry_momentum: v2Research.perplexity?.industry_momentum,
+            momentum_read: v2Research.perplexity?.momentum_read,
+            linkedin_profile: v2Research.linkedin_profile
+              ? {
+                  name: v2Research.linkedin_profile.name,
+                  headline: v2Research.linkedin_profile.headline,
+                  current_title: v2Research.linkedin_profile.current_title,
+                  tenure_months: v2Research.linkedin_profile.tenure_months,
+                  previous_roles: v2Research.linkedin_profile.previous_roles,
+                  career_arc: v2Research.linkedin_profile.career_arc,
+                  education: v2Research.linkedin_profile.education,
+                  archetype: v2Research.linkedin_profile.archetype,
+                }
+              : undefined,
+            linkedin_posts: v2Research.linkedin_posts
+              ? {
+                  posts: v2Research.linkedin_posts.posts.map(p => ({
+                    text: p.text,
+                    date: p.date,
+                    likes: p.likes,
+                    comments: p.comments,
+                  })),
+                  post_count: v2Research.linkedin_posts.post_count,
+                  avg_engagement: v2Research.linkedin_posts.avg_engagement,
+                  top_topics: v2Research.linkedin_posts.top_topics,
+                  tone: v2Research.linkedin_posts.tone,
+                  last_post_date: v2Research.linkedin_posts.last_post_date,
+                }
+              : undefined,
+            serp_results: v2Research.google_serp?.results.map(r => ({
+              keyword: r.keyword,
+              target_rank: r.target_rank,
+              top_results: r.top_results.map(tr => ({
+                position: tr.position,
+                title: tr.title,
+                domain: tr.domain,
+              })),
+            })),
+            website_tech: v2Research.website_tech
+              ? {
+                  platform: v2Research.website_tech.platform,
+                  built_by: v2Research.website_tech.built_by,
+                  email_platform: v2Research.website_tech.email_platform,
+                  chat_widget: v2Research.website_tech.chat_widget,
+                  analytics: v2Research.website_tech.analytics,
+                  other_tools: v2Research.website_tech.other_tools,
+                }
+              : undefined,
+          }
+        : undefined,
     };
 
     let usage: { input: number; output: number };

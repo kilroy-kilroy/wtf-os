@@ -907,3 +907,757 @@ function formatExperience(experience: any[]): string {
     })
     .join('. ');
 }
+
+// ============================================================================
+// V2 RESEARCH CHAIN - BrightData + Website Tech Detection
+// ============================================================================
+
+const BRIGHT_DATA_API = process.env.BRIGHT_DATA_API;
+const BRIGHT_DATA_BASE = 'https://api.brightdata.com/datasets/v3';
+
+const BD_DISCOVERY_DATASETS = {
+  linkedinProfile: 'gd_l1viktl72bvl7bjuj0',
+  linkedinPosts: 'gd_lyy3tktm25m4avu764',
+  googleSerp: 'gd_l1vijqt9jfj7olije8',
+};
+
+async function bdDiscoveryTrigger(datasetId: string, input: any[]): Promise<string | null> {
+  if (!BRIGHT_DATA_API) return null;
+
+  try {
+    const response = await fetch(`${BRIGHT_DATA_BASE}/trigger?dataset_id=${datasetId}&format=json&uncompressed_webhook=true`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${BRIGHT_DATA_API}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(input),
+      signal: AbortSignal.timeout(15000),
+    });
+
+    if (!response.ok) {
+      // Retry with wrapped format
+      const response2 = await fetch(`${BRIGHT_DATA_BASE}/trigger?dataset_id=${datasetId}&format=json&uncompressed_webhook=true`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${BRIGHT_DATA_API}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ input }),
+        signal: AbortSignal.timeout(15000),
+      });
+
+      if (!response2.ok) return null;
+      const data2 = await response2.json();
+      return data2.snapshot_id || null;
+    }
+
+    const data = await response.json();
+    return data.snapshot_id || null;
+  } catch (error: any) {
+    console.error(`[BrightData:Discovery] Trigger error for ${datasetId}:`, error.message);
+    return null;
+  }
+}
+
+async function bdDiscoveryPoll(snapshotId: string, maxWaitMs: number = 60000): Promise<any[]> {
+  if (!BRIGHT_DATA_API || !snapshotId) return [];
+
+  const startTime = Date.now();
+  const pollInterval = 10000;
+
+  while (Date.now() - startTime < maxWaitMs) {
+    try {
+      const response = await fetch(`${BRIGHT_DATA_BASE}/snapshot/${snapshotId}?format=json`, {
+        headers: { 'Authorization': `Bearer ${BRIGHT_DATA_API}` },
+        signal: AbortSignal.timeout(15000),
+      });
+
+      if (response.status === 200) {
+        const data = await response.json();
+        return Array.isArray(data) ? data : [data];
+      }
+      // 202 = still running, keep polling
+    } catch {
+      // Continue polling on network errors
+    }
+
+    await new Promise(resolve => setTimeout(resolve, pollInterval));
+  }
+
+  console.warn(`[BrightData:Discovery] Snapshot ${snapshotId} timed out after ${maxWaitMs}ms`);
+  return [];
+}
+
+// ---------- LinkedIn Personal Profile (v2 Source 2) ----------
+
+export interface LinkedInProfileResult {
+  name: string;
+  headline: string;
+  about: string;
+  current_title: string;
+  current_company: string;
+  tenure_months: number | null;
+  previous_roles: Array<{ title: string; company: string; duration: string }>;
+  career_arc: string;
+  education: string;
+  archetype: 'operator' | 'strategist' | 'founder' | 'new_hire' | 'lifer' | 'unknown';
+  raw_data: string;
+}
+
+export async function researchLinkedInProfile(linkedinUrl: string): Promise<LinkedInProfileResult | null> {
+  if (!BRIGHT_DATA_API || !linkedinUrl) return null;
+
+  try {
+    const url = linkedinUrl.trim().replace(/\/$/, '');
+    console.log(`[Discovery:v2] Scraping LinkedIn profile: ${url}`);
+
+    // Try synchronous /scrape endpoint first
+    const response = await fetch(`${BRIGHT_DATA_BASE}/scrape?dataset_id=${BD_DISCOVERY_DATASETS.linkedinProfile}&format=json&include_errors=true`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${BRIGHT_DATA_API}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ input: [{ url }] }),
+      signal: AbortSignal.timeout(90000),
+    });
+
+    let results: any[];
+    if (response.status === 202) {
+      const data = await response.json();
+      if (!data.snapshot_id) return null;
+      results = await bdDiscoveryPoll(data.snapshot_id, 90000);
+    } else if (response.ok) {
+      results = await response.json();
+      if (!Array.isArray(results)) results = [results];
+    } else {
+      // Fallback to trigger/poll
+      const snapshotId = await bdDiscoveryTrigger(BD_DISCOVERY_DATASETS.linkedinProfile, [{ url }]);
+      if (!snapshotId) return null;
+      results = await bdDiscoveryPoll(snapshotId, 60000);
+    }
+
+    const profile = results[0];
+    if (!profile) return null;
+
+    // Extract experience history
+    const experience = (profile.experience || profile.positions || []).slice(0, 5);
+    const currentJob = experience.find((e: any) => e.current || e.is_current) || experience[0];
+    const previousRoles = experience.slice(1, 4).map((e: any) => ({
+      title: e.title || e.position || '',
+      company: e.company || e.organization_name || e.company_name || '',
+      duration: e.duration || e.date_range || '',
+    }));
+
+    // Calculate tenure
+    let tenureMonths: number | null = null;
+    if (currentJob?.start_date || currentJob?.date_range) {
+      const startStr = currentJob.start_date || currentJob.date_range?.split('–')[0]?.trim();
+      if (startStr) {
+        const startDate = new Date(startStr);
+        if (!isNaN(startDate.getTime())) {
+          tenureMonths = Math.round((Date.now() - startDate.getTime()) / (1000 * 60 * 60 * 24 * 30));
+        }
+      }
+    }
+
+    // Determine career arc
+    const titles = experience.map((e: any) => (e.title || e.position || '').toLowerCase());
+    let careerArc = '';
+    if (titles.length >= 2) {
+      const hasOps = titles.some((t: string) => /ops|operations|manager|director/i.test(t));
+      const hasLeadership = titles.some((t: string) => /ceo|coo|vp|president|founder|owner/i.test(t));
+      const hasConsulting = titles.some((t: string) => /consultant|advisor|mba|strategy/i.test(t));
+      const hasAgency = titles.some((t: string) => /agency|marketing|brand/i.test(t));
+
+      if (hasOps && hasLeadership) careerArc = 'ops → leadership';
+      else if (hasConsulting && hasLeadership) careerArc = 'consulting → leadership';
+      else if (hasAgency) careerArc = 'agency → in-house';
+      else careerArc = titles.slice(0, 3).join(' → ');
+    }
+
+    // Determine archetype
+    let archetype: LinkedInProfileResult['archetype'] = 'unknown';
+    const currentTitle = (currentJob?.title || profile.headline || '').toLowerCase();
+
+    if (/founder|owner|co-founder/i.test(currentTitle)) {
+      archetype = 'founder';
+    } else if (tenureMonths !== null && tenureMonths < 12) {
+      archetype = 'new_hire';
+    } else if (tenureMonths !== null && tenureMonths > 120) {
+      archetype = 'lifer';
+    } else if (/mba|consultant|strategy|strategist/i.test(titles.join(' '))) {
+      archetype = 'strategist';
+    } else {
+      archetype = 'operator';
+    }
+
+    // Education
+    const education = (profile.education || [])
+      .slice(0, 2)
+      .map((e: any) => `${e.degree || e.field_of_study || ''} at ${e.school || e.institution || ''}`.trim())
+      .filter((e: string) => e.length > 3)
+      .join('; ');
+
+    return {
+      name: profile.full_name || profile.name || '',
+      headline: profile.headline || profile.position || '',
+      about: (profile.about || profile.summary || '').substring(0, 2000),
+      current_title: currentJob?.title || profile.headline || '',
+      current_company: currentJob?.company || currentJob?.organization_name || '',
+      tenure_months: tenureMonths,
+      previous_roles: previousRoles,
+      career_arc: careerArc,
+      education,
+      archetype,
+      raw_data: JSON.stringify(profile, null, 2),
+    };
+  } catch (error: any) {
+    console.error('[Discovery:v2] LinkedIn profile scrape failed:', error.message);
+    return null;
+  }
+}
+
+// ---------- LinkedIn Posts (v2 Source 3) ----------
+
+export interface LinkedInPostsResult {
+  posts: Array<{
+    text: string;
+    date: string;
+    likes: number;
+    comments: number;
+    shares: number;
+  }>;
+  post_count: number;
+  avg_engagement: number;
+  top_topics: string[];
+  tone: string;
+  last_post_date: string | null;
+  raw_data: string;
+}
+
+export async function researchLinkedInPosts(linkedinUrl: string): Promise<LinkedInPostsResult | null> {
+  if (!BRIGHT_DATA_API || !linkedinUrl) return null;
+
+  try {
+    const url = linkedinUrl.trim().replace(/\/$/, '');
+    console.log(`[Discovery:v2] Scraping LinkedIn posts: ${url}`);
+
+    const response = await fetch(`${BRIGHT_DATA_BASE}/scrape?dataset_id=${BD_DISCOVERY_DATASETS.linkedinPosts}&format=json&include_errors=true`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${BRIGHT_DATA_API}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ input: [{ url }] }),
+      signal: AbortSignal.timeout(90000),
+    });
+
+    let results: any[];
+    if (response.status === 202) {
+      const data = await response.json();
+      if (!data.snapshot_id) return null;
+      results = await bdDiscoveryPoll(data.snapshot_id, 90000);
+    } else if (response.ok) {
+      results = await response.json();
+      if (!Array.isArray(results)) results = [results];
+    } else {
+      return null;
+    }
+
+    if (!results.length) return null;
+
+    // Filter to profile owner's posts
+    const profileSlug = url.split('/in/')[1]?.split('/')[0]?.split('?')[0]?.toLowerCase() || '';
+    const ownPosts = profileSlug
+      ? results.filter((item: any) => {
+          const userId = (item.user_id || '').toLowerCase();
+          return !userId || userId === profileSlug;
+        })
+      : results;
+    const source = ownPosts.length > 0 ? ownPosts : results;
+
+    const posts = source.slice(0, 10).map((item: any) => ({
+      text: (item.post_text || item.text || item.content || item.description || '').substring(0, 2000),
+      date: item.date_posted || item.post_date || item.date || item.posted_at || '',
+      likes: item.num_likes || item.likes || item.reactions || 0,
+      comments: item.num_comments || item.comments || 0,
+      shares: item.num_shares || item.shares || item.reposts || 0,
+    }));
+
+    const totalEngagement = posts.reduce((sum: number, p) => sum + p.likes + p.comments + p.shares, 0);
+    const allText = posts.map(p => p.text).join(' ').toLowerCase();
+
+    // Extract topics
+    const words = allText.split(/\s+/).filter(w => w.length > 4);
+    const freq: Record<string, number> = {};
+    for (const w of words) {
+      const clean = w.replace(/[^a-z]/g, '');
+      if (clean.length > 4) freq[clean] = (freq[clean] || 0) + 1;
+    }
+    const topTopics = Object.entries(freq)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([word]) => word);
+
+    // Determine tone
+    let tone = 'professional';
+    if (/excited|amazing|incredible|love|passion/i.test(allText)) tone = 'promotional';
+    else if (/think|believe|perspective|insight|reflect/i.test(allText)) tone = 'thoughtful';
+    else if (/frustrat|broken|wrong|fail|problem/i.test(allText)) tone = 'critical';
+
+    const lastPostDate = posts.length > 0 ? posts[0].date : null;
+
+    return {
+      posts,
+      post_count: posts.length,
+      avg_engagement: posts.length > 0 ? Math.round(totalEngagement / posts.length) : 0,
+      top_topics: topTopics,
+      tone,
+      last_post_date: lastPostDate,
+      raw_data: JSON.stringify(source.slice(0, 5), null, 2),
+    };
+  } catch (error: any) {
+    console.error('[Discovery:v2] LinkedIn posts scrape failed:', error.message);
+    return null;
+  }
+}
+
+// ---------- Google SERP (v2 Source 4) ----------
+
+export interface SerpResult {
+  keyword: string;
+  target_rank: number | null; // null = not found on page 1
+  top_results: Array<{ position: number; title: string; url: string; domain: string }>;
+}
+
+export interface GoogleSerpResult {
+  results: SerpResult[];
+  raw_data: string;
+}
+
+export async function researchGoogleSerp(
+  keywords: string[],
+  targetDomain: string
+): Promise<GoogleSerpResult | null> {
+  if (!BRIGHT_DATA_API || !keywords.length) return null;
+
+  try {
+    console.log(`[Discovery:v2] SERP search for ${keywords.length} keywords, target: ${targetDomain}`);
+
+    const input = keywords.map(keyword => ({
+      keyword,
+      url: `https://www.google.com/search?q=${encodeURIComponent(keyword)}`,
+      country: 'us',
+      language: 'en',
+    }));
+
+    const snapshotId = await bdDiscoveryTrigger(BD_DISCOVERY_DATASETS.googleSerp, input);
+    if (!snapshotId) {
+      // Try synchronous /scrape endpoint
+      const response = await fetch(`${BRIGHT_DATA_BASE}/scrape?dataset_id=${BD_DISCOVERY_DATASETS.googleSerp}&format=json&include_errors=true`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${BRIGHT_DATA_API}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ input }),
+        signal: AbortSignal.timeout(90000),
+      });
+
+      if (!response.ok) return null;
+
+      let results: any[];
+      if (response.status === 202) {
+        const data = await response.json();
+        if (!data.snapshot_id) return null;
+        results = await bdDiscoveryPoll(data.snapshot_id, 90000);
+      } else {
+        results = await response.json();
+        if (!Array.isArray(results)) results = [results];
+      }
+
+      return parseSerpResults(results, keywords, targetDomain);
+    }
+
+    const results = await bdDiscoveryPoll(snapshotId, 90000);
+    return parseSerpResults(results, keywords, targetDomain);
+  } catch (error: any) {
+    console.error('[Discovery:v2] Google SERP search failed:', error.message);
+    return null;
+  }
+}
+
+function parseSerpResults(results: any[], keywords: string[], targetDomain: string): GoogleSerpResult {
+  const cleanDomain = targetDomain.replace('www.', '').toLowerCase();
+  const serpResults: SerpResult[] = [];
+
+  for (let i = 0; i < keywords.length; i++) {
+    const result = results[i] || results.find((r: any) =>
+      (r.keyword || r.query || '').toLowerCase() === keywords[i].toLowerCase()
+    );
+
+    if (!result) {
+      serpResults.push({
+        keyword: keywords[i],
+        target_rank: null,
+        top_results: [],
+      });
+      continue;
+    }
+
+    // Extract organic results
+    const organicResults = (result.organic || result.organic_results || result.results || [])
+      .slice(0, 10)
+      .map((r: any, idx: number) => ({
+        position: r.position || r.rank || idx + 1,
+        title: r.title || '',
+        url: r.url || r.link || '',
+        domain: extractDomainFromUrl(r.url || r.link || ''),
+      }));
+
+    // Find target rank
+    const targetResult = organicResults.find((r: any) =>
+      r.domain.includes(cleanDomain) || cleanDomain.includes(r.domain)
+    );
+
+    serpResults.push({
+      keyword: keywords[i],
+      target_rank: targetResult?.position || null,
+      top_results: organicResults.slice(0, 3),
+    });
+  }
+
+  return {
+    results: serpResults,
+    raw_data: JSON.stringify(results, null, 2).substring(0, 10000),
+  };
+}
+
+function extractDomainFromUrl(url: string): string {
+  try {
+    return new URL(url).hostname.replace('www.', '').toLowerCase();
+  } catch {
+    return url.toLowerCase();
+  }
+}
+
+// ---------- Website Tech Stack Detection (v2 Source 5) ----------
+
+export interface WebsiteTechResult {
+  platform: string;
+  built_by: string | null;
+  email_platform: string | null;
+  chat_widget: string | null;
+  analytics: string | null;
+  other_tools: string[];
+  raw_html_snippet: string;
+}
+
+export async function researchWebsiteTech(websiteUrl: string): Promise<WebsiteTechResult | null> {
+  if (!websiteUrl) return null;
+
+  try {
+    const url = websiteUrl.startsWith('http') ? websiteUrl : `https://${websiteUrl}`;
+    console.log(`[Discovery:v2] Scraping website tech: ${url}`);
+
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      },
+      signal: AbortSignal.timeout(15000),
+      redirect: 'follow',
+    });
+
+    if (!response.ok) return null;
+
+    const html = await response.text();
+    const lowerHtml = html.toLowerCase();
+
+    // Detect platform
+    let platform = 'Unknown';
+    if (lowerHtml.includes('shopify') || lowerHtml.includes('cdn.shopify.com')) platform = 'Shopify';
+    else if (lowerHtml.includes('wp-content') || lowerHtml.includes('wordpress')) platform = 'WordPress';
+    else if (lowerHtml.includes('squarespace')) platform = 'Squarespace';
+    else if (lowerHtml.includes('wix.com') || lowerHtml.includes('wixsite')) platform = 'Wix';
+    else if (lowerHtml.includes('hubspot')) platform = 'HubSpot';
+    else if (lowerHtml.includes('webflow') || lowerHtml.includes('webflow.io')) platform = 'Webflow';
+    else if (lowerHtml.includes('next') && lowerHtml.includes('_next')) platform = 'Next.js';
+    else if (lowerHtml.includes('gatsby')) platform = 'Gatsby';
+
+    // Detect agency/builder credit
+    let builtBy: string | null = null;
+    const footerMatch = html.match(/(?:website\s+(?:by|designed\s+by|built\s+by|powered\s+by)|designed\s+(?:by|&\s*built\s*by)|developed\s+by|crafted\s+by)\s+[<>a-zA-Z\s="'\/]*?>?\s*([A-Za-z][A-Za-z0-9\s&.]+?)(?:<\/|[|•\-]|\s{2})/i);
+    if (footerMatch) {
+      builtBy = footerMatch[1].trim().replace(/<[^>]+>/g, '').trim();
+      if (builtBy.length < 2 || builtBy.length > 60) builtBy = null;
+    }
+
+    // Detect email platform
+    let emailPlatform: string | null = null;
+    if (lowerHtml.includes('klaviyo')) emailPlatform = 'Klaviyo';
+    else if (lowerHtml.includes('mailchimp') || lowerHtml.includes('mc.js')) emailPlatform = 'Mailchimp';
+    else if (lowerHtml.includes('convertkit')) emailPlatform = 'ConvertKit';
+    else if (lowerHtml.includes('activecampaign')) emailPlatform = 'ActiveCampaign';
+    else if (lowerHtml.includes('hubspot') && lowerHtml.includes('forms')) emailPlatform = 'HubSpot';
+    else if (lowerHtml.includes('constantcontact')) emailPlatform = 'Constant Contact';
+
+    // Detect chat widget
+    let chatWidget: string | null = null;
+    if (lowerHtml.includes('intercom')) chatWidget = 'Intercom';
+    else if (lowerHtml.includes('drift')) chatWidget = 'Drift';
+    else if (lowerHtml.includes('tidio')) chatWidget = 'Tidio';
+    else if (lowerHtml.includes('zendesk') && lowerHtml.includes('chat')) chatWidget = 'Zendesk Chat';
+    else if (lowerHtml.includes('crisp')) chatWidget = 'Crisp';
+    else if (lowerHtml.includes('livechat')) chatWidget = 'LiveChat';
+    else if (lowerHtml.includes('tawk.to') || lowerHtml.includes('tawk')) chatWidget = 'Tawk.to';
+
+    // Detect analytics
+    let analytics: string | null = null;
+    if (lowerHtml.includes('gtag') || lowerHtml.includes('google-analytics') || lowerHtml.includes('googletagmanager')) analytics = 'GA4';
+    if (lowerHtml.includes('segment')) analytics = analytics ? `${analytics}, Segment` : 'Segment';
+    if (lowerHtml.includes('mixpanel')) analytics = analytics ? `${analytics}, Mixpanel` : 'Mixpanel';
+    if (lowerHtml.includes('hotjar')) analytics = analytics ? `${analytics}, Hotjar` : 'Hotjar';
+
+    // Other notable tools
+    const otherTools: string[] = [];
+    if (lowerHtml.includes('stripe')) otherTools.push('Stripe');
+    if (lowerHtml.includes('calendly')) otherTools.push('Calendly');
+    if (lowerHtml.includes('typeform')) otherTools.push('Typeform');
+    if (lowerHtml.includes('zapier')) otherTools.push('Zapier');
+    if (lowerHtml.includes('recaptcha') || lowerHtml.includes('captcha')) otherTools.push('reCAPTCHA');
+
+    return {
+      platform,
+      built_by: builtBy,
+      email_platform: emailPlatform,
+      chat_widget: chatWidget,
+      analytics,
+      other_tools: otherTools,
+      raw_html_snippet: html.substring(0, 5000),
+    };
+  } catch (error: any) {
+    console.error('[Discovery:v2] Website tech scrape failed:', error.message);
+    return null;
+  }
+}
+
+// ---------- SERP Keyword Generator ----------
+
+export function generateSerpKeywords(
+  targetCompany: string,
+  targetWebsite: string | undefined,
+  targetIcp: string | undefined,
+  competitors: string | undefined
+): string[] {
+  const keywords: string[] = [];
+
+  // Branded search
+  keywords.push(targetCompany);
+
+  // Try to infer location and service from available data
+  if (targetIcp) {
+    keywords.push(`${targetCompany} ${targetIcp}`);
+  }
+
+  if (targetWebsite) {
+    const domain = extractDomainFromUrl(
+      targetWebsite.startsWith('http') ? targetWebsite : `https://${targetWebsite}`
+    );
+    const parts = domain.split('.')[0];
+    if (parts !== targetCompany.toLowerCase().replace(/\s+/g, '')) {
+      keywords.push(parts);
+    }
+  }
+
+  // Competitor comparison
+  if (competitors) {
+    const firstCompetitor = competitors.split(',')[0]?.trim();
+    if (firstCompetitor) {
+      keywords.push(`${firstCompetitor} vs ${targetCompany}`);
+    }
+  }
+
+  return keywords.slice(0, 5);
+}
+
+// ---------- V2 Combined Research Flow ----------
+
+export interface V2ResearchInput {
+  // Requestor
+  requestor_name: string;
+  requestor_company?: string;
+  requestor_website?: string;
+  service_offered: string;
+
+  // Target
+  target_company: string;
+  target_website?: string;
+  target_contact: string;
+  target_title?: string;
+  target_linkedin?: string;
+  target_icp?: string;
+  competitors?: string;
+}
+
+export interface V2ResearchResult {
+  // Source 1: Perplexity
+  perplexity: {
+    company_snapshot: string;
+    funding_info: { round: string; amount: string; date: string; investors: string } | null;
+    recent_news: Array<{ title: string; date: string; summary: string }>;
+    industry_momentum: string;
+    momentum_read: string;
+    raw_response: string;
+  } | null;
+
+  // Source 2: LinkedIn Profile
+  linkedin_profile: LinkedInProfileResult | null;
+
+  // Source 3: LinkedIn Posts
+  linkedin_posts: LinkedInPostsResult | null;
+
+  // Source 4: Google SERP
+  google_serp: GoogleSerpResult | null;
+
+  // Source 5: Website Tech
+  website_tech: WebsiteTechResult | null;
+
+  // Apollo enrichment (kept from v1)
+  apollo_company: ApolloCompanyData | null;
+  apollo_contact: ApolloContactData | null;
+
+  errors: string[];
+}
+
+/**
+ * Run the v2 5-source research chain for Discovery Lab Pro
+ */
+export async function runV2DiscoveryResearch(input: V2ResearchInput): Promise<V2ResearchResult> {
+  const errors: string[] = [];
+  const result: V2ResearchResult = {
+    perplexity: null,
+    linkedin_profile: null,
+    linkedin_posts: null,
+    google_serp: null,
+    website_tech: null,
+    apollo_company: null,
+    apollo_contact: null,
+    errors: [],
+  };
+
+  // Extract domain
+  let domain: string | undefined;
+  if (input.target_website) {
+    try {
+      const url = new URL(input.target_website.startsWith('http') ? input.target_website : `https://${input.target_website}`);
+      domain = url.hostname.replace('www.', '');
+    } catch {
+      domain = input.target_website.replace('www.', '').split('/')[0];
+    }
+  }
+
+  // Generate SERP keywords
+  const serpKeywords = generateSerpKeywords(
+    input.target_company,
+    input.target_website,
+    input.target_icp,
+    input.competitors
+  );
+
+  // Run all 5 sources + Apollo enrichment in parallel
+  const promises: Promise<void>[] = [];
+
+  // Source 1: Perplexity (company context + news + industry)
+  promises.push(
+    (async () => {
+      try {
+        const [newsData, marketData] = await Promise.all([
+          fetchCompanyNews(input.target_company, domain),
+          researchMarket(
+            input.target_icp || `${input.target_company}'s industry`,
+            input.target_company,
+            input.service_offered
+          ),
+        ]);
+
+        result.perplexity = {
+          company_snapshot: marketData.raw_response.substring(0, 3000),
+          funding_info: newsData.funding_info,
+          recent_news: newsData.recent_news,
+          industry_momentum: marketData.industry_trends,
+          momentum_read: marketData.market_dynamics,
+          raw_response: `${marketData.raw_response}\n\n${newsData.raw_response}`,
+        };
+      } catch (e: any) {
+        errors.push(`Perplexity research failed: ${e.message}`);
+      }
+    })()
+  );
+
+  // Source 2: BrightData LinkedIn Profile
+  if (input.target_linkedin) {
+    promises.push(
+      researchLinkedInProfile(input.target_linkedin)
+        .then(r => { result.linkedin_profile = r; })
+        .catch(e => { errors.push(`LinkedIn profile failed: ${e.message}`); })
+    );
+  }
+
+  // Source 3: BrightData LinkedIn Posts
+  if (input.target_linkedin) {
+    promises.push(
+      researchLinkedInPosts(input.target_linkedin)
+        .then(r => { result.linkedin_posts = r; })
+        .catch(e => { errors.push(`LinkedIn posts failed: ${e.message}`); })
+    );
+  }
+
+  // Source 4: BrightData Google SERP
+  if (serpKeywords.length > 0 && domain) {
+    promises.push(
+      researchGoogleSerp(serpKeywords, domain)
+        .then(r => { result.google_serp = r; })
+        .catch(e => { errors.push(`Google SERP failed: ${e.message}`); })
+    );
+  }
+
+  // Source 5: Website tech detection
+  if (input.target_website) {
+    promises.push(
+      researchWebsiteTech(input.target_website)
+        .then(r => { result.website_tech = r; })
+        .catch(e => { errors.push(`Website tech failed: ${e.message}`); })
+    );
+  }
+
+  // Apollo company enrichment
+  if (domain) {
+    promises.push(
+      enrichCompanyWithApollo(domain)
+        .then(r => { result.apollo_company = r; })
+        .catch(e => { errors.push(`Apollo company failed: ${e.message}`); })
+    );
+  }
+
+  // Apollo contact enrichment
+  if (input.target_contact && domain) {
+    promises.push(
+      enrichContactWithApollo(input.target_contact, domain)
+        .then(r => { result.apollo_contact = r; })
+        .catch(e => { errors.push(`Apollo contact failed: ${e.message}`); })
+    );
+  }
+
+  // Wait for all with timeout
+  const timeout = new Promise<void>(resolve => setTimeout(() => {
+    errors.push('Research chain timed out after 120s');
+    resolve();
+  }, 120000));
+
+  await Promise.race([Promise.allSettled(promises), timeout]);
+
+  result.errors = errors;
+  return result;
+}

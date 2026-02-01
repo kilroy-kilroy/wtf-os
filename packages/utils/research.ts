@@ -960,17 +960,24 @@ async function bdDiscoveryTrigger(datasetId: string, input: any[]): Promise<stri
   }
 }
 
-async function bdDiscoveryPoll(snapshotId: string, maxWaitMs: number = 60000): Promise<any[]> {
+async function bdDiscoveryPoll(snapshotId: string, maxWaitMs: number = 60000, abortSignal?: AbortSignal): Promise<any[]> {
   if (!BRIGHT_DATA_API || !snapshotId) return [];
 
   const startTime = Date.now();
   const pollInterval = 10000;
 
   while (Date.now() - startTime < maxWaitMs) {
+    if (abortSignal?.aborted) {
+      console.warn(`[BrightData:Discovery] Snapshot ${snapshotId} aborted by chain timeout`);
+      return [];
+    }
+
     try {
       const response = await fetch(`${BRIGHT_DATA_BASE}/snapshot/${snapshotId}?format=json`, {
         headers: { 'Authorization': `Bearer ${BRIGHT_DATA_API}` },
-        signal: AbortSignal.timeout(15000),
+        signal: abortSignal
+          ? AbortSignal.any([AbortSignal.timeout(15000), abortSignal])
+          : AbortSignal.timeout(15000),
       });
 
       if (response.status === 200) {
@@ -978,7 +985,8 @@ async function bdDiscoveryPoll(snapshotId: string, maxWaitMs: number = 60000): P
         return Array.isArray(data) ? data : [data];
       }
       // 202 = still running, keep polling
-    } catch {
+    } catch (e: any) {
+      if (abortSignal?.aborted) return [];
       // Continue polling on network errors
     }
 
@@ -1005,7 +1013,7 @@ export interface LinkedInProfileResult {
   raw_data: string;
 }
 
-export async function researchLinkedInProfile(linkedinUrl: string): Promise<LinkedInProfileResult | null> {
+export async function researchLinkedInProfile(linkedinUrl: string, abortSignal?: AbortSignal): Promise<LinkedInProfileResult | null> {
   if (!BRIGHT_DATA_API || !linkedinUrl) return null;
 
   try {
@@ -1013,6 +1021,9 @@ export async function researchLinkedInProfile(linkedinUrl: string): Promise<Link
     console.log(`[Discovery:v2] Scraping LinkedIn profile: ${url}`);
 
     // Try synchronous /scrape endpoint first
+    const fetchSignal = abortSignal
+      ? AbortSignal.any([AbortSignal.timeout(75000), abortSignal])
+      : AbortSignal.timeout(75000);
     const response = await fetch(`${BRIGHT_DATA_BASE}/scrape?dataset_id=${BD_DISCOVERY_DATASETS.linkedinProfile}&format=json&include_errors=true`, {
       method: 'POST',
       headers: {
@@ -1020,14 +1031,14 @@ export async function researchLinkedInProfile(linkedinUrl: string): Promise<Link
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ input: [{ url }] }),
-      signal: AbortSignal.timeout(90000),
+      signal: fetchSignal,
     });
 
     let results: any[];
     if (response.status === 202) {
       const data = await response.json();
       if (!data.snapshot_id) return null;
-      results = await bdDiscoveryPoll(data.snapshot_id, 90000);
+      results = await bdDiscoveryPoll(data.snapshot_id, 75000, abortSignal);
     } else if (response.ok) {
       results = await response.json();
       if (!Array.isArray(results)) results = [results];
@@ -1035,7 +1046,7 @@ export async function researchLinkedInProfile(linkedinUrl: string): Promise<Link
       // Fallback to trigger/poll
       const snapshotId = await bdDiscoveryTrigger(BD_DISCOVERY_DATASETS.linkedinProfile, [{ url }]);
       if (!snapshotId) return null;
-      results = await bdDiscoveryPoll(snapshotId, 60000);
+      results = await bdDiscoveryPoll(snapshotId, 60000, abortSignal);
     }
 
     const profile = results[0];
@@ -1137,13 +1148,16 @@ export interface LinkedInPostsResult {
   raw_data: string;
 }
 
-export async function researchLinkedInPosts(linkedinUrl: string): Promise<LinkedInPostsResult | null> {
+export async function researchLinkedInPosts(linkedinUrl: string, abortSignal?: AbortSignal): Promise<LinkedInPostsResult | null> {
   if (!BRIGHT_DATA_API || !linkedinUrl) return null;
 
   try {
     const url = linkedinUrl.trim().replace(/\/$/, '');
     console.log(`[Discovery:v2] Scraping LinkedIn posts: ${url}`);
 
+    const fetchSignal = abortSignal
+      ? AbortSignal.any([AbortSignal.timeout(75000), abortSignal])
+      : AbortSignal.timeout(75000);
     const response = await fetch(`${BRIGHT_DATA_BASE}/scrape?dataset_id=${BD_DISCOVERY_DATASETS.linkedinPosts}&format=json&include_errors=true`, {
       method: 'POST',
       headers: {
@@ -1151,14 +1165,14 @@ export async function researchLinkedInPosts(linkedinUrl: string): Promise<Linked
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ input: [{ url }] }),
-      signal: AbortSignal.timeout(90000),
+      signal: fetchSignal,
     });
 
     let results: any[];
     if (response.status === 202) {
       const data = await response.json();
       if (!data.snapshot_id) return null;
-      results = await bdDiscoveryPoll(data.snapshot_id, 90000);
+      results = await bdDiscoveryPoll(data.snapshot_id, 75000, abortSignal);
     } else if (response.ok) {
       results = await response.json();
       if (!Array.isArray(results)) results = [results];
@@ -1239,7 +1253,8 @@ export interface GoogleSerpResult {
 
 export async function researchGoogleSerp(
   keywords: string[],
-  targetDomain: string
+  targetDomain: string,
+  abortSignal?: AbortSignal
 ): Promise<GoogleSerpResult | null> {
   if (!BRIGHT_DATA_API || !keywords.length) return null;
 
@@ -1256,6 +1271,9 @@ export async function researchGoogleSerp(
     const snapshotId = await bdDiscoveryTrigger(BD_DISCOVERY_DATASETS.googleSerp, input);
     if (!snapshotId) {
       // Try synchronous /scrape endpoint
+      const fetchSignal = abortSignal
+        ? AbortSignal.any([AbortSignal.timeout(75000), abortSignal])
+        : AbortSignal.timeout(75000);
       const response = await fetch(`${BRIGHT_DATA_BASE}/scrape?dataset_id=${BD_DISCOVERY_DATASETS.googleSerp}&format=json&include_errors=true`, {
         method: 'POST',
         headers: {
@@ -1263,7 +1281,7 @@ export async function researchGoogleSerp(
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ input }),
-        signal: AbortSignal.timeout(90000),
+        signal: fetchSignal,
       });
 
       if (!response.ok) return null;
@@ -1272,7 +1290,7 @@ export async function researchGoogleSerp(
       if (response.status === 202) {
         const data = await response.json();
         if (!data.snapshot_id) return null;
-        results = await bdDiscoveryPoll(data.snapshot_id, 90000);
+        results = await bdDiscoveryPoll(data.snapshot_id, 75000, abortSignal);
       } else {
         results = await response.json();
         if (!Array.isArray(results)) results = [results];
@@ -1281,7 +1299,7 @@ export async function researchGoogleSerp(
       return parseSerpResults(results, keywords, targetDomain);
     }
 
-    const results = await bdDiscoveryPoll(snapshotId, 90000);
+    const results = await bdDiscoveryPoll(snapshotId, 75000, abortSignal);
     return parseSerpResults(results, keywords, targetDomain);
   } catch (error: any) {
     console.error('[Discovery:v2] Google SERP search failed:', error.message);
@@ -1449,7 +1467,8 @@ export function generateSerpKeywords(
   targetCompany: string,
   targetWebsite: string | undefined,
   targetIcp: string | undefined,
-  competitors: string | undefined
+  competitors: string | undefined,
+  serviceOffered?: string
 ): string[] {
   const keywords: string[] = [];
 
@@ -1459,6 +1478,15 @@ export function generateSerpKeywords(
   // Try to infer location and service from available data
   if (targetIcp) {
     keywords.push(`${targetCompany} ${targetIcp}`);
+  }
+
+  // Service-category keyword to probe their capabilities beyond primary offering
+  // e.g. "InteractOne marketing services" or "InteractOne email marketing"
+  if (serviceOffered) {
+    const serviceKeyword = serviceOffered.split(',')[0]?.trim();
+    if (serviceKeyword) {
+      keywords.push(`${targetCompany} ${serviceKeyword}`);
+    }
   }
 
   if (targetWebsite) {
@@ -1563,8 +1591,12 @@ export async function runV2DiscoveryResearch(input: V2ResearchInput): Promise<V2
     input.target_company,
     input.target_website,
     input.target_icp,
-    input.competitors
+    input.competitors,
+    input.service_offered
   );
+
+  // AbortController to cancel in-flight BrightData polls when chain timeout fires
+  const chainAbort = new AbortController();
 
   // Run all 5 sources + Apollo enrichment in parallel
   const promises: Promise<void>[] = [];
@@ -1599,27 +1631,27 @@ export async function runV2DiscoveryResearch(input: V2ResearchInput): Promise<V2
   // Source 2: BrightData LinkedIn Profile
   if (input.target_linkedin) {
     promises.push(
-      researchLinkedInProfile(input.target_linkedin)
+      researchLinkedInProfile(input.target_linkedin, chainAbort.signal)
         .then(r => { result.linkedin_profile = r; })
-        .catch(e => { errors.push(`LinkedIn profile failed: ${e.message}`); })
+        .catch(e => { if (!chainAbort.signal.aborted) errors.push(`LinkedIn profile failed: ${e.message}`); })
     );
   }
 
   // Source 3: BrightData LinkedIn Posts
   if (input.target_linkedin) {
     promises.push(
-      researchLinkedInPosts(input.target_linkedin)
+      researchLinkedInPosts(input.target_linkedin, chainAbort.signal)
         .then(r => { result.linkedin_posts = r; })
-        .catch(e => { errors.push(`LinkedIn posts failed: ${e.message}`); })
+        .catch(e => { if (!chainAbort.signal.aborted) errors.push(`LinkedIn posts failed: ${e.message}`); })
     );
   }
 
   // Source 4: BrightData Google SERP
   if (serpKeywords.length > 0 && domain) {
     promises.push(
-      researchGoogleSerp(serpKeywords, domain)
+      researchGoogleSerp(serpKeywords, domain, chainAbort.signal)
         .then(r => { result.google_serp = r; })
-        .catch(e => { errors.push(`Google SERP failed: ${e.message}`); })
+        .catch(e => { if (!chainAbort.signal.aborted) errors.push(`Google SERP failed: ${e.message}`); })
     );
   }
 
@@ -1650,8 +1682,9 @@ export async function runV2DiscoveryResearch(input: V2ResearchInput): Promise<V2
     );
   }
 
-  // Wait for all with timeout
+  // Wait for all with timeout - abort in-flight BrightData polls on timeout
   const timeout = new Promise<void>(resolve => setTimeout(() => {
+    chainAbort.abort();
     errors.push('Research chain timed out after 120s');
     resolve();
   }, 120000));

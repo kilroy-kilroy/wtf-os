@@ -541,7 +541,7 @@ export default async function ResultsPage({ params }: { params: { id: string } }
         <div className="space-y-4 mb-6">
           {scores.realityChecks?.filter((c: any) => c.type === 'celebration').length > 0 && (
             <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-2xl p-6">
-              <h2 className="text-lg font-bold text-emerald-400 mb-5">What You're Doing Right</h2>
+              <h2 className="text-lg font-bold text-emerald-400 mb-5">What You&apos;re Doing Right</h2>
               <div className="space-y-6">
                 {scores.realityChecks.filter((c: any) => c.type === 'celebration').map((check: any, i: number) => (
                   <div key={check.id || i}>

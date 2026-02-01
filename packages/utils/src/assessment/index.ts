@@ -6,3 +6,5 @@ export { calculateRevelations, calculateFounderTax, calculatePipelineProbability
 export type { RevelationIntakeData, RevelationsResult, FounderTaxResult, PipelineProbabilityResult, AuthorityGapResult, PositioningCollisionResult, TrajectoryForkResult } from './revelations';
 export { generateDiagnoses, buildAgencyContext } from './diagnosis';
 export type { DiagnosisResult, AgencyContext } from './diagnosis';
+export { generateFollowUpQuestions, generateFollowUpInsights, calculateLTVMetrics } from './follow-up';
+export type { FollowUpQuestion, FollowUpAnswers, FollowUpInsight, LTVMetrics } from './follow-up';

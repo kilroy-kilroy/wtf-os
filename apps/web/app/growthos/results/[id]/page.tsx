@@ -2,6 +2,7 @@ import { cookies } from 'next/headers';
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
 import { redirect, notFound } from 'next/navigation';
 import Link from 'next/link';
+import { FollowUpQuestionsSection, LTVSection } from './FollowUpSection';
 
 function ScoreBar({ score, label, narrative, color }: {
   score: number; label: string; narrative: string; color: string;
@@ -537,10 +538,27 @@ export default async function ResultsPage({ params }: { params: { id: string } }
 
       {/* ===== 8. REALITY CHECKS ===== */}
       {((scores.realityChecks?.length > 0) || (scores.impossibilities?.length > 0)) && (
-        <div className="bg-[#E31B23]/5 border border-[#E31B23]/20 rounded-2xl p-6 mb-6">
+        <div className="space-y-4 mb-6">
+          {scores.realityChecks?.filter((c: any) => c.type === 'celebration').length > 0 && (
+            <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-2xl p-6">
+              <h2 className="text-lg font-bold text-emerald-400 mb-5">What You're Doing Right</h2>
+              <div className="space-y-6">
+                {scores.realityChecks.filter((c: any) => c.type === 'celebration').map((check: any, i: number) => (
+                  <div key={check.id || i}>
+                    <h3 className="text-sm font-bold text-emerald-400 mb-2">{check.title}</h3>
+                    {check.body.split('\n').map((line: string, j: number) => {
+                      if (!line.trim()) return null;
+                      return <p key={j} className="text-sm text-slate-300 mb-1">{line}</p>;
+                    })}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          <div className="bg-[#E31B23]/5 border border-[#E31B23]/20 rounded-2xl p-6">
           <h2 className="text-lg font-bold text-[#E31B23] mb-5">Reality Checks</h2>
           <div className="space-y-6">
-            {scores.realityChecks?.map((check: any, i: number) => (
+            {scores.realityChecks?.filter((c: any) => c.type !== 'celebration').map((check: any, i: number) => (
               <div key={check.id || i}>
                 <h3 className="text-sm font-bold text-[#E31B23] mb-2">{check.title}</h3>
                 {check.body.split('\n').map((line: string, j: number) => {
@@ -551,14 +569,29 @@ export default async function ResultsPage({ params }: { params: { id: string } }
                 })}
               </div>
             ))}
-            {(!scores.realityChecks || scores.realityChecks.length === 0) && scores.impossibilities?.map((item: string, i: number) => (
+            {(!scores.realityChecks || scores.realityChecks.filter((c: any) => c.type !== 'celebration').length === 0) && scores.impossibilities?.map((item: string, i: number) => (
               <div key={i} className="flex items-start gap-3">
                 <span className="text-[#E31B23] mt-0.5 font-bold text-lg">!</span>
                 <p className="text-sm text-slate-300">{item}</p>
               </div>
             ))}
           </div>
+          </div>
         </div>
+      )}
+
+      {/* ===== UNIT ECONOMICS (LTV) ===== */}
+      {scores.ltvMetrics && (
+        <LTVSection ltv={scores.ltvMetrics} />
+      )}
+
+      {/* ===== FOLLOW-UP QUESTIONS / DEEP DIVE ===== */}
+      {(scores.followUpQuestions?.length > 0 || scores.followUpInsights?.length > 0) && (
+        <FollowUpQuestionsSection
+          questions={scores.followUpQuestions || []}
+          assessmentId={params.id}
+          existingInsights={scores.followUpInsights}
+        />
       )}
 
       {/* ===== REVELATIONS: Claude Diagnoses (primary) or Calculated Fallback ===== */}

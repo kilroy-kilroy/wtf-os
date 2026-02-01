@@ -270,21 +270,59 @@ const VALUATION_MULTIPLES = {
   premium: 1.2,
 };
 
-const TRAJECTORY_ASSUMPTIONS = {
-  currentPath: {
-    clientGrowthDecay: 0.9,
-    marginCompression: 0.02,
-    founderHoursIncrease: 5,
-    valuationMultipleDecay: 0.85,
-  },
-  interventionPath: {
-    clientGrowthBoost: 1.3,
-    churnReduction: 0.7,
-    marginImprovement: 0.02,
-    founderHoursReduction: 5,
-    valuationMultipleGrowth: 1.1,
-  },
-};
+/**
+ * Dynamic trajectory assumptions. Instead of static constants, adjust
+ * decay/growth rates based on the agency's actual situation.
+ * Agencies with weaker fundamentals see steeper current-path declines.
+ */
+function getTrajectoryAssumptions(data: RevelationIntakeData) {
+  const delegationScore = (
+    data.ceoDeliveryRating + data.ceoAccountMgmtRating +
+    data.ceoMarketingRating + data.ceoSalesRating
+  ) / 4;
+  const systemsScore = getSystemsScore(data);
+  const referralPct = data.referralPercent || 0;
+
+  // Count active lead channels (10%+ contribution)
+  const channels = [
+    data.referralPercent, data.inboundPercent, data.contentPercent,
+    data.paidPercent, data.outboundPercent, data.partnershipPercent || 0,
+  ];
+  const activeChannels = channels.filter(c => c >= 10).length;
+
+  // Current path: worse fundamentals = steeper decline
+  let clientGrowthDecay = 0.9;
+  if (referralPct >= 70) clientGrowthDecay -= 0.08;      // heavy referral dependency accelerates decay
+  if (activeChannels <= 1) clientGrowthDecay -= 0.05;     // single channel = fragile
+  if (delegationScore < 2) clientGrowthDecay -= 0.05;     // founder bottleneck compounds
+
+  let marginCompression = 0.02;
+  if (delegationScore < 2) marginCompression += 0.01;     // founder doing everything = rising costs
+  if (systemsScore < 2) marginCompression += 0.01;        // no systems = inefficiency compounds
+
+  let founderHoursIncrease = 5;
+  if (delegationScore < 2) founderHoursIncrease += 3;     // already doing everything, it only gets worse
+  if (systemsScore < 2) founderHoursIncrease += 2;        // no systems = more firefighting
+
+  let valuationMultipleDecay = 0.85;
+  if (delegationScore < 2) valuationMultipleDecay -= 0.05; // founder-dependent businesses devalue faster
+
+  return {
+    currentPath: {
+      clientGrowthDecay: Math.max(0.6, clientGrowthDecay),
+      marginCompression: Math.min(0.06, marginCompression),
+      founderHoursIncrease: Math.min(12, founderHoursIncrease),
+      valuationMultipleDecay: Math.max(0.7, valuationMultipleDecay),
+    },
+    interventionPath: {
+      clientGrowthBoost: 1.3,
+      churnReduction: 0.7,
+      marginImprovement: 0.02,
+      founderHoursReduction: delegationScore < 2 ? 7 : 5,   // more room to improve if starting low
+      valuationMultipleGrowth: systemsScore < 2 ? 1.15 : 1.1, // bigger lift from adding systems
+    },
+  };
+}
 
 const CLOSE_RATE_MIDPOINTS: Record<string, number> = {
   '<10%': 7,
@@ -772,11 +810,13 @@ function projectTrajectory(
     clientsLost: number;
     avgClientValue: number;
     delegationScore: number;
-  }
+  },
+  data: RevelationIntakeData
 ): Record<string, any> {
+  const dynamicAssumptions = getTrajectoryAssumptions(data);
   const assumptions = type === 'current'
-    ? TRAJECTORY_ASSUMPTIONS.currentPath
-    : TRAJECTORY_ASSUMPTIONS.interventionPath;
+    ? dynamicAssumptions.currentPath
+    : dynamicAssumptions.interventionPath;
   const years: Record<string, any> = {};
   let prevYear = baseline.year0;
 
@@ -784,7 +824,7 @@ function projectTrajectory(
     let nextYear: any = {};
 
     if (type === 'current') {
-      const curAssumptions = assumptions as typeof TRAJECTORY_ASSUMPTIONS.currentPath;
+      const curAssumptions = assumptions as typeof dynamicAssumptions.currentPath;
       const effectiveGrowth = baseline.netClientGrowth * Math.pow(curAssumptions.clientGrowthDecay, i);
       nextYear.clients = Math.max(5, Math.round(prevYear.clients + effectiveGrowth));
       nextYear.revenue = nextYear.clients * baseline.avgClientValue;
@@ -797,7 +837,7 @@ function projectTrajectory(
         nextYear.margin = Math.max(0.02, nextYear.margin - 0.02);
       }
     } else {
-      const intAssumptions = assumptions as typeof TRAJECTORY_ASSUMPTIONS.interventionPath;
+      const intAssumptions = assumptions as typeof dynamicAssumptions.interventionPath;
       const boostedGrowth = baseline.netClientGrowth * intAssumptions.clientGrowthBoost;
       const reducedChurn = baseline.clientsLost * intAssumptions.churnReduction;
       const effectiveGrowth = boostedGrowth + (baseline.clientsLost - reducedChurn);
@@ -885,8 +925,8 @@ export function calculateTrajectoryFork(
       delegationScore,
     };
 
-    const trajA = projectTrajectory('current', baseline);
-    const trajB = projectTrajectory('intervention', baseline);
+    const trajA = projectTrajectory('current', baseline, data);
+    const trajB = projectTrajectory('intervention', baseline, data);
 
     const year3Gap = {
       revenue: trajB.year3.revenue - trajA.year3.revenue,

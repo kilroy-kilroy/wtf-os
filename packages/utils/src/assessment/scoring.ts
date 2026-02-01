@@ -470,7 +470,22 @@ function scoreTeamVisibility(data: IntakeData): ZoneScore {
 // OVERALL SCORE
 // ============================================
 
-function calculateOverallScore(zones: WTFZones): number {
+/**
+ * Segment-weighted scoring. Different zones matter more at different stages.
+ * - Startups: Founder Load and Lead Engine matter most (survival)
+ * - Growth: Profitability and Systems matter more (scaling foundations)
+ * - Scale+: Systems Readiness and Team Visibility gain importance (leverage)
+ */
+const SEGMENT_WEIGHTS: Record<Segment, number[]> = {
+  // [revQuality, profit, growthChurn, leadEngine, founderLoad, systems, content, teamVis]
+  startup:     [1.0, 1.0, 1.2, 1.3, 1.3, 0.7, 1.0, 0.5],
+  growth:      [1.0, 1.2, 1.2, 1.2, 1.1, 0.9, 1.0, 0.6],
+  scale:       [1.0, 1.2, 1.1, 1.0, 1.0, 1.2, 1.0, 0.8],
+  established: [1.0, 1.1, 1.0, 0.9, 1.0, 1.2, 1.0, 1.0],
+  enterprise:  [1.0, 1.0, 1.0, 0.8, 0.9, 1.2, 1.0, 1.1],
+};
+
+function calculateOverallScore(zones: WTFZones, segment?: Segment): number {
   const scores = [
     zones.revenueQuality.score,
     zones.profitability.score,
@@ -481,7 +496,11 @@ function calculateOverallScore(zones: WTFZones): number {
     zones.contentPositioning.score,
     zones.teamVisibility.score,
   ];
-  const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
+
+  const weights = SEGMENT_WEIGHTS[segment || 'growth'];
+  const weightedSum = scores.reduce((sum, score, i) => sum + score * weights[i], 0);
+  const totalWeight = weights.reduce((a, b) => a + b, 0);
+  const avg = weightedSum / totalWeight;
   return Math.round(avg * 10) / 10;
 }
 
@@ -679,6 +698,45 @@ function detectRealityChecks(data: IntakeData, zones: WTFZones): RealityCheck[] 
       type: 'alert',
       title: 'REALITY CHECK',
       body: `You're targeting ${targetGrowthPercent.toFixed(0)}% growth while your net growth rate is ${netGrowthRate.toFixed(1)}%.\n\nThat's ambition. But the math doesn't support it without intervention.\n\nEither:\n1. Fix churn first\n2. Dramatically increase lead gen\n3. Adjust your target to reality`,
+    });
+  }
+
+  // Check 3: Strong Delegation (celebration)
+  const avgDelegation = ratings.reduce((a, b) => a + b, 0) / ratings.length;
+  if (avgDelegation >= 4 && data.founderWeeklyHours <= 45) {
+    checks.push({
+      id: 'strong-delegation',
+      type: 'celebration',
+      title: 'STRONG DELEGATION',
+      body: `Delegation avg of ${avgDelegation.toFixed(1)}/5 at ${data.founderWeeklyHours} hours/week. You've built a business that doesn't depend on you for daily operations. That's rare and it's your biggest asset.`,
+    });
+  }
+
+  // Check 4: Diversified Pipeline (celebration)
+  const channels = [
+    data.referralPercent, data.inboundPercent, data.contentPercent,
+    data.paidPercent, data.outboundPercent, data.partnershipPercent || 0,
+  ];
+  const activeChannelCount = channels.filter(c => c >= 10).length;
+  if (activeChannelCount >= 3 && data.referralPercent < 50) {
+    checks.push({
+      id: 'diversified-pipeline',
+      type: 'celebration',
+      title: 'DIVERSIFIED PIPELINE',
+      body: `${activeChannelCount} active lead channels with referrals at only ${data.referralPercent}%. You've built a pipeline you control. Most agencies never get here.`,
+    });
+  }
+
+  // Check 4b: Strong Margins (celebration)
+  const marginMid = data.netProfitMargin
+    ? parseMarginMidpoint(data.netProfitMargin)
+    : (data.netProfit / 100);
+  if (marginMid >= 0.25) {
+    checks.push({
+      id: 'strong-margins',
+      type: 'celebration',
+      title: 'STRONG MARGINS',
+      body: `${Math.round(marginMid * 100)}% net margin is elite. You have real leverage for growth, acquisitions, or a future exit. Protect this.`,
     });
   }
 
@@ -918,7 +976,7 @@ export function calculateAssessment(data: IntakeData): AssessmentResult {
     teamVisibility: scoreTeamVisibility(data),
   };
 
-  const overall = calculateOverallScore(wtfZones);
+  const overall = calculateOverallScore(wtfZones, segment);
   const overallLabel = getOverallLabel(overall);
   const narratives = generateNarratives(data, wtfZones);
   const growthLevers = detectGrowthLevers(data, wtfZones);

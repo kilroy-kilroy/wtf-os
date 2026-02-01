@@ -393,38 +393,3 @@ export async function onCoachingReportReady(
     },
   });
 }
-
-/**
- * Fire when user completes GrowthOS assessment
- * Triggers post-assessment nurture sequence
- */
-export async function onAssessmentCompleted(
-  email: string,
-  firstName: string,
-  agencyName: string,
-  assessmentId: string,
-  overallScore: number
-): Promise<{ success: boolean; error?: string }> {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.timkilroy.com';
-  const reportUrl = `${appUrl}/growthos/report/${assessmentId}`;
-
-  await createOrUpdateContact({
-    email,
-    firstName,
-    companyName: agencyName,
-    source: 'growthos_assessment',
-    userGroup: 'growthos_assessed',
-  });
-
-  return sendEvent({
-    email,
-    eventName: 'assessment_completed',
-    eventProperties: {
-      firstName: firstName || '',
-      agencyName: agencyName || '',
-      assessmentId,
-      overallScore,
-      reportUrl,
-    },
-  });
-}

@@ -1,3 +1,5 @@
+export const maxDuration = 300; // 5 minutes - research chain (240s) + Claude analysis
+
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@repo/db/client';
 import {

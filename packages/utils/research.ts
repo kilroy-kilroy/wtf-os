@@ -1022,8 +1022,8 @@ export async function researchLinkedInProfile(linkedinUrl: string, abortSignal?:
 
     // Try synchronous /scrape endpoint first
     const fetchSignal = abortSignal
-      ? AbortSignal.any([AbortSignal.timeout(75000), abortSignal])
-      : AbortSignal.timeout(75000);
+      ? AbortSignal.any([AbortSignal.timeout(120000), abortSignal])
+      : AbortSignal.timeout(120000);
     const response = await fetch(`${BRIGHT_DATA_BASE}/scrape?dataset_id=${BD_DISCOVERY_DATASETS.linkedinProfile}&format=json&include_errors=true`, {
       method: 'POST',
       headers: {
@@ -1038,7 +1038,7 @@ export async function researchLinkedInProfile(linkedinUrl: string, abortSignal?:
     if (response.status === 202) {
       const data = await response.json();
       if (!data.snapshot_id) return null;
-      results = await bdDiscoveryPoll(data.snapshot_id, 75000, abortSignal);
+      results = await bdDiscoveryPoll(data.snapshot_id, 120000, abortSignal);
     } else if (response.ok) {
       results = await response.json();
       if (!Array.isArray(results)) results = [results];
@@ -1156,8 +1156,8 @@ export async function researchLinkedInPosts(linkedinUrl: string, abortSignal?: A
     console.log(`[Discovery:v2] Scraping LinkedIn posts: ${url}`);
 
     const fetchSignal = abortSignal
-      ? AbortSignal.any([AbortSignal.timeout(75000), abortSignal])
-      : AbortSignal.timeout(75000);
+      ? AbortSignal.any([AbortSignal.timeout(120000), abortSignal])
+      : AbortSignal.timeout(120000);
     const response = await fetch(`${BRIGHT_DATA_BASE}/scrape?dataset_id=${BD_DISCOVERY_DATASETS.linkedinPosts}&format=json&include_errors=true`, {
       method: 'POST',
       headers: {
@@ -1172,7 +1172,7 @@ export async function researchLinkedInPosts(linkedinUrl: string, abortSignal?: A
     if (response.status === 202) {
       const data = await response.json();
       if (!data.snapshot_id) return null;
-      results = await bdDiscoveryPoll(data.snapshot_id, 75000, abortSignal);
+      results = await bdDiscoveryPoll(data.snapshot_id, 120000, abortSignal);
     } else if (response.ok) {
       results = await response.json();
       if (!Array.isArray(results)) results = [results];
@@ -1272,8 +1272,8 @@ export async function researchGoogleSerp(
     if (!snapshotId) {
       // Try synchronous /scrape endpoint
       const fetchSignal = abortSignal
-        ? AbortSignal.any([AbortSignal.timeout(75000), abortSignal])
-        : AbortSignal.timeout(75000);
+        ? AbortSignal.any([AbortSignal.timeout(120000), abortSignal])
+        : AbortSignal.timeout(120000);
       const response = await fetch(`${BRIGHT_DATA_BASE}/scrape?dataset_id=${BD_DISCOVERY_DATASETS.googleSerp}&format=json&include_errors=true`, {
         method: 'POST',
         headers: {
@@ -1290,7 +1290,7 @@ export async function researchGoogleSerp(
       if (response.status === 202) {
         const data = await response.json();
         if (!data.snapshot_id) return null;
-        results = await bdDiscoveryPoll(data.snapshot_id, 75000, abortSignal);
+        results = await bdDiscoveryPoll(data.snapshot_id, 120000, abortSignal);
       } else {
         results = await response.json();
         if (!Array.isArray(results)) results = [results];
@@ -1299,7 +1299,7 @@ export async function researchGoogleSerp(
       return parseSerpResults(results, keywords, targetDomain);
     }
 
-    const results = await bdDiscoveryPoll(snapshotId, 75000, abortSignal);
+    const results = await bdDiscoveryPoll(snapshotId, 120000, abortSignal);
     return parseSerpResults(results, keywords, targetDomain);
   } catch (error: any) {
     console.error('[Discovery:v2] Google SERP search failed:', error.message);
@@ -1683,11 +1683,12 @@ export async function runV2DiscoveryResearch(input: V2ResearchInput): Promise<V2
   }
 
   // Wait for all with timeout - abort in-flight BrightData polls on timeout
+  // 240s gives BrightData sources enough time to complete even with slow scrapes
   const timeout = new Promise<void>(resolve => setTimeout(() => {
     chainAbort.abort();
-    errors.push('Research chain timed out after 120s');
+    errors.push('Research chain timed out after 240s');
     resolve();
-  }, 120000));
+  }, 240000));
 
   await Promise.race([Promise.allSettled(promises), timeout]);
 

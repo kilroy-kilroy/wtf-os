@@ -118,6 +118,7 @@ export default function ProfileSetupPage() {
       checkDomain(user.email);
     };
     getUser();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [supabase, router]);
 
   const checkDomain = async (email: string) => {

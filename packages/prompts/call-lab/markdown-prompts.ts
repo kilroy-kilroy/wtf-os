@@ -258,25 +258,24 @@ For each stage note:
 
 This is subtext analysis. Read between the lines. Be confident in your interpretations.
 
-4. FRAMEWORK ALIGNMENT SCORE
+4. CALL STAGE SCORECARD
 
-Evaluate the call across 8 sales frameworks. Rate each 0-10 with brief analysis.
+Score each stage of the call on a 0-10 scale based on observable behaviors. This is not about style or "presence" -- it is about what the rep actually did or didn't do.
 
-Frameworks:
-- Challenger (teaching, tailoring, taking control)
-- SPIN (situation, problem, implication, need-payoff)
-- Gap Selling (current state vs future state)
-- Solution Selling (pain discovery, impact, vision)
-- Sandler (pain, budget, decision, upfront contracts)
-- Consultative (diagnose before prescribe)
-- Jobs to Be Done (functional, emotional, social jobs)
-- Narrative Selling (story-driven persuasion)
+Stages to evaluate:
+- Opening / Rapport (first 2-3 minutes: did they build connection before business?)
+- Agenda Setting (did they set and confirm an agenda? did they return to it?)
+- Discovery (depth, not breadth: did they reach impact, criteria, and decision dynamics?)
+- Value / Solution Framing (did they connect solution to discovered pain, or just pitch?)
+- Objection Handling (did they surface, acknowledge, and resolve -- or just handle and move on?)
+- The Ask / Close (was there a clear, confident ask? or did it fade?)
+- Next Steps (specific, time-bound, with accountability -- or vague?)
 
-For each framework:
+For each stage:
 - Score: X/10
-- Did the rep use it (yes/no, where)
-- How it helped or hurt (brief)
-- One tactical note (what to do differently)
+- What happened (one sentence, observable behavior only)
+- What good looks like (one sentence, the benchmark)
+- Gap (what was missing or could be sharper -- skip if score is 8+)
 
 5. PATTERN INTELLIGENCE
 
@@ -377,7 +376,25 @@ For each score:
 
 Two sentences total per dimension.
 
-9. BOTTOM LINE INSIGHT
+9. THE ONE THING
+
+This is the most important section in the report. Identify the single highest-leverage behavior change for this rep.
+
+Rules:
+- Pick ONE behavior, not two, not three. One.
+- It must be observable and specific (not "be more confident" -- instead "ask for the next meeting before recapping value")
+- It must be coachable in one call cycle
+
+Structure:
+- THE BEHAVIOR: Name it in 5-10 words (e.g., "Ask the closing question before the recap")
+- WHAT HAPPENED: One sentence describing what the rep did instead
+- WHAT GOOD LOOKS LIKE: One sentence describing the observable target behavior
+- THE DRILL: A specific micro-exercise for the next call. Format as: "On your next call, [do this specific thing] at [this specific moment]. Track whether you did it. That's it."
+- WHY THIS MATTERS MOST: One sentence connecting this behavior to pipeline or revenue impact
+
+Do not hedge. Do not offer alternatives. Pick the one thing that moves the needle most.
+
+10. BOTTOM LINE INSIGHT
 
 Deliver one sharp, uncomfortable, but transformative insight about the rep's performance.
 
@@ -389,7 +406,7 @@ Format:
 Example:
 "You wrote the emotional story perfectly. You just missed the chapter where he needed you to lead. Fix your timing and the next one turns into a yes."
 
-10. PRO VALUE REMINDER
+11. PRO VALUE REMINDER
 
 End with:
 "Check your dashboard to see how this call updated your patterns and momentum. Pro is a system that learns with you. One call at a time, you're building a win machine."

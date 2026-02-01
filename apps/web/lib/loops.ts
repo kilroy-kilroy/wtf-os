@@ -368,7 +368,9 @@ export async function onCoachingReportReady(
   reportId: string,
   periodStart: string,
   periodEnd: string,
-  firstName?: string
+  firstName?: string,
+  oneThingBehavior?: string,
+  oneThingDrill?: string
 ): Promise<{ success: boolean; error?: string }> {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.timkilroy.com';
   const reportUrl = `${appUrl}/dashboard/coaching/${reportId}`;
@@ -390,6 +392,8 @@ export async function onCoachingReportReady(
       periodStart,
       periodEnd,
       firstName: firstName || '',
+      oneThingBehavior: oneThingBehavior || '',
+      oneThingDrill: oneThingDrill || '',
     },
   });
 }

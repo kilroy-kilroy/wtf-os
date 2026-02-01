@@ -711,6 +711,66 @@ function formatEmployeeCount(count: number): string {
 }
 
 /**
+ * Fetch job posting signals using Perplexity (real-time search)
+ * Returns open roles that signal priorities, gaps, or budget allocation
+ */
+export async function fetchJobPostings(
+  companyName: string,
+  serviceContext: string,
+  domain?: string
+): Promise<{
+  job_postings: Array<{ title: string; department: string; signal: string }>;
+  raw_response: string;
+}> {
+  const systemPrompt = `You are a business intelligence researcher. Analyze job postings to extract strategic signals about company priorities and gaps. Be specific and factual.`;
+
+  const userQuery = `Find current job postings and recent hiring activity for ${companyName}${domain ? ` (${domain})` : ''}.
+
+Focus on roles related to: ${serviceContext}
+
+I need:
+1. OPEN ROLES - Up to 5 most relevant open positions (title, department, what it signals about their priorities)
+2. HIRING PATTERN - Are they building a new team, replacing departures, or scaling existing capabilities?
+3. GAPS - Based on what they're hiring for, what capabilities are they missing right now?
+
+Format each role as:
+- Title | Department | Signal (what this tells us about their priorities or gaps)
+
+If no relevant job postings found, explicitly say "No relevant job postings found for ${companyName}".`;
+
+  try {
+    const response = await queryPerplexity(systemPrompt, userQuery, {
+      maxTokens: 1000,
+    });
+
+    // Parse job postings from response
+    const postings: Array<{ title: string; department: string; signal: string }> = [];
+    const lines = response.split('\n');
+    for (const line of lines) {
+      const match = line.match(/^[-•*]\s*(.+?)\s*\|\s*(.+?)\s*\|\s*(.+)$/);
+      if (match) {
+        postings.push({
+          title: match[1].trim(),
+          department: match[2].trim(),
+          signal: match[3].trim(),
+        });
+      }
+    }
+
+    return {
+      job_postings: postings.slice(0, 5),
+      raw_response: response,
+    };
+  } catch (error) {
+    console.error('Job postings fetch error:', error);
+    return {
+      job_postings: [],
+      raw_response: '',
+    };
+  }
+}
+
+/**
  * Fetch recent news and funding using Perplexity (real-time search)
  */
 export async function fetchCompanyNews(
@@ -1540,6 +1600,9 @@ export interface V2ResearchResult {
     raw_response: string;
   } | null;
 
+  // Source 1b: Perplexity Job Postings
+  job_postings: Array<{ title: string; department: string; signal: string }> | null;
+
   // Source 2: LinkedIn Profile
   linkedin_profile: LinkedInProfileResult | null;
 
@@ -1566,6 +1629,7 @@ export async function runV2DiscoveryResearch(input: V2ResearchInput): Promise<V2
   const errors: string[] = [];
   const result: V2ResearchResult = {
     perplexity: null,
+    job_postings: null,
     linkedin_profile: null,
     linkedin_posts: null,
     google_serp: null,
@@ -1605,13 +1669,14 @@ export async function runV2DiscoveryResearch(input: V2ResearchInput): Promise<V2
   promises.push(
     (async () => {
       try {
-        const [newsData, marketData] = await Promise.all([
+        const [newsData, marketData, jobData] = await Promise.all([
           fetchCompanyNews(input.target_company, domain),
           researchMarket(
             input.target_icp || `${input.target_company}'s industry`,
             input.target_company,
             input.service_offered
           ),
+          fetchJobPostings(input.target_company, input.service_offered, domain),
         ]);
 
         result.perplexity = {
@@ -1622,6 +1687,7 @@ export async function runV2DiscoveryResearch(input: V2ResearchInput): Promise<V2
           momentum_read: marketData.market_dynamics,
           raw_response: `${marketData.raw_response}\n\n${newsData.raw_response}`,
         };
+        result.job_postings = jobData.job_postings.length > 0 ? jobData.job_postings : null;
       } catch (e: any) {
         errors.push(`Perplexity research failed: ${e.message}`);
       }

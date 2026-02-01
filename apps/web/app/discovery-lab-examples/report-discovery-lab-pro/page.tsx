@@ -7,219 +7,294 @@ import Link from 'next/link';
  * Example Discovery Lab Pro Report Page
  *
  * Public showcase of a Discovery Lab Pro report with synthetic data.
+ * Updated to match the new format with Top 5 Findings, Prospect Psychology,
+ * Objection Handles, What We Don't Know, and other Pro sections.
  * No auth required - all data is hardcoded.
  */
 
 const SYNTHETIC_REPORT = {
-  prospect: {
-    name: 'Sarah Chen',
-    title: 'VP of Operations',
-    company: 'TechCorp',
-    linkedin: 'linkedin.com/in/sarahchen',
-    email: 'sarah.chen@techcorp.io',
-    background: 'Previously Director of Ops at ScaleUp Inc. MBA from Stanford. Known for data-driven decision making and building efficient processes.',
-    priorities: ['Operational efficiency', 'Team scaling', 'Process automation'],
-    communicationStyle: 'Direct and data-focused. Appreciates brevity and concrete ROI metrics.',
-  },
-  company: {
-    name: 'TechCorp',
-    website: 'techcorp.io',
-    industry: 'Enterprise SaaS',
-    size: '150-200 employees',
-    funding: 'Series B ($45M)',
-    founded: '2019',
-    headquarters: 'San Francisco, CA',
-    description: 'TechCorp provides enterprise workflow automation solutions for mid-market companies. Known for rapid growth and strong customer retention.',
-    techStack: ['Salesforce', 'Slack', 'Notion', 'Asana', 'Custom internal tools'],
-    growthRate: '200% YoY',
-    recentMilestones: [
-      'Series B closed Nov 2024',
-      'Forbes Cloud 100 Rising Stars',
-      'Expanded to European market',
-      'Hired new CTO from Stripe',
-    ],
-  },
-  stakeholders: [
+  // Meta
+  targetCompany: 'TechCorp',
+  targetWebsite: 'techcorp.io',
+  targetContact: 'Sarah Chen',
+  targetTitle: 'VP of Operations',
+
+  // Top 5 Findings
+  findings: [
     {
-      name: 'Sarah Chen',
-      title: 'VP of Operations',
-      role: 'Champion / Evaluator',
-      influence: 'High',
-      priorities: ['Reduce manual work', 'Scale processes', 'Prove ROI to CEO'],
-      concerns: ['Implementation time', 'Team adoption', 'Integration complexity'],
-      communicationTip: 'Lead with data. She needs to build a business case for her CEO.',
+      title: 'Series B Creates Urgency Window',
+      what: 'TechCorp closed $45M Series B in Nov 2024. Investors expect operational leverage and efficient scaling -- not more headcount solving process problems.',
+      why: 'Post-funding companies have 6-12 months to show operational efficiency gains before the board starts asking questions. This is your urgency lever.',
+      action: 'Frame your solution as the operational infrastructure their investors expect. Reference the gap between headcount growth and process maturity.',
+      confidence: 'HIGH -- Series B confirmed via Forbes Cloud 100 and company announcements.',
     },
     {
-      name: 'Marcus Johnson',
-      title: 'CEO',
-      role: 'Economic Buyer',
-      influence: 'Final Decision',
-      priorities: ['Revenue growth', 'Operational leverage', 'Investor optics'],
-      concerns: ['Distraction from core product', 'Budget allocation'],
-      communicationTip: 'Focus on strategic impact, not features. He thinks in quarters.',
+      title: 'European Expansion Will Break Current Processes',
+      what: 'TechCorp is expanding to Europe in Q1. Their current stack (Asana + custom tools) was built for one timezone and one market.',
+      why: 'Multi-timezone operations expose every manual process. What works at 150 people in SF will collapse at 250 across three time zones.',
+      action: 'Use Europe launch as the forcing function. "If your processes are struggling now, what happens when half your team is 9 hours ahead?"',
+      confidence: 'HIGH -- European expansion mentioned in multiple company updates and job postings.',
     },
     {
-      name: 'David Park',
-      title: 'CTO',
-      role: 'Technical Evaluator',
-      influence: 'Veto Power',
-      priorities: ['System reliability', 'Clean integrations', 'Security compliance'],
-      concerns: ['Technical debt', 'API limitations', 'Data privacy'],
-      communicationTip: 'Don\'t oversell. He\'ll dig into the technical details.',
+      title: 'New CTO Is Consolidating Tech Stack',
+      what: 'David Park joined from Stripe in Sep 2024. CTOs from high-growth companies typically audit and consolidate within 6 months of arrival.',
+      why: 'He could be your champion (modernization) or your blocker (consolidation means fewer tools, not more). You need to know which one fast.',
+      action: 'Position as consolidation play, not addition. "We replace 3 tools, not add a 4th." Get intel from Sarah on his priorities before the demo.',
+      confidence: 'MEDIUM -- CTO hire confirmed, consolidation stance is inferred from Stripe background.',
     },
     {
-      name: 'Lisa Wang',
-      title: 'Head of Finance',
-      role: 'Budget Approver',
-      influence: 'Medium',
-      priorities: ['Cost control', 'Predictable spend', 'Clear ROI'],
-      concerns: ['Hidden costs', 'Long contracts'],
-      communicationTip: 'Show total cost of ownership and payback period.',
+      title: 'Champion Needs Help Building the Business Case',
+      what: 'Sarah is VP of Ops, not C-suite. She likely sees the problem clearly but needs ammo to sell internally -- especially to a data-driven CEO.',
+      why: 'If you don\'t arm her with ROI data and a clear narrative, the deal stalls at "I need to run this by my CEO."',
+      action: 'Offer to build the business case WITH her. "I can put together a one-pager with the ROI calculation you can share with Marcus. I\'ve done this for other ops leaders."',
+      confidence: 'HIGH -- VP-level champion needing executive buy-in is a common and reliable pattern.',
+    },
+    {
+      title: 'Current Solution Is Duct Tape, Not Infrastructure',
+      what: 'They\'re running on Asana + custom internal tools. This works until it doesn\'t -- and at their growth rate, "doesn\'t" is coming fast.',
+      why: 'Custom internal tools have hidden maintenance costs. Every new hire means more duct tape. Sarah probably already knows this but hasn\'t quantified it.',
+      action: 'Help her calculate the real cost: engineering hours maintaining custom tools + onboarding time + error rate. Make the invisible visible.',
+      confidence: 'MEDIUM -- Tech stack confirmed, pain level inferred from growth rate and company stage.',
     },
   ],
-  competitiveIntel: {
-    currentSolution: {
-      name: 'Asana + Custom Internal Tools',
-      strengths: ['Team is familiar with it', 'Low direct cost', 'Customized to their workflow'],
-      weaknesses: ['Doesn\'t scale', 'High maintenance cost', 'No automation'],
-      switchingCost: 'Medium - some process redesign needed',
-    },
-    competitors: [
-      {
-        name: 'Monday.com',
-        status: 'Evaluated 6 months ago',
-        whyNotChosen: 'Too rigid for their workflow. Felt like a "spreadsheet with colors."',
-        yourAdvantage: 'Emphasize flexibility and customization capabilities.',
-      },
-      {
-        name: 'Notion',
-        status: 'Currently using for docs',
-        relationship: 'They like it for documentation but find it lacking for workflows.',
-        yourAdvantage: 'Position as complement, not replacement. Integration story.',
-      },
-    ],
+
+  // Executive Summary
+  executiveSummary:
+    'TechCorp is a Series B SaaS company growing at 200% YoY with a 150-person team about to double. They\'re running on Asana and custom internal tools that were built for a company half their size. European expansion in Q1 will break what\'s already straining. The new CTO from Stripe is likely consolidating the tech stack. Sarah Chen (your champion) is a data-driven operator who needs ROI ammo to sell internally. This is a high-urgency opportunity with a clear pain, a definable timeline, and a champion who wants to move -- if you help her build the case.',
+
+  // Authority Snapshot
+  serviceReframed: 'Operational infrastructure that replaces duct-tape workflows with scalable automation -- so TechCorp can double headcount without doubling process chaos.',
+  recentSignals: 'Series B closed ($45M), European expansion Q1, new CTO from Stripe, 12 ops-related job postings in last 60 days.',
+  authorityLine: 'You\'ve built TechCorp into a workflow automation leader -- my lane is making sure your internal operations scale as fast as your product, so your "scaling wall" doesn\'t become the thing that slows down everything else.',
+
+  // Prospect Psychology
+  psychology: {
+    success: 'Processes that scale without adding headcount. Clear metrics. Board-ready operational dashboard.',
+    fears: 'Implementation disrupts the team during growth. Adoption fails. She championed a tool that nobody uses.',
+    need: '"This won\'t add work. It replaces work. And here\'s the data to prove it."',
+    yes: 'Concrete ROI with timeline. Peer company proof. Low-risk entry point (pilot, not company-wide).',
   },
+
+  // Pain / Impact Probes
+  primaryProbes: [
+    {
+      tag: 'PRIMARY',
+      question: 'Walk me through what happens when a new employee joins TechCorp today -- how does onboarding actually work?',
+      followup: 'What breaks when you\'re doing that 10 times a month instead of 3?',
+    },
+    {
+      tag: 'PRIMARY',
+      question: 'You mentioned "scaling wall" -- what does that look like in your day-to-day? Where do you feel it most?',
+      followup: 'If that continues for another 6 months while you\'re also launching Europe, what happens?',
+    },
+    {
+      tag: 'PRIMARY',
+      question: 'How much engineering time is going into maintaining your custom internal tools right now?',
+      followup: 'What else could those engineers be building if they weren\'t patching workflows?',
+    },
+    {
+      tag: 'PRIMARY',
+      question: 'If you could wave a magic wand and fix one operational headache, what would it be?',
+      followup: 'What\'s the downstream impact of leaving that unfixed through Q2?',
+    },
+    {
+      tag: 'PRIMARY',
+      question: 'How does your team handle cross-timezone work today? What happens when something urgent comes up at 3am SF time?',
+      followup: 'What does that look like with a European team that\'s 9 hours ahead?',
+    },
+  ],
+  secondaryProbes: [
+    {
+      tag: 'SECONDARY',
+      question: 'Who else would need to be involved in evaluating something like this?',
+      followup: 'What does David (CTO) care about most when it comes to new tools?',
+    },
+    {
+      tag: 'SECONDARY',
+      question: 'Have you tried to solve this before? What happened?',
+      followup: 'What would need to be different this time for it to work?',
+    },
+    {
+      tag: 'SECONDARY',
+      question: 'What does success look like for your team in the next 12 months -- what does Marcus expect from Ops post-Series B?',
+      followup: 'How are you measuring that today?',
+    },
+  ],
+
+  // Market & Competitor Hooks
+  hooks: [
+    {
+      name: 'The Post-Series B Ops Crunch',
+      description: 'Companies that raise B rounds typically hit an operational inflection point within 6-12 months. Growth outpaces process, and the things that worked at 50 people actively break at 200.',
+    },
+    {
+      name: 'The Custom Tool Trap',
+      description: 'Internal tools are free until they\'re not. The hidden cost is engineering hours, technical debt, and the fact that nobody documents them -- which means they become single points of failure.',
+    },
+    {
+      name: 'Multi-Market Operations',
+      description: 'Companies expanding internationally typically see a 40% increase in operational complexity per new market. The ones that thrive automate before they expand, not after.',
+    },
+    {
+      name: 'The CTO Consolidation Wave',
+      description: 'New CTOs from high-growth companies (Stripe, Datadog, Figma) are consolidating tech stacks within their first year. Position as the consolidation play.',
+    },
+  ],
+
+  // Competitor Positioning
+  competitors: [
+    {
+      name: 'Asana',
+      strength: 'Team familiarity. Low switching cost for basic project tracking. Sarah\'s team knows it.',
+      weakness: 'Not built for workflow automation. No cross-team orchestration. Custom fields are a band-aid.',
+      positioning: 'Don\'t compete with Asana on task management. Position as the automation layer that makes Asana unnecessary for ops workflows.',
+      question: 'What are you using Asana for that it wasn\'t really designed to do?',
+    },
+    {
+      name: 'Monday.com',
+      strength: 'Visual interface. Good marketing. Mid-market name recognition.',
+      weakness: 'They evaluated it 6 months ago and called it "a spreadsheet with colors." Too rigid for their workflow.',
+      positioning: 'They already rejected Monday. Use this: "You tried the visual tools. The issue isn\'t the interface -- it\'s the automation underneath."',
+      question: 'When you looked at Monday, what specifically felt too rigid?',
+    },
+    {
+      name: 'Custom Internal Tools',
+      strength: 'Built exactly for their current workflow. No vendor dependency. "It works."',
+      weakness: 'High maintenance cost. No one documents it. Breaks when the engineer who built it leaves. Doesn\'t scale to Europe.',
+      positioning: 'Don\'t trash their tools. Acknowledge the ingenuity. Then: "The question is whether those tools scale to 300 people across 3 time zones."',
+      question: 'How much of your engineering bandwidth is going to maintaining internal tools vs. building product?',
+    },
+  ],
+
+  // Emotional / Identity Probe
+  emotionalProbe: 'You built TechCorp\'s operations from the ground up. When you think about what this team looks like at 300 people -- is the version you\'re imagining one you\'re excited about, or one that keeps you up at night?',
+
+  // Quick Discovery Flow
+  flowSteps: [
+    {
+      title: 'Opening Authority Position',
+      script: 'Sarah, I know your time is tight so I\'ll be direct. I saw TechCorp just closed Series B -- congrats. In my experience, that\'s usually when ops challenges shift from "annoying" to "blocking growth." I\'m curious whether that\'s resonating with what you\'re seeing?',
+    },
+    {
+      title: 'Current State Probe',
+      script: 'Walk me through a typical week for your ops team. Where are the biggest time sinks right now?',
+    },
+    {
+      title: 'Pain Amplification',
+      script: 'When you say "starting to break" -- help me understand what that looks like day to day. Is it more about things falling through cracks, or people spending too much time on manual work?',
+    },
+    {
+      title: 'Future State Vision',
+      script: 'If we fast-forward 12 months and the ops team is humming -- what does that look like? What\'s different?',
+    },
+    {
+      title: 'Impact Quantification',
+      script: 'If you had to put a number on what this is costing you per month -- in time, money, or missed opportunities -- what would that be?',
+    },
+    {
+      title: 'Next Steps',
+      script: 'Based on what you shared about the Q2 deadline and the Europe launch, I think there\'s a conversation worth having. I have time Tuesday at 2pm or Thursday at 10am -- which works better for a 30-minute deep dive?',
+    },
+  ],
+
+  // Conversation Decision Tree
+  decisionBranches: [
+    {
+      condition: 'If they\'re skeptical about adding another tool...',
+      guidance: 'Don\'t fight it. Acknowledge the tool fatigue, then reposition.',
+      script: 'I hear that a lot. The last thing you need is another tool your team has to learn. The question is whether your current stack can handle 300 people across 3 time zones. If it can, we should stop talking. If it can\'t, let\'s figure out what actually needs to change.',
+    },
+    {
+      condition: 'If they say timing isn\'t right...',
+      guidance: 'Use the Europe launch as the forcing function.',
+      script: 'Totally get it. But here\'s what I\'ve seen: companies that try to fix ops after they expand internationally spend 3x more. What if we scoped a pilot that launches alongside Europe, not after?',
+    },
+    {
+      condition: 'If they want to include the CTO...',
+      guidance: 'This is a buying signal. Help them set it up.',
+      script: 'That\'s exactly the right move. I can prepare a technical brief for David that focuses on integrations, security, and how we replace complexity instead of adding it. Want me to draft that so you can send it ahead of the meeting?',
+    },
+    {
+      condition: 'If they ask about pricing too early...',
+      guidance: 'Deflect gracefully. Position as advisor, not salesperson.',
+      script: 'Happy to talk numbers, but I want to make sure I\'m not wasting your time. Based on what you\'ve shared, I\'m not even sure we\'re the right fit yet. Can I ask a couple more questions to figure that out?',
+    },
+  ],
+
+  // What They'll Google
+  googleItems: [
+    { label: "WHAT THEY'LL SEARCH", value: '"workflow automation for scaling companies" "Asana alternative for operations" "operational efficiency tools Series B"' },
+    { label: 'WHAT YOU WANT THEM TO FIND', value: 'Your case studies with similar companies. Comparison pages positioning you vs. Asana/Monday for ops workflows. ROI calculator.' },
+    { label: 'SEEDS TO PLANT', value: 'Mention a specific case study during the call: "The team at [company] was in your exact situation -- Series B, 150 people, Europe expansion. I can send you what they did."' },
+  ],
+
+  // Opening 60 Seconds
+  openingParts: [
+    { label: 'AUTHORITY FRAME (15 sec)', script: 'Sarah, I work with Series B ops leaders who are hitting the scaling wall -- where the processes that got you to 150 people start breaking as you head toward 300.' },
+    { label: 'REASON FOR CALL (15 sec)', script: 'I saw TechCorp just closed your B round and you\'re expanding to Europe. That\'s usually the moment when ops goes from "we should fix this" to "we need to fix this now."' },
+    { label: 'PERMISSION QUESTION (10 sec)', script: 'Is that resonating with what you\'re seeing, or am I off base?' },
+    { label: 'TRANSITION (10 sec)', script: 'Great. Help me understand where it\'s hitting hardest -- walk me through what a typical week looks like for your team right now.' },
+  ],
+
+  // Objection Handles
   objections: [
     {
       objection: '"We\'re too busy to implement something new right now."',
-      likelihood: 'High',
-      root: 'Fear of disruption during growth phase.',
-      response: '"That\'s exactly why companies in your position reach out to us. The longer you wait, the more manual work compounds. What if I showed you how [Similar Company] implemented in 2 weeks with zero disruption to their team?"',
+      handle: 'That\'s exactly why companies in your position reach out to us. The longer you wait, the more manual work compounds. What if I showed you how a similar company implemented in 2 weeks with zero disruption to their team?',
     },
     {
-      objection: '"We already have Asana — why would we add another tool?"',
-      likelihood: 'High',
-      root: 'Sunk cost fallacy + change resistance.',
-      response: '"Totally fair. Most of our customers started with Asana too. The question isn\'t whether Asana is bad — it\'s whether it can handle what you need at 300 people. Can I share what the breaking points usually are?"',
+      objection: '"We already have Asana -- why would we add another tool?"',
+      handle: 'Most of our customers started with Asana too. The question isn\'t whether Asana is bad -- it\'s whether it can handle what you need at 300 people across 3 time zones. Can I share what the breaking points usually are?',
     },
     {
       objection: '"I need to run this by my CEO first."',
-      likelihood: 'Medium',
-      root: 'Lack of confidence in building internal business case.',
-      response: '"Absolutely. Would it help if I put together a one-pager with the ROI calculation you could share with him? I\'ve done this for other ops leaders — happy to make your life easier."',
+      handle: 'Absolutely. Would it help if I put together a one-pager with the ROI calculation you could share with him? I\'ve done this for other ops leaders -- happy to make your life easier.',
     },
     {
-      objection: '"The timing isn\'t right — maybe after our Europe launch."',
-      likelihood: 'Medium',
-      root: 'Prioritization conflict.',
-      response: '"Makes sense. Actually, the Europe launch is exactly why I\'d suggest getting ahead of this. Multi-timezone operations is where manual processes really break. What if we scoped a pilot that launched after Europe but started planning now?"',
+      objection: '"Maybe after our Europe launch."',
+      handle: 'Makes sense. Actually, the Europe launch is exactly why I\'d suggest getting ahead of this. Multi-timezone operations is where manual processes really break. What if we scoped a pilot that started planning now but launched alongside Europe?',
     },
   ],
-  talkTracks: [
-    {
-      scenario: 'Opening the call',
-      context: 'Sarah is likely busy and skeptical of another sales call.',
-      script: '"Sarah, I know your time is tight so I\'ll be direct. I saw TechCorp just closed Series B — congrats. In my experience, that\'s usually when ops challenges shift from \'annoying\' to \'blocking growth.\' I\'m curious whether that\'s resonating with what you\'re seeing?"',
-      why: 'Acknowledges her time, shows you did homework, opens with a hypothesis she can confirm or correct.',
-    },
-    {
-      scenario: 'After she describes the problem',
-      context: 'She\'s shared that processes are "starting to break."',
-      script: '"When you say \'starting to break\' — help me understand what that looks like day to day. Is it more about things falling through cracks, or people spending too much time on manual work?"',
-      why: 'Gets specific symptoms, shows genuine curiosity, avoids assuming you know her problem.',
-    },
-    {
-      scenario: 'When she asks about pricing',
-      context: 'Too early to discuss — she\'s testing if you\'ll flip into sales mode.',
-      script: '"Happy to talk numbers, but I want to make sure I\'m not wasting your time. Based on what you\'ve shared, I\'m not even sure we\'re the right fit yet. Can I ask a couple more questions to figure that out?"',
-      why: 'Deflects gracefully, positions you as advisor not salesperson, earns permission to dig deeper.',
-    },
-    {
-      scenario: 'Closing the call',
-      context: 'You\'ve built rapport and uncovered real pain.',
-      script: '"Based on what you shared about the Q2 deadline and the Europe launch, I think there\'s a conversation worth having about how we could help. I have time Tuesday at 2pm or Thursday at 10am — which works better for a 30-minute deep dive?"',
-      why: 'References her stated priorities, proposes specific times, makes saying yes easy.',
-    },
+
+  // Call Objective & Success Metrics
+  primaryObjective: 'Confirm operational pain, map the buying committee, and secure a second meeting with CTO involvement.',
+  successCriteria: 'Sarah articulates the problem in her own words, names at least 2 stakeholders, and agrees to a follow-up with a specific date.',
+  minimumViableOutcome: 'Sarah agrees to review a one-pager and schedule a follow-up within the week.',
+  redFlags: 'She says "we\'re not looking at anything right now" or "our current tools are fine." If conviction is low, the deal is dead.',
+
+  // What We Don't Know
+  gaps: [
+    'Exact budget authority and approval process',
+    'CTO\'s stance on new vendor additions vs. build-in-house',
+    'Whether there\'s an active evaluation of other solutions',
+    'Internal politics between Ops and Engineering teams',
   ],
-  triggerEvents: [
-    {
-      event: 'Series B Funding',
-      date: 'Nov 2024',
-      implication: 'Pressure to scale efficiently. Investor expectations for operational leverage.',
-      actionability: 'High — they have budget and urgency.',
-    },
-    {
-      event: 'European Expansion',
-      date: 'Q1 2025',
-      implication: 'Multi-timezone operations will break current manual processes.',
-      actionability: 'High — creates natural deadline.',
-    },
-    {
-      event: 'New CTO Hire',
-      date: 'Sep 2024',
-      implication: 'Fresh eyes on tech stack. Likely to consolidate and modernize.',
-      actionability: 'Medium — could be ally or gatekeeper.',
-    },
-    {
-      event: 'Headcount doubling',
-      date: 'Next 12 months',
-      implication: 'Every manual process becomes 2x more painful.',
-      actionability: 'High — use as urgency lever.',
-    },
+  assumptions: [
+    'Sarah has enough influence to drive an evaluation',
+    'Series B creates budget availability for operational tools',
+    'European expansion timeline is firm (Q1)',
+    'Custom internal tools are a recognized pain point, not a source of pride',
   ],
-  dealStrategy: {
-    idealOutcome: 'Pilot program scoped for Q1, expanding to full deployment by Q2.',
-    landingZone: 'Operations team (10-15 users) with clear success metrics.',
-    expansionPath: 'Ops → Product → Engineering → Company-wide',
-    timeline: [
-      { phase: 'Discovery Call', target: 'This week', goal: 'Confirm pain, identify stakeholders' },
-      { phase: 'Demo + Technical Review', target: 'Week 2', goal: 'Get CTO buy-in' },
-      { phase: 'Business Case Presentation', target: 'Week 3', goal: 'CEO alignment' },
-      { phase: 'Pilot Proposal', target: 'Week 4', goal: 'Signed agreement' },
-    ],
-    risks: [
-      { risk: 'CTO blocks due to integration concerns', mitigation: 'Bring solutions engineer to demo' },
-      { risk: 'CEO deprioritizes for Europe launch', mitigation: 'Frame as enabler of Europe success' },
-      { risk: 'Champion (Sarah) leaves', mitigation: 'Build multi-threaded relationships' },
-    ],
-  },
-  questionsToAsk: [
-    {
-      question: 'Walk me through what happens when a new employee joins — how does onboarding work today?',
-      purpose: 'Uncovers operational complexity and manual processes.',
-    },
-    {
-      question: 'If you could wave a magic wand and fix one operational headache, what would it be?',
-      purpose: 'Gets to their core pain in their own words.',
-    },
-    {
-      question: 'Who else would need to be involved in evaluating something like this?',
-      purpose: 'Maps buying committee without being salesy.',
-    },
-    {
-      question: 'What does success look like for your team in the next 12 months?',
-      purpose: 'Aligns your solution to their goals.',
-    },
-    {
-      question: 'Have you tried to solve this before? What happened?',
-      purpose: 'Surfaces past failures and buying objections.',
-    },
+  redFlagsToWatch: [
+    'If Sarah can\'t articulate specific operational pain -- the problem may not be urgent enough',
+    'If CTO is actively building internal tools -- you\'re competing with engineering, not a vendor',
+    'If the Europe launch gets delayed -- your urgency lever disappears',
+  ],
+
+  // Post-Call Actions
+  actions: [
+    { timing: 'Immediately after call', action: 'Send follow-up email with specific next-step date, reference her exact language from the call.' },
+    { timing: 'Within 24 hours', action: 'Send the case study from a similar company (Series B, scaling ops, Europe expansion).' },
+    { timing: 'Within 48 hours', action: 'Draft the one-pager ROI document for her to share with CEO. Make it easy for her to champion internally.' },
+    { timing: 'Before next meeting', action: 'Research David Park (CTO) -- LinkedIn, any talks or blog posts. Prepare a technical brief addressing integration and security.' },
+    { timing: 'Week of next meeting', action: 'Send calendar invite with agenda. Include pre-read materials. Show you\'re organized and respectful of their time.' },
   ],
 };
 
 export default function ExampleDiscoveryProReportPage() {
   const [expandedSections, setExpandedSections] = useState<string[]>([
-    'stakeholders',
+    'findings',
+    'probes',
     'objections',
   ]);
 
@@ -257,200 +332,292 @@ export default function ExampleDiscoveryProReportPage() {
       <main className="max-w-5xl mx-auto px-4 py-8 space-y-6">
         {/* Prospect Header */}
         <div className="bg-[#111] border border-[#333] rounded-lg p-6">
-          <div className="flex items-start justify-between mb-6">
-            <div>
-              <h1 className="font-anton text-2xl text-white uppercase tracking-wide mb-1">
-                {report.prospect.name} — {report.company.name}
-              </h1>
-              <p className="text-[#FFDE59]">{report.prospect.title}</p>
-              <p className="text-[#666] text-sm mt-2">{report.prospect.background}</p>
+          <h1 className="font-anton text-2xl text-white uppercase tracking-wide mb-1">
+            {report.targetContact} -- {report.targetCompany}
+          </h1>
+          <p className="text-[#FFDE59]">{report.targetTitle}</p>
+          <p className="text-[#666] text-sm mt-1">{report.targetWebsite}</p>
+        </div>
+
+        {/* Top 5 Findings */}
+        <div className="bg-[#111] border border-[#333] rounded-lg p-6">
+          <button
+            onClick={() => toggleSection('findings')}
+            className="w-full flex items-center justify-between"
+          >
+            <h2 className="font-anton text-xl text-[#E51B23] uppercase tracking-wider">
+              Top 5 Findings <span className="bg-[#E51B23] text-white text-[10px] px-2 py-0.5 ml-2 rounded">PRO</span>
+            </h2>
+            <span className="text-[#666]">{expandedSections.includes('findings') ? '−' : '+'}</span>
+          </button>
+
+          {expandedSections.includes('findings') && (
+            <div className="space-y-4 mt-4">
+              {report.findings.map((finding, i) => (
+                <div key={i} className="bg-gradient-to-r from-[#1A1A1A] to-[#2a1a1a] border-2 border-[#E51B23] p-4 rounded">
+                  <div className="flex items-start gap-3 mb-3">
+                    <span className="font-anton text-2xl text-[#E51B23]">{i + 1}</span>
+                    <h3 className="font-bold text-[#FFDE59] text-lg">{finding.title}</h3>
+                  </div>
+                  <div className="space-y-2 text-sm">
+                    <p className="text-[#B3B3B3]"><strong className="text-white">What it is:</strong> {finding.what}</p>
+                    <p className="text-[#B3B3B3]"><strong className="text-white">Why it matters:</strong> {finding.why}</p>
+                    <p className="text-[#B3B3B3]"><strong className="text-white">What to do:</strong> {finding.action}</p>
+                    <p className="text-[#666] text-xs italic">Confidence: {finding.confidence}</p>
+                  </div>
+                </div>
+              ))}
             </div>
-            <div className="text-right">
-              <div className="text-xs text-[#666] mb-1">COMMUNICATION STYLE</div>
-              <p className="text-[#B3B3B3] text-sm max-w-xs">{report.prospect.communicationStyle}</p>
+          )}
+        </div>
+
+        {/* Executive Summary */}
+        <div className="bg-gradient-to-r from-[#1A1A1A] to-[#2a1a1a] border-2 border-[#E51B23] rounded-lg p-6">
+          <h2 className="font-anton text-xl text-[#E51B23] uppercase tracking-wider mb-4">
+            Executive Summary <span className="bg-[#E51B23] text-white text-[10px] px-2 py-0.5 ml-2 rounded">PRO</span>
+          </h2>
+          <p className="text-white leading-relaxed">{report.executiveSummary}</p>
+        </div>
+
+        {/* Authority Snapshot */}
+        <div className="bg-[#111] border border-[#333] rounded-lg p-6">
+          <h2 className="font-anton text-lg text-[#E51B23] uppercase tracking-wider mb-4">
+            Authority Snapshot
+          </h2>
+          <div className="space-y-2 text-sm mb-4">
+            <div><strong className="text-[#FFDE59]">Your Service:</strong> <span className="text-[#B3B3B3]">{report.serviceReframed}</span></div>
+            <div><strong className="text-[#FFDE59]">Target Company:</strong> <span className="text-[#B3B3B3]">{report.targetCompany} ({report.targetWebsite})</span></div>
+            <div><strong className="text-[#FFDE59]">Contact:</strong> <span className="text-[#B3B3B3]">{report.targetContact} - {report.targetTitle}</span></div>
+            <div><strong className="text-[#FFDE59]">Recent Signals:</strong> <span className="text-[#B3B3B3]">{report.recentSignals}</span></div>
+          </div>
+          <div className="bg-[#FFDE59] p-4 rounded">
+            <p className="text-black font-semibold text-sm">{report.authorityLine}</p>
+          </div>
+        </div>
+
+        {/* Prospect Psychology */}
+        <div className="bg-[#111] border border-[#333] rounded-lg p-6">
+          <h2 className="font-anton text-lg text-[#E51B23] uppercase tracking-wider mb-4">
+            Prospect Psychology <span className="bg-[#E51B23] text-white text-[10px] px-2 py-0.5 ml-2 rounded">PRO</span>
+          </h2>
+          <div className="grid md:grid-cols-2 gap-3">
+            <div className="bg-[#333] p-4 rounded">
+              <p className="text-[#E51B23] text-xs font-bold tracking-wider mb-2">SUCCESS METRICS</p>
+              <p className="text-[#B3B3B3] text-sm">{report.psychology.success}</p>
+            </div>
+            <div className="bg-[#333] p-4 rounded">
+              <p className="text-[#E51B23] text-xs font-bold tracking-wider mb-2">FEARS</p>
+              <p className="text-[#B3B3B3] text-sm">{report.psychology.fears}</p>
+            </div>
+            <div className="bg-[#333] p-4 rounded">
+              <p className="text-[#E51B23] text-xs font-bold tracking-wider mb-2">WHAT THEY NEED TO HEAR</p>
+              <p className="text-[#B3B3B3] text-sm">{report.psychology.need}</p>
+            </div>
+            <div className="bg-[#333] p-4 rounded">
+              <p className="text-[#E51B23] text-xs font-bold tracking-wider mb-2">WHAT MAKES THEM SAY YES</p>
+              <p className="text-[#B3B3B3] text-sm">{report.psychology.yes}</p>
             </div>
           </div>
+        </div>
 
-          <div className="flex flex-wrap gap-2">
-            {report.prospect.priorities.map((priority, i) => (
-              <span key={i} className="bg-[#FFDE59]/20 text-[#FFDE59] text-xs px-3 py-1 rounded-full">
-                {priority}
-              </span>
+        {/* Pain / Impact Probes */}
+        <div className="bg-[#111] border border-[#333] rounded-lg p-6">
+          <button
+            onClick={() => toggleSection('probes')}
+            className="w-full flex items-center justify-between"
+          >
+            <h2 className="font-anton text-lg text-[#FFDE59] uppercase tracking-wider">
+              Pain / Impact Probes <span className="bg-[#E51B23] text-white text-[10px] px-2 py-0.5 ml-2 rounded">8 TOTAL</span>
+            </h2>
+            <span className="text-[#666]">{expandedSections.includes('probes') ? '−' : '+'}</span>
+          </button>
+
+          {expandedSections.includes('probes') && (
+            <div className="mt-4">
+              <p className="text-[#FFDE59] font-bold text-sm mb-3">PRIMARY PROBES</p>
+              <div className="space-y-3 mb-6">
+                {report.primaryProbes.map((probe, i) => (
+                  <div key={i} className="border-l-3 border-[#E51B23] pl-3" style={{ borderLeftWidth: '3px' }}>
+                    <p className="text-[#E51B23] text-[10px] font-bold tracking-wider mb-1">{probe.tag}</p>
+                    <p className="text-white text-sm font-semibold mb-1">{probe.question}</p>
+                    <p className="text-[#B3B3B3] text-xs italic pl-3">&rarr; {probe.followup}</p>
+                  </div>
+                ))}
+              </div>
+
+              <p className="text-[#FFDE59] font-bold text-sm mb-3">SECONDARY PROBES</p>
+              <div className="space-y-3">
+                {report.secondaryProbes.map((probe, i) => (
+                  <div key={i} className="border-l-3 border-[#E51B23] pl-3" style={{ borderLeftWidth: '3px' }}>
+                    <p className="text-[#E51B23] text-[10px] font-bold tracking-wider mb-1">{probe.tag}</p>
+                    <p className="text-white text-sm font-semibold mb-1">{probe.question}</p>
+                    <p className="text-[#B3B3B3] text-xs italic pl-3">&rarr; {probe.followup}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Market & Competitor Hooks */}
+        <div className="bg-[#111] border border-[#333] rounded-lg p-6">
+          <button
+            onClick={() => toggleSection('hooks')}
+            className="w-full flex items-center justify-between"
+          >
+            <h2 className="font-anton text-lg text-[#FFDE59] uppercase tracking-wider">
+              Market & Competitor Hooks
+            </h2>
+            <span className="text-[#666]">{expandedSections.includes('hooks') ? '−' : '+'}</span>
+          </button>
+
+          {expandedSections.includes('hooks') && (
+            <div className="space-y-4 mt-4">
+              {report.hooks.map((hook, i) => (
+                <div key={i}>
+                  <p className="text-[#FFDE59] font-bold text-sm mb-1">{hook.name}</p>
+                  <p className="text-[#B3B3B3] text-sm">{hook.description}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Competitor Positioning */}
+        <div className="bg-[#111] border border-[#333] rounded-lg p-6">
+          <button
+            onClick={() => toggleSection('competitors')}
+            className="w-full flex items-center justify-between"
+          >
+            <h2 className="font-anton text-lg text-[#FFDE59] uppercase tracking-wider">
+              Competitor Positioning <span className="bg-[#E51B23] text-white text-[10px] px-2 py-0.5 ml-2 rounded">PRO</span>
+            </h2>
+            <span className="text-[#666]">{expandedSections.includes('competitors') ? '−' : '+'}</span>
+          </button>
+
+          {expandedSections.includes('competitors') && (
+            <div className="space-y-4 mt-4">
+              {report.competitors.map((comp, i) => (
+                <div key={i} className="bg-[#333] border-l-3 border-[#E51B23] p-4 rounded-r" style={{ borderLeftWidth: '3px' }}>
+                  <h3 className="text-[#FFDE59] font-bold text-base mb-3">{comp.name}</h3>
+                  <div className="space-y-1 text-sm">
+                    <p className="text-[#B3B3B3]"><strong className="text-white">Good at:</strong> {comp.strength}</p>
+                    <p className="text-[#B3B3B3]"><strong className="text-white">Falls short:</strong> {comp.weakness}</p>
+                    <p className="text-[#B3B3B3]"><strong className="text-white">Position against:</strong> {comp.positioning}</p>
+                  </div>
+                  <div className="bg-[#1A1A1A] p-3 rounded mt-3">
+                    <p className="text-white text-sm italic">&ldquo;{comp.question}&rdquo;</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Emotional / Identity Probe */}
+        <div className="bg-gradient-to-r from-[#1A1A1A] to-[#2a1a1a] border-2 border-[#E51B23] rounded-lg p-6">
+          <h2 className="font-anton text-lg text-[#E51B23] uppercase tracking-wider mb-4">
+            Emotional / Identity Probe
+          </h2>
+          <p className="text-white italic text-lg leading-relaxed">&ldquo;{report.emotionalProbe}&rdquo;</p>
+        </div>
+
+        {/* Quick Discovery Flow */}
+        <div className="bg-[#111] border border-[#333] rounded-lg p-6">
+          <button
+            onClick={() => toggleSection('flow')}
+            className="w-full flex items-center justify-between"
+          >
+            <h2 className="font-anton text-lg text-[#FFDE59] uppercase tracking-wider">
+              Quick Discovery Flow
+            </h2>
+            <span className="text-[#666]">{expandedSections.includes('flow') ? '−' : '+'}</span>
+          </button>
+
+          {expandedSections.includes('flow') && (
+            <div className="space-y-4 mt-4">
+              {report.flowSteps.map((step, i) => (
+                <div key={i} className="flex gap-3">
+                  <span className="font-anton text-2xl text-[#E51B23] min-w-[24px]">{i + 1}</span>
+                  <div className="flex-1">
+                    <p className="text-[#FFDE59] font-bold text-sm mb-1">{step.title}</p>
+                    <div className="bg-[#333] p-3 rounded border-l-3 border-[#E51B23]" style={{ borderLeftWidth: '3px' }}>
+                      <p className="text-[#B3B3B3] text-sm italic">&ldquo;{step.script}&rdquo;</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Conversation Decision Tree */}
+        <div className="bg-[#111] border border-[#333] rounded-lg p-6">
+          <button
+            onClick={() => toggleSection('decisions')}
+            className="w-full flex items-center justify-between"
+          >
+            <h2 className="font-anton text-lg text-[#FFDE59] uppercase tracking-wider">
+              Conversation Decision Tree <span className="bg-[#E51B23] text-white text-[10px] px-2 py-0.5 ml-2 rounded">PRO</span>
+            </h2>
+            <span className="text-[#666]">{expandedSections.includes('decisions') ? '−' : '+'}</span>
+          </button>
+
+          {expandedSections.includes('decisions') && (
+            <div className="space-y-4 mt-4">
+              {report.decisionBranches.map((branch, i) => (
+                <div key={i} className="bg-[#1A1A1A] border border-[#333] p-4 rounded">
+                  <p className="text-[#FFDE59] font-bold text-sm mb-2">{branch.condition}</p>
+                  <p className="text-[#B3B3B3] text-xs mb-3">{branch.guidance}</p>
+                  <div className="bg-[#333] p-3 rounded">
+                    <p className="text-white text-sm italic">&ldquo;{branch.script}&rdquo;</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* What They'll Google */}
+        <div className="bg-[#111] border border-[#333] rounded-lg p-6">
+          <h2 className="font-anton text-lg text-[#FFDE59] uppercase tracking-wider mb-4">
+            What They&apos;ll Google <span className="bg-[#E51B23] text-white text-[10px] px-2 py-0.5 ml-2 rounded">PRO</span>
+          </h2>
+          <div className="space-y-4">
+            {report.googleItems.map((item, i) => (
+              <div key={i}>
+                <p className="text-[#E51B23] text-xs font-bold tracking-wider mb-1">{item.label}</p>
+                <p className="text-[#B3B3B3] text-sm">{item.value}</p>
+              </div>
             ))}
           </div>
         </div>
 
-        {/* Company Intel */}
+        {/* Opening 60 Seconds */}
         <div className="bg-[#111] border border-[#333] rounded-lg p-6">
           <h2 className="font-anton text-lg text-[#FFDE59] uppercase tracking-wider mb-4">
-            Company Intelligence
+            Opening 60 Seconds <span className="bg-[#E51B23] text-white text-[10px] px-2 py-0.5 ml-2 rounded">PRO</span>
           </h2>
-          <div className="grid md:grid-cols-2 gap-6">
-            <div>
-              <p className="text-[#B3B3B3] mb-4">{report.company.description}</p>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-[#666]">Industry</span>
-                  <span className="text-white">{report.company.industry}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-[#666]">Size</span>
-                  <span className="text-white">{report.company.size}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-[#666]">Funding</span>
-                  <span className="text-white">{report.company.funding}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-[#666]">Growth Rate</span>
-                  <span className="text-green-500">{report.company.growthRate}</span>
+          <div className="space-y-4">
+            {report.openingParts.map((part, i) => (
+              <div key={i}>
+                <p className="text-[#FFDE59] text-xs font-bold tracking-wider mb-2">{part.label}</p>
+                <div className="bg-[#333] p-3 rounded">
+                  <p className="text-white text-sm italic">&ldquo;{part.script}&rdquo;</p>
                 </div>
               </div>
-            </div>
-            <div>
-              <div className="mb-4">
-                <h3 className="text-white font-semibold mb-2">Tech Stack</h3>
-                <div className="flex flex-wrap gap-2">
-                  {report.company.techStack.map((tech, i) => (
-                    <span key={i} className="bg-[#333] text-[#B3B3B3] text-xs px-2 py-1 rounded">
-                      {tech}
-                    </span>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <h3 className="text-white font-semibold mb-2">Recent Milestones</h3>
-                <ul className="space-y-1">
-                  {report.company.recentMilestones.map((milestone, i) => (
-                    <li key={i} className="text-[#B3B3B3] text-sm flex items-center gap-2">
-                      <span className="text-green-500">✓</span> {milestone}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
 
-        {/* Stakeholder Map */}
-        <div className="bg-[#111] border border-[#333] rounded-lg p-6">
-          <button
-            onClick={() => toggleSection('stakeholders')}
-            className="w-full flex items-center justify-between"
-          >
-            <h2 className="font-anton text-lg text-[#FFDE59] uppercase tracking-wider">
-              Stakeholder Map
-            </h2>
-            <span className="text-[#666]">{expandedSections.includes('stakeholders') ? '−' : '+'}</span>
-          </button>
-
-          {expandedSections.includes('stakeholders') && (
-            <div className="grid md:grid-cols-2 gap-4 mt-4">
-              {report.stakeholders.map((person, i) => (
-                <div key={i} className="bg-[#1A1A1A] border border-[#333] p-4 rounded">
-                  <div className="flex items-start justify-between mb-2">
-                    <div>
-                      <h3 className="text-white font-semibold">{person.name}</h3>
-                      <p className="text-[#B3B3B3] text-sm">{person.title}</p>
-                    </div>
-                    <div className="text-right">
-                      <span className={`text-xs px-2 py-1 rounded ${
-                        person.influence === 'Final Decision' ? 'bg-[#E51B23] text-white' :
-                        person.influence === 'High' ? 'bg-[#FFDE59] text-black' :
-                        'bg-[#333] text-white'
-                      }`}>
-                        {person.influence}
-                      </span>
-                    </div>
-                  </div>
-                  <p className="text-[#666] text-xs mb-3">{person.role}</p>
-
-                  <div className="mb-2">
-                    <p className="text-[#666] text-xs mb-1">PRIORITIES:</p>
-                    <ul className="text-[#B3B3B3] text-xs list-disc list-inside">
-                      {person.priorities.map((p, j) => <li key={j}>{p}</li>)}
-                    </ul>
-                  </div>
-
-                  <div className="mb-2">
-                    <p className="text-[#666] text-xs mb-1">CONCERNS:</p>
-                    <ul className="text-[#E51B23] text-xs list-disc list-inside">
-                      {person.concerns.map((c, j) => <li key={j}>{c}</li>)}
-                    </ul>
-                  </div>
-
-                  <div className="mt-3 pt-3 border-t border-[#333]">
-                    <p className="text-[#666] text-xs mb-1">HOW TO APPROACH:</p>
-                    <p className="text-[#FFDE59] text-sm">{person.communicationTip}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Competitive Intel */}
-        <div className="bg-[#111] border border-[#333] rounded-lg p-6">
-          <button
-            onClick={() => toggleSection('competitive')}
-            className="w-full flex items-center justify-between"
-          >
-            <h2 className="font-anton text-lg text-[#FFDE59] uppercase tracking-wider">
-              Competitive Intelligence
-            </h2>
-            <span className="text-[#666]">{expandedSections.includes('competitive') ? '−' : '+'}</span>
-          </button>
-
-          {expandedSections.includes('competitive') && (
-            <div className="mt-4 space-y-4">
-              <div className="bg-[#1A1A1A] border-l-4 border-[#E51B23] p-4 rounded-r">
-                <h3 className="text-white font-semibold mb-2">Current Solution: {report.competitiveIntel.currentSolution.name}</h3>
-                <div className="grid md:grid-cols-3 gap-4 text-sm">
-                  <div>
-                    <p className="text-green-500 text-xs mb-1">STRENGTHS:</p>
-                    <ul className="text-[#B3B3B3] list-disc list-inside">
-                      {report.competitiveIntel.currentSolution.strengths.map((s, i) => <li key={i}>{s}</li>)}
-                    </ul>
-                  </div>
-                  <div>
-                    <p className="text-[#E51B23] text-xs mb-1">WEAKNESSES:</p>
-                    <ul className="text-[#B3B3B3] list-disc list-inside">
-                      {report.competitiveIntel.currentSolution.weaknesses.map((w, i) => <li key={i}>{w}</li>)}
-                    </ul>
-                  </div>
-                  <div>
-                    <p className="text-[#666] text-xs mb-1">SWITCHING COST:</p>
-                    <p className="text-white">{report.competitiveIntel.currentSolution.switchingCost}</p>
-                  </div>
-                </div>
-              </div>
-
-              {report.competitiveIntel.competitors.map((comp, i) => (
-                <div key={i} className="bg-[#1A1A1A] border border-[#333] p-4 rounded">
-                  <div className="flex justify-between items-start mb-2">
-                    <h3 className="text-white font-semibold">{comp.name}</h3>
-                    <span className="text-[#666] text-xs">{comp.status}</span>
-                  </div>
-                  <p className="text-[#E51B23] text-sm mb-2">
-                    <strong>Why not chosen:</strong> {comp.whyNotChosen || comp.relationship}
-                  </p>
-                  <p className="text-green-500 text-sm">
-                    <strong>Your advantage:</strong> {comp.yourAdvantage}
-                  </p>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Objection Handling */}
+        {/* Objection Handles */}
         <div className="bg-[#111] border border-[#333] rounded-lg p-6">
           <button
             onClick={() => toggleSection('objections')}
             className="w-full flex items-center justify-between"
           >
             <h2 className="font-anton text-lg text-[#FFDE59] uppercase tracking-wider">
-              Predicted Objections & Responses
+              Objection Handles <span className="bg-[#E51B23] text-white text-[10px] px-2 py-0.5 ml-2 rounded">PRO</span>
             </h2>
             <span className="text-[#666]">{expandedSections.includes('objections') ? '−' : '+'}</span>
           </button>
@@ -458,128 +625,94 @@ export default function ExampleDiscoveryProReportPage() {
           {expandedSections.includes('objections') && (
             <div className="space-y-4 mt-4">
               {report.objections.map((obj, i) => (
-                <div key={i} className={`bg-[#1A1A1A] border-l-4 p-4 rounded-r ${
-                  obj.likelihood === 'High' ? 'border-[#E51B23]' : 'border-[#FFDE59]'
-                }`}>
-                  <div className="flex justify-between items-start mb-2">
-                    <p className="text-white font-medium italic">{obj.objection}</p>
-                    <span className={`text-xs px-2 py-1 rounded ${
-                      obj.likelihood === 'High' ? 'bg-[#E51B23] text-white' : 'bg-[#FFDE59] text-black'
-                    }`}>
-                      {obj.likelihood} likelihood
-                    </span>
-                  </div>
-                  <p className="text-[#666] text-sm mb-3">Root cause: {obj.root}</p>
-                  <div className="bg-black/50 p-3 rounded">
-                    <p className="text-[#666] text-xs mb-1">YOUR RESPONSE:</p>
-                    <p className="text-green-400 text-sm">{obj.response}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Talk Tracks */}
-        <div className="bg-[#111] border border-[#333] rounded-lg p-6">
-          <button
-            onClick={() => toggleSection('tracks')}
-            className="w-full flex items-center justify-between"
-          >
-            <h2 className="font-anton text-lg text-[#FFDE59] uppercase tracking-wider">
-              Custom Talk Tracks
-            </h2>
-            <span className="text-[#666]">{expandedSections.includes('tracks') ? '−' : '+'}</span>
-          </button>
-
-          {expandedSections.includes('tracks') && (
-            <div className="space-y-4 mt-4">
-              {report.talkTracks.map((track, i) => (
                 <div key={i} className="bg-[#1A1A1A] border border-[#333] p-4 rounded">
-                  <h3 className="text-white font-semibold mb-1">{track.scenario}</h3>
-                  <p className="text-[#666] text-sm mb-3">{track.context}</p>
-                  <div className="bg-black/50 p-3 rounded mb-3">
-                    <p className="text-[#FFDE59] italic">&quot;{track.script}&quot;</p>
+                  <p className="text-[#E51B23] font-bold text-sm mb-3">{obj.objection}</p>
+                  <div className="bg-[#333] p-3 rounded border-l-3 border-[#FFDE59]" style={{ borderLeftWidth: '3px' }}>
+                    <p className="text-white text-sm italic">&ldquo;{obj.handle}&rdquo;</p>
                   </div>
-                  <p className="text-[#B3B3B3] text-sm">
-                    <span className="text-green-500">Why this works:</span> {track.why}
-                  </p>
                 </div>
               ))}
             </div>
           )}
         </div>
 
-        {/* Deal Strategy */}
-        <div className="bg-[#111] border border-[#333] rounded-lg p-6">
-          <button
-            onClick={() => toggleSection('strategy')}
-            className="w-full flex items-center justify-between"
-          >
-            <h2 className="font-anton text-lg text-[#FFDE59] uppercase tracking-wider">
-              Deal Strategy
-            </h2>
-            <span className="text-[#666]">{expandedSections.includes('strategy') ? '−' : '+'}</span>
-          </button>
-
-          {expandedSections.includes('strategy') && (
-            <div className="mt-4 space-y-6">
-              <div className="grid md:grid-cols-3 gap-4">
-                <div className="bg-[#1A1A1A] border border-[#333] p-4 rounded">
-                  <p className="text-[#666] text-xs mb-1">IDEAL OUTCOME</p>
-                  <p className="text-white">{report.dealStrategy.idealOutcome}</p>
-                </div>
-                <div className="bg-[#1A1A1A] border border-[#333] p-4 rounded">
-                  <p className="text-[#666] text-xs mb-1">LANDING ZONE</p>
-                  <p className="text-white">{report.dealStrategy.landingZone}</p>
-                </div>
-                <div className="bg-[#1A1A1A] border border-[#333] p-4 rounded">
-                  <p className="text-[#666] text-xs mb-1">EXPANSION PATH</p>
-                  <p className="text-white">{report.dealStrategy.expansionPath}</p>
-                </div>
-              </div>
-
-              <div>
-                <h3 className="text-white font-semibold mb-3">Timeline</h3>
-                <div className="space-y-2">
-                  {report.dealStrategy.timeline.map((phase, i) => (
-                    <div key={i} className="flex items-center gap-4 bg-[#1A1A1A] p-3 rounded">
-                      <span className="text-[#FFDE59] font-anton w-8">{i + 1}</span>
-                      <div className="flex-1">
-                        <p className="text-white">{phase.phase}</p>
-                        <p className="text-[#666] text-xs">{phase.goal}</p>
-                      </div>
-                      <span className="text-[#B3B3B3] text-sm">{phase.target}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <h3 className="text-white font-semibold mb-3">Deal Risks</h3>
-                <div className="space-y-2">
-                  {report.dealStrategy.risks.map((risk, i) => (
-                    <div key={i} className="bg-[#1A1A1A] border-l-4 border-[#E51B23] p-3 rounded-r">
-                      <p className="text-[#E51B23] text-sm mb-1">Risk: {risk.risk}</p>
-                      <p className="text-green-400 text-sm">Mitigation: {risk.mitigation}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Questions to Ask */}
+        {/* Call Objective & Success Metrics */}
         <div className="bg-[#111] border border-[#333] rounded-lg p-6">
           <h2 className="font-anton text-lg text-[#FFDE59] uppercase tracking-wider mb-4">
-            Strategic Questions
+            Call Objective & Success Metrics
+          </h2>
+          <div className="grid md:grid-cols-2 gap-3">
+            <div className="bg-[#1A1A1A] border border-[#333] p-4 rounded">
+              <p className="text-[#E51B23] text-xs font-bold tracking-wider mb-2">PRIMARY GOAL</p>
+              <p className="text-[#B3B3B3] text-sm">{report.primaryObjective}</p>
+            </div>
+            <div className="bg-[#1A1A1A] border border-[#333] p-4 rounded">
+              <p className="text-[#4CAF50] text-xs font-bold tracking-wider mb-2">SUCCESS LOOKS LIKE</p>
+              <p className="text-[#B3B3B3] text-sm">{report.successCriteria}</p>
+            </div>
+            <div className="bg-[#1A1A1A] border border-[#333] p-4 rounded">
+              <p className="text-[#E51B23] text-xs font-bold tracking-wider mb-2">MINIMUM VIABLE OUTCOME</p>
+              <p className="text-[#B3B3B3] text-sm">{report.minimumViableOutcome}</p>
+            </div>
+            <div className="bg-[#1A1A1A] border border-[#333] p-4 rounded">
+              <p className="text-[#E51B23] text-xs font-bold tracking-wider mb-2">RED FLAGS</p>
+              <p className="text-[#B3B3B3] text-sm">{report.redFlags}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* What We Don't Know */}
+        <div className="bg-[#111] border border-[#333] rounded-lg p-6">
+          <h2 className="font-anton text-lg text-[#FFDE59] uppercase tracking-wider mb-4">
+            What We Don&apos;t Know <span className="bg-[#E51B23] text-white text-[10px] px-2 py-0.5 ml-2 rounded">PRO</span>
+          </h2>
+          <div className="space-y-4">
+            <div className="bg-[#1A1A1A] border border-[#333] p-4 rounded">
+              <p className="text-[#FFDE59] text-xs font-bold tracking-wider mb-3">INFORMATION GAPS</p>
+              <ul className="space-y-1">
+                {report.gaps.map((gap, i) => (
+                  <li key={i} className="text-[#B3B3B3] text-sm flex items-start gap-2">
+                    <span className="text-[#E51B23]">•</span> {gap}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="bg-[#1A1A1A] border border-[#333] p-4 rounded">
+              <p className="text-[#FFDE59] text-xs font-bold tracking-wider mb-3">ASSUMPTIONS TO VALIDATE</p>
+              <ul className="space-y-1">
+                {report.assumptions.map((assumption, i) => (
+                  <li key={i} className="text-[#B3B3B3] text-sm flex items-start gap-2">
+                    <span className="text-[#FFDE59]">•</span> {assumption}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="bg-[#1A1A1A] border border-[#333] p-4 rounded">
+              <p className="text-[#FFDE59] text-xs font-bold tracking-wider mb-3">RED FLAGS TO WATCH</p>
+              <ul className="space-y-1">
+                {report.redFlagsToWatch.map((flag, i) => (
+                  <li key={i} className="text-[#B3B3B3] text-sm flex items-start gap-2">
+                    <span className="text-[#E51B23]">⚠</span> {flag}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        {/* Post-Call Actions */}
+        <div className="bg-[#111] border border-[#333] rounded-lg p-6">
+          <h2 className="font-anton text-lg text-[#FFDE59] uppercase tracking-wider mb-4">
+            Post-Call Actions <span className="bg-[#E51B23] text-white text-[10px] px-2 py-0.5 ml-2 rounded">PRO</span>
           </h2>
           <div className="space-y-3">
-            {report.questionsToAsk.map((q, i) => (
-              <div key={i} className="bg-[#1A1A1A] p-4 rounded">
-                <p className="text-white mb-1">&quot;{q.question}&quot;</p>
-                <p className="text-[#666] text-sm">Purpose: {q.purpose}</p>
+            {report.actions.map((action, i) => (
+              <div key={i} className="flex items-start gap-3">
+                <span className="font-anton text-2xl text-[#E51B23] min-w-[24px]">{i + 1}</span>
+                <div>
+                  <p className="text-[#FFDE59] text-xs font-bold tracking-wider mb-1">{action.timing}</p>
+                  <p className="text-[#B3B3B3] text-sm">{action.action}</p>
+                </div>
               </div>
             ))}
           </div>
@@ -591,7 +724,7 @@ export default function ExampleDiscoveryProReportPage() {
             Get this intelligence for every prospect
           </h2>
           <p className="text-white/90 mb-6 max-w-lg mx-auto">
-            Stakeholder maps. Competitive intel. Custom talk tracks. Win more deals before the call even starts.
+            Top 5 findings. Prospect psychology. Objection handles. Decision trees. Win more deals before the call even starts.
           </p>
           <Link
             href="/discovery-lab-pro?utm_source=example"

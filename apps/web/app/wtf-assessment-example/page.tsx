@@ -866,26 +866,21 @@ export default function WTFAssessmentExample() {
         <p className="text-lg font-bold text-[#E31B23] mb-6 text-center">{diagnoses.cta.headline}</p>
         <h2 className="text-xl font-bold text-white mb-6 text-center">Next Steps</h2>
         <div className="bg-slate-700/30 rounded-xl p-6 mb-4 border border-[#00D4FF]/20">
-          <h3 className="text-lg font-bold text-white mb-2">45-Minute Roadmap Consultation</h3>
-          <p className="text-sm text-slate-400 mb-3">Let&apos;s fix this together. In 45 minutes, we&apos;ll:</p>
-          <ul className="text-sm text-slate-300 space-y-1 mb-4">
-            <li>&bull; Prioritize your positioning fix</li>
-            <li>&bull; Map your founder escape route</li>
-            <li>&bull; Build your 90-day action plan</li>
-          </ul>
+          <h3 className="text-lg font-bold text-white mb-2">Get Your Own WTF Assessment</h3>
+          <p className="text-sm text-slate-400 mb-3">Want to see where your agency really stands? Take the assessment and get your personalized diagnostic report.</p>
           <a
-            href="https://zcal.co/timkilroy/growthos"
+            href="/growthos"
             className="inline-block px-6 py-3 rounded-xl bg-[#E31B23] text-white font-bold text-sm hover:shadow-lg hover:shadow-[#E31B23]/25 transition-all"
           >
-            Book Your Roadmap Call &rarr;
+            Take Your Assessment &rarr;
           </a>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <a href="https://zcal.co/timkilroy/growthos" className="bg-slate-700/30 rounded-xl p-5 border border-slate-700/50 hover:border-[#00D4FF]/30 transition-all block">
+          <a href="https://timkilroy.com" target="_blank" rel="noopener noreferrer" className="bg-slate-700/30 rounded-xl p-5 border border-slate-700/50 hover:border-[#00D4FF]/30 transition-all block">
             <h4 className="font-bold text-white mb-1">Coaching &amp; Consulting</h4>
             <p className="text-xs text-slate-400">Explore our programs &rarr;</p>
           </a>
-          <a href="https://www.skool.com/agency-inner-circle" target="_blank" rel="noopener noreferrer" className="bg-slate-700/30 rounded-xl p-5 border border-slate-700/50 hover:border-[#00D4FF]/30 transition-all block">
+          <a href="https://agencyinnercircle.com" target="_blank" rel="noopener noreferrer" className="bg-slate-700/30 rounded-xl p-5 border border-slate-700/50 hover:border-[#00D4FF]/30 transition-all block">
             <h4 className="font-bold text-white mb-1">The Agency Inner Circle</h4>
             <p className="text-xs text-slate-400">Free community for agency owners. Join free &rarr;</p>
           </a>
@@ -895,10 +890,10 @@ export default function WTFAssessmentExample() {
       {/* ===== FOOTER ===== */}
       <div className="flex gap-4 mt-4 mb-12">
         <a
-          href="https://zcal.co/timkilroy/growthos"
+          href="/growthos"
           className="flex-1 text-center py-3 rounded-xl bg-[#E31B23] text-white font-bold text-sm hover:shadow-lg hover:shadow-[#E31B23]/25 transition-all"
         >
-          Get Your Assessment &rarr;
+          Take Your Assessment &rarr;
         </a>
       </div>
     </div>

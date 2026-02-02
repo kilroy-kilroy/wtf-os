@@ -8,14 +8,14 @@ const SAMPLE_INTAKE = {
 };
 
 const SAMPLE_ZONES = {
-  revenueQuality: { score: 3.2, color: "#f59e0b", insight: "Revenue per FTE sits at $128K \u2014 solid for a 12-person shop, but you\u2019re leaving $40-60K/head on the table vs. top-quartile agencies your size. The issue isn\u2019t volume, it\u2019s margin compression from scope creep and underpriced retainers." },
-  profitability: { score: 2.1, color: "#E31B23", insight: "Net margin at 11% is a red flag. After founder comp adjustments, you\u2019re closer to 6%. You\u2019re running a jobs program, not a profit engine. Every untracked hour is money you\u2019re donating to clients." },
-  growthVsChurn: { score: 3.8, color: "#f59e0b", insight: "Adding 8 clients while losing 5 nets you 3 \u2014 but the churn rate (31%) means you\u2019re refilling a leaky bucket. The new clients mask the retention problem. Fix churn first, then pour fuel on acquisition." },
-  leadEngine: { score: 1.8, color: "#E31B23", insight: "Referrals at 70% is a single point of failure disguised as a compliment. One bad quarter, one lost champion at a client, and your pipeline evaporates. You have no engine \u2014 you have a hope strategy." },
-  founderLoad: { score: 2.4, color: "#E31B23", insight: "You\u2019re working 55 hours/week and still doing 40% delivery. That\u2019s not leadership \u2014 that\u2019s the most expensive project manager in the building. The business can\u2019t grow past you if you ARE the business." },
-  systemsReadiness: { score: 2.8, color: "#f59e0b", insight: "SOPs exist in your head, not on paper. Onboarding takes 3x longer than it should. You can\u2019t delegate what isn\u2019t documented, and you can\u2019t scale what you can\u2019t delegate." },
-  contentPositioning: { score: 3.5, color: "#f59e0b", insight: "Your positioning says \"full-service digital agency\" \u2014 which means nothing to nobody. You\u2019re competing with 47,000 other agencies saying the exact same thing. Your best clients came to you for e-commerce migration expertise. Lead with that." },
-  teamVisibility: { score: 1.5, color: "#E31B23", insight: "Your team has zero LinkedIn presence. In a trust-based sale, invisibility is a liability. Buyers Google your people before signing. Right now they find nothing." },
+  revenueQuality: { score: 3.2, color: "#00D4FF", insight: "Revenue per FTE sits at $128K \u2014 solid for a 12-person shop, but you\u2019re leaving $40-60K/head on the table vs. top-quartile agencies your size. The issue isn\u2019t volume, it\u2019s margin compression from scope creep and underpriced retainers." },
+  profitability: { score: 2.1, color: "#E51B23", insight: "Net margin at 11% is a red flag. After founder comp adjustments, you\u2019re closer to 6%. You\u2019re running a jobs program, not a profit engine. Every untracked hour is money you\u2019re donating to clients." },
+  growthVsChurn: { score: 3.8, color: "#00D4FF", insight: "Adding 8 clients while losing 5 nets you 3 \u2014 but the churn rate (31%) means you\u2019re refilling a leaky bucket. The new clients mask the retention problem. Fix churn first, then pour fuel on acquisition." },
+  leadEngine: { score: 1.8, color: "#E51B23", insight: "Referrals at 70% is a single point of failure disguised as a compliment. One bad quarter, one lost champion at a client, and your pipeline evaporates. You have no engine \u2014 you have a hope strategy." },
+  founderLoad: { score: 2.4, color: "#E51B23", insight: "You\u2019re working 55 hours/week and still doing 40% delivery. That\u2019s not leadership \u2014 that\u2019s the most expensive project manager in the building. The business can\u2019t grow past you if you ARE the business." },
+  systemsReadiness: { score: 2.8, color: "#00D4FF", insight: "SOPs exist in your head, not on paper. Onboarding takes 3x longer than it should. You can\u2019t delegate what isn\u2019t documented, and you can\u2019t scale what you can\u2019t delegate." },
+  contentPositioning: { score: 3.5, color: "#00D4FF", insight: "Your positioning says \"full-service digital agency\" \u2014 which means nothing to nobody. You\u2019re competing with 47,000 other agencies saying the exact same thing. Your best clients came to you for e-commerce migration expertise. Lead with that." },
+  teamVisibility: { score: 1.5, color: "#E51B23", insight: "Your team has zero LinkedIn presence. In a trust-based sale, invisibility is a liability. Buyers Google your people before signing. Right now they find nothing." },
 };
 
 const SAMPLE_SCORES = {
@@ -349,40 +349,40 @@ function ScoreBar({ score, label, narrative, color }: {
     <div className="mb-6">
       <div className="flex items-center justify-between mb-1.5">
         <span className="text-sm font-semibold text-white">{label}</span>
-        <span className="text-sm font-bold" style={{ color }}>{score}/5</span>
+        <span className="text-sm font-anton" style={{ color }}>{score}/5</span>
       </div>
-      <div className="h-3 bg-slate-700 rounded-full overflow-hidden">
+      <div className="h-2 bg-[#333] rounded-full overflow-hidden">
         <div className="h-full rounded-full transition-all duration-500" style={{ width: `${widthPercent}%`, backgroundColor: color }} />
       </div>
-      <p className="mt-2 text-sm text-slate-300">{narrative}</p>
+      <p className="mt-2 text-sm text-[#B3B3B3]">{narrative}</p>
     </div>
   );
 }
 
 function GrowthLeverCard({ lever }: { lever: { name: string; description: string; impact: string; currentState: string; recommendation: string } }) {
-  const impactColor = lever.impact === "high" ? "bg-red-500/10 text-red-400 border-red-500/30"
-    : lever.impact === "medium" ? "bg-amber-500/10 text-amber-400 border-amber-500/30"
-    : "bg-slate-500/10 text-slate-400 border-slate-500/30";
+  const impactColor = lever.impact === "high" ? "bg-[#E51B23]/10 text-[#E51B23] border-[#E51B23]/30"
+    : lever.impact === "medium" ? "bg-[#00D4FF]/10 text-[#00D4FF] border-[#00D4FF]/30"
+    : "bg-[#333] text-[#666] border-[#333]";
   return (
-    <div className="bg-slate-700/30 rounded-xl p-5 border border-slate-700/50">
+    <div className="bg-[#1A1A1A] border border-[#333] rounded p-5">
       <div className="flex items-center justify-between mb-2">
         <h4 className="font-bold text-white">{lever.name}</h4>
         <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border ${impactColor}`}>{lever.impact} impact</span>
       </div>
-      <p className="text-sm text-slate-400 mb-3">{lever.description}</p>
-      <p className="text-xs text-slate-500 mb-1"><strong className="text-slate-400">Current:</strong> {lever.currentState}</p>
+      <p className="text-sm text-[#B3B3B3] mb-3">{lever.description}</p>
+      <p className="text-xs text-[#666] mb-1"><strong className="text-[#B3B3B3]">Current:</strong> {lever.currentState}</p>
       <p className="text-xs text-[#00D4FF]"><strong>Fix:</strong> {lever.recommendation}</p>
     </div>
   );
 }
 
 function AnalysisSection({ title, score, children }: { title: string; score: number; children: React.ReactNode }) {
-  const scoreColor = score >= 8 ? "#00D4FF" : score >= 5 ? "#f59e0b" : "#E31B23";
+  const scoreColor = score >= 8 ? "#00D4FF" : score >= 5 ? "#00D4FF" : "#E51B23";
   return (
-    <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 mb-6">
+    <div className="bg-[#111] border border-[#333] rounded-lg p-6 mb-6">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-bold text-white">{title}</h2>
-        <span className="text-sm font-bold" style={{ color: scoreColor }}>{score}/10</span>
+        <h2 className="font-anton text-lg text-[#00D4FF] uppercase tracking-wider">{title}</h2>
+        <span className="text-2xl font-anton" style={{ color: scoreColor }}>{score}<span className="text-sm text-[#666]">/10</span></span>
       </div>
       {children}
     </div>
@@ -393,8 +393,8 @@ function GapsList({ gaps }: { gaps: string[] }) {
   if (!gaps?.length) return null;
   return (
     <div className="mb-3">
-      <p className="text-xs text-slate-500 font-bold uppercase mb-1">Gaps</p>
-      <ul className="space-y-1">{gaps.map((g, i) => <li key={i} className="text-sm text-slate-400">&bull; {g}</li>)}</ul>
+      <p className="text-[#E51B23] text-xs font-bold uppercase mb-2">GAPS</p>
+      <ul className="space-y-1">{gaps.map((g, i) => <li key={i} className="text-sm text-[#B3B3B3]">&bull; {g}</li>)}</ul>
     </div>
   );
 }
@@ -403,8 +403,8 @@ function RecommendationsList({ recs }: { recs: string[] }) {
   if (!recs?.length) return null;
   return (
     <div>
-      <p className="text-xs text-[#00D4FF] font-bold uppercase mb-1">Recommendations</p>
-      <ul className="space-y-1">{recs.map((r, i) => <li key={i} className="text-sm text-slate-300">&bull; {r}</li>)}</ul>
+      <p className="text-[#00D4FF] text-xs font-bold uppercase mb-2">RECOMMENDATIONS</p>
+      <ul className="space-y-1">{recs.map((r, i) => <li key={i} className="text-sm text-[#B3B3B3]">&bull; {r}</li>)}</ul>
     </div>
   );
 }
@@ -429,18 +429,18 @@ function MarkdownContent({ content }: { content: string }) {
           <table className="w-full text-sm">
             {tableHeaders.length > 0 && (
               <thead>
-                <tr className="border-b border-slate-600/50">
+                <tr className="border-b border-[#333]">
                   {tableHeaders.map((h, i) => (
-                    <th key={i} className="text-left text-slate-500 px-3 py-2 font-medium">{h.trim()}</th>
+                    <th key={i} className="text-left text-[#666] px-3 py-2 font-medium">{h.trim()}</th>
                   ))}
                 </tr>
               </thead>
             )}
             <tbody>
               {tableRows.map((row, ri) => (
-                <tr key={ri} className="border-b border-slate-700/50">
+                <tr key={ri} className="border-b border-[#333]/50">
                   {row.map((cell, ci) => (
-                    <td key={ci} className="px-3 py-2 text-slate-300">{renderInline(cell.trim())}</td>
+                    <td key={ci} className="px-3 py-2 text-[#B3B3B3]">{renderInline(cell.trim())}</td>
                   ))}
                 </tr>
               ))}
@@ -483,35 +483,35 @@ function MarkdownContent({ content }: { content: string }) {
     } else if (inTable) { flushTable(); }
 
     if (line.startsWith("### ")) {
-      elements.push(<h4 key={i} className="text-sm font-bold text-[#00D4FF] uppercase tracking-wide mt-5 mb-2">{line.slice(4)}</h4>);
+      elements.push(<h4 key={i} className="font-anton text-sm text-[#00D4FF] uppercase tracking-wider mt-5 mb-2">{line.slice(4)}</h4>);
     } else if (line.startsWith("## ")) {
-      elements.push(<h3 key={i} className="text-base font-bold text-white mt-5 mb-2">{line.slice(3)}</h3>);
+      elements.push(<h3 key={i} className="font-anton text-base text-white uppercase tracking-wide mt-5 mb-2">{line.slice(3)}</h3>);
     } else if (line.startsWith("# ")) {
-      elements.push(<h2 key={i} className="text-lg font-bold text-white mt-4 mb-2">{line.slice(2)}</h2>);
+      elements.push(<h2 key={i} className="font-anton text-lg text-white uppercase tracking-wide mt-4 mb-2">{line.slice(2)}</h2>);
     } else if (/^---+$/.test(line.trim())) {
-      elements.push(<hr key={i} className="border-slate-700/50 my-4" />);
+      elements.push(<hr key={i} className="border-[#333] my-4" />);
     } else if (/^[-*]\s/.test(line.trim())) {
-      elements.push(<p key={i} className="text-sm text-slate-300 ml-4 mb-1">&bull; {renderInline(line.trim().slice(2))}</p>);
+      elements.push(<p key={i} className="text-sm text-[#B3B3B3] ml-4 mb-1">&bull; {renderInline(line.trim().slice(2))}</p>);
     } else if (/^\d+\.\s/.test(line.trim())) {
       const num = line.trim().match(/^(\d+)\.\s/)?.[1];
       const text = line.trim().replace(/^\d+\.\s/, "");
-      elements.push(<p key={i} className="text-sm text-slate-300 ml-4 mb-1"><span className="text-[#00D4FF] font-bold mr-1">{num}.</span>{renderInline(text)}</p>);
+      elements.push(<p key={i} className="text-sm text-[#B3B3B3] ml-4 mb-1"><span className="text-[#00D4FF] font-anton mr-1">{num}.</span>{renderInline(text)}</p>);
     } else if (line.trim() === "") {
       // skip
     } else {
-      elements.push(<p key={i} className="text-sm text-slate-300 mb-2">{renderInline(line)}</p>);
+      elements.push(<p key={i} className="text-sm text-[#B3B3B3] mb-2">{renderInline(line)}</p>);
     }
   }
   if (inTable) flushTable();
   return <div className="space-y-0.5">{elements}</div>;
 }
 
-function DiagnosisSection({ title, content, color = "#E31B23" }: { title: string; content: string; color?: string }) {
+function DiagnosisSection({ title, content, color = "#E51B23" }: { title: string; content: string; color?: string }) {
   return (
-    <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 mb-6">
+    <div className="bg-[#111] border border-[#333] rounded-lg p-6 mb-6">
       <div className="flex items-center gap-3 mb-5">
-        <div className="w-1.5 h-8 rounded-full" style={{ backgroundColor: color }} />
-        <h2 className="text-lg font-bold text-white">{title}</h2>
+        <div className="w-1 h-8 rounded-full" style={{ backgroundColor: color }} />
+        <h2 className="font-anton text-lg text-white uppercase tracking-wider">{title}</h2>
       </div>
       <MarkdownContent content={content} />
     </div>
@@ -530,372 +530,398 @@ export default function WTFAssessmentExample() {
   const analysis = enrichment.analysis;
   const diagnoses = scores.diagnoses;
   const llm = enrichment.llmAwareness;
-  const overallColor = scores.overall >= 4 ? "#22c55e" : scores.overall >= 2.5 ? "#f59e0b" : "#E31B23";
+  const overallColor = scores.overall >= 4 ? "#00D4FF" : scores.overall >= 2.5 ? "#00D4FF" : "#E51B23";
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Example Banner */}
-      <div className="bg-[#00D4FF]/10 border border-[#00D4FF]/30 rounded-xl px-4 py-3 mb-6 text-center">
-        <p className="text-sm text-[#00D4FF] font-medium">
-          Sample Assessment &mdash; This is a demo report with synthetic data for a fictional agency.
-        </p>
-      </div>
-
-      {/* ===== HEADER ===== */}
-      <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-8 mb-6 text-center">
-        <h1 className="text-3xl font-extrabold text-white mb-2">{intake.agencyName}</h1>
-        <p className="text-slate-400 mb-6">Business Diagnostic Results</p>
-        <div className="inline-flex items-center gap-4">
-          <div
-            className="w-24 h-24 rounded-2xl flex items-center justify-center text-3xl font-extrabold"
-            style={{ backgroundColor: overallColor + "20", border: `2px solid ${overallColor}40` }}
-          >
-            <span style={{ color: overallColor }}>{scores.overall.toFixed(1)}</span>
+    <div className="min-h-screen bg-black font-poppins">
+      {/* Header */}
+      <header className="border-b border-[#333] px-4 py-4">
+        <div className="max-w-5xl mx-auto flex items-center justify-between">
+          <div className="font-anton text-xl tracking-wide">
+            <span className="text-white">GROWTH</span>
+            <span className="text-[#00D4FF]">OS</span>
           </div>
-          <div className="text-left">
-            <p className="text-xs text-slate-500 uppercase tracking-wider font-bold">Overall Score</p>
-            <p className="text-lg font-bold text-white">{scores.overallLabel}</p>
-            <p className="text-sm text-slate-400">{scores.segmentLabel}</p>
-          </div>
-        </div>
-      </div>
-
-      {/* ===== WTF ZONES HEATMAP ===== */}
-      <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 mb-6">
-        <h2 className="text-lg font-bold text-white mb-5">WTF Zones Heatmap</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
-          <ScoreBar score={zones.revenueQuality.score} label="Revenue Quality" narrative={zones.revenueQuality.insight} color={zones.revenueQuality.color} />
-          <ScoreBar score={zones.profitability.score} label="Profitability" narrative={zones.profitability.insight} color={zones.profitability.color} />
-          <ScoreBar score={zones.growthVsChurn.score} label="Growth vs Churn" narrative={zones.growthVsChurn.insight} color={zones.growthVsChurn.color} />
-          <ScoreBar score={zones.leadEngine.score} label="Lead Engine" narrative={zones.leadEngine.insight} color={zones.leadEngine.color} />
-          <ScoreBar score={zones.founderLoad.score} label="Founder Load" narrative={zones.founderLoad.insight} color={zones.founderLoad.color} />
-          <ScoreBar score={zones.systemsReadiness.score} label="Systems Readiness" narrative={zones.systemsReadiness.insight} color={zones.systemsReadiness.color} />
-          <ScoreBar score={zones.contentPositioning.score} label="Content & Positioning" narrative={zones.contentPositioning.insight} color={zones.contentPositioning.color} />
-          <ScoreBar score={zones.teamVisibility.score} label="Team Visibility" narrative={zones.teamVisibility.insight} color={zones.teamVisibility.color} />
-        </div>
-      </div>
-
-      {/* ===== ENRICHMENT ANALYSIS ===== */}
-      <AnalysisSection title="Positioning Coherence" score={analysis.positioningCoherence.score}>
-        <p className="text-sm text-slate-300 mb-4">{analysis.positioningCoherence.verdict}</p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-          <div className="bg-slate-700/30 rounded-xl p-4">
-            <p className="text-xs text-slate-500 mb-1 font-bold uppercase">What Your Website Says</p>
-            <p className="text-sm text-slate-300">{analysis.positioningCoherence.websiteMessage}</p>
-          </div>
-          <div className="bg-slate-700/30 rounded-xl p-4">
-            <p className="text-xs text-slate-500 mb-1 font-bold uppercase">What Your LinkedIn Says</p>
-            <p className="text-sm text-slate-300">{analysis.positioningCoherence.linkedinMessage}</p>
-          </div>
-        </div>
-        <p className="text-sm mb-4">Alignment: <span className="font-bold capitalize text-amber-400">{analysis.positioningCoherence.alignment}</span></p>
-        <GapsList gaps={analysis.positioningCoherence.gaps} />
-        <RecommendationsList recs={analysis.positioningCoherence.recommendations} />
-      </AnalysisSection>
-
-      <AnalysisSection title="Content-Market Fit" score={analysis.contentMarketFit.score}>
-        <p className="text-sm text-slate-300 mb-4">{analysis.contentMarketFit.verdict}</p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-          <div className="bg-slate-700/30 rounded-xl p-4">
-            <p className="text-xs text-slate-500 mb-2 font-bold uppercase">Your Content Topics</p>
-            <div className="flex flex-wrap gap-1.5">
-              {analysis.contentMarketFit.topicsVsIcpProblems.topContentTopics.map((t, i) => (
-                <span key={i} className="px-2 py-0.5 rounded-full bg-[#00D4FF]/10 text-[#00D4FF] text-xs">{t}</span>
-              ))}
-            </div>
-          </div>
-          <div className="bg-slate-700/30 rounded-xl p-4">
-            <p className="text-xs text-slate-500 mb-2 font-bold uppercase">What Your ICP Cares About</p>
-            <div className="flex flex-wrap gap-1.5">
-              {analysis.contentMarketFit.topicsVsIcpProblems.topIcpProblems.map((p, i) => (
-                <span key={i} className="px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 text-xs">{p}</span>
-              ))}
-            </div>
-          </div>
-        </div>
-        <div className="mb-4">
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-xs text-slate-500 font-bold">Content-Problem Overlap</span>
-            <span className="text-xs font-bold text-[#00D4FF]">{analysis.contentMarketFit.topicsVsIcpProblems.overlap}%</span>
-          </div>
-          <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
-            <div className="h-full bg-[#00D4FF] rounded-full" style={{ width: `${analysis.contentMarketFit.topicsVsIcpProblems.overlap}%` }} />
-          </div>
-        </div>
-        <GapsList gaps={analysis.contentMarketFit.gaps} />
-        <RecommendationsList recs={analysis.contentMarketFit.recommendations} />
-      </AnalysisSection>
-
-      <AnalysisSection title="Social Proof Alignment" score={analysis.socialProofAlignment.score}>
-        <p className="text-sm text-slate-300 mb-4">{analysis.socialProofAlignment.verdict}</p>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
-          <div className="bg-slate-700/30 rounded-xl p-4">
-            <p className="text-xs text-slate-500 mb-1 font-bold uppercase">Case Studies</p>
-            <p className="text-sm text-slate-300">{analysis.socialProofAlignment.caseStudyRelevance}</p>
-          </div>
-          <div className="bg-slate-700/30 rounded-xl p-4">
-            <p className="text-xs text-slate-500 mb-1 font-bold uppercase">Testimonials</p>
-            <p className="text-sm text-slate-300">{analysis.socialProofAlignment.testimonialStrength}</p>
-          </div>
-          <div className="bg-slate-700/30 rounded-xl p-4">
-            <p className="text-xs text-slate-500 mb-1 font-bold uppercase">Client Logos</p>
-            <p className="text-sm text-slate-300">{analysis.socialProofAlignment.logoSignalStrength}</p>
-          </div>
-        </div>
-        <GapsList gaps={analysis.socialProofAlignment.gaps} />
-        <RecommendationsList recs={analysis.socialProofAlignment.recommendations} />
-      </AnalysisSection>
-
-      <AnalysisSection title="ICP Problem Awareness" score={analysis.icpProblemAwareness.score}>
-        <p className="text-sm text-slate-300 mb-4">{analysis.icpProblemAwareness.verdict}</p>
-        <div className="mb-4 overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-slate-700">
-                <th className="text-left py-2 text-xs text-slate-500 font-bold uppercase">Problem</th>
-                <th className="text-center py-2 text-xs text-slate-500 font-bold uppercase w-28">Addressed?</th>
-                <th className="text-left py-2 text-xs text-slate-500 font-bold uppercase">Where</th>
-              </tr>
-            </thead>
-            <tbody>
-              {analysis.icpProblemAwareness.problemCoverage.map((row, i) => (
-                <tr key={i} className="border-b border-slate-700/50">
-                  <td className="py-2 text-slate-300">{row.problem}</td>
-                  <td className="py-2 text-center">
-                    <span className={row.addressed ? "text-[#00D4FF]" : "text-[#E31B23]"}>
-                      {row.addressed ? "\u2713" : "\u2717"}
-                    </span>
-                  </td>
-                  <td className="py-2 text-slate-400 text-xs">{row.where}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <div className="mb-4">
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-xs text-slate-500 font-bold">Problem Coverage</span>
-            <span className="text-xs font-bold text-[#00D4FF]">{analysis.icpProblemAwareness.coveragePercent}%</span>
-          </div>
-          <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
-            <div className="h-full bg-[#00D4FF] rounded-full" style={{ width: `${analysis.icpProblemAwareness.coveragePercent}%` }} />
-          </div>
-        </div>
-        <div className="mb-3">
-          <p className="text-xs text-[#E31B23] font-bold uppercase mb-1">Problems You&apos;re Not Addressing</p>
-          <ul className="space-y-1">{analysis.icpProblemAwareness.missingProblems.map((p, i) => <li key={i} className="text-sm text-slate-400">&bull; {p}</li>)}</ul>
-        </div>
-        <div className="mb-3">
-          <p className="text-xs text-[#00D4FF] font-bold uppercase mb-1">Content Opportunities</p>
-          <ul className="space-y-1">{analysis.icpProblemAwareness.contentOpportunities.map((c, i) => <li key={i} className="text-sm text-slate-300">&bull; {c}</li>)}</ul>
-        </div>
-        <RecommendationsList recs={analysis.icpProblemAwareness.recommendations} />
-      </AnalysisSection>
-
-      {/* ===== AI DISCOVERABILITY ===== */}
-      <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 mb-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-bold text-white">AI Discoverability</h2>
-          <span className="text-sm font-bold text-[#E31B23]">{llm.summary.score}%</span>
-        </div>
-        <div className="mb-4">
-          <p className="text-sm text-[#E31B23] font-medium mb-2">You don&apos;t exist to AI.</p>
-          <p className="text-sm text-slate-400">We asked Claude, ChatGPT, and Perplexity the kinds of questions your ICP would actually type &mdash; real problems, real revenue numbers, asking for specific help. You weren&apos;t mentioned. Not once.</p>
-        </div>
-        <div className="grid grid-cols-3 gap-4 mb-4">
-          {(["claude", "chatgpt", "perplexity"] as const).map(provider => (
-            <div key={provider} className="bg-slate-700/30 rounded-xl p-4 text-center">
-              <p className="text-xs text-slate-500 capitalize mb-1">{provider}</p>
-              <p className="text-lg font-bold text-[#E31B23]">{"\u2717"} Not Found</p>
-            </div>
-          ))}
-        </div>
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-xs text-slate-500 font-bold">AI Awareness Score</span>
-          <span className="text-xs font-bold text-[#00D4FF]">{llm.summary.score}%</span>
-        </div>
-        <div className="h-2 bg-slate-700 rounded-full overflow-hidden mb-4">
-          <div className="h-full rounded-full bg-[#E31B23]" style={{ width: `${llm.summary.score}%` }} />
-        </div>
-        <div className="mt-4 bg-slate-700/30 rounded-xl p-4">
-          <p className="text-xs text-slate-500 font-bold uppercase mb-2">What Buyers Are Asking AI Right Now</p>
-          <div className="mb-3 space-y-1">
-            {llm.summary.queriesUsed.map((q, i) => (
-              <p key={i} className="text-sm text-white bg-slate-600/30 rounded-lg px-3 py-2 italic">&ldquo;{q}&rdquo;</p>
-            ))}
-          </div>
-          <p className="text-sm text-slate-400 mb-2">We asked Claude, ChatGPT, and Perplexity these exact questions. You weren&apos;t mentioned. Not once.</p>
-          <ul className="space-y-1 text-sm text-slate-400">
-            <li>&bull; AI is increasingly how people research purchases</li>
-            <li>&bull; Your competitors ARE showing up</li>
-            <li>&bull; This gap will widen, not shrink</li>
-          </ul>
-          <p className="text-sm text-[#00D4FF] mt-3 font-medium">The fix: become the answer. Your ICP is asking questions like &ldquo;{llm.summary.queriesUsed[0]}&rdquo; right now. You need content that answers those exact questions &mdash; not thought leadership, not brand awareness. Specific, tactical answers to specific problems. That&apos;s how you get cited.</p>
-        </div>
-      </div>
-
-      {/* ===== REALITY CHECKS ===== */}
-      <div className="space-y-4 mb-6">
-        <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-2xl p-6">
-          <h2 className="text-lg font-bold text-emerald-400 mb-5">What You&apos;re Doing Right</h2>
-          <div className="space-y-6">
-            {scores.realityChecks.filter(c => c.type === "celebration").map((check) => (
-              <div key={check.id}>
-                <h3 className="text-sm font-bold text-emerald-400 mb-2">{check.title}</h3>
-                <p className="text-sm text-slate-300">{check.body}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div className="bg-[#E31B23]/5 border border-[#E31B23]/20 rounded-2xl p-6">
-          <h2 className="text-lg font-bold text-[#E31B23] mb-5">Reality Checks</h2>
-          <div className="space-y-6">
-            {scores.realityChecks.filter(c => c.type !== "celebration").map((check) => (
-              <div key={check.id}>
-                <h3 className="text-sm font-bold text-[#E31B23] mb-2">{check.title}</h3>
-                <p className="text-sm text-slate-300">{check.body}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* ===== UNIT ECONOMICS ===== */}
-      <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 mb-6">
-        <h2 className="text-lg font-bold text-white mb-5">Unit Economics</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
-          <div className="bg-slate-700/30 rounded-xl p-4 text-center">
-            <p className="text-2xl font-bold text-white">{fmtCurrency(scores.ltvMetrics.avgClientValue)}</p>
-            <p className="text-xs text-slate-500">Avg Monthly Value</p>
-          </div>
-          <div className="bg-slate-700/30 rounded-xl p-4 text-center">
-            <p className="text-2xl font-bold text-white">{scores.ltvMetrics.avgClientLifetimeMonths}mo</p>
-            <p className="text-xs text-slate-500">Avg Client Lifetime</p>
-          </div>
-          <div className="bg-slate-700/30 rounded-xl p-4 text-center">
-            <p className="text-2xl font-bold text-[#00D4FF]">{fmtCurrency(scores.ltvMetrics.ltv)}</p>
-            <p className="text-xs text-slate-500">Client LTV</p>
-          </div>
-          <div className="bg-slate-700/30 rounded-xl p-4 text-center">
-            <p className="text-2xl font-bold" style={{ color: scores.ltvMetrics.ltvCacColor }}>{scores.ltvMetrics.ltvCacRatio}x</p>
-            <p className="text-xs text-slate-500">LTV:CAC Ratio</p>
-          </div>
-        </div>
-        <div className="bg-slate-700/20 rounded-xl p-4">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: scores.ltvMetrics.ltvCacColor }} />
-            <p className="text-sm text-slate-300">{scores.ltvMetrics.ltvCacAssessment}</p>
-          </div>
-          <p className="text-xs text-slate-500">Estimated CAC: {fmtCurrency(scores.ltvMetrics.estimatedCAC)} (based on lead sources, volume, and close rate)</p>
-        </div>
-      </div>
-
-      {/* ===== DIAGNOSES ===== */}
-      <DiagnosisSection title="The Founder Tax" content={diagnoses.founderTax} color="#E31B23" />
-      <DiagnosisSection title="The Pipeline Probability" content={diagnoses.pipeline} color="#f59e0b" />
-      <DiagnosisSection title="The Authority Gap" content={diagnoses.authority} color="#E31B23" />
-      <DiagnosisSection title="The Positioning Collision" content={diagnoses.positioning} color="#f59e0b" />
-      <DiagnosisSection title="The Trajectory Fork" content={diagnoses.trajectory} color="#00D4FF" />
-
-      {/* ===== GROWTH LEVERS ===== */}
-      <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 mb-6">
-        <h2 className="text-lg font-bold text-white mb-5">Growth Levers</h2>
-        <div className="space-y-4">
-          {scores.growthLevers.map((lever, i) => (
-            <GrowthLeverCard key={i} lever={lever} />
-          ))}
-        </div>
-      </div>
-
-      {/* ===== FOUNDER OS ===== */}
-      <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 mb-6">
-        <h2 className="text-lg font-bold text-white mb-5">Founder Operating System</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
-          <div className="bg-slate-700/30 rounded-xl p-4 text-center">
-            <p className="text-2xl font-bold text-white">{scores.founderOS.delegationScore.toFixed(1)}</p>
-            <p className="text-xs text-slate-500">Delegation</p>
-          </div>
-          <div className="bg-slate-700/30 rounded-xl p-4 text-center">
-            <p className="text-2xl font-bold text-white">{scores.founderOS.onVsInRatio}%</p>
-            <p className="text-xs text-slate-500">ON vs IN</p>
-          </div>
-          <div className="bg-slate-700/30 rounded-xl p-4 text-center">
-            <p className="text-2xl font-bold capitalize text-amber-400">{scores.founderOS.burnoutRisk}</p>
-            <p className="text-xs text-slate-500">Burnout Risk</p>
-          </div>
-          <div className="bg-slate-700/30 rounded-xl p-4 text-center">
-            <p className="text-2xl font-bold text-white">{scores.founderOS.bottleneckAreas.length}</p>
-            <p className="text-xs text-slate-500">Bottlenecks</p>
-          </div>
-        </div>
-        <p className="text-sm text-slate-300 mb-2">{scores.founderOS.delegationNarrative}</p>
-        <p className="text-sm text-slate-400 mb-2">{scores.founderOS.onVsInNarrative}</p>
-        <p className="text-sm text-slate-400 mt-2">
-          <strong className="text-white">Bottlenecks:</strong> {scores.founderOS.bottleneckAreas.join(", ")}
-        </p>
-      </div>
-
-      {/* ===== PRIORITY ACTIONS ===== */}
-      <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 mb-6">
-        <h2 className="text-lg font-bold text-white mb-5">Priority Actions</h2>
-        <p className="text-sm text-slate-400 mb-4">Based on everything above, here&apos;s what matters in order:</p>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-slate-700">
-                <th className="text-left py-2 text-xs text-slate-500 font-bold uppercase w-16">#</th>
-                <th className="text-left py-2 text-xs text-slate-500 font-bold uppercase">Action</th>
-                <th className="text-left py-2 text-xs text-slate-500 font-bold uppercase">Why</th>
-              </tr>
-            </thead>
-            <tbody>
-              {scores.priorityActions.map((action) => (
-                <tr key={action.priority} className="border-b border-slate-700/50">
-                  <td className="py-3 text-[#00D4FF] font-bold">{action.priority}</td>
-                  <td className="py-3 text-white font-medium">{action.action}</td>
-                  <td className="py-3 text-slate-400">{action.why}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* ===== CTA ===== */}
-      <div className="bg-gradient-to-br from-slate-800/80 to-slate-900/80 border border-slate-700/50 rounded-2xl p-8 mb-6">
-        <p className="text-lg font-bold text-[#E31B23] mb-6 text-center">{diagnoses.cta.headline}</p>
-        <h2 className="text-xl font-bold text-white mb-6 text-center">Next Steps</h2>
-        <div className="bg-slate-700/30 rounded-xl p-6 mb-4 border border-[#00D4FF]/20">
-          <h3 className="text-lg font-bold text-white mb-2">Get Your Own WTF Assessment</h3>
-          <p className="text-sm text-slate-400 mb-3">Want to see where your agency really stands? Take the assessment and get your personalized diagnostic report.</p>
           <a
-            href="/growthos"
-            className="inline-block px-6 py-3 rounded-xl bg-[#E31B23] text-white font-bold text-sm hover:shadow-lg hover:shadow-[#E31B23]/25 transition-all"
+            href="https://zcal.co/timkilroy/growthos"
+            className="bg-[#00D4FF] text-black px-4 py-2 font-anton text-sm uppercase tracking-wider hover:bg-[#00D4FF]/80 transition-colors"
+          >
+            Get Your Assessment
+          </a>
+        </div>
+      </header>
+
+      <main className="max-w-5xl mx-auto px-4 py-8 space-y-6">
+        {/* Example Banner */}
+        <div className="bg-[#1A1A1A] border-l-4 border-[#00D4FF] p-4">
+          <p className="text-sm text-[#B3B3B3]">
+            <span className="text-[#00D4FF] font-bold">SAMPLE REPORT</span> &mdash; This is a demo assessment with synthetic data for a fictional agency.
+          </p>
+        </div>
+
+        {/* ===== HEADER ===== */}
+        <div className="bg-[#111] border border-[#333] rounded-lg p-6">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h1 className="font-anton text-2xl text-white uppercase tracking-wide mb-1">
+                {intake.agencyName}
+              </h1>
+              <p className="text-[#666] text-sm">
+                Business Diagnostic &bull; {scores.segmentLabel}
+              </p>
+            </div>
+            <div className="text-right">
+              <div className="text-5xl font-anton" style={{ color: overallColor }}>{scores.overall.toFixed(1)}</div>
+              <div className="text-[#666] text-xs tracking-wider uppercase">Overall Score</div>
+              <div className="text-[#B3B3B3] text-xs mt-1">{scores.overallLabel}</div>
+            </div>
+          </div>
+        </div>
+
+        {/* ===== WTF ZONES HEATMAP ===== */}
+        <div className="bg-[#111] border border-[#333] rounded-lg p-6">
+          <h2 className="font-anton text-lg text-[#00D4FF] uppercase tracking-wider mb-5">
+            WTF Zones Heatmap
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
+            <ScoreBar score={zones.revenueQuality.score} label="Revenue Quality" narrative={zones.revenueQuality.insight} color={zones.revenueQuality.color} />
+            <ScoreBar score={zones.profitability.score} label="Profitability" narrative={zones.profitability.insight} color={zones.profitability.color} />
+            <ScoreBar score={zones.growthVsChurn.score} label="Growth vs Churn" narrative={zones.growthVsChurn.insight} color={zones.growthVsChurn.color} />
+            <ScoreBar score={zones.leadEngine.score} label="Lead Engine" narrative={zones.leadEngine.insight} color={zones.leadEngine.color} />
+            <ScoreBar score={zones.founderLoad.score} label="Founder Load" narrative={zones.founderLoad.insight} color={zones.founderLoad.color} />
+            <ScoreBar score={zones.systemsReadiness.score} label="Systems Readiness" narrative={zones.systemsReadiness.insight} color={zones.systemsReadiness.color} />
+            <ScoreBar score={zones.contentPositioning.score} label="Content & Positioning" narrative={zones.contentPositioning.insight} color={zones.contentPositioning.color} />
+            <ScoreBar score={zones.teamVisibility.score} label="Team Visibility" narrative={zones.teamVisibility.insight} color={zones.teamVisibility.color} />
+          </div>
+        </div>
+
+        {/* ===== ENRICHMENT ANALYSIS ===== */}
+        <AnalysisSection title="Positioning Coherence" score={analysis.positioningCoherence.score}>
+          <p className="text-sm text-[#B3B3B3] mb-4">{analysis.positioningCoherence.verdict}</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+            <div className="bg-[#1A1A1A] border border-[#333] rounded p-4">
+              <p className="text-[#666] text-xs font-bold uppercase mb-1">What Your Website Says</p>
+              <p className="text-sm text-[#B3B3B3]">{analysis.positioningCoherence.websiteMessage}</p>
+            </div>
+            <div className="bg-[#1A1A1A] border border-[#333] rounded p-4">
+              <p className="text-[#666] text-xs font-bold uppercase mb-1">What Your LinkedIn Says</p>
+              <p className="text-sm text-[#B3B3B3]">{analysis.positioningCoherence.linkedinMessage}</p>
+            </div>
+          </div>
+          <p className="text-sm text-[#B3B3B3] mb-4">Alignment: <span className="font-bold capitalize text-[#00D4FF]">{analysis.positioningCoherence.alignment}</span></p>
+          <GapsList gaps={analysis.positioningCoherence.gaps} />
+          <RecommendationsList recs={analysis.positioningCoherence.recommendations} />
+        </AnalysisSection>
+
+        <AnalysisSection title="Content-Market Fit" score={analysis.contentMarketFit.score}>
+          <p className="text-sm text-[#B3B3B3] mb-4">{analysis.contentMarketFit.verdict}</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+            <div className="bg-[#1A1A1A] border border-[#333] rounded p-4">
+              <p className="text-[#666] text-xs font-bold uppercase mb-2">Your Content Topics</p>
+              <div className="flex flex-wrap gap-1.5">
+                {analysis.contentMarketFit.topicsVsIcpProblems.topContentTopics.map((t, i) => (
+                  <span key={i} className="px-2 py-0.5 rounded bg-[#00D4FF]/10 text-[#00D4FF] text-xs">{t}</span>
+                ))}
+              </div>
+            </div>
+            <div className="bg-[#1A1A1A] border border-[#333] rounded p-4">
+              <p className="text-[#666] text-xs font-bold uppercase mb-2">What Your ICP Cares About</p>
+              <div className="flex flex-wrap gap-1.5">
+                {analysis.contentMarketFit.topicsVsIcpProblems.topIcpProblems.map((p, i) => (
+                  <span key={i} className="px-2 py-0.5 rounded bg-[#E51B23]/10 text-[#E51B23] text-xs">{p}</span>
+                ))}
+              </div>
+            </div>
+          </div>
+          <div className="mb-4">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[#666] text-xs font-bold uppercase">Content-Problem Overlap</span>
+              <span className="text-xs font-bold text-[#00D4FF]">{analysis.contentMarketFit.topicsVsIcpProblems.overlap}%</span>
+            </div>
+            <div className="h-2 bg-[#333] rounded-full overflow-hidden">
+              <div className="h-full bg-[#00D4FF] rounded-full" style={{ width: `${analysis.contentMarketFit.topicsVsIcpProblems.overlap}%` }} />
+            </div>
+          </div>
+          <GapsList gaps={analysis.contentMarketFit.gaps} />
+          <RecommendationsList recs={analysis.contentMarketFit.recommendations} />
+        </AnalysisSection>
+
+        <AnalysisSection title="Social Proof Alignment" score={analysis.socialProofAlignment.score}>
+          <p className="text-sm text-[#B3B3B3] mb-4">{analysis.socialProofAlignment.verdict}</p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+            <div className="bg-[#1A1A1A] border border-[#333] rounded p-4">
+              <p className="text-[#666] text-xs font-bold uppercase mb-1">Case Studies</p>
+              <p className="text-sm text-[#B3B3B3]">{analysis.socialProofAlignment.caseStudyRelevance}</p>
+            </div>
+            <div className="bg-[#1A1A1A] border border-[#333] rounded p-4">
+              <p className="text-[#666] text-xs font-bold uppercase mb-1">Testimonials</p>
+              <p className="text-sm text-[#B3B3B3]">{analysis.socialProofAlignment.testimonialStrength}</p>
+            </div>
+            <div className="bg-[#1A1A1A] border border-[#333] rounded p-4">
+              <p className="text-[#666] text-xs font-bold uppercase mb-1">Client Logos</p>
+              <p className="text-sm text-[#B3B3B3]">{analysis.socialProofAlignment.logoSignalStrength}</p>
+            </div>
+          </div>
+          <GapsList gaps={analysis.socialProofAlignment.gaps} />
+          <RecommendationsList recs={analysis.socialProofAlignment.recommendations} />
+        </AnalysisSection>
+
+        <AnalysisSection title="ICP Problem Awareness" score={analysis.icpProblemAwareness.score}>
+          <p className="text-sm text-[#B3B3B3] mb-4">{analysis.icpProblemAwareness.verdict}</p>
+          <div className="mb-4 overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-[#333]">
+                  <th className="text-left py-2 text-[#666] text-xs font-bold uppercase">Problem</th>
+                  <th className="text-center py-2 text-[#666] text-xs font-bold uppercase w-28">Addressed?</th>
+                  <th className="text-left py-2 text-[#666] text-xs font-bold uppercase">Where</th>
+                </tr>
+              </thead>
+              <tbody>
+                {analysis.icpProblemAwareness.problemCoverage.map((row, i) => (
+                  <tr key={i} className="border-b border-[#333]/50">
+                    <td className="py-2 text-[#B3B3B3]">{row.problem}</td>
+                    <td className="py-2 text-center">
+                      <span className={row.addressed ? "text-[#00D4FF]" : "text-[#E51B23]"}>
+                        {row.addressed ? "\u2713" : "\u2717"}
+                      </span>
+                    </td>
+                    <td className="py-2 text-[#666] text-xs">{row.where}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="mb-4">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[#666] text-xs font-bold uppercase">Problem Coverage</span>
+              <span className="text-xs font-bold text-[#00D4FF]">{analysis.icpProblemAwareness.coveragePercent}%</span>
+            </div>
+            <div className="h-2 bg-[#333] rounded-full overflow-hidden">
+              <div className="h-full bg-[#00D4FF] rounded-full" style={{ width: `${analysis.icpProblemAwareness.coveragePercent}%` }} />
+            </div>
+          </div>
+          <div className="mb-3">
+            <p className="text-[#E51B23] text-xs font-bold uppercase mb-2">PROBLEMS YOU&apos;RE NOT ADDRESSING</p>
+            <ul className="space-y-1">{analysis.icpProblemAwareness.missingProblems.map((p, i) => <li key={i} className="text-sm text-[#B3B3B3]">&bull; {p}</li>)}</ul>
+          </div>
+          <div className="mb-3">
+            <p className="text-[#00D4FF] text-xs font-bold uppercase mb-2">CONTENT OPPORTUNITIES</p>
+            <ul className="space-y-1">{analysis.icpProblemAwareness.contentOpportunities.map((c, i) => <li key={i} className="text-sm text-[#B3B3B3]">&bull; {c}</li>)}</ul>
+          </div>
+          <RecommendationsList recs={analysis.icpProblemAwareness.recommendations} />
+        </AnalysisSection>
+
+        {/* ===== AI DISCOVERABILITY ===== */}
+        <div className="bg-[#111] border border-[#333] rounded-lg p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-anton text-lg text-[#00D4FF] uppercase tracking-wider">AI Discoverability</h2>
+            <span className="text-2xl font-anton text-[#E51B23]">{llm.summary.score}%</span>
+          </div>
+          <div className="bg-[#1A1A1A] border-l-4 border-[#E51B23] p-4 mb-4">
+            <p className="text-[#E51B23] font-bold text-sm mb-1">You don&apos;t exist to AI.</p>
+            <p className="text-sm text-[#B3B3B3]">We asked Claude, ChatGPT, and Perplexity the kinds of questions your ICP would actually type &mdash; real problems, real revenue numbers, asking for specific help. You weren&apos;t mentioned. Not once.</p>
+          </div>
+          <div className="grid grid-cols-3 gap-4 mb-4">
+            {(["claude", "chatgpt", "perplexity"] as const).map(provider => (
+              <div key={provider} className="bg-[#0a0a0a] border border-[#333] p-4 rounded text-center">
+                <p className="text-[#666] text-xs capitalize mb-1">{provider}</p>
+                <p className="text-lg font-anton text-[#E51B23]">{"\u2717"} Not Found</p>
+              </div>
+            ))}
+          </div>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[#666] text-xs font-bold uppercase">AI Awareness Score</span>
+            <span className="text-xs font-bold text-[#00D4FF]">{llm.summary.score}%</span>
+          </div>
+          <div className="h-2 bg-[#333] rounded-full overflow-hidden mb-4">
+            <div className="h-full rounded-full bg-[#E51B23]" style={{ width: `${Math.max(llm.summary.score, 2)}%` }} />
+          </div>
+          <div className="bg-[#1A1A1A] border border-[#333] rounded p-4">
+            <p className="text-[#666] text-xs font-bold uppercase mb-2">What Buyers Are Asking AI Right Now</p>
+            <div className="mb-3 space-y-1">
+              {llm.summary.queriesUsed.map((q, i) => (
+                <p key={i} className="text-sm text-white bg-black/50 rounded px-3 py-2 italic">&ldquo;{q}&rdquo;</p>
+              ))}
+            </div>
+            <p className="text-sm text-[#B3B3B3] mb-2">We asked Claude, ChatGPT, and Perplexity these exact questions. You weren&apos;t mentioned. Not once.</p>
+            <ul className="space-y-1 text-sm text-[#B3B3B3]">
+              <li>&bull; AI is increasingly how people research purchases</li>
+              <li>&bull; Your competitors ARE showing up</li>
+              <li>&bull; This gap will widen, not shrink</li>
+            </ul>
+            <p className="text-sm text-[#00D4FF] mt-3 font-medium">The fix: become the answer. Your ICP is asking questions like &ldquo;{llm.summary.queriesUsed[0]}&rdquo; right now. You need content that answers those exact questions &mdash; not thought leadership, not brand awareness. Specific, tactical answers to specific problems. That&apos;s how you get cited.</p>
+          </div>
+        </div>
+
+        {/* ===== REALITY CHECKS ===== */}
+        <div className="space-y-6">
+          <div className="bg-[#111] border border-[#333] rounded-lg p-6">
+            <h2 className="font-anton text-lg text-[#00D4FF] uppercase tracking-wider mb-5">What You&apos;re Doing Right</h2>
+            <div className="space-y-4">
+              {scores.realityChecks.filter(c => c.type === "celebration").map((check) => (
+                <div key={check.id} className="bg-[#1A1A1A] border border-[#333] border-l-4 border-l-green-500/50 rounded p-4">
+                  <h3 className="text-sm font-bold text-green-500 mb-2">{check.title}</h3>
+                  <p className="text-sm text-[#B3B3B3]">{check.body}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="bg-[#111] border border-[#333] rounded-lg p-6">
+            <h2 className="font-anton text-lg text-[#E51B23] uppercase tracking-wider mb-5">Reality Checks</h2>
+            <div className="space-y-4">
+              {scores.realityChecks.filter(c => c.type !== "celebration").map((check) => (
+                <div key={check.id} className="bg-[#1A1A1A] border border-[#333] border-l-4 border-l-[#E51B23] rounded p-4">
+                  <h3 className="text-sm font-bold text-[#E51B23] mb-2">{check.title}</h3>
+                  <p className="text-sm text-[#B3B3B3]">{check.body}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* ===== UNIT ECONOMICS ===== */}
+        <div className="bg-[#111] border border-[#333] rounded-lg p-6">
+          <h2 className="font-anton text-lg text-[#00D4FF] uppercase tracking-wider mb-5">Unit Economics</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
+            <div className="bg-[#0a0a0a] border border-[#333] p-4 rounded text-center">
+              <p className="text-2xl font-anton text-white">{fmtCurrency(scores.ltvMetrics.avgClientValue)}</p>
+              <p className="text-[#666] text-xs tracking-wider uppercase mt-1">Avg Monthly</p>
+            </div>
+            <div className="bg-[#0a0a0a] border border-[#333] p-4 rounded text-center">
+              <p className="text-2xl font-anton text-white">{scores.ltvMetrics.avgClientLifetimeMonths}mo</p>
+              <p className="text-[#666] text-xs tracking-wider uppercase mt-1">Avg Lifetime</p>
+            </div>
+            <div className="bg-[#0a0a0a] border border-[#333] p-4 rounded text-center">
+              <p className="text-2xl font-anton text-[#00D4FF]">{fmtCurrency(scores.ltvMetrics.ltv)}</p>
+              <p className="text-[#666] text-xs tracking-wider uppercase mt-1">Client LTV</p>
+            </div>
+            <div className="bg-[#0a0a0a] border border-[#333] p-4 rounded text-center">
+              <p className="text-2xl font-anton text-green-500">{scores.ltvMetrics.ltvCacRatio}x</p>
+              <p className="text-[#666] text-xs tracking-wider uppercase mt-1">LTV:CAC</p>
+            </div>
+          </div>
+          <div className="bg-[#1A1A1A] border border-[#333] rounded p-4">
+            <p className="text-sm text-[#B3B3B3]">{scores.ltvMetrics.ltvCacAssessment}</p>
+            <p className="text-xs text-[#666] mt-2">Estimated CAC: {fmtCurrency(scores.ltvMetrics.estimatedCAC)} (based on lead sources, volume, and close rate)</p>
+          </div>
+        </div>
+
+        {/* ===== DIAGNOSES ===== */}
+        <DiagnosisSection title="The Founder Tax" content={diagnoses.founderTax} color="#E51B23" />
+        <DiagnosisSection title="The Pipeline Probability" content={diagnoses.pipeline} color="#00D4FF" />
+        <DiagnosisSection title="The Authority Gap" content={diagnoses.authority} color="#E51B23" />
+        <DiagnosisSection title="The Positioning Collision" content={diagnoses.positioning} color="#00D4FF" />
+        <DiagnosisSection title="The Trajectory Fork" content={diagnoses.trajectory} color="#00D4FF" />
+
+        {/* ===== GROWTH LEVERS ===== */}
+        <div className="bg-[#111] border border-[#333] rounded-lg p-6">
+          <h2 className="font-anton text-lg text-[#00D4FF] uppercase tracking-wider mb-5">Growth Levers</h2>
+          <div className="space-y-4">
+            {scores.growthLevers.map((lever, i) => (
+              <GrowthLeverCard key={i} lever={lever} />
+            ))}
+          </div>
+        </div>
+
+        {/* ===== FOUNDER OS ===== */}
+        <div className="bg-[#111] border border-[#333] rounded-lg p-6">
+          <h2 className="font-anton text-lg text-[#00D4FF] uppercase tracking-wider mb-5">Founder Operating System</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
+            <div className="bg-[#0a0a0a] border border-[#333] p-4 rounded text-center">
+              <p className="text-2xl font-anton text-[#E51B23]">{scores.founderOS.delegationScore.toFixed(1)}</p>
+              <p className="text-[#666] text-xs tracking-wider uppercase mt-1">Delegation</p>
+            </div>
+            <div className="bg-[#0a0a0a] border border-[#333] p-4 rounded text-center">
+              <p className="text-2xl font-anton text-[#E51B23]">{scores.founderOS.onVsInRatio}%</p>
+              <p className="text-[#666] text-xs tracking-wider uppercase mt-1">ON vs IN</p>
+            </div>
+            <div className="bg-[#0a0a0a] border border-[#E51B23] p-4 rounded text-center">
+              <p className="text-2xl font-anton capitalize text-[#E51B23]">{scores.founderOS.burnoutRisk}</p>
+              <p className="text-[#666] text-xs tracking-wider uppercase mt-1">Burnout Risk</p>
+            </div>
+            <div className="bg-[#0a0a0a] border border-[#333] p-4 rounded text-center">
+              <p className="text-2xl font-anton text-white">{scores.founderOS.bottleneckAreas.length}</p>
+              <p className="text-[#666] text-xs tracking-wider uppercase mt-1">Bottlenecks</p>
+            </div>
+          </div>
+          <p className="text-sm text-[#B3B3B3] mb-2">{scores.founderOS.delegationNarrative}</p>
+          <p className="text-sm text-[#666] mb-2">{scores.founderOS.onVsInNarrative}</p>
+          <p className="text-sm text-[#666] mt-2">
+            <strong className="text-white">Bottlenecks:</strong> {scores.founderOS.bottleneckAreas.join(", ")}
+          </p>
+        </div>
+
+        {/* ===== PRIORITY ACTIONS ===== */}
+        <div className="bg-[#111] border border-[#333] rounded-lg p-6">
+          <h2 className="font-anton text-lg text-[#00D4FF] uppercase tracking-wider mb-5">Priority Actions</h2>
+          <p className="text-sm text-[#666] mb-4">Based on everything above, here&apos;s what matters in order:</p>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-[#333]">
+                  <th className="text-left py-2 text-[#666] text-xs font-bold uppercase w-16">#</th>
+                  <th className="text-left py-2 text-[#666] text-xs font-bold uppercase">Action</th>
+                  <th className="text-left py-2 text-[#666] text-xs font-bold uppercase">Why</th>
+                </tr>
+              </thead>
+              <tbody>
+                {scores.priorityActions.map((action) => (
+                  <tr key={action.priority} className="border-b border-[#333]/50">
+                    <td className="py-3 text-[#00D4FF] font-anton">{action.priority}</td>
+                    <td className="py-3 text-white font-medium">{action.action}</td>
+                    <td className="py-3 text-[#B3B3B3]">{action.why}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* ===== CTA ===== */}
+        <div className="bg-[#00D4FF] rounded-lg p-8 text-center">
+          <p className="font-anton text-black text-sm uppercase tracking-wider mb-2">{diagnoses.cta.headline}</p>
+          <h2 className="font-anton text-2xl text-black uppercase tracking-wide mb-6">
+            Next Steps
+          </h2>
+          <div className="bg-black/20 rounded p-6 mb-4 text-left max-w-lg mx-auto">
+            <h3 className="font-anton text-black text-lg mb-2">45-Minute Roadmap Consultation</h3>
+            <p className="text-sm text-black/80 mb-3">Let&apos;s fix this together. In 45 minutes, we&apos;ll:</p>
+            <ul className="text-sm text-black/80 space-y-1 mb-4">
+              <li>&bull; Prioritize your positioning fix</li>
+              <li>&bull; Map your founder escape route</li>
+              <li>&bull; Build your 90-day action plan</li>
+            </ul>
+          </div>
+          <a
+            href="https://zcal.co/timkilroy/growthos"
+            className="inline-block bg-black text-white px-8 py-4 font-anton text-lg tracking-wider hover:bg-[#111] transition-colors"
           >
             Take Your Assessment &rarr;
           </a>
         </div>
+
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <a href="https://timkilroy.com" target="_blank" rel="noopener noreferrer" className="bg-slate-700/30 rounded-xl p-5 border border-slate-700/50 hover:border-[#00D4FF]/30 transition-all block">
+          <a href="https://zcal.co/timkilroy/growthos" className="bg-[#111] border border-[#333] rounded-lg p-5 hover:border-[#00D4FF]/50 transition-colors block">
             <h4 className="font-bold text-white mb-1">Coaching &amp; Consulting</h4>
-            <p className="text-xs text-slate-400">Explore our programs &rarr;</p>
+            <p className="text-xs text-[#666]">Explore our programs &rarr;</p>
           </a>
-          <a href="https://agencyinnercircle.com" target="_blank" rel="noopener noreferrer" className="bg-slate-700/30 rounded-xl p-5 border border-slate-700/50 hover:border-[#00D4FF]/30 transition-all block">
+          <a href="https://www.skool.com/agency-inner-circle" target="_blank" rel="noopener noreferrer" className="bg-[#111] border border-[#333] rounded-lg p-5 hover:border-[#00D4FF]/50 transition-colors block">
             <h4 className="font-bold text-white mb-1">The Agency Inner Circle</h4>
-            <p className="text-xs text-slate-400">Free community for agency owners. Join free &rarr;</p>
+            <p className="text-xs text-[#666]">Free community for agency owners. Join free &rarr;</p>
           </a>
         </div>
-      </div>
 
-      {/* ===== FOOTER ===== */}
-      <div className="flex gap-4 mt-4 mb-12">
-        <a
-          href="/growthos"
-          className="flex-1 text-center py-3 rounded-xl bg-[#E31B23] text-white font-bold text-sm hover:shadow-lg hover:shadow-[#E31B23]/25 transition-all"
-        >
-          Take Your Assessment &rarr;
-        </a>
-      </div>
+        {/* ===== FOOTER ===== */}
+        <footer className="border-t border-[#333] pt-8 mt-2">
+          <div className="flex items-center justify-between">
+            <div className="font-anton text-sm tracking-wide">
+              <span className="text-white">GROWTH</span>
+              <span className="text-[#00D4FF]">OS</span>
+            </div>
+            <span className="text-[#666] text-sm">Example data &bull; Not a real report</span>
+          </div>
+        </footer>
+      </main>
     </div>
   );
 }

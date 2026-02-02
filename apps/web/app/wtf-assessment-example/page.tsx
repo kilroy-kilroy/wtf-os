@@ -896,7 +896,7 @@ export default function WTFAssessmentExample() {
             href="https://zcal.co/timkilroy/growthos"
             className="inline-block bg-black text-white px-8 py-4 font-anton text-lg tracking-wider hover:bg-[#111] transition-colors"
           >
-            Book Your Roadmap Call &rarr;
+            Take Your Assessment &rarr;
           </a>
         </div>
 

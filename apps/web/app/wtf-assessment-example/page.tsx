@@ -542,7 +542,7 @@ export default function WTFAssessmentExample() {
             <span className="text-[#00D4FF]">OS</span>
           </div>
           <a
-            href="https://zcal.co/timkilroy/growthos"
+            href="/growthos"
             className="bg-[#00D4FF] text-black px-4 py-2 font-anton text-sm uppercase tracking-wider hover:bg-[#00D4FF]/80 transition-colors"
           >
             Get Your Assessment
@@ -884,16 +884,17 @@ export default function WTFAssessmentExample() {
             Next Steps
           </h2>
           <div className="bg-black/20 rounded p-6 mb-4 text-left max-w-lg mx-auto">
-            <h3 className="font-anton text-black text-lg mb-2">45-Minute Roadmap Consultation</h3>
-            <p className="text-sm text-black/80 mb-3">Let&apos;s fix this together. In 45 minutes, we&apos;ll:</p>
+            <h3 className="font-anton text-black text-lg mb-2">Get Your Own WTF Assessment</h3>
+            <p className="text-sm text-black/80 mb-3">Take the 10-minute assessment and get:</p>
             <ul className="text-sm text-black/80 space-y-1 mb-4">
-              <li>&bull; Prioritize your positioning fix</li>
-              <li>&bull; Map your founder escape route</li>
-              <li>&bull; Build your 90-day action plan</li>
+              <li>&bull; Your personalized WTF Zones score across 8 business dimensions</li>
+              <li>&bull; AI-powered analysis of your positioning, content, and market visibility</li>
+              <li>&bull; Custom growth levers ranked by impact for your agency</li>
+              <li>&bull; Your Founder Tax calculation and delegation roadmap</li>
             </ul>
           </div>
           <a
-            href="https://zcal.co/timkilroy/growthos"
+            href="/growthos"
             className="inline-block bg-black text-white px-8 py-4 font-anton text-lg tracking-wider hover:bg-[#111] transition-colors"
           >
             Take Your Assessment &rarr;
@@ -901,11 +902,11 @@ export default function WTFAssessmentExample() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <a href="https://zcal.co/timkilroy/growthos" className="bg-[#111] border border-[#333] rounded-lg p-5 hover:border-[#00D4FF]/50 transition-colors block">
+          <a href="https://timkilroy.com" target="_blank" rel="noopener noreferrer" className="bg-[#111] border border-[#333] rounded-lg p-5 hover:border-[#00D4FF]/50 transition-colors block">
             <h4 className="font-bold text-white mb-1">Coaching &amp; Consulting</h4>
             <p className="text-xs text-[#666]">Explore our programs &rarr;</p>
           </a>
-          <a href="https://www.skool.com/agency-inner-circle" target="_blank" rel="noopener noreferrer" className="bg-[#111] border border-[#333] rounded-lg p-5 hover:border-[#00D4FF]/50 transition-colors block">
+          <a href="https://agencyinnercircle.com" target="_blank" rel="noopener noreferrer" className="bg-[#111] border border-[#333] rounded-lg p-5 hover:border-[#00D4FF]/50 transition-colors block">
             <h4 className="font-bold text-white mb-1">The Agency Inner Circle</h4>
             <p className="text-xs text-[#666]">Free community for agency owners. Join free &rarr;</p>
           </a>

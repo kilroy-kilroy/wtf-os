@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { getSubscriptionStatus } from '@/lib/subscription';
 import ChangePasswordButton from '@/components/ChangePasswordButton';
 import { FirefliesIntegration } from '@/components/FirefliesIntegration';
+import { ZoomIntegration } from '@/components/ZoomIntegration';
 
 export default async function SettingsPage() {
   const supabase = createServerComponentClient({ cookies });
@@ -235,23 +236,7 @@ export default async function SettingsPage() {
             <FirefliesIntegration />
 
             {/* Zoom */}
-            <div className="flex items-center justify-between py-3">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-[#111] border border-[#333] rounded flex items-center justify-center">
-                  <span className="text-lg">📹</span>
-                </div>
-                <div>
-                  <span className="text-white font-medium">Zoom</span>
-                  <p className="text-xs text-[#666]">Import recordings directly</p>
-                </div>
-              </div>
-              <button
-                className="border border-[#333] rounded px-3 py-1.5 text-[#666] text-sm cursor-not-allowed"
-                disabled
-              >
-                Coming Soon
-              </button>
-            </div>
+            <ZoomIntegration />
 
             <p className="text-xs text-[#666] text-center pt-4">
               More integrations coming soon. Have a request?{' '}

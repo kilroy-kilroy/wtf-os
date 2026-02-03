@@ -18,6 +18,12 @@ function getSupabaseAdmin() {
   );
 }
 
+/** Sanitize user-controlled strings before logging to prevent log injection */
+function sanitizeForLog(value: string | undefined | null): string {
+  if (!value) return '';
+  return value.replace(/[\r\n\t]/g, ' ').slice(0, 200);
+}
+
 interface ZoomWebhookPayload {
   event: string;
   payload: {
@@ -110,12 +116,16 @@ async function processTranscriptCompleted(
   duration?: number,
   startTime?: string
 ) {
-  console.log('[Zoom Webhook] Processing transcript for meeting:', { meetingId, topic, hostEmail });
+  console.log('[Zoom Webhook] Processing transcript for meeting:', {
+    meetingId: sanitizeForLog(meetingId),
+    topic: sanitizeForLog(topic),
+    hostEmail: sanitizeForLog(hostEmail),
+  });
 
   // Find the user who connected this Zoom account
   const user = await findUserByZoomEmail(hostEmail);
   if (!user) {
-    console.log('[Zoom Webhook] No user found for Zoom email:', hostEmail);
+    console.log('[Zoom Webhook] No user found for Zoom email:', sanitizeForLog(hostEmail));
     return { success: false, reason: 'user_not_found' };
   }
 
@@ -259,9 +269,9 @@ export async function POST(request: Request) {
     switch (event) {
       case 'recording.completed': {
         console.log('[Zoom Webhook] Recording completed:', {
-          meetingId: payload?.id,
-          topic: payload?.topic,
-          hostEmail: payload?.host_email,
+          meetingId: sanitizeForLog(String(payload?.id)),
+          topic: sanitizeForLog(payload?.topic),
+          hostEmail: sanitizeForLog(payload?.host_email),
         });
         // Recording completed - we'll wait for transcript_completed if we want the transcript
         // Or we could store the recording info for later processing
@@ -270,9 +280,9 @@ export async function POST(request: Request) {
 
       case 'recording.transcript_completed': {
         console.log('[Zoom Webhook] Transcript completed:', {
-          meetingId: payload?.id,
-          topic: payload?.topic,
-          hostEmail: payload?.host_email,
+          meetingId: sanitizeForLog(String(payload?.id)),
+          topic: sanitizeForLog(payload?.topic),
+          hostEmail: sanitizeForLog(payload?.host_email),
         });
 
         if (payload?.host_email && payload?.uuid) {
@@ -295,7 +305,7 @@ export async function POST(request: Request) {
       }
 
       default:
-        console.log('[Zoom Webhook] Unhandled event:', event);
+        console.log('[Zoom Webhook] Unhandled event:', sanitizeForLog(event));
     }
 
     return NextResponse.json({ success: true });

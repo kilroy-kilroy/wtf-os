@@ -1,0 +1,157 @@
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DemandOS Visibility Engine</title>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-731QHS2TBX"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'G-731QHS2TBX');
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              brand: {
+                red: '#E51B23',
+                black: '#000000',
+                yellow: '#FFDE59',
+                white: '#FFFFFF',
+                gray: '#1A1A1A'
+              }
+            },
+            fontFamily: {
+              anton: ['Anton', 'sans-serif'],
+              poppins: ['Poppins', 'sans-serif'],
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+      body {
+        background-color: #000000;
+        color: #FFFFFF;
+        font-family: 'Poppins', sans-serif;
+      }
+      h1, h2, h3, h4, h5, h6 {
+        font-family: 'Anton', sans-serif;
+        text-transform: uppercase;
+      }
+      /* Custom Scrollbar for that OS feel */
+      ::-webkit-scrollbar {
+        width: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #1a1a1a; 
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #E51B23; 
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #ff4444; 
+      }
+
+      /* PRINT STYLES FOR PDF EXPORT */
+      @media print {
+        body {
+          background-color: white !important;
+          color: black !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+        
+        /* Hide UI elements */
+        button, header button, .no-print {
+          display: none !important;
+        }
+
+        /* Reset layout constraints */
+        .min-h-screen {
+          min-height: auto !important;
+        }
+        .max-w-7xl {
+          max-width: 100% !important;
+          margin: 0 !important;
+          padding: 0 !important;
+        }
+        
+        /* Force background colors for key elements */
+        .bg-black {
+          background-color: #f4f4f4 !important;
+          border: 1px solid #ddd !important;
+          color: black !important;
+        }
+        .bg-brand-gray {
+          background-color: white !important;
+          border: 1px solid #000 !important;
+          color: black !important;
+        }
+        
+        /* Brand colors in print */
+        .text-white {
+          color: black !important;
+        }
+        .text-gray-400, .text-gray-300 {
+          color: #444 !important;
+        }
+        .bg-brand-red {
+          background-color: #E51B23 !important;
+          color: white !important;
+        }
+        .text-brand-red {
+          color: #E51B23 !important;
+        }
+        .border-brand-red {
+          border-color: #E51B23 !important;
+        }
+        .text-brand-yellow {
+          color: #d4b200 !important; /* Darker yellow for readability on white */
+          font-weight: bold !important;
+        }
+        
+        /* Ensure Grid works */
+        .grid {
+          display: grid !important;
+          break-inside: avoid;
+        }
+        
+        /* Page breaks */
+        h3, .section-break {
+          break-before: auto;
+          page-break-inside: avoid;
+        }
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react/": "https://aistudiocdn.com/react@^18.3.1/",
+    "react": "https://aistudiocdn.com/react@^18.3.1",
+    "recharts": "https://aistudiocdn.com/recharts@^2.12.7",
+    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.300.0",
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.30.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^18.3.1/",
+    "vite": "https://aistudiocdn.com/vite@^5.0.0",
+    "@vitejs/plugin-react": "https://aistudiocdn.com/@vitejs/plugin-react@^4.2.0"
+  }
+}
+</script>
+</head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="./index.tsx"></script>
+  </body>
+</html>

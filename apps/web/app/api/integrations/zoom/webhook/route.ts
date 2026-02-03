@@ -10,11 +10,13 @@ import {
   ZoomTokens,
 } from '@/lib/zoom';
 
-// Create Supabase admin client for webhook operations
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Lazy-initialize Supabase admin client to avoid build-time errors
+function getSupabaseAdmin() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+}
 
 interface ZoomWebhookPayload {
   event: string;
@@ -42,7 +44,7 @@ interface ZoomWebhookPayload {
  */
 async function findUserByZoomEmail(zoomEmail: string) {
   // Query users where preferences.integrations.zoom.userEmail matches
-  const { data: users, error } = await supabaseAdmin
+  const { data: users, error } = await getSupabaseAdmin()
     .from('users')
     .select('id, email, preferences')
     .filter('preferences->integrations->zoom->userEmail', 'eq', zoomEmail);
@@ -69,7 +71,7 @@ async function createIngestionItem(
     hostEmail?: string;
   }
 ) {
-  const { data, error } = await supabaseAdmin.from('ingestion_items').insert({
+  const { data, error } = await getSupabaseAdmin().from('ingestion_items').insert({
     user_id: userId,
     source_type: 'transcript',
     source_channel: 'zoom',
@@ -136,7 +138,7 @@ async function processTranscriptCompleted(
   // Persist refreshed tokens if needed
   if (updatedTokens) {
     const existingPreferences = user.preferences || {};
-    await supabaseAdmin
+    await getSupabaseAdmin()
       .from('users')
       .update({
         preferences: {

@@ -2,13 +2,17 @@ import { NextResponse } from 'next/server';
 import { Resend } from 'resend';
 import { createClient } from '@supabase/supabase-js';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Lazy-initialize clients to avoid build-time errors when env vars aren't available
+function getResend() {
+  return new Resend(process.env.RESEND_API_KEY);
+}
 
-// Create Supabase admin client for storing support tickets
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+function getSupabaseAdmin() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+}
 
 interface SupportRequest {
   name: string;
@@ -58,6 +62,7 @@ export async function POST(request: Request) {
     };
 
     // Send notification to support team
+    const resend = getResend();
     const supportEmail = process.env.SUPPORT_EMAIL || 'support@timkilroy.com';
 
     try {
@@ -133,7 +138,7 @@ export async function POST(request: Request) {
     try {
       // Check if support_tickets table exists by attempting insert
       // If it fails, we just log and continue
-      await supabaseAdmin.from('support_tickets').insert({
+      await getSupabaseAdmin().from('support_tickets').insert({
         ticket_id: ticketId,
         name: body.name,
         email: body.email,

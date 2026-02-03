@@ -10,6 +10,7 @@ import {
 } from '@/components/console';
 import { CallLabLogo } from '@/components/CallLabLogo';
 import { FirefliesTranscriptSelector } from '@/components/FirefliesTranscriptSelector';
+import { ZoomRecordingSelector } from '@/components/ZoomRecordingSelector';
 
 // Union type for both response formats
 type AnalysisResult =
@@ -333,10 +334,20 @@ export default function CallLabPage() {
                     }}
                   />
 
+                  {/* Zoom Import Option */}
+                  <ZoomRecordingSelector
+                    onSelect={(transcript) => {
+                      setFormData((prev) => ({
+                        ...prev,
+                        transcript: transcript.text,
+                      }));
+                    }}
+                  />
+
                   <ConsoleInput
                     multiline
                     rows={16}
-                    placeholder="Paste your call transcript here... Or import from Fireflies above."
+                    placeholder="Paste your call transcript here... Or import from Fireflies/Zoom above."
                     label="CALL TRANSCRIPT *"
                     required
                     value={formData.transcript}

@@ -12,6 +12,7 @@ import {
 } from '@/components/console';
 import { PatternTag } from '@/components/pattern-tag';
 import { FirefliesTranscriptSelector } from '@/components/FirefliesTranscriptSelector';
+import { ZoomRecordingSelector } from '@/components/ZoomRecordingSelector';
 import Image from 'next/image';
 
 // Helper to safely extract score value (handles both number and {score, reason} format)
@@ -827,10 +828,20 @@ export default function CallLabProPage() {
                     }}
                   />
 
+                  {/* Zoom Import Option */}
+                  <ZoomRecordingSelector
+                    onSelect={(transcript) => {
+                      setFormData((prev) => ({
+                        ...prev,
+                        transcript: transcript.text,
+                      }));
+                    }}
+                  />
+
                   <ConsoleInput
                     multiline
                     rows={16}
-                    placeholder="Paste your call transcript here... Or import from Fireflies above."
+                    placeholder="Paste your call transcript here... Or import from Fireflies/Zoom above."
                     label="CALL TRANSCRIPT *"
                     required
                     value={formData.transcript}

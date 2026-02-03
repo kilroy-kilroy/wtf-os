@@ -361,7 +361,7 @@ export function verifyWebhookRequest(
   signature: string
 ): boolean {
   const crypto = require('crypto');
-  const secretToken = process.env.ZOOM_WEBHOOK_SECRET_TOKEN;
+  const secretToken = process.env.ZOOM_WEBHOOK_SECRET;
 
   if (!secretToken) return false;
 

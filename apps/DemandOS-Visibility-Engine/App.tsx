@@ -10,7 +10,8 @@ import { Globe, Linkedin, Instagram, Youtube, Mail, FileText } from 'lucide-reac
 
 // --- CONFIGURATION ---
 // Paste your Zapier Webhook URL here to hardcode it (avoids using the UI settings)
-const HARDCODED_WEBHOOK_URL = "https://hooks.zapier.com/hooks/catch/1852580/uzksxsr/"; 
+const HARDCODED_WEBHOOK_URL = "";
+// Example: "https://hooks.zapier.com/hooks/catch/123456/abcdef/" 
 
 const App: React.FC = () => {
   // Initialize state from localStorage

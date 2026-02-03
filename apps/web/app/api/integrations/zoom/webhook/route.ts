@@ -227,7 +227,7 @@ export async function POST(request: Request) {
     // Handle Zoom URL validation challenge
     if (parsed.event === 'endpoint.url_validation') {
       const crypto = require('crypto');
-      const secretToken = process.env.ZOOM_WEBHOOK_SECRET_TOKEN;
+      const secretToken = process.env.ZOOM_WEBHOOK_SECRET;
 
       if (!secretToken) {
         return NextResponse.json({ error: 'Webhook secret not configured' }, { status: 500 });

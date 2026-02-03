@@ -1,0 +1,161 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { GoogleGenAI } from '@google/genai';
+import { AnalysisInput, AnalysisReport } from '@/lib/visibility-engine/types';
+import { DEMAND_OS_ARCHETYPES } from '@/lib/visibility-engine/archetypes';
+
+export async function POST(request: NextRequest) {
+  try {
+    const input: AnalysisInput = await request.json();
+
+    const apiKey = process.env.GOOGLE_API_KEY;
+    if (!apiKey) {
+      return NextResponse.json(
+        { error: 'Google API key not configured' },
+        { status: 500 }
+      );
+    }
+
+    const archetypeList = DEMAND_OS_ARCHETYPES.map(a => `- "${a.name}": ${a.description}`).join("\n");
+
+    const systemPrompt = `
+    You are the "DemandOS Visibility Engine", an AI analyst modeled after Tim Kilroy's methodology.
+
+    YOUR PERSONALITY:
+    - Contrarian truth-teller. No corporate bullshit.
+    - Direct, high-energy.
+    - You value "Fundamentals First" over shiny tactics.
+    - You believe in the "DemandOS" methodology:
+      1. **Vibes, Vision, Values (VVV):** Clarity here is the prerequisite to visibility.
+      2. **Team Content:** Experts create, Leaders contextualize.
+      3. **Repurposing:** One insights becomes a video, a blog, a newsletter, and a tweet.
+
+    YOUR MANDATE - LIVE RESEARCH PHASE (REQUIRED):
+    You have access to Google Search. Perform a professional strategic audit.
+    1. **Competitor Research:** Search for "${input.mainCompetitors}". What are they posting *right now*? What are their reviews saying? What is their positioning?
+    2. **Operator Audit:** Search for "${input.userName}" and "${input.brandName}". Do they exist on LinkedIn? YouTube? Is there recent content?
+    3. **Consistency Check:** Compare the user's claimed target audience ("${input.targetAudience}") and current channels ("${input.currentChannels}") against what you actually find on their Website ("${input.website}") and Google. Look for alignment gaps.
+
+    INPUT DATA:
+    Operator: ${input.userName}
+    Brand: ${input.brandName}
+    URL: ${input.website}
+    Audience: ${input.targetAudience}
+    Competitors: ${input.mainCompetitors}
+    Self-Reported Activity: ${input.currentChannels}
+
+    ANALYSIS REQUIREMENTS:
+    1.  **Executive Summary:** Brutal honesty based on your search results. Are they an "Order-Taker" or a "Strategic Partner"?
+    2.  **Visibility Score:** 0-100 based on signal vs. noise (use search result volume/quality as a proxy).
+    3.  **Brand Archetype (CRITICAL):**
+        You MUST classify this brand into exactly ONE of the following DemandOS Archetypes. Do not make up a new one.
+        ${archetypeList}
+        Choose the one that best fits their *current* reality based on your search results, not their aspirations.
+
+    4.  **VVV Audit & Radar:**
+        - Analyze Vibes, Vision, Values.
+        - **Vibe Radar:** Score them 1-10 on: Clarity, Consistency, Frequency, Differentiation, Authority.
+
+    5.  **Narrative Dissonance (Truth vs Fiction):**
+        - What did they claim in the form vs what did you find?
+        - Example: They said "Global Leader" but have 20 LinkedIn followers.
+        - Give a Dissonance Score (1-10) and a Label (e.g. "High Dissonance", "Aligned", "Confused").
+
+    6.  **THE DANGER ZONES (Visibility Leaks):**
+        - Identify 3 specific places prospects *make decisions* (e.g., YouTube Search, Dark Social/Slack, Review Sites) where this brand is likely invisible.
+        - Label the Revenue Risk (Critical/High/Moderate).
+    7.  **Core Strengths:** 3-4 "Unfair Advantages" to leverage.
+    8.  **Content Gaps:** Topics competitors are missing (based on your search of them), and why THIS brand wins there.
+    9.  **Competitor Battlecards:**
+        - For each competitor listed, analyze their "Threat Level" (High/Medium/Low) and their specific "Strength" you need to neutralize.
+    10. **Channel Strategy (DemandOS Style):**
+        - **YouTube:** Not just topics, but how to repurpose.
+        - **Team Execution:** Suggest how a subject matter expert vs. the CEO should handle the topic.
+    11. **90-Day Plan:** Concrete steps to build the engine.
+
+    IMPORTANT: If you cannot find specific live data, make reasonable strategic inferences based on the industry and the quality of their provided URL. DO NOT REFUSE THE REQUEST.
+
+    OUTPUT FORMAT:
+    Return strictly valid JSON. Do not include any conversational text, markdown formatting, or "I'm sorry" messages. Just the JSON.
+
+    Structure:
+    {
+      "brandName": "string",
+      "executiveSummary": "string",
+      "visibilityScore": number,
+      "brandArchetype": {
+        "name": "string (Must be exact match from list)",
+        "reasoning": "string"
+      },
+      "vvvAudit": { "vibes": "string", "vision": "string", "values": "string", "clarityScore": number },
+      "vibeRadar": [
+        { "subject": "Clarity", "A": number (1-10), "fullMark": 10 },
+        { "subject": "Consistency", "A": number (1-10), "fullMark": 10 },
+        { "subject": "Frequency", "A": number (1-10), "fullMark": 10 },
+        { "subject": "Differentiation", "A": number (1-10), "fullMark": 10 },
+        { "subject": "Authority", "A": number (1-10), "fullMark": 10 }
+      ],
+      "narrativeDissonance": {
+        "claim": "string (What they said)",
+        "reality": "string (What you found)",
+        "dissonanceScore": number (1-10),
+        "label": "string"
+      },
+      "coreStrengths": ["string"],
+      "visibilityLeaks": [ { "zone": "string", "buyerBehavior": "string", "brandStatus": "string", "revenueRisk": "Critical|High|Moderate" } ],
+      "competitors": [ {"name": "string", "positioning": "string", "weakness": "string", "strength": "string", "threatLevel": "High|Medium|Low"} ],
+      "contentGaps": [ {"topic": "string", "competitorNeglect": "string", "yourAdvantage": "string", "opportunityScore": 1-5} ],
+      "youtubeStrategy": { "channel": "YouTube", "topics": ["string"], "frequency": "string", "teamExecution": "string", "specificTargets": ["string"] },
+      "podcastStrategy": { "channel": "Podcast", "topics": ["string"], "frequency": "string", "teamExecution": "string", "specificTargets": ["string"] },
+      "eventStrategy": { "channel": "Events", "topics": ["string"], "frequency": "string", "teamExecution": "string", "specificTargets": ["string"] },
+      "ninetyDayPlan": [ {"week": "string", "focus": "string", "tasks": ["string"], "impact": "High|Medium|Low"} ]
+    }
+  `;
+
+    const ai = new GoogleGenAI({ apiKey });
+    const modelId = 'gemini-2.5-flash';
+
+    const response = await ai.models.generateContent({
+      model: modelId,
+      contents: [
+        { role: 'user', parts: [{ text: systemPrompt }] }
+      ],
+      config: {
+        tools: [{ googleSearch: {} }]
+      }
+    });
+
+    const text = response.text;
+    if (!text) {
+      return NextResponse.json(
+        { error: 'No response from DemandOS Core' },
+        { status: 500 }
+      );
+    }
+
+    // Clean potential Markdown formatting
+    const cleanedText = text.replace(/```json/g, '').replace(/```/g, '').trim();
+
+    try {
+      const report = JSON.parse(cleanedText) as AnalysisReport;
+      return NextResponse.json(report);
+    } catch {
+      console.error("Failed to parse JSON. Raw text:", text);
+      if (text.includes("sorry") || text.includes("cannot")) {
+        return NextResponse.json(
+          { error: 'AI Safety Filter Triggered. Please try again with a different brand name or less sensitive inputs.' },
+          { status: 400 }
+        );
+      }
+      return NextResponse.json(
+        { error: 'System Error: AI returned invalid data format' },
+        { status: 500 }
+      );
+    }
+  } catch (error) {
+    console.error('DemandOS Analysis Failed:', error);
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Analysis failed' },
+      { status: 500 }
+    );
+  }
+}

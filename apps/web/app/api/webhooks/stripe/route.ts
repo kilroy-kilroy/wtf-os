@@ -65,6 +65,9 @@ export async function POST(request: NextRequest) {
             session.subscription as string
           )
 
+          // In Stripe API v2026-01-28, current_period fields moved to subscription items
+          const firstItem = subscription.items.data[0]
+
           // Try to find existing user by email
           let userId = null
           if (session.customer_email) {
@@ -86,8 +89,8 @@ export async function POST(request: NextRequest) {
               customer_email: session.customer_email || '',
               plan_type: session.metadata?.priceType || 'solo',
               status: subscription.status,
-              current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
-              current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+              current_period_start: firstItem ? new Date(firstItem.current_period_start * 1000).toISOString() : new Date().toISOString(),
+              current_period_end: firstItem ? new Date(firstItem.current_period_end * 1000).toISOString() : new Date().toISOString(),
               updated_at: new Date().toISOString(),
             }, {
               onConflict: 'stripe_subscription_id'
@@ -131,12 +134,13 @@ export async function POST(request: NextRequest) {
       })
 
       try {
-        // Safely convert timestamps to ISO strings, handling undefined/null values
-        const currentPeriodStart = subscription.current_period_start
-          ? new Date(subscription.current_period_start * 1000).toISOString()
+        // In Stripe API v2026-01-28, current_period fields moved to subscription items
+        const firstItem = subscription.items.data[0]
+        const currentPeriodStart = firstItem?.current_period_start
+          ? new Date(firstItem.current_period_start * 1000).toISOString()
           : null
-        const currentPeriodEnd = subscription.current_period_end
-          ? new Date(subscription.current_period_end * 1000).toISOString()
+        const currentPeriodEnd = firstItem?.current_period_end
+          ? new Date(firstItem.current_period_end * 1000).toISOString()
           : null
         const canceledAt = subscription.canceled_at
           ? new Date(subscription.canceled_at * 1000).toISOString()

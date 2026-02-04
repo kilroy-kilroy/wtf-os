@@ -19,11 +19,11 @@ export async function GET(request: Request) {
 
     if (error) {
       console.error('[Zoom Callback] OAuth error:', error);
-      return NextResponse.redirect(`${appUrl}/console/call-lab?zoom_error=denied`);
+      return NextResponse.redirect(`${appUrl}/settings?zoom_error=denied`);
     }
 
     if (!code) {
-      return NextResponse.redirect(`${appUrl}/console/call-lab?zoom_error=no_code`);
+      return NextResponse.redirect(`${appUrl}/settings?zoom_error=no_code`);
     }
 
     // Verify user is authenticated
@@ -33,7 +33,7 @@ export async function GET(request: Request) {
     } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      return NextResponse.redirect(`${appUrl}/console/call-lab?zoom_error=unauthorized`);
+      return NextResponse.redirect(`${appUrl}/settings?zoom_error=unauthorized`);
     }
 
     // Exchange code for tokens
@@ -42,7 +42,7 @@ export async function GET(request: Request) {
 
     if (!tokenResult.success || !tokenResult.tokens) {
       console.error('[Zoom Callback] Token exchange failed:', tokenResult.error);
-      return NextResponse.redirect(`${appUrl}/console/call-lab?zoom_error=token_failed`);
+      return NextResponse.redirect(`${appUrl}/settings?zoom_error=token_failed`);
     }
 
     // Get Zoom user info
@@ -81,13 +81,13 @@ export async function GET(request: Request) {
 
     if (updateError) {
       console.error('[Zoom Callback] Database error:', updateError);
-      return NextResponse.redirect(`${appUrl}/console/call-lab?zoom_error=save_failed`);
+      return NextResponse.redirect(`${appUrl}/settings?zoom_error=save_failed`);
     }
 
-    return NextResponse.redirect(`${appUrl}/console/call-lab?zoom_connected=true`);
+    return NextResponse.redirect(`${appUrl}/settings?zoom_connected=true`);
   } catch (error) {
     console.error('[Zoom Callback] Error:', error);
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-    return NextResponse.redirect(`${appUrl}/console/call-lab?zoom_error=unknown`);
+    return NextResponse.redirect(`${appUrl}/settings?zoom_error=unknown`);
   }
 }

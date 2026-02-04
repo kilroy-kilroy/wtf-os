@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 
 // ============================================
 // TYPES
@@ -302,6 +303,12 @@ export default function AdminDashboardPage() {
           </p>
         </div>
         <div className="flex gap-2">
+          <Link
+            href="/admin/reports"
+            className="px-4 py-2 rounded-lg bg-slate-700 text-slate-300 text-sm font-medium hover:bg-slate-600"
+          >
+            Client Reports
+          </Link>
           <button
             onClick={() => fetchData(apiKey)}
             disabled={loading}

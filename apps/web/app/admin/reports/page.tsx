@@ -650,7 +650,7 @@ function ProductView({
     ? data.users.find((u) => u.id === filterUserId)?.name || null
     : null;
 
-  const sortReports = <T extends Record<string, any>>(reports: T[]): T[] => {
+  const sortReports = useCallback(<T extends Record<string, any>>(reports: T[]): T[] => {
     return [...reports].sort((a, b) => {
       const aVal = a[sortField];
       const bVal = b[sortField];
@@ -660,12 +660,12 @@ function ProductView({
       const cmp = typeof aVal === 'number' ? aVal - bVal : String(aVal).localeCompare(String(bVal));
       return sortAsc ? cmp : -cmp;
     });
-  };
+  }, [sortField, sortAsc]);
 
-  const applyUserFilter = <T extends { userId: string | null }>(reports: T[]): T[] => {
+  const applyUserFilter = useCallback(<T extends { userId: string | null }>(reports: T[]): T[] => {
     if (!filterUserId) return reports;
     return reports.filter((r) => r.userId === filterUserId);
-  };
+  }, [filterUserId]);
 
   const productTabs: Array<{ key: ProductFilter; label: string }> = [
     { key: 'all', label: 'All Products' },
@@ -685,18 +685,18 @@ function ProductView({
     if (selectedProduct === 'callLabLite') reports = reports.filter((r) => r.tier !== 'pro');
     if (selectedProduct === 'callLabPro') reports = reports.filter((r) => r.tier === 'pro');
     return sortReports(applyUserFilter(reports));
-  }, [data.reports.callLab, selectedProduct, filterUserId, sortField, sortAsc]);
+  }, [data.reports.callLab, selectedProduct, sortReports, applyUserFilter]);
 
   const discoveryReports = useMemo(() => {
     let reports = data.reports.discovery;
     if (selectedProduct === 'discoveryLite') reports = reports.filter((r) => r.version !== 'pro');
     if (selectedProduct === 'discoveryPro') reports = reports.filter((r) => r.version === 'pro');
     return sortReports(applyUserFilter(reports));
-  }, [data.reports.discovery, selectedProduct, filterUserId, sortField, sortAsc]);
+  }, [data.reports.discovery, selectedProduct, sortReports, applyUserFilter]);
 
   const assessmentReports = useMemo(() => {
     return sortReports(applyUserFilter(data.reports.assessments));
-  }, [data.reports.assessments, filterUserId, sortField, sortAsc]);
+  }, [data.reports.assessments, sortReports, applyUserFilter]);
 
   return (
     <div>

@@ -29,11 +29,11 @@ export async function GET(request: NextRequest) {
       discoveryResult,
       assessmentsResult,
     ] = await Promise.all([
-      supabase
+      (supabase as any)
         .from('agencies')
         .select('id, name, url')
         .order('name'),
-      supabase
+      (supabase as any)
         .from('users')
         .select('id, email, first_name, last_name')
         .order('created_at', { ascending: false }),

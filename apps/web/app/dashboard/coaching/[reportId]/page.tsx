@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
-import { createServerComponentClient } from "@supabase/auth-helpers-nextjs";
-import { cookies } from "next/headers";
+import { createAuthServerClient } from '@/lib/supabase-auth';
 import { format } from "date-fns";
 import Link from "next/link";
 
@@ -76,7 +75,7 @@ export default async function CoachingReportPage({
   params: Promise<{ reportId: string }>;
 }) {
   const { reportId } = await params;
-  const supabase = createServerComponentClient({ cookies });
+  const supabase = await createAuthServerClient();
 
   const {
     data: { user },

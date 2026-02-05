@@ -1,5 +1,4 @@
-import { createServerComponentClient } from "@supabase/auth-helpers-nextjs";
-import { cookies } from "next/headers";
+import { createAuthServerClient } from '@/lib/supabase-auth';
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import {
@@ -347,7 +346,7 @@ function getHighlightedPattern(
 
 // Fetch and process real dashboard data
 async function getDashboardData(
-  supabase: ReturnType<typeof createServerComponentClient>,
+  supabase: Awaited<ReturnType<typeof createAuthServerClient>>,
   userId: string,
   userEmail: string
 ) {
@@ -667,7 +666,7 @@ async function getDashboardData(
 }
 
 export default async function DashboardPage() {
-  const supabase = createServerComponentClient({ cookies });
+  const supabase = await createAuthServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();

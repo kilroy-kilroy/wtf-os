@@ -1,5 +1,4 @@
-import { cookies } from 'next/headers';
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createAuthServerClient } from '@/lib/supabase-auth';
 import { redirect, notFound } from 'next/navigation';
 import Link from 'next/link';
 
@@ -444,7 +443,7 @@ function TrajectoryForkSection({ data }: { data: any }) {
 // ============================================
 
 export default async function ResultsPage({ params }: { params: { id: string } }) {
-  const supabase = createServerComponentClient({ cookies });
+  const supabase = await createAuthServerClient();
   const { data: { session } } = await supabase.auth.getSession();
 
   if (!session) redirect('/login?next=/growthos');

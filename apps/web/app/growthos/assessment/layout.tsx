@@ -1,13 +1,12 @@
 import { redirect } from 'next/navigation';
-import { cookies } from 'next/headers';
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createAuthServerClient } from '@/lib/supabase-auth';
 
 export default async function AssessmentLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = createServerComponentClient({ cookies });
+  const supabase = await createAuthServerClient();
   const { data: { session } } = await supabase.auth.getSession();
 
   if (!session) {

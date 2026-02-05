@@ -1,5 +1,4 @@
-import { cookies } from 'next/headers';
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createAuthServerClient } from '@/lib/supabase-auth';
 import { redirect, notFound } from 'next/navigation';
 import Link from 'next/link';
 import { FollowUpQuestionsSection, LTVSection } from './FollowUpSection';
@@ -217,7 +216,7 @@ function DiagnosisSection({ title, content, color = '#E31B23' }: {
 // ============================================
 
 export default async function ResultsPage({ params }: { params: { id: string } }) {
-  const supabase = createServerComponentClient({ cookies });
+  const supabase = await createAuthServerClient();
   const { data: { user }, error: authError } = await supabase.auth.getUser();
 
   if (authError || !user) redirect('/growthos');

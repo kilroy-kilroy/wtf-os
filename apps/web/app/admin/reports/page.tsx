@@ -743,6 +743,7 @@ function ProductView({
                   <SortHeader field="agencyName">Agency</SortHeader>
                   <th className="text-left text-xs text-slate-500 pb-2 pr-4 font-medium">Tier</th>
                   <SortHeader field="createdAt">Date</SortHeader>
+                  <th className="text-left text-xs text-slate-500 pb-2 font-medium"></th>
                 </tr>
               </thead>
               <tbody>
@@ -771,7 +772,10 @@ function ProductView({
                         {r.tier}
                       </span>
                     </td>
-                    <td className="py-2 text-slate-500 text-xs">{formatTimeAgo(r.createdAt)}</td>
+                    <td className="py-2 pr-4 text-slate-500 text-xs">{formatTimeAgo(r.createdAt)}</td>
+                    <td className="py-2">
+                      <ReportLink href={`/call-lab/report/${r.id}`}>View</ReportLink>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -852,6 +856,7 @@ function ProductView({
                   <SortHeader field="userName">User</SortHeader>
                   <th className="text-left text-xs text-slate-500 pb-2 pr-4 font-medium">Type</th>
                   <SortHeader field="createdAt">Date</SortHeader>
+                  <th className="text-left text-xs text-slate-500 pb-2 font-medium"></th>
                 </tr>
               </thead>
               <tbody>
@@ -873,7 +878,10 @@ function ProductView({
                         {r.assessmentType}
                       </span>
                     </td>
-                    <td className="py-2 text-slate-500 text-xs">{formatTimeAgo(r.createdAt)}</td>
+                    <td className="py-2 pr-4 text-slate-500 text-xs">{formatTimeAgo(r.createdAt)}</td>
+                    <td className="py-2">
+                      <ReportLink href={`/growthos/results/${r.id}`}>View</ReportLink>
+                    </td>
                   </tr>
                 ))}
               </tbody>

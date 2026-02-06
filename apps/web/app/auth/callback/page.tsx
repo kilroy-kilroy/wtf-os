@@ -1,14 +1,14 @@
 'use client';
 
 import { useEffect, useState, Suspense } from 'react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from '@/lib/supabase-browser';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 function AuthCallbackContent() {
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
-  const supabase = createClientComponentClient();
+  const supabase = createClient();
 
   useEffect(() => {
     const handleCallback = async () => {

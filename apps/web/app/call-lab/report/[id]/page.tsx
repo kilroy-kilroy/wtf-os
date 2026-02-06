@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
-import { createServerComponentClient } from "@supabase/auth-helpers-nextjs";
-import { cookies } from "next/headers";
+import { createClient } from '@/lib/supabase-auth-server';
 import { format } from "date-fns";
 import Link from "next/link";
 import { ConsolePanel, ConsoleHeading, CallLabProReport } from "@/components/console";
@@ -321,7 +320,7 @@ export default async function CallReportPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const supabase = createServerComponentClient({ cookies });
+  const supabase = await createClient();
 
   const {
     data: { user },

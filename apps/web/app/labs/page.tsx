@@ -1,5 +1,4 @@
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
+import { createClient } from '@/lib/supabase-auth-server';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { getSubscriptionStatus } from '@/lib/subscription';
@@ -54,7 +53,7 @@ const allLabs: Lab[] = [
 ];
 
 export default async function LabsPage() {
-  const supabase = createServerComponentClient({ cookies });
+  const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();

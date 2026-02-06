@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from '@/lib/supabase-browser';
 
 function UpgradeContent() {
   const searchParams = useSearchParams();
@@ -17,7 +17,7 @@ function UpgradeContent() {
         const product = searchParams.get('product') || 'call-lab-pro';
 
         // Get user email if logged in
-        const supabase = createClientComponentClient();
+        const supabase = createClient();
         const { data: { user } } = await supabase.auth.getUser();
 
         setStatus('Redirecting to checkout...');

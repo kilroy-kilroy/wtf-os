@@ -119,7 +119,7 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify({
         model: 'sonar-pro',
         messages: [
-          { role: 'system', content: systemPrompt }
+          { role: 'user', content: systemPrompt }
         ]
       })
     });

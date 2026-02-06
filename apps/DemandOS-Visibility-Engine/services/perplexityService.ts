@@ -143,7 +143,7 @@ export const generateAnalysis = async (input: AnalysisInput): Promise<AnalysisRe
       body: JSON.stringify({
         model: 'sonar-pro',
         messages: [
-          { role: 'system', content: systemPrompt }
+          { role: 'user', content: systemPrompt }
         ]
       })
     });

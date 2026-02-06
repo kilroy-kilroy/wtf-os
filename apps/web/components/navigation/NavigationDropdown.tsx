@@ -40,7 +40,7 @@ export function NavigationDropdown({ label, items }: NavigationDropdownProps) {
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-1 text-[13px] font-poppins text-white hover:text-[#FFDE59] transition-colors duration-200 py-2"
+        className="flex items-center gap-1 text-[13px] font-anton uppercase tracking-wide text-white hover:text-[#FFDE59] transition-colors duration-200 py-2"
       >
         {label}
         <ChevronDown

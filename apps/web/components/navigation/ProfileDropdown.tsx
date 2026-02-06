@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useState, useRef, useEffect } from 'react';
-import { User, Settings, LayoutDashboard, LogOut } from 'lucide-react';
+import { User, Settings, LayoutDashboard, LogOut, Flask } from 'lucide-react';
 
 interface ProfileDropdownProps {
   userName?: string;
@@ -74,12 +74,12 @@ export function ProfileDropdown({ userName, userEmail }: ProfileDropdownProps) {
           {/* Menu Items */}
           <div className="py-2">
             <Link
-              href="/dashboard"
+              href="/labs"
               onClick={() => setIsOpen(false)}
               className="flex items-center gap-3 px-4 py-2 text-[13px] font-poppins text-white hover:bg-[#1a1a1a] hover:text-[#FFDE59] transition-colors duration-200"
             >
-              <LayoutDashboard size={16} />
-              Dashboard
+              <Flask size={16} />
+              Your Labs
             </Link>
             <Link
               href="/settings"

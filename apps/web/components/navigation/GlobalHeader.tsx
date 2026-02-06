@@ -32,28 +32,31 @@ export function GlobalHeader({ userName, userEmail }: GlobalHeaderProps) {
     <header className="w-full bg-black border-b border-[#333333] sticky top-0 z-50">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-14">
-          {/* Logo */}
-          <Link
-            href="https://timkilroy.com"
-            className="flex items-center gap-2 hover:opacity-80 transition-opacity"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <div className="font-anton text-[20px] tracking-wider text-white">
-              <span className="text-[#E51B23]">T</span>
-              <span className="text-[#FFDE59]">K</span>
-            </div>
-          </Link>
+          {/* Left Section: Logo + Navigation */}
+          <div className="flex items-center gap-6">
+            {/* Logo */}
+            <Link
+              href="https://timkilroy.com"
+              className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <div className="font-anton text-[20px] tracking-wider text-white">
+                <span className="text-[#E51B23]">T</span>
+                <span className="text-[#FFDE59]">K</span>
+              </div>
+            </Link>
 
-          {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center gap-6">
-            <NavigationDropdown label="Free Tools" items={freeTools} />
-            <NavigationDropdown label="Pro Tools" items={proTools} />
-          </nav>
+            {/* Desktop Navigation */}
+            <nav className="hidden md:flex items-center gap-6">
+              <NavigationDropdown label="Free Tools" items={freeTools} />
+              <NavigationDropdown label="Pro Tools" items={proTools} />
+            </nav>
+          </div>
 
-          {/* Right Section */}
+          {/* Right Section: Profile */}
           <div className="flex items-center gap-4">
-            {/* Profile - Always Visible */}
+            {/* Profile - Desktop Only */}
             <div className="hidden md:block">
               <ProfileDropdown userName={userName} userEmail={userEmail} />
             </div>
@@ -130,11 +133,11 @@ export function GlobalHeader({ userName, userEmail }: GlobalHeaderProps) {
             {/* Profile Links */}
             <div className="pt-4 border-t border-[#333333]">
               <Link
-                href="/dashboard"
+                href="/labs"
                 onClick={() => setMobileMenuOpen(false)}
                 className="block px-2 py-2 text-[14px] font-poppins text-white hover:text-[#FFDE59] transition-colors"
               >
-                Dashboard
+                Your Labs
               </Link>
               <Link
                 href="/settings"

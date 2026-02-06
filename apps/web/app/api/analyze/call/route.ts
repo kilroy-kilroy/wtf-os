@@ -1,3 +1,5 @@
+export const maxDuration = 300; // 5 minutes - Pro analysis with 16K tokens + fallback
+
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@repo/db/client';
 import {
@@ -149,7 +151,7 @@ export async function POST(request: NextRequest) {
 
         const response = await retryWithBackoff(async () => {
           return await runModel('call-lab-' + version, systemPrompt, userPrompt);
-        });
+        }, 2); // Limit retries: Pro analysis (16K tokens) can take 60-120s per attempt
 
         usage = response.usage;
         modelUsed = 'claude-sonnet-4-5-20250929';
@@ -173,7 +175,7 @@ export async function POST(request: NextRequest) {
               provider: 'openai',
               model: 'gpt-4o',
             });
-          });
+          }, 2); // Limit retries to stay within 300s maxDuration
 
           usage = response.usage;
           modelUsed = 'gpt-4o';
@@ -287,7 +289,7 @@ ${ingestionItem.raw_content}`;
               CALL_LAB_PRO_SYSTEM_PROMPT,
               proUserPrompt
             );
-          });
+          }, 2); // Limit retries: Pro JSON analysis can take 60-120s per attempt
 
           usage = response.usage;
           modelUsed = 'claude-sonnet-4-5-20250929';

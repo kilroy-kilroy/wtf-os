@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { useState } from 'react';
 import { Menu, X } from 'lucide-react';
 import { NavigationDropdown } from './NavigationDropdown';
@@ -37,14 +38,17 @@ export function GlobalHeader({ userName, userEmail }: GlobalHeaderProps) {
             {/* Logo */}
             <Link
               href="https://timkilroy.com"
-              className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+              className="flex items-center hover:opacity-80 transition-opacity"
               target="_blank"
               rel="noopener noreferrer"
             >
-              <div className="font-anton text-[20px] tracking-wider text-white">
-                <span className="text-[#E51B23]">T</span>
-                <span className="text-[#FFDE59]">K</span>
-              </div>
+              <Image
+                src="/logos/white_logo_transparent_background.png"
+                alt="Tim Kilroy"
+                width={40}
+                height={40}
+                className="h-8 w-auto"
+              />
             </Link>
 
             {/* Desktop Navigation */}

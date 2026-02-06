@@ -6,9 +6,9 @@ import {
   ConsoleHeading,
   ConsoleButton,
   ConsoleInput,
-  SalesOSHeader,
   ConsoleMarkdownRenderer,
 } from '@/components/console';
+import { ToolPageHeader } from '@/components/ToolPageHeader';
 
 interface DiscoveryResult {
   markdown: string;
@@ -214,12 +214,14 @@ export default function DiscoveryLabPage() {
   );
 
   return (
-    <div className="min-h-screen bg-black py-12 px-4">
-      <div className="max-w-5xl mx-auto">
-        <SalesOSHeader
-          systemStatus={loading ? 'PROCESSING' : 'READY'}
-          productName="DISCOVERY LAB"
-        />
+    <div className="min-h-screen bg-black">
+      <ToolPageHeader
+        osLogoSrc="/logos/4_SalesOS All-Caps Logo in Black and Red.png"
+        osLogoAlt="SalesOS"
+        toolLogoSrc="/logos/16_Discovery Lab SQ.png"
+        toolLogoAlt="Discovery Lab"
+      />
+      <div className="max-w-5xl mx-auto py-12 px-4">
 
         {!result ? (
           /* Input Form */

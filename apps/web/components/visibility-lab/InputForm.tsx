@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { AnalysisInput } from '@/lib/visibility-engine/types';
+import { AnalysisInput } from '@/lib/visibility-lab/types';
 import { Play, ShieldAlert, Terminal, User, Mail, Lock, Webhook, X, Save, Phone, Briefcase } from 'lucide-react';
 
 interface Props {

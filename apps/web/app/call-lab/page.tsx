@@ -8,7 +8,7 @@ import {
   ConsoleInput,
   ConsoleMarkdownRenderer
 } from '@/components/console';
-import { CallLabLogo } from '@/components/CallLabLogo';
+import { ToolPageHeader } from '@/components/ToolPageHeader';
 import { FirefliesTranscriptSelector } from '@/components/FirefliesTranscriptSelector';
 import { ZoomRecordingSelector } from '@/components/ZoomRecordingSelector';
 
@@ -214,18 +214,12 @@ export default function CallLabPage() {
 
   return (
     <div className="min-h-screen bg-black">
-      {/* Header with Logo */}
-      <header className="border-b border-[#333] px-4 py-6">
-        <div className="max-w-5xl mx-auto flex items-center justify-between">
-          <CallLabLogo variant="square" className="h-16 w-auto" />
-          <div className="flex items-center gap-2">
-            <div className={`w-2 h-2 rounded-full ${loading ? 'bg-yellow-500 animate-pulse' : 'bg-green-500'}`} />
-            <span className="font-anton text-xs text-white uppercase tracking-wider">
-              SYS_{loading ? 'PROCESSING' : 'READY'}
-            </span>
-          </div>
-        </div>
-      </header>
+      <ToolPageHeader
+        osLogoSrc="/logos/4_SalesOS All-Caps Logo in Black and Red.png"
+        osLogoAlt="SalesOS"
+        toolLogoSrc="/logos/call-lab-square.png"
+        toolLogoAlt="Call Lab"
+      />
 
       <div className="max-w-5xl mx-auto px-4 py-12">
 

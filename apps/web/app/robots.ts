@@ -16,7 +16,7 @@ export default function robots(): MetadataRoute.Robots {
           '/discovery-lab',
           '/discovery-lab-pro',
           '/discovery-lab-examples',
-          '/visibility-engine',
+          '/visibility-lab',
           '/growthos',
           '/wtf-sales-guide',
           '/wtf-assessment-example',

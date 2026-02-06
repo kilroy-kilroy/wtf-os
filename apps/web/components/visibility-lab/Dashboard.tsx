@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { AnalysisReport } from '@/lib/visibility-engine/types';
+import { AnalysisReport } from '@/lib/visibility-lab/types';
 import { Download, Youtube, Mic, Users, AlertTriangle, CheckCircle, Zap, Target, Skull, Activity, Layers, ArrowRight, Save, Share2, Swords, Microscope, PenTool, X, Copy } from 'lucide-react';
 import { ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, Radar, Tooltip } from 'recharts';
 
@@ -47,7 +47,7 @@ export const Dashboard: React.FC<Props> = ({ data, onReset }) => {
     setCurrentDraft("");
 
     try {
-      const response = await fetch('/api/visibility-engine/generate-post', {
+      const response = await fetch('/api/visibility-lab/generate-post', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

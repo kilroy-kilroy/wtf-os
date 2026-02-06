@@ -4,6 +4,7 @@ import Script from "next/script";
 import { Analytics } from "@vercel/analytics/next";
 import { ExitIntentPopup } from "@/components/ExitIntentPopup";
 import { Footer } from "@/components/Footer";
+import { GlobalHeaderWrapper } from "@/components/navigation/GlobalHeaderWrapper";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -53,6 +54,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
             style={{ display: 'none', visibility: 'hidden' }}
           />
         </noscript>
+        <GlobalHeaderWrapper />
         <div className="flex-1">
           {children}
         </div>

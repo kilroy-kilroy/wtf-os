@@ -1,18 +1,19 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { InputForm } from '@/components/visibility-engine/InputForm';
-import { Dashboard } from '@/components/visibility-engine/Dashboard';
-import { LoadingScreen } from '@/components/visibility-engine/LoadingScreen';
-import { AnalysisInput, AnalysisReport } from '@/lib/visibility-engine/types';
-import { formatEmail } from '@/lib/visibility-engine/email-formatter';
+import { InputForm } from '@/components/visibility-lab/InputForm';
+import { Dashboard } from '@/components/visibility-lab/Dashboard';
+import { LoadingScreen } from '@/components/visibility-lab/LoadingScreen';
+import { ToolPageHeader } from '@/components/ToolPageHeader';
+import { AnalysisInput, AnalysisReport } from '@/lib/visibility-lab/types';
+import { formatEmail } from '@/lib/visibility-lab/email-formatter';
 import { Globe, Linkedin, Instagram, Youtube, Mail, FileText } from 'lucide-react';
 
 // --- CONFIGURATION ---
 // Paste your Zapier Webhook URL here to hardcode it (avoids using the UI settings)
 const HARDCODED_WEBHOOK_URL = "https://hooks.zapier.com/hooks/catch/1852580/uzksxsr/";
 
-export default function VisibilityEnginePage() {
+export default function VisibilityLabPage() {
   // Initialize state from localStorage
   const [report, setReport] = useState<AnalysisReport | null>(null);
   const [webhookUrl, setWebhookUrl] = useState<string>('');
@@ -49,7 +50,7 @@ export default function VisibilityEnginePage() {
   const handleAnalyze = async (input: AnalysisInput) => {
     setIsLoading(true);
     try {
-      const response = await fetch('/api/visibility-engine/analyze', {
+      const response = await fetch('/api/visibility-lab/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(input)
@@ -124,6 +125,12 @@ export default function VisibilityEnginePage() {
 
   return (
     <div className="min-h-screen bg-black selection:bg-brand-yellow selection:text-black">
+      <ToolPageHeader
+        osLogoSrc="/logos/DemandOS VisibilityLabSQTransparent.png"
+        osLogoAlt="DemandOS"
+        toolLogoSrc="/logos/VisibilityLabSQTransparent.png"
+        toolLogoAlt="Visibility Lab"
+      />
       {isLoading && <LoadingScreen />}
 
       {!report ? (
@@ -136,7 +143,7 @@ export default function VisibilityEnginePage() {
               DEMAND<span className="text-brand-red">OS</span>
             </h1>
             <div className="inline-block bg-brand-yellow text-black px-4 py-1 font-bold tracking-widest text-sm">
-              VISIBILITY ENGINE v1.0
+              VISIBILITY LAB v1.0
             </div>
           </header>
 

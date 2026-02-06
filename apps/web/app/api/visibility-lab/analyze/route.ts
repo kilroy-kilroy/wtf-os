@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { AnalysisInput, AnalysisReport } from '@/lib/visibility-engine/types';
-import { DEMAND_OS_ARCHETYPES } from '@/lib/visibility-engine/archetypes';
+import { AnalysisInput, AnalysisReport } from '@/lib/visibility-lab/types';
+import { DEMAND_OS_ARCHETYPES } from '@/lib/visibility-lab/archetypes';
 
 export async function POST(request: NextRequest) {
   try {

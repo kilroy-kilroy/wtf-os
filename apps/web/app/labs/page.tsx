@@ -1,4 +1,4 @@
-import { createAuthServerClient } from '@/lib/supabase-auth';
+import { createClient } from '@/lib/supabase-auth-server';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { getSubscriptionStatus } from '@/lib/subscription';
@@ -53,7 +53,7 @@ const allLabs: Lab[] = [
 ];
 
 export default async function LabsPage() {
-  const supabase = await createAuthServerClient();
+  const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();

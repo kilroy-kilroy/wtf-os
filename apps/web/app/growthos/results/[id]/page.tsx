@@ -1,4 +1,4 @@
-import { createAuthServerClient } from '@/lib/supabase-auth';
+import { createClient } from '@/lib/supabase-auth-server';
 import { redirect, notFound } from 'next/navigation';
 import Link from 'next/link';
 import { FollowUpQuestionsSection, LTVSection } from './FollowUpSection';
@@ -216,7 +216,7 @@ function DiagnosisSection({ title, content, color = '#E31B23' }: {
 // ============================================
 
 export default async function ResultsPage({ params }: { params: { id: string } }) {
-  const supabase = await createAuthServerClient();
+  const supabase = await createClient();
   const { data: { user }, error: authError } = await supabase.auth.getUser();
 
   if (authError || !user) redirect('/growthos');

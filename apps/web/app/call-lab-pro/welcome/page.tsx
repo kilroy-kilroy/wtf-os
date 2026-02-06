@@ -2,14 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from '@/lib/supabase-browser';
 import { Suspense } from 'react';
 
 function WelcomeContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const sessionId = searchParams.get('session_id');
-  const supabase = createClientComponentClient();
+  const supabase = createClient();
 
   const [fullName, setFullName] = useState('');
   const [companyName, setCompanyName] = useState('');

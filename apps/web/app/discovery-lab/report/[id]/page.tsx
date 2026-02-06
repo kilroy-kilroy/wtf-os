@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import { createAuthServerClient } from '@/lib/supabase-auth';
+import { createClient } from '@/lib/supabase-auth-server';
 import Link from 'next/link';
 import { ConsolePanel, ConsoleHeading, ConsoleMarkdownRenderer } from '@/components/console';
 
@@ -25,7 +25,7 @@ export default async function DiscoveryReportPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const supabase = await createAuthServerClient();
+  const supabase = await createClient();
 
   // Try to get user - reports can be viewed by owner or via direct link
   const {

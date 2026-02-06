@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { createAuthServerClient } from '@/lib/supabase-auth';
+import { createClient as createAuthClient } from '@/lib/supabase-auth-server';
 import { calculateAssessment } from '@repo/utils/src/assessment/scoring';
 import { runEnrichmentPipeline } from '@repo/utils/src/assessment/enrichment';
 import { calculateRevelations } from '@repo/utils/src/assessment/revelations';
@@ -20,7 +20,7 @@ const supabase = createClient(
 export async function POST(request: NextRequest) {
   try {
     // Get authenticated user (secure, validates with Supabase Auth server)
-    const authClient = await createAuthServerClient();
+    const authClient = await createAuthClient();
     const { data: { user }, error: authError } = await authClient.auth.getUser();
 
     if (authError || !user) {

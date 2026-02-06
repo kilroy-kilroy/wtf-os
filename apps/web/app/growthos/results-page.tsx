@@ -1,4 +1,4 @@
-import { createAuthServerClient } from '@/lib/supabase-auth';
+import { createClient } from '@/lib/supabase-auth-server';
 import { redirect, notFound } from 'next/navigation';
 import Link from 'next/link';
 
@@ -443,7 +443,7 @@ function TrajectoryForkSection({ data }: { data: any }) {
 // ============================================
 
 export default async function ResultsPage({ params }: { params: { id: string } }) {
-  const supabase = await createAuthServerClient();
+  const supabase = await createClient();
   const { data: { session } } = await supabase.auth.getSession();
 
   if (!session) redirect('/login?next=/growthos');

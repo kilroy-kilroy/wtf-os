@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from '@/lib/supabase-browser';
 import { useRouter } from 'next/navigation';
 import {
   ConsolePanel,
@@ -171,7 +171,7 @@ export default function CallLabProPage() {
   const [suggestedBrief, setSuggestedBrief] = useState<string | null>(null);
 
   const router = useRouter();
-  const supabase = createClientComponentClient();
+  const supabase = createClient();
 
   // Pre-fill user data if logged in
   useEffect(() => {

@@ -1,4 +1,4 @@
-import { createAuthServerClient } from '@/lib/supabase-auth';
+import { createClient } from '@/lib/supabase-auth-server';
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import {
@@ -346,7 +346,7 @@ function getHighlightedPattern(
 
 // Fetch and process real dashboard data
 async function getDashboardData(
-  supabase: Awaited<ReturnType<typeof createAuthServerClient>>,
+  supabase: Awaited<ReturnType<typeof createClient>>,
   userId: string,
   userEmail: string
 ) {
@@ -666,7 +666,7 @@ async function getDashboardData(
 }
 
 export default async function DashboardPage() {
-  const supabase = await createAuthServerClient();
+  const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();

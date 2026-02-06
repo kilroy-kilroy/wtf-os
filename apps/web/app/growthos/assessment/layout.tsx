@@ -1,12 +1,12 @@
 import { redirect } from 'next/navigation';
-import { createAuthServerClient } from '@/lib/supabase-auth';
+import { createClient } from '@/lib/supabase-auth-server';
 
 export default async function AssessmentLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = await createAuthServerClient();
+  const supabase = await createClient();
   const { data: { session } } = await supabase.auth.getSession();
 
   if (!session) {

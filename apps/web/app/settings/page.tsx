@@ -1,4 +1,4 @@
-import { createAuthServerClient } from '@/lib/supabase-auth';
+import { createClient } from '@/lib/supabase-auth-server';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { getSubscriptionStatus } from '@/lib/subscription';
@@ -7,7 +7,7 @@ import { FirefliesIntegration } from '@/components/FirefliesIntegration';
 import { ZoomIntegration } from '@/components/ZoomIntegration';
 
 export default async function SettingsPage() {
-  const supabase = await createAuthServerClient();
+  const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();

@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { createAuthServerClient } from '@/lib/supabase-auth';
+import { createClient } from '@/lib/supabase-auth-server';
 import { format } from "date-fns";
 import Link from "next/link";
 import { ConsolePanel, ConsoleHeading, CallLabProReport } from "@/components/console";
@@ -320,7 +320,7 @@ export default async function CallReportPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const supabase = await createAuthServerClient();
+  const supabase = await createClient();
 
   const {
     data: { user },

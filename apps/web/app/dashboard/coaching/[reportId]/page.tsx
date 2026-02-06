@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { createAuthServerClient } from '@/lib/supabase-auth';
+import { createClient } from '@/lib/supabase-auth-server';
 import { format } from "date-fns";
 import Link from "next/link";
 
@@ -75,7 +75,7 @@ export default async function CoachingReportPage({
   params: Promise<{ reportId: string }>;
 }) {
   const { reportId } = await params;
-  const supabase = await createAuthServerClient();
+  const supabase = await createClient();
 
   const {
     data: { user },

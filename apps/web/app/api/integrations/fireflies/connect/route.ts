@@ -1,5 +1,4 @@
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
+import { createClient } from '@/lib/supabase-auth-server';
 import { NextResponse } from 'next/server';
 import { verifyApiKey, getUserInfo } from '@/lib/fireflies';
 
@@ -11,7 +10,7 @@ import { verifyApiKey, getUserInfo } from '@/lib/fireflies';
  */
 export async function POST(request: Request) {
   try {
-    const supabase = createRouteHandlerClient({ cookies });
+    const supabase = await createClient();
 
     // Get current user
     const {

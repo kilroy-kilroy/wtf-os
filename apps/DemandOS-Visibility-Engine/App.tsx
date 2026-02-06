@@ -4,7 +4,7 @@ import { InputForm } from './components/InputForm';
 import { Dashboard } from './components/Dashboard';
 import { LoadingScreen } from './components/LoadingScreen';
 import { AnalysisInput, AnalysisReport } from './types';
-import { generateAnalysis } from './services/geminiService';
+import { generateAnalysis } from './services/perplexityService';
 import { formatEmail } from './services/emailFormatter';
 import { Globe, Linkedin, Instagram, Youtube, Mail, FileText } from 'lucide-react';
 

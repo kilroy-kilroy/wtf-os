@@ -1,4 +1,3 @@
-import { GoogleGenAI } from "@google/genai";
 import { AnalysisInput, AnalysisReport } from "../types";
 import { DEMAND_OS_ARCHETYPES } from "./archetypeDefinitions";
 
@@ -19,17 +18,17 @@ const getApiKey = () => {
   // Fallback to process.env for local dev if the global isn't set
   // Cast import.meta to any to avoid TS errors if vite types aren't loaded
   const metaEnv = (import.meta as any).env;
-  if (metaEnv && metaEnv.API_KEY) {
-      return metaEnv.API_KEY;
-  }
-  
-  // Final check for standard process.env (Vercel token replacement)
-  if (typeof process !== 'undefined' && process.env && process.env.API_KEY) {
-    return process.env.API_KEY;
+  if (metaEnv && metaEnv.PERPLEXITY_API_KEY) {
+      return metaEnv.PERPLEXITY_API_KEY;
   }
 
-  console.error("API Key is missing. If you are on Vercel, ensure 'API_KEY' is set in Environment Variables and you have REDEPLOYED.");
-  throw new Error("Configuration Error: API Key not found.");
+  // Final check for standard process.env (Vercel token replacement)
+  if (typeof process !== 'undefined' && process.env && process.env.PERPLEXITY_API_KEY) {
+    return process.env.PERPLEXITY_API_KEY;
+  }
+
+  console.error("Perplexity API Key is missing. If you are on Vercel, ensure 'PERPLEXITY_API_KEY' is set in Environment Variables and you have REDEPLOYED.");
+  throw new Error("Configuration Error: Perplexity API Key not found.");
 }
 
 export const generateAnalysis = async (input: AnalysisInput): Promise<AnalysisReport> => {
@@ -134,22 +133,29 @@ export const generateAnalysis = async (input: AnalysisInput): Promise<AnalysisRe
 
   try {
     const apiKey = getApiKey();
-    const ai = new GoogleGenAI({ apiKey });
-    const modelId = 'gemini-2.5-flash'; 
-    
-    const response = await ai.models.generateContent({
-      model: modelId,
-      contents: [
-        { role: 'user', parts: [{ text: systemPrompt }] }
-      ],
-      config: {
-        tools: [{ googleSearch: {} }]
-        // Note: responseMimeType: 'application/json' is NOT supported when using googleSearch tool.
-        // We must rely on the prompt to enforce JSON structure.
-      }
+
+    const response = await fetch('https://api.perplexity.ai/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'sonar-pro',
+        messages: [
+          { role: 'system', content: systemPrompt }
+        ]
+      })
     });
 
-    const text = response.text;
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Perplexity API error:', errorText);
+      throw new Error(`Perplexity API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const text = data.choices?.[0]?.message?.content;
     if (!text) throw new Error("No response from DemandOS Core.");
 
     // Clean potential Markdown formatting
@@ -191,12 +197,28 @@ export const generateQuickPost = async (topic: string, archetype: string, brandN
 
   try {
     const apiKey = getApiKey();
-    const ai = new GoogleGenAI({ apiKey });
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: [{ role: 'user', parts: [{ text: prompt }] }]
+
+    const response = await fetch('https://api.perplexity.ai/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'sonar',
+        messages: [
+          { role: 'user', content: prompt }
+        ]
+      })
     });
-    return response.text || "Error generating draft.";
+
+    if (!response.ok) {
+      console.error('Perplexity API error:', response.status);
+      return "Error generating draft.";
+    }
+
+    const data = await response.json();
+    return data.choices?.[0]?.message?.content || "Error generating draft.";
   } catch (e) {
     console.error("Draft generation failed", e);
     return "System Error: Could not generate draft.";

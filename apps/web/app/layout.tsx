@@ -3,6 +3,7 @@ import { Inter, Anton, Poppins } from "next/font/google";
 import Script from "next/script";
 import { Analytics } from "@vercel/analytics/next";
 import { ExitIntentPopup } from "@/components/ExitIntentPopup";
+import { Footer } from "@/components/Footer";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -43,7 +44,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 })(window,document,'script','dataLayer','GTM-5T985Z8');`}
         </Script>
       </head>
-      <body className={`${inter.className} ${anton.variable} ${poppins.variable}`}>
+      <body className={`${inter.className} ${anton.variable} ${poppins.variable} min-h-screen flex flex-col`}>
         <noscript>
           <iframe
             src="https://www.googletagmanager.com/ns.html?id=GTM-5T985Z8"
@@ -52,7 +53,10 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
             style={{ display: 'none', visibility: 'hidden' }}
           />
         </noscript>
-        {children}
+        <div className="flex-1">
+          {children}
+        </div>
+        <Footer />
         <ExitIntentPopup />
         <Analytics />
       </body>

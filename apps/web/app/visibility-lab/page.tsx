@@ -1,13 +1,18 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { InputForm } from '@/components/visibility-lab/InputForm';
+import {
+  ConsolePanel,
+  ConsoleHeading,
+  ConsoleButton,
+  ConsoleInput,
+} from '@/components/console';
 import { Dashboard } from '@/components/visibility-lab/Dashboard';
 import { LoadingScreen } from '@/components/visibility-lab/LoadingScreen';
 import { ToolPageHeader } from '@/components/ToolPageHeader';
 import { AnalysisInput, AnalysisReport } from '@/lib/visibility-lab/types';
 import { formatEmail } from '@/lib/visibility-lab/email-formatter';
-import { Globe, Linkedin, Instagram, Youtube, Mail, FileText } from 'lucide-react';
+import { Lock, X, Save, Webhook } from 'lucide-react';
 
 // --- CONFIGURATION ---
 // Paste your Zapier Webhook URL here to hardcode it (avoids using the UI settings)
@@ -19,6 +24,20 @@ export default function VisibilityLabPage() {
   const [webhookUrl, setWebhookUrl] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [tempWebhook, setTempWebhook] = useState('');
+
+  const [formData, setFormData] = useState<AnalysisInput>({
+    userName: '',
+    userEmail: '',
+    userPhone: '',
+    userTitle: '',
+    brandName: '',
+    website: '',
+    targetAudience: '',
+    mainCompetitors: '',
+    currentChannels: ''
+  });
 
   // Load saved data from localStorage on mount
   useEffect(() => {
@@ -31,10 +50,12 @@ export default function VisibilityLabPage() {
 
       if (HARDCODED_WEBHOOK_URL) {
         setWebhookUrl(HARDCODED_WEBHOOK_URL);
+        setTempWebhook(HARDCODED_WEBHOOK_URL);
       } else {
         const savedWebhook = localStorage.getItem('demandos_webhook_url');
         if (savedWebhook) {
           setWebhookUrl(savedWebhook);
+          setTempWebhook(savedWebhook);
         }
       }
     } catch (e) {
@@ -42,18 +63,20 @@ export default function VisibilityLabPage() {
     }
   }, []);
 
-  const handleSaveWebhook = (url: string) => {
-    setWebhookUrl(url);
-    localStorage.setItem('demandos_webhook_url', url);
+  const handleSaveWebhook = () => {
+    setWebhookUrl(tempWebhook);
+    localStorage.setItem('demandos_webhook_url', tempWebhook);
+    setShowSettings(false);
   };
 
-  const handleAnalyze = async (input: AnalysisInput) => {
+  const handleAnalyze = async (e: React.FormEvent) => {
+    e.preventDefault();
     setIsLoading(true);
     try {
       const response = await fetch('/api/visibility-lab/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(input)
+        body: JSON.stringify(formData)
       });
 
       if (!response.ok) {
@@ -77,12 +100,12 @@ export default function VisibilityLabPage() {
 
         // Flattened payload for specific Zapier requirements
         const zapierPayload = {
-          name: input.userName,
-          email: input.userEmail,
-          company: input.brandName,
-          phone: input.userPhone,
-          title: input.userTitle,
-          brand_name: input.brandName,
+          name: formData.userName,
+          email: formData.userEmail,
+          company: formData.brandName,
+          phone: formData.userPhone,
+          title: formData.userTitle,
+          brand_name: formData.brandName,
           html: emailHtml,
           timestamp: new Date().toISOString()
         };
@@ -124,9 +147,9 @@ export default function VisibilityLabPage() {
   }
 
   return (
-    <div className="min-h-screen bg-black selection:bg-brand-yellow selection:text-black">
+    <div className="min-h-screen bg-black">
       <ToolPageHeader
-        osLogoSrc="/logos/DemandOS VisibilityLabSQTransparent.png"
+        osLogoSrc="/logos/DemandOS All-Caps Logo in WHITE and Red.png"
         osLogoAlt="DemandOS"
         toolLogoSrc="/logos/VisibilityLabSQTransparent.png"
         toolLogoAlt="Visibility Lab"
@@ -134,54 +157,214 @@ export default function VisibilityLabPage() {
       {isLoading && <LoadingScreen />}
 
       {!report ? (
-        <div className="min-h-screen flex flex-col items-center justify-center p-4 relative">
-          {/* Background Texture */}
-          <div className="absolute inset-0 opacity-10 pointer-events-none" style={{backgroundImage: 'radial-gradient(#333 1px, transparent 1px)', backgroundSize: '20px 20px'}}></div>
+        <div className="max-w-5xl mx-auto px-4 py-12">
+          <ConsolePanel>
+            <div className="space-y-8 relative">
+              {/* Settings Modal */}
+              {showSettings && (
+                <div className="absolute inset-0 z-50 bg-black/95 flex items-center justify-center p-8 backdrop-blur-sm rounded-lg">
+                  <div className="w-full max-w-lg">
+                    <div className="flex justify-between items-center mb-6 border-b border-gray-800 pb-4">
+                      <h3 className="text-xl font-anton text-white flex items-center gap-2">
+                        <Lock className="text-[#E51B23]" size={20} /> ADMIN CONFIG
+                      </h3>
+                      <button onClick={() => setShowSettings(false)} className="text-gray-500 hover:text-white">
+                        <X size={24} />
+                      </button>
+                    </div>
 
-          <header className="mb-12 text-center z-10">
-            <h1 className="text-5xl md:text-7xl text-white font-anton mb-2 tracking-tighter">
-              DEMAND<span className="text-brand-red">OS</span>
-            </h1>
-            <div className="inline-block bg-brand-yellow text-black px-4 py-1 font-bold tracking-widest text-sm">
-              VISIBILITY LAB v1.0
+                    <div className="space-y-6 font-poppins">
+                      <div className="bg-[#1a1a1a] p-4 border border-[#333333] rounded">
+                        <div className="flex items-center gap-2 text-[#FFDE59] font-bold uppercase mb-2">
+                          <Webhook size={16} /> Zapier Integration
+                        </div>
+                        <p className="text-sm text-[#B3B3B3] mb-4">
+                          Configure a Webhook to automatically receive analysis data JSON when a report is generated.
+                        </p>
+
+                        <div className="text-xs text-gray-300 bg-black p-3 mb-4 font-mono border-l-2 border-[#E51B23]">
+                          <strong className="text-[#E51B23]">INSTRUCTIONS:</strong><br/>
+                          1. Go to Zapier &rarr; Click &quot;Create Zap&quot;<br/>
+                          2. Trigger: <strong>&quot;Webhooks by Zapier&quot;</strong><br/>
+                          3. Event: <strong>&quot;Catch Hook&quot;</strong><br/>
+                          4. Copy the &quot;Webhook URL&quot; provided<br/>
+                          5. Paste below.
+                        </div>
+
+                        <ConsoleInput
+                          type="url"
+                          value={tempWebhook}
+                          onChange={(e) => setTempWebhook((e.target as HTMLInputElement).value)}
+                          placeholder="https://hooks.zapier.com/hooks/catch/..."
+                          label="DESTINATION URL"
+                        />
+                      </div>
+
+                      <ConsoleButton
+                        onClick={handleSaveWebhook}
+                        variant="secondary"
+                        fullWidth
+                      >
+                        <span className="flex items-center justify-center gap-2">
+                          <Save size={16} /> SAVE CONFIGURATION
+                        </span>
+                      </ConsoleButton>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Header */}
+              <div className="space-y-3">
+                <ConsoleHeading level={1} className="mb-2">
+                  <span className="text-white">INITIALIZE </span>
+                  <span className="text-[#FFDE59]">ANALYSIS</span>
+                </ConsoleHeading>
+                <p className="text-[#B3B3B3] font-poppins text-lg">
+                  Feed the DemandOS engine. Be honest. We can&apos;t fix what we can&apos;t see.
+                </p>
+              </div>
+
+              <form onSubmit={handleAnalyze} className="space-y-8">
+                {/* Operator Identity */}
+                <div className="space-y-4">
+                  <ConsoleHeading level={3} variant="yellow">
+                    OPERATOR IDENTITY
+                  </ConsoleHeading>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <ConsoleInput
+                      type="text"
+                      placeholder="Your Name"
+                      label="NAME *"
+                      required
+                      value={formData.userName}
+                      onChange={(e) =>
+                        setFormData({ ...formData, userName: (e.target as HTMLInputElement).value })
+                      }
+                    />
+                    <ConsoleInput
+                      type="email"
+                      placeholder="you@company.com"
+                      label="EMAIL *"
+                      required
+                      value={formData.userEmail}
+                      onChange={(e) =>
+                        setFormData({ ...formData, userEmail: (e.target as HTMLInputElement).value })
+                      }
+                    />
+                    <ConsoleInput
+                      type="tel"
+                      placeholder="+1 (555) 123-4567"
+                      label="PHONE *"
+                      required
+                      value={formData.userPhone}
+                      onChange={(e) =>
+                        setFormData({ ...formData, userPhone: (e.target as HTMLInputElement).value })
+                      }
+                    />
+                    <ConsoleInput
+                      type="text"
+                      placeholder="CEO, VP Marketing, etc."
+                      label="JOB TITLE *"
+                      required
+                      value={formData.userTitle}
+                      onChange={(e) =>
+                        setFormData({ ...formData, userTitle: (e.target as HTMLInputElement).value })
+                      }
+                    />
+                  </div>
+                </div>
+
+                {/* Target Brand */}
+                <div className="space-y-4">
+                  <ConsoleHeading level={3} variant="yellow">
+                    TARGET BRAND
+                  </ConsoleHeading>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <ConsoleInput
+                      type="text"
+                      placeholder="Brand / Agency Name"
+                      label="BRAND NAME *"
+                      required
+                      value={formData.brandName}
+                      onChange={(e) =>
+                        setFormData({ ...formData, brandName: (e.target as HTMLInputElement).value })
+                      }
+                    />
+                    <ConsoleInput
+                      type="text"
+                      placeholder="https://..."
+                      label="WEBSITE *"
+                      required
+                      value={formData.website}
+                      onChange={(e) =>
+                        setFormData({ ...formData, website: (e.target as HTMLInputElement).value })
+                      }
+                    />
+                  </div>
+                </div>
+
+                {/* Market Context */}
+                <div className="space-y-4">
+                  <ConsoleHeading level={3} variant="yellow">
+                    MARKET CONTEXT
+                  </ConsoleHeading>
+                  <ConsoleInput
+                    multiline
+                    rows={2}
+                    placeholder="Who are you trying to sell to? Be specific."
+                    label="TARGET AUDIENCE *"
+                    required
+                    value={formData.targetAudience}
+                    onChange={(e) =>
+                      setFormData({ ...formData, targetAudience: (e.target as HTMLTextAreaElement).value })
+                    }
+                  />
+                  <ConsoleInput
+                    multiline
+                    rows={2}
+                    placeholder="Who is stealing your lunch? List 2-3 top competitors."
+                    label="COMPETITORS *"
+                    required
+                    value={formData.mainCompetitors}
+                    onChange={(e) =>
+                      setFormData({ ...formData, mainCompetitors: (e.target as HTMLTextAreaElement).value })
+                    }
+                  />
+                  <ConsoleInput
+                    multiline
+                    rows={2}
+                    placeholder="Where are you currently posting? LinkedIn? YouTube? Nowhere?"
+                    label="CURRENT VISIBILITY *"
+                    required
+                    value={formData.currentChannels}
+                    onChange={(e) =>
+                      setFormData({ ...formData, currentChannels: (e.target as HTMLTextAreaElement).value })
+                    }
+                  />
+                </div>
+
+                {/* Submit Button */}
+                <div className="flex items-center gap-4">
+                  <ConsoleButton type="submit" fullWidth disabled={isLoading}>
+                    {isLoading ? '⟳ RUNNING DIAGNOSTICS...' : '▶ RUN VISIBILITY LAB'}
+                  </ConsoleButton>
+                </div>
+
+                {/* Settings link */}
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setShowSettings(true)}
+                    className="text-[#666] hover:text-[#FFDE59] transition-colors text-xs font-poppins flex items-center gap-1"
+                    title="Admin Configuration"
+                  >
+                    <Lock size={12} /> Admin Settings
+                  </button>
+                </div>
+              </form>
             </div>
-          </header>
-
-          <InputForm
-            onSubmit={handleAnalyze}
-            isLoading={isLoading}
-            savedWebhookUrl={webhookUrl}
-            onSaveWebhook={handleSaveWebhook}
-          />
-
-          {/* Social Icons */}
-          <div className="mt-10 flex flex-wrap items-center justify-center gap-6 z-10">
-            <a href="https://timkilroy.com" target="_blank" rel="noreferrer" className="text-gray-500 hover:text-brand-red transition-colors transform hover:scale-110" title="Website">
-              <Globe size={20} />
-            </a>
-            <a href="https://linkedin.com/in/timkilroy" target="_blank" rel="noreferrer" className="text-gray-500 hover:text-brand-red transition-colors transform hover:scale-110" title="LinkedIn">
-              <Linkedin size={20} />
-            </a>
-            <a href="https://www.instagram.com/timkilroy_agencygrowth/" target="_blank" rel="noreferrer" className="text-gray-500 hover:text-brand-red transition-colors transform hover:scale-110" title="Instagram">
-              <Instagram size={20} />
-            </a>
-            <a href="https://youtube.com/@agencygrowthcoach" target="_blank" rel="noreferrer" className="text-gray-500 hover:text-brand-red transition-colors transform hover:scale-110" title="YouTube">
-              <Youtube size={20} />
-            </a>
-            <a href="https://www.agencyinnercircle.com" target="_blank" rel="noreferrer" className="text-gray-500 hover:text-brand-red transition-colors transform hover:scale-110" title="Newsletter">
-              <FileText size={20} />
-            </a>
-            <a href="https://timkilroy.com/contact" target="_blank" rel="noreferrer" className="text-gray-500 hover:text-brand-red transition-colors transform hover:scale-110" title="Contact">
-              <Mail size={20} />
-            </a>
-          </div>
-
-          <footer className="mt-8 text-gray-600 text-xs font-poppins text-center z-10">
-            <p className="mb-1">Copyright © 2018-2025 KLRY, LLC. All rights reserved.</p>
-            <a href="https://timkilroy.com/privacy-policy-2/" target="_blank" rel="noreferrer" className="hover:text-brand-red transition-colors underline decoration-brand-red/30">
-              Privacy Policy
-            </a>
-          </footer>
+          </ConsolePanel>
         </div>
       ) : (
         <Dashboard data={report} onReset={handleReset} />

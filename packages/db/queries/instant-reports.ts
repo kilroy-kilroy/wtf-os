@@ -23,7 +23,18 @@ export interface TechnicalScores {
   activeListening?: number;
 }
 
+export interface InstantScores {
+  firstImpression: number;
+  firstImpressionNote: string;
+  clarity: number;
+  clarityNote: string;
+  confidence: number;
+  confidenceNote: string;
+}
+
 export interface InstantReportAnalysis {
+  // Instant scores (for solo recordings)
+  instant?: InstantScores;
   // WTF Method scores (primary)
   wtf?: WtfScores;
   // Technical scores (secondary)

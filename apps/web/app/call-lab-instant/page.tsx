@@ -25,6 +25,15 @@ interface TechnicalScores {
   activeListening?: number;
 }
 
+interface InstantScores {
+  firstImpression: number;
+  firstImpressionNote: string;
+  clarity: number;
+  clarityNote: string;
+  confidence: number;
+  confidenceNote: string;
+}
+
 interface AnalysisResult {
   reportId: string;
   transcript: string;
@@ -32,6 +41,7 @@ interface AnalysisResult {
   analysis: {
     wtf?: WtfScores;
     technical?: TechnicalScores;
+    instant?: InstantScores;
     summary: string;
     what_worked: string[];
     what_to_watch: string[];
@@ -196,9 +206,21 @@ export default function CallLabInstantPage() {
   };
 
   const scenarios = [
-    { id: 'value_prop' as Scenario, title: 'Give your 90-second elevator pitch', desc: 'The quick version of what you do and who you help' },
-    { id: 'pricing' as Scenario, title: 'Present your core offer', desc: 'Walk through your main service offering' },
-    { id: 'objection' as Scenario, title: 'Handle this objection: "I need to think about it"', desc: 'Show us how you respond when they hesitate' },
+    {
+      id: 'value_prop' as Scenario,
+      title: 'GIVE YOUR 90-SECOND ELEVATOR PITCH',
+      desc: 'Deliver a quick overview of your services and target audience.'
+    },
+    {
+      id: 'pricing' as Scenario,
+      title: 'PRESENT YOUR CORE OFFER',
+      desc: 'Walk through your main service offering as if presenting to a prospect.'
+    },
+    {
+      id: 'objection' as Scenario,
+      title: 'HANDLE THIS OBJECTION: "I NEED TO THINK ABOUT IT"',
+      desc: 'Respond to the most common buyer hesitation.'
+    },
   ];
 
   return (
@@ -224,37 +246,43 @@ export default function CallLabInstantPage() {
           </p>
 
           {/* Scenario Selection */}
-          {recordingState === 'idle' && (
-            <div className="mb-8 p-6 bg-[#FFDE59]/10 border-l-4 border-[#FFDE59]">
-              <h3 className="font-bold text-[#FFDE59] mb-3">Pick A Scenario:</h3>
-              <div className="space-y-3">
-                {scenarios.map((s) => (
-                  <label
-                    key={s.id}
-                    className={`flex items-start gap-3 cursor-pointer p-3 rounded transition-colors ${
-                      selectedScenario === s.id
-                        ? 'bg-[#E51B23]/20 border border-[#E51B23]'
-                        : 'hover:bg-white/5'
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="scenario"
-                      value={s.id}
-                      checked={selectedScenario === s.id}
-                      onChange={() => setSelectedScenario(s.id)}
-                      className="mt-1 accent-[#E51B23]"
-                    />
-                    <div>
-                      <span className="font-semibold text-white">{s.title}</span>
-                      <span className="text-white/60 ml-2">{s.desc}</span>
+          {recordingState === 'idle' && !selectedScenario && (
+            <div className="mb-8 space-y-4">
+              {scenarios.map((s) => (
+                <button
+                  key={s.id}
+                  onClick={() => setSelectedScenario(s.id)}
+                  className="w-full bg-[#1A1A1A] border-2 border-[#333] hover:border-[#E51B23] p-6 rounded-lg text-left transition-all duration-300 hover:scale-[1.02] group"
+                >
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 rounded-full bg-[#E51B23] flex items-center justify-center flex-shrink-0 group-hover:bg-[#FFDE59] transition-colors">
+                      <svg className="w-6 h-6 text-white group-hover:text-black" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" />
+                      </svg>
                     </div>
-                  </label>
-                ))}
-              </div>
-              <p className="text-white/50 text-sm mt-3 italic">
-                Record whichever one you struggle with most.
+                    <div className="flex-1">
+                      <h3 className="font-anton text-lg text-white mb-2 tracking-wide">{s.title}</h3>
+                      <p className="text-white/70 text-sm">{s.desc}</p>
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Selected Scenario Display */}
+          {recordingState === 'idle' && selectedScenario && (
+            <div className="mb-6 p-4 bg-[#FFDE59]/10 border-l-4 border-[#FFDE59] rounded-r">
+              <p className="text-[#FFDE59] font-semibold mb-2">You selected:</p>
+              <p className="text-white font-bold">
+                {scenarios.find(s => s.id === selectedScenario)?.title}
               </p>
+              <button
+                onClick={() => setSelectedScenario(null)}
+                className="text-white/60 text-sm mt-2 hover:text-white underline"
+              >
+                Change scenario
+              </button>
             </div>
           )}
 
@@ -319,14 +347,43 @@ export default function CallLabInstantPage() {
           {/* Results */}
           {(recordingState === 'results' || recordingState === 'capturing') && result && (
             <div className="mt-8 space-y-6">
-              {/* Score Card */}
-              <div className="p-6 bg-white/5 border-2 border-[#E51B23] rounded-xl text-center">
-                <div className="inline-block bg-[#E51B23] text-white px-6 py-3 rounded-lg mb-3">
-                  <span className="font-anton text-4xl">{result.score}</span>
-                  <span className="text-xl">/10</span>
+              {/* Instant Feedback Scores */}
+              {result.analysis.instant && (
+                <div className="p-6 bg-[#1a1a1a] border-2 border-[#FFDE59] rounded-lg">
+                  <h3 className="font-anton text-xl text-[#FFDE59] mb-6 tracking-wide">
+                    🎙️ INSTANT FEEDBACK
+                  </h3>
+
+                  <div className="space-y-4">
+                    {/* First Impression */}
+                    <div className="pb-4 border-b border-white/10">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-white font-semibold">1. First Impression Score</span>
+                        <span className="text-2xl font-bold text-[#FFDE59]">{result.analysis.instant.firstImpression}/10</span>
+                      </div>
+                      <p className="text-white/70 text-sm">{result.analysis.instant.firstImpressionNote}</p>
+                    </div>
+
+                    {/* Clarity */}
+                    <div className="pb-4 border-b border-white/10">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-white font-semibold">2. Clarity Score</span>
+                        <span className="text-2xl font-bold text-[#FFDE59]">{result.analysis.instant.clarity}/10</span>
+                      </div>
+                      <p className="text-white/70 text-sm">{result.analysis.instant.clarityNote}</p>
+                    </div>
+
+                    {/* Confidence */}
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-white font-semibold">3. Confidence Score</span>
+                        <span className="text-2xl font-bold text-[#FFDE59]">{result.analysis.instant.confidence}/10</span>
+                      </div>
+                      <p className="text-white/70 text-sm">{result.analysis.instant.confidenceNote}</p>
+                    </div>
+                  </div>
                 </div>
-                <p className="text-white/80">{result.analysis.summary}</p>
-              </div>
+              )}
 
               {/* WTF Method Assessment - PROMINENT */}
               {result.analysis.wtf && (
@@ -369,15 +426,9 @@ export default function CallLabInstantPage() {
                 </div>
               )}
 
-              {/* Technical Scores */}
-              {result.analysis.technical && (
-                <div className="grid grid-cols-3 gap-3">
-                  {result.analysis.technical.talkRatio && (
-                    <div className="bg-white/5 rounded p-3 text-center">
-                      <div className="text-lg font-bold text-[#FFDE59]">{result.analysis.technical.talkRatio}</div>
-                      <div className="text-xs text-white/50">Talk Ratio</div>
-                    </div>
-                  )}
+              {/* Technical Scores - Only show if relevant (not Talk Ratio for solo recordings) */}
+              {result.analysis.technical && (result.analysis.technical.questionQuality !== undefined || result.analysis.technical.activeListening !== undefined) && (
+                <div className="grid grid-cols-2 gap-3">
                   {result.analysis.technical.questionQuality !== undefined && (
                     <div className="bg-white/5 rounded p-3 text-center">
                       <div className="text-lg font-bold text-[#FFDE59]">{result.analysis.technical.questionQuality}/10</div>

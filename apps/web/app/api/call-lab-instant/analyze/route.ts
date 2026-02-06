@@ -152,6 +152,8 @@ export async function POST(request: NextRequest) {
 
     try {
       const analysis: InstantReportAnalysis = {
+        // Instant scores (for solo recordings)
+        instant: analysisResult.instant,
         // WTF Method scores (primary)
         wtf: analysisResult.wtf,
         // Technical scores (secondary)
@@ -188,6 +190,8 @@ export async function POST(request: NextRequest) {
       transcript,
       score: analysisResult.score,
       analysis: {
+        // Instant scores (for solo recordings)
+        instant: analysisResult.instant,
         // WTF Method scores (primary)
         wtf: analysisResult.wtf,
         // Technical scores (secondary)

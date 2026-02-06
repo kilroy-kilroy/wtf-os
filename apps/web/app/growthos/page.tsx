@@ -145,6 +145,10 @@ export default function GrowthOSGatePage() {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Jane Smith"
+                  autoComplete="off"
+                  autoCorrect="off"
+                  autoCapitalize="off"
+                  spellCheck={false}
                   className="w-full px-4 py-3 bg-slate-700/50 border-2 border-slate-600 rounded-xl text-white placeholder-slate-500 focus:border-[#00D4FF] focus:ring-0 focus:outline-none transition-colors text-sm"
                 />
               </div>
@@ -156,6 +160,10 @@ export default function GrowthOSGatePage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="jane@agency.com"
+                  autoComplete="off"
+                  autoCorrect="off"
+                  autoCapitalize="off"
+                  spellCheck={false}
                   className="w-full px-4 py-3 bg-slate-700/50 border-2 border-slate-600 rounded-xl text-white placeholder-slate-500 focus:border-[#00D4FF] focus:ring-0 focus:outline-none transition-colors text-sm"
                 />
               </div>

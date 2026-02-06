@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { InputForm } from '@/components/visibility-lab/InputForm';
 import { Dashboard } from '@/components/visibility-lab/Dashboard';
 import { LoadingScreen } from '@/components/visibility-lab/LoadingScreen';
+import { ToolPageHeader } from '@/components/ToolPageHeader';
 import { AnalysisInput, AnalysisReport } from '@/lib/visibility-lab/types';
 import { formatEmail } from '@/lib/visibility-lab/email-formatter';
 import { Globe, Linkedin, Instagram, Youtube, Mail, FileText } from 'lucide-react';
@@ -124,6 +125,12 @@ export default function VisibilityLabPage() {
 
   return (
     <div className="min-h-screen bg-black selection:bg-brand-yellow selection:text-black">
+      <ToolPageHeader
+        osLogoSrc="/logos/DemandOS VisibilityLabSQTransparent.png"
+        osLogoAlt="DemandOS"
+        toolLogoSrc="/logos/VisibilityLabSQTransparent.png"
+        toolLogoAlt="Visibility Lab"
+      />
       {isLoading && <LoadingScreen />}
 
       {!report ? (

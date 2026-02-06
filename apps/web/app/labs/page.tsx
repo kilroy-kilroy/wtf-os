@@ -24,6 +24,15 @@ const allLabs: Lab[] = [
     product: 'call-lab',
   },
   {
+    name: 'Call Lab Instant',
+    description: 'Quick call analysis with instant feedback and scoring.',
+    href: '/call-lab-instant',
+    tier: 'Free',
+    icon: '⚡',
+    color: '#E51B23',
+    product: 'call-lab',
+  },
+  {
     name: 'Call Lab Pro',
     description: 'Deep-dive analysis with pattern recognition, coaching reports, and performance tracking.',
     href: '/call-lab/pro',
@@ -50,6 +59,24 @@ const allLabs: Lab[] = [
     color: '#FFDE59',
     product: 'discovery-lab',
   },
+  {
+    name: 'Visibility Lab',
+    description: 'Track your market visibility and competitive positioning.',
+    href: '/visibility-lab',
+    tier: 'Free',
+    icon: '👁️',
+    color: '#E51B23',
+    product: 'call-lab',
+  },
+  {
+    name: 'WTF Assessment',
+    description: 'Evaluate your sales process and identify areas for improvement.',
+    href: '/wtf-assessment',
+    tier: 'Free',
+    icon: '📊',
+    color: '#E51B23',
+    product: 'call-lab',
+  },
 ];
 
 export default async function LabsPage() {
@@ -72,25 +99,16 @@ export default async function LabsPage() {
   const hasCallLabPro = subscriptionStatus.hasCallLabPro;
   const hasDiscoveryLabPro = subscriptionStatus.hasDiscoveryLabPro;
 
-  // Filter labs based on subscription
-  // If user has Pro for a product, show only the Pro version
-  // If user doesn't have Pro, show only the Free version
+  // Show all free tools + pro tools user has access to
   const filteredLabs = allLabs.filter((lab) => {
-    if (lab.product === 'call-lab') {
-      if (hasCallLabPro) {
-        return lab.tier === 'Pro';
-      } else {
-        return lab.tier === 'Free';
-      }
-    }
-    if (lab.product === 'discovery-lab') {
-      if (hasDiscoveryLabPro) {
-        return lab.tier === 'Pro';
-      } else {
-        return lab.tier === 'Free';
-      }
-    }
-    return true;
+    // Always show free tools
+    if (lab.tier === 'Free') return true;
+
+    // Show Pro tools only if user has subscription
+    if (lab.name === 'Call Lab Pro') return hasCallLabPro;
+    if (lab.name === 'Discovery Lab Pro') return hasDiscoveryLabPro;
+
+    return false;
   });
 
   // Determine upsell recommendation

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from '@/lib/supabase-browser';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 
@@ -17,7 +17,7 @@ export default function GrowthOSGatePage() {
   const [confirmationSent, setConfirmationSent] = useState(false);
 
   const router = useRouter();
-  const supabase = createClientComponentClient();
+  const supabase = createClient();
 
   function handleContinue(e: React.FormEvent) {
     e.preventDefault();

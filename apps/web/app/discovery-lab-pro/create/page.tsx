@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from '@/lib/supabase-browser';
 import {
   ConsolePanel,
   ConsoleHeading,
@@ -47,7 +47,7 @@ const LOADING_MESSAGES = [
 ];
 
 export default function DiscoveryLabProCreatePage() {
-  const supabase = createClientComponentClient();
+  const supabase = createClient();
 
   const [formData, setFormData] = useState({
     // Requestor info (pre-filled from profile)

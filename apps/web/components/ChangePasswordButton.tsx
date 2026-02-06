@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from '@/lib/supabase-browser';
 
 interface ChangePasswordButtonProps {
   email: string;
@@ -11,7 +11,7 @@ export default function ChangePasswordButton({ email }: ChangePasswordButtonProp
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [isError, setIsError] = useState(false);
-  const supabase = createClientComponentClient();
+  const supabase = createClient();
 
   const handleChangePassword = async () => {
     setIsLoading(true);

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { createClient } from "@/lib/supabase-browser";
 
 const OUTCOMES = [
   { value: "won", label: "Won the deal", icon: "🎉", color: "border-green-500 hover:bg-green-900" },
@@ -28,7 +28,7 @@ export default function OutcomeUpdatePage({
   const [success, setSuccess] = useState(false);
 
   const router = useRouter();
-  const supabase = createClientComponentClient();
+  const supabase = createClient();
 
   useEffect(() => {
     const fetchCall = async () => {

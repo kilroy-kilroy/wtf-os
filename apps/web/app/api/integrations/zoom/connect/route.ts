@@ -1,5 +1,4 @@
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
+import { createClient } from '@/lib/supabase-auth-server';
 import { NextResponse } from 'next/server';
 import { getAuthorizationUrl } from '@/lib/zoom';
 
@@ -10,7 +9,7 @@ import { getAuthorizationUrl } from '@/lib/zoom';
  */
 export async function GET() {
   try {
-    const supabase = createRouteHandlerClient({ cookies });
+    const supabase = await createClient();
 
     const {
       data: { user },

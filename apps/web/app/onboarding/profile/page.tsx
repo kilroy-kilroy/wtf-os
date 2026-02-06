@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from '@/lib/supabase-browser';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 
@@ -75,7 +75,7 @@ export default function ProfileSetupPage() {
   const [existingOrgName, setExistingOrgName] = useState<string | null>(null);
 
   const router = useRouter();
-  const supabase = createClientComponentClient();
+  const supabase = createClient();
 
   // Pre-fill from auth and any existing assessment data
   useEffect(() => {

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from '@/lib/supabase-browser';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 
@@ -27,7 +27,7 @@ function LoginContent() {
 
   const router = useRouter();
   const searchParams = useSearchParams();
-  const supabase = createClientComponentClient();
+  const supabase = createClient();
 
   // Read `next` param so we can route back after login
   const nextPath = searchParams.get('next');

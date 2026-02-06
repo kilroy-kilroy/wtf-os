@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { cookies } from 'next/headers';
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createClient as createAuthClient } from '@/lib/supabase-auth-server';
 import { generateFollowUpInsights } from '@repo/utils/src/assessment/follow-up';
 import type { FollowUpAnswers } from '@repo/utils/src/assessment/follow-up';
 import type { IntakeData, AssessmentResult } from '@repo/utils/src/assessment/scoring';
@@ -14,7 +13,7 @@ const supabase = createClient(
 
 export async function POST(request: NextRequest) {
   try {
-    const authClient = createServerComponentClient({ cookies });
+    const authClient = await createAuthClient();
     const { data: { user }, error: authError } = await authClient.auth.getUser();
 
     if (authError || !user) {

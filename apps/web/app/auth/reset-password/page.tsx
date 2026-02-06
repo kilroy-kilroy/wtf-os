@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from '@/lib/supabase-browser';
 import { useRouter } from 'next/navigation';
 
 export default function ResetPasswordPage() {
@@ -14,7 +14,7 @@ export default function ResetPasswordPage() {
   const [initializing, setInitializing] = useState(true);
 
   const router = useRouter();
-  const supabase = createClientComponentClient();
+  const supabase = createClient();
 
   useEffect(() => {
     const initSession = async () => {

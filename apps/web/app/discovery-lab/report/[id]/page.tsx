@@ -1,6 +1,5 @@
 import { redirect } from 'next/navigation';
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
+import { createClient } from '@/lib/supabase-auth-server';
 import Link from 'next/link';
 import { ConsolePanel, ConsoleHeading, ConsoleMarkdownRenderer } from '@/components/console';
 
@@ -26,7 +25,7 @@ export default async function DiscoveryReportPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const supabase = createServerComponentClient({ cookies });
+  const supabase = await createClient();
 
   // Try to get user - reports can be viewed by owner or via direct link
   const {

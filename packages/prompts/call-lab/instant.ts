@@ -103,6 +103,14 @@ Respond with this EXACT JSON structure:
 
 {
   "score": 7,
+  "instant": {
+    "firstImpression": 3,
+    "firstImpressionNote": "Brief assessment of the opening impact - does it grab attention or push people away?",
+    "clarity": 5,
+    "clarityNote": "Brief assessment of message clarity - is it crystal clear what they sell and who it's for?",
+    "confidence": 4,
+    "confidenceNote": "Brief assessment of delivery confidence - do they sound like they believe what they're saying?"
+  },
   "wtf": {
     "radicalRelevance": 8,
     "radicalRelevanceNote": "Brief assessment of how well they connected to prospect's world",
@@ -119,7 +127,6 @@ Respond with this EXACT JSON structure:
     "overall": "2-3 sentence assessment of trust-building using WTF framework and the single biggest opportunity"
   },
   "technical": {
-    "talkRatio": "Estimated talk ratio (e.g., '40:60' means seller 40%, prospect 60%)",
     "questionQuality": 7,
     "activeListening": 8
   },
@@ -137,9 +144,13 @@ Respond with this EXACT JSON structure:
 
 Requirements:
 - score: Overall 1-10 integer (consider WTF scores heavily)
+- instant scores: ALWAYS include these for solo pitch recordings
+  - firstImpression: 1-10 for opening impact and hook strength
+  - clarity: 1-10 for message clarity (what they sell, who it's for)
+  - confidence: 1-10 for vocal confidence and conviction
+  - Each with a brief note explaining the score
 - wtf scores: Each 1-10 integer with note, evidence, and improvement
-- technical.questionQuality: 1-10 for question quality
-- technical.activeListening: 1-10 for active listening signals
+- technical: Only include questionQuality and activeListening if relevant (NOT talkRatio for solo recordings)
 - summary: 1-2 sentences max
 - what_worked: 2-3 items, each 1 sentence
 - what_to_watch: 2-3 items, each 1 sentence
@@ -147,9 +158,11 @@ Requirements:
 - Reference actual words from the transcript when possible
 - Be encouraging but honest - this is meant to help them improve
 
-NOTE: For a 30-second pitch, some WTF elements may not be observable. Score based on what IS present:
+NOTE: For a solo pitch recording (no two-way conversation):
+- ALWAYS include "instant" scores (First Impression, Clarity, Confidence)
+- DO NOT include "talkRatio" in technical scores (makes no sense for solo recordings)
+- Score WTF elements based on whether their APPROACH would build trust in a real conversation
 - If no prospect context is shown, score Radical Relevance on whether they COULD personalize based on what they say
-- If it's a solo pitch (no prospect), focus on whether their approach invites trust
 `;
 
 function getScenarioDescription(scenario: InstantScenario): string {
@@ -184,10 +197,20 @@ export interface TechnicalScores {
   activeListening?: number;
 }
 
+export interface InstantScores {
+  firstImpression: number;
+  firstImpressionNote: string;
+  clarity: number;
+  clarityNote: string;
+  confidence: number;
+  confidenceNote: string;
+}
+
 export interface CallLabInstantResponse {
   score: number;
   wtf?: WtfScores;
   technical?: TechnicalScores;
+  instant?: InstantScores;
   summary: string;
   what_worked: string[];
   what_to_watch: string[];

@@ -1,10 +1,8 @@
 /**
- * HTML to PDF converter using Puppeteer
- * Converts HTML reports to PDF with high-fidelity rendering
+ * HTML to PDF converter
+ * Uses Puppeteer with dynamic imports to avoid breaking when Chromium is unavailable.
+ * Falls back gracefully in serverless environments where Chromium can't launch.
  */
-
-import puppeteer from 'puppeteer-core';
-import chromium from '@sparticuz/chromium';
 
 export interface PdfOptions {
   format?: 'Letter' | 'A4';
@@ -18,7 +16,7 @@ export interface PdfOptions {
 }
 
 /**
- * Convert HTML string to PDF buffer using Puppeteer
+ * Convert HTML string to PDF buffer using Puppeteer (dynamic import)
  */
 export async function htmlToPdf(
   html: string,
@@ -29,6 +27,10 @@ export async function htmlToPdf(
     printBackground = true,
     margin = { top: '0', right: '0', bottom: '0', left: '0' },
   } = options;
+
+  // Dynamic imports — prevents module-level crash if packages are missing
+  const puppeteer = (await import('puppeteer-core')).default;
+  const chromium = (await import('@sparticuz/chromium')).default;
 
   let browser;
   try {
@@ -75,6 +77,9 @@ export async function htmlFileToPdf(
     printBackground = true,
     margin = { top: '0', right: '0', bottom: '0', left: '0' },
   } = options;
+
+  const puppeteer = (await import('puppeteer-core')).default;
+  const chromium = (await import('@sparticuz/chromium')).default;
 
   let browser;
   try {

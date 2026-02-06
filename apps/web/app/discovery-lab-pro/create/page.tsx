@@ -201,19 +201,22 @@ export default function DiscoveryLabProCreatePage() {
     if (!result) return;
 
     setDownloadingPdf(true);
+    const pdfMetadata = {
+      date: new Date().toLocaleDateString(),
+      repName: formData.requestor_name || 'Sales Rep',
+      prospectCompany: formData.target_company,
+      tier: 'pro',
+      product: 'discovery-lab',
+    };
+
     try {
+      // Try server-side PDF generation first
       const response = await fetch('/api/export/pdf', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           result: result.markdown,
-          metadata: {
-            date: new Date().toLocaleDateString(),
-            repName: formData.requestor_name || 'Sales Rep',
-            prospectCompany: formData.target_company,
-            tier: 'pro',
-            product: 'discovery-lab',
-          },
+          metadata: pdfMetadata,
         }),
       });
 
@@ -231,8 +234,42 @@ export default function DiscoveryLabProCreatePage() {
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
     } catch (err) {
-      console.error('Error downloading PDF:', err);
-      alert('Failed to download PDF. Please try again.');
+      console.error('Server PDF generation failed, trying HTML fallback:', err);
+
+      // Fallback: fetch the styled HTML and open it for print-to-PDF
+      try {
+        const htmlResponse = await fetch('/api/export/pdf', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            result: result.markdown,
+            metadata: pdfMetadata,
+            format: 'html',
+          }),
+        });
+
+        if (!htmlResponse.ok) {
+          throw new Error('HTML fallback also failed');
+        }
+
+        const html = await htmlResponse.text();
+        const printWindow = window.open('', '_blank');
+        if (printWindow) {
+          printWindow.document.write(html);
+          printWindow.document.close();
+          // Auto-trigger print dialog so user can "Save as PDF"
+          printWindow.onload = () => printWindow.print();
+          // Fallback if onload doesn't fire (content already loaded)
+          setTimeout(() => {
+            try { printWindow.print(); } catch (_) { /* ignore */ }
+          }, 1000);
+        } else {
+          alert('Please allow pop-ups to download the PDF.');
+        }
+      } catch (fallbackErr) {
+        console.error('HTML fallback also failed:', fallbackErr);
+        alert('Failed to download PDF. Please try again.');
+      }
     } finally {
       setDownloadingPdf(false);
     }

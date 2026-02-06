@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { AnalysisReport } from '../types';
 import { Download, Youtube, Mic, Users, AlertTriangle, CheckCircle, Zap, Target, Lock, Skull, Activity, Layers, ArrowRight, Save, Share2, Swords, Microscope, PenTool, X, Copy } from 'lucide-react';
 import { ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, Radar, Tooltip } from 'recharts';
-import { generateQuickPost } from '../services/geminiService';
+import { generateQuickPost } from '../services/perplexityService';
 
 interface Props {
   data: AnalysisReport;

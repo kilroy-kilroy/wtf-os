@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { GoogleGenAI } from '@google/genai';
 
 export async function POST(request: NextRequest) {
   try {
     const { topic, archetype, brandName } = await request.json();
 
-    const apiKey = process.env.GOOGLE_API_KEY;
+    const apiKey = process.env.PERPLEXITY_API_KEY;
     if (!apiKey) {
       return NextResponse.json(
-        { error: 'Google API key not configured' },
+        { error: 'Perplexity API key not configured' },
         { status: 500 }
       );
     }
@@ -30,13 +29,31 @@ export async function POST(request: NextRequest) {
     OUTPUT: Just the post text. No preamble.
   `;
 
-    const ai = new GoogleGenAI({ apiKey });
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: [{ role: 'user', parts: [{ text: prompt }] }]
+    const response = await fetch('https://api.perplexity.ai/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'sonar',
+        messages: [
+          { role: 'user', content: prompt }
+        ]
+      })
     });
 
-    const text = response.text || 'Error generating draft.';
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Perplexity API error:', errorText);
+      return NextResponse.json(
+        { error: 'Failed to generate post' },
+        { status: response.status }
+      );
+    }
+
+    const data = await response.json();
+    const text = data.choices?.[0]?.message?.content || 'Error generating draft.';
     return NextResponse.json({ draft: text });
   } catch (error) {
     console.error('Draft generation failed:', error);

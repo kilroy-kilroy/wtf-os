@@ -10,7 +10,7 @@ interface Lab {
   tier: 'Free' | 'Pro';
   icon: string;
   color: string;
-  product: 'call-lab' | 'discovery-lab';
+  product: 'call-lab' | 'discovery-lab' | 'visibility-lab';
 }
 
 const allLabs: Lab[] = [
@@ -66,7 +66,16 @@ const allLabs: Lab[] = [
     tier: 'Free',
     icon: '👁️',
     color: '#E51B23',
-    product: 'call-lab',
+    product: 'visibility-lab',
+  },
+  {
+    name: 'Visibility Lab Pro',
+    description: 'Deep strategic visibility audit with KVI scoring, competitor war room, buyer journey mapping, and operator profiling.',
+    href: '/visibility-lab-pro',
+    tier: 'Pro',
+    icon: '👁️‍🗨️',
+    color: '#FFDE59',
+    product: 'visibility-lab',
   },
   {
     name: 'WTF Assessment',
@@ -98,6 +107,7 @@ export default async function LabsPage() {
 
   const hasCallLabPro = subscriptionStatus.hasCallLabPro;
   const hasDiscoveryLabPro = subscriptionStatus.hasDiscoveryLabPro;
+  const hasVisibilityLabPro = subscriptionStatus.hasVisibilityLabPro;
 
   // Show all free tools + pro tools user has access to
   const filteredLabs = allLabs.filter((lab) => {
@@ -107,15 +117,18 @@ export default async function LabsPage() {
     // Show Pro tools only if user has subscription
     if (lab.name === 'Call Lab Pro') return hasCallLabPro;
     if (lab.name === 'Discovery Lab Pro') return hasDiscoveryLabPro;
+    if (lab.name === 'Visibility Lab Pro') return hasVisibilityLabPro;
 
     return false;
   });
 
-  // Determine upsell recommendation
+  // Determine upsell recommendation - recommend a Pro tool the user doesn't have
   let upsellLab: Lab | null = null;
-  if (hasCallLabPro && !hasDiscoveryLabPro) {
+  if (!hasVisibilityLabPro) {
+    upsellLab = allLabs.find(l => l.name === 'Visibility Lab Pro') || null;
+  } else if (!hasDiscoveryLabPro) {
     upsellLab = allLabs.find(l => l.name === 'Discovery Lab Pro') || null;
-  } else if (hasDiscoveryLabPro && !hasCallLabPro) {
+  } else if (!hasCallLabPro) {
     upsellLab = allLabs.find(l => l.name === 'Call Lab Pro') || null;
   }
 
@@ -265,7 +278,7 @@ export default async function LabsPage() {
           >
             Settings
           </Link>
-          {!hasCallLabPro && !hasDiscoveryLabPro && (
+          {!hasCallLabPro && !hasDiscoveryLabPro && !hasVisibilityLabPro && (
             <Link
               href="/call-lab-pro/checkout"
               className="text-sm text-[#FFDE59] hover:text-white transition"

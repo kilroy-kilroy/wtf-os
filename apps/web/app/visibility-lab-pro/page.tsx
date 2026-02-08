@@ -79,6 +79,11 @@ export default function VisibilityLabProPage() {
     clientAcquisition: '',
     contentCapacity: '',
     linkedInUrl: '',
+    companyLinkedInUrl: '',
+    youtubeUrl: '',
+    podcastUrl: '',
+    newsletterUrl: '',
+    twitterUrl: '',
   });
 
   // Load saved data from localStorage on mount
@@ -338,6 +343,56 @@ export default function VisibilityLabProPage() {
                       required
                       value={formData.website}
                       onChange={(e) => setFormData({ ...formData, website: (e.target as HTMLInputElement).value })}
+                    />
+                  </div>
+                </div>
+
+                {/* ── BRAND CHANNELS (PRO) ── */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <ConsoleHeading level={3} variant="yellow">
+                      BRAND CHANNELS
+                    </ConsoleHeading>
+                    <span className="bg-[#FFDE59] text-black text-[10px] font-anton uppercase px-2 py-0.5">PRO</span>
+                  </div>
+                  <p className="text-[#666] text-xs font-poppins">
+                    Provide direct URLs so we can audit your actual channels instead of guessing. All optional.
+                  </p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <ConsoleInput
+                      type="url"
+                      placeholder="https://linkedin.com/company/yourbrand"
+                      label="COMPANY LINKEDIN"
+                      value={formData.companyLinkedInUrl}
+                      onChange={(e) => setFormData({ ...formData, companyLinkedInUrl: (e.target as HTMLInputElement).value })}
+                    />
+                    <ConsoleInput
+                      type="url"
+                      placeholder="https://youtube.com/@yourchannel"
+                      label="YOUTUBE"
+                      value={formData.youtubeUrl}
+                      onChange={(e) => setFormData({ ...formData, youtubeUrl: (e.target as HTMLInputElement).value })}
+                    />
+                    <ConsoleInput
+                      type="url"
+                      placeholder="https://podcasts.apple.com/... or Spotify link"
+                      label="PODCAST"
+                      value={formData.podcastUrl}
+                      onChange={(e) => setFormData({ ...formData, podcastUrl: (e.target as HTMLInputElement).value })}
+                    />
+                    <ConsoleInput
+                      type="url"
+                      placeholder="https://yourbrand.substack.com or newsletter URL"
+                      label="NEWSLETTER"
+                      value={formData.newsletterUrl}
+                      onChange={(e) => setFormData({ ...formData, newsletterUrl: (e.target as HTMLInputElement).value })}
+                    />
+                    <ConsoleInput
+                      type="url"
+                      placeholder="https://twitter.com/yourbrand"
+                      label="TWITTER / X"
+                      value={formData.twitterUrl}
+                      onChange={(e) => setFormData({ ...formData, twitterUrl: (e.target as HTMLInputElement).value })}
                     />
                   </div>
                 </div>

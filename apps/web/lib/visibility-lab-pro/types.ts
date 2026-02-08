@@ -32,6 +32,13 @@ export interface VisibilityLabProInput {
 
   // PRO: Operator Context
   linkedInUrl: string;
+
+  // PRO: Brand Channels (optional — direct URLs for deeper audit)
+  companyLinkedInUrl: string;
+  youtubeUrl: string;
+  podcastUrl: string;
+  newsletterUrl: string;
+  twitterUrl: string;
 }
 
 // --- OUTPUT TYPES ---

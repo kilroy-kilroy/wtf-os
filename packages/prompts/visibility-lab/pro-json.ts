@@ -21,6 +21,11 @@ export function buildVisibilityLabProPrompt(input: {
   clientAcquisition: string;
   contentCapacity: string;
   linkedInUrl: string;
+  companyLinkedInUrl: string;
+  youtubeUrl: string;
+  podcastUrl: string;
+  newsletterUrl: string;
+  twitterUrl: string;
 }): string {
   const archetypeList = DEMAND_OS_ARCHETYPES.map(a => `- "${a.name}": ${a.description}`).join("\n");
 
@@ -88,12 +93,18 @@ You have access to Google Search. Perform a professional strategic audit.
    - Where do they show up in search results?
 
 2. OPERATOR AUDIT: Search for "${input.userName}" and "${input.brandName}".
-   ${input.linkedInUrl ? `Also check their LinkedIn: "${input.linkedInUrl}"` : ''}
-   - Do they exist on LinkedIn? YouTube? Podcasts?
-   - Is there recent content?
+   ${input.linkedInUrl ? `Also check their personal LinkedIn: "${input.linkedInUrl}"` : ''}
+   ${input.companyLinkedInUrl ? `Also check their company LinkedIn: "${input.companyLinkedInUrl}"` : ''}
+   ${input.youtubeUrl ? `Also check their YouTube: "${input.youtubeUrl}"` : ''}
+   ${input.podcastUrl ? `Also check their podcast: "${input.podcastUrl}"` : ''}
+   ${input.newsletterUrl ? `Also check their newsletter: "${input.newsletterUrl}"` : ''}
+   ${input.twitterUrl ? `Also check their Twitter/X: "${input.twitterUrl}"` : ''}
+   - Do they exist on LinkedIn? YouTube? Podcasts? Newsletter?
+   - Is there recent content on these channels?
    - Are they quoted/mentioned in industry publications?
    - What speaking engagements or podcast appearances exist?
    - How strong is their personal brand vs. the company brand?
+   - For any provided URLs above, audit ACTUAL content quality, frequency, and engagement.
 
 3. BRAND FORENSICS: Visit and analyze "${input.website}".
    - Does the messaging match what they claim?
@@ -113,12 +124,17 @@ INPUT DATA
 OPERATOR:
 - Name: ${input.userName}
 - Title: ${input.userTitle}
-- LinkedIn: ${input.linkedInUrl || 'Not provided'}
+- Personal LinkedIn: ${input.linkedInUrl || 'Not provided'}
 
 BRAND:
 - Name: ${input.brandName}
 - Website: ${input.website}
 - Years in Business: ${input.yearsInBusiness}
+- Company LinkedIn: ${input.companyLinkedInUrl || 'Not provided'}
+- YouTube: ${input.youtubeUrl || 'Not provided'}
+- Podcast: ${input.podcastUrl || 'Not provided'}
+- Newsletter: ${input.newsletterUrl || 'Not provided'}
+- Twitter/X: ${input.twitterUrl || 'Not provided'}
 
 MARKET:
 - Target Audience: ${input.targetAudience}

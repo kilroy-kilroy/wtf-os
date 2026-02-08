@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import {
   VisibilityLabProReport,
+  KilroyVisibilityIndex,
   KVIScore,
 } from '@/lib/visibility-lab-pro/types';
 import {
@@ -65,6 +66,11 @@ const KVI_LABELS: Record<string, { label: string; icon: React.ReactNode }> = {
   founderSignalStrength: { label: 'Founder Signal', icon: <User size={16} /> },
 };
 
+// Helper to access KVI dimensions by key
+function getKviScore(kvi: KilroyVisibilityIndex, key: string): KVIScore | undefined {
+  return (kvi as unknown as Record<string, KVIScore>)[key];
+}
+
 export const ProReport: React.FC<Props> = ({ data, onReset }) => {
   const [expandedCompetitor, setExpandedCompetitor] = useState<number | null>(null);
   const [draftModalOpen, setDraftModalOpen] = useState(false);
@@ -126,7 +132,7 @@ export const ProReport: React.FC<Props> = ({ data, onReset }) => {
   // Build KVI radar data
   const kviRadarData = Object.entries(KVI_LABELS).map(([key, { label }]) => ({
     subject: label,
-    A: (data.kvi as Record<string, KVIScore>)[key]?.score || 0,
+    A: getKviScore(data.kvi, key)?.score || 0,
     fullMark: 100,
   }));
 
@@ -298,7 +304,7 @@ export const ProReport: React.FC<Props> = ({ data, onReset }) => {
             {/* Score Bars */}
             <div className="space-y-4">
               {Object.entries(KVI_LABELS).map(([key, { label, icon }]) => {
-                const item = (data.kvi as Record<string, KVIScore>)[key];
+                const item = getKviScore(data.kvi, key);
                 const score = item?.score || 0;
                 return (
                   <div key={key} className="group">

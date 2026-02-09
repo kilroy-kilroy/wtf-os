@@ -31,20 +31,20 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ clients: [] });
     }
 
-    // Get user emails
-    const userIds = enrollments.map(e => e.user_id);
     const clients = [];
 
     for (const enrollment of enrollments) {
       const { data: userData } = await supabase.auth.admin.getUserById(enrollment.user_id);
+      const program = enrollment.program as any;
+      const company = enrollment.company as any;
 
       clients.push({
         id: enrollment.id,
         email: userData?.user?.email || 'unknown',
         full_name: userData?.user?.user_metadata?.full_name || null,
-        program_name: enrollment.program?.name || 'Unknown',
-        program_slug: enrollment.program?.slug || '',
-        company_name: enrollment.company?.company_name || null,
+        program_name: program?.name || 'Unknown',
+        program_slug: program?.slug || '',
+        company_name: company?.company_name || null,
         onboarding_completed: enrollment.onboarding_completed,
         status: enrollment.status,
         enrolled_at: enrollment.enrolled_at,

@@ -59,12 +59,14 @@ export async function GET(request: NextRequest) {
     }
 
     // Filter to only 5MF programs
-    const fmfEnrollments = enrollments.filter(e => e.program?.has_five_minute_friday);
+    const fmfEnrollments = enrollments.filter(e => (e.program as any)?.has_five_minute_friday);
 
     let sent = 0;
     let skipped = 0;
 
     for (const enrollment of fmfEnrollments) {
+      const program = enrollment.program as any;
+
       // Check timezone - should we send now?
       // Simple approach: check if it's between 8 AM and 11 AM in their timezone
       try {
@@ -106,7 +108,7 @@ export async function GET(request: NextRequest) {
         eventName: 'five_minute_friday_reminder',
         eventProperties: {
           firstName,
-          programName: enrollment.program?.name || '',
+          programName: program?.name || '',
           submitUrl: `${appUrl}/client/five-minute-friday`,
           weekOf: fridayStr,
         },

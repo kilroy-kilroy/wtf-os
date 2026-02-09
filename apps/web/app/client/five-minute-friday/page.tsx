@@ -33,7 +33,7 @@ export default function FiveMinuteFridayPage() {
         .eq('status', 'active')
         .single();
 
-      if (!enrollment?.program?.has_five_minute_friday) {
+      if (!(enrollment?.program as any)?.has_five_minute_friday) {
         router.push('/client/dashboard');
         return;
       }

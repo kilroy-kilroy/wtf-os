@@ -58,12 +58,13 @@ export default function ClientDashboardPage() {
         .eq('week_of', fridayStr)
         .single();
 
+      const program = enrollment.program as any;
       setData({
         enrollment: enrollment as any,
         company,
-        hasFiveMinuteFriday: enrollment.program?.has_five_minute_friday || false,
-        hasCallLabPro: enrollment.leads_sales_calls || enrollment.program?.has_call_lab_pro || false,
-        pendingFriday: !existingFriday && enrollment.program?.has_five_minute_friday,
+        hasFiveMinuteFriday: program?.has_five_minute_friday || false,
+        hasCallLabPro: enrollment.leads_sales_calls || program?.has_call_lab_pro || false,
+        pendingFriday: !existingFriday && program?.has_five_minute_friday,
       });
       setLoading(false);
     }

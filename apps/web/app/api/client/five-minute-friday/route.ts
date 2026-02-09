@@ -27,7 +27,8 @@ export async function POST(request: NextRequest) {
       .eq('status', 'active')
       .single();
 
-    if (!enrollment?.program?.has_five_minute_friday) {
+    const program = enrollment?.program as any;
+    if (!program?.has_five_minute_friday) {
       return NextResponse.json({ error: '5-Minute Friday not available for your program' }, { status: 403 });
     }
 

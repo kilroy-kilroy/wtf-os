@@ -304,10 +304,22 @@ export default function AdminDashboardPage() {
         </div>
         <div className="flex gap-2">
           <Link
+            href="/admin/clients"
+            className="px-4 py-2 rounded-lg bg-[#E51B23] text-white text-sm font-medium hover:bg-[#c81720]"
+          >
+            Clients
+          </Link>
+          <Link
+            href="/admin/five-minute-friday"
+            className="px-4 py-2 rounded-lg bg-[#FFDE59] text-black text-sm font-medium hover:bg-[#e6c94f]"
+          >
+            5MF
+          </Link>
+          <Link
             href="/admin/reports"
             className="px-4 py-2 rounded-lg bg-slate-700 text-slate-300 text-sm font-medium hover:bg-slate-600"
           >
-            Client Reports
+            Reports
           </Link>
           <button
             onClick={() => fetchData(apiKey)}

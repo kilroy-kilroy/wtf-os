@@ -43,6 +43,17 @@ interface DashboardData {
   };
 }
 
+interface AdminUser {
+  id: string;
+  email: string;
+  first_name: string | null;
+  last_name: string | null;
+  call_lab_tier: string | null;
+  discovery_lab_tier: string | null;
+  subscription_tier: string | null;
+  created_at: string;
+}
+
 // ============================================
 // COMPONENTS
 // ============================================
@@ -212,7 +223,14 @@ export default function AdminDashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [activeTab, setActiveTab] = useState<'overview' | 'reports'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'reports' | 'users'>('overview');
+
+  // User management state
+  const [userSearch, setUserSearch] = useState('');
+  const [users, setUsers] = useState<AdminUser[]>([]);
+  const [usersLoading, setUsersLoading] = useState(false);
+  const [usersError, setUsersError] = useState('');
+  const [updatingUser, setUpdatingUser] = useState<string | null>(null);
 
   // Persist key in sessionStorage
   useEffect(() => {
@@ -241,6 +259,57 @@ export default function AdminDashboardPage() {
       setLoading(false);
     }
   }, []);
+
+  const searchUsers = useCallback(async (email: string) => {
+    if (!apiKey || email.length < 3) return;
+    setUsersLoading(true);
+    setUsersError('');
+    try {
+      const res = await fetch(`/api/admin/users?email=${encodeURIComponent(email)}`, {
+        headers: { Authorization: `Bearer ${apiKey}` },
+      });
+      if (res.status === 401) {
+        setUsersError('Unauthorized');
+        return;
+      }
+      const json = await res.json();
+      if (json.error) {
+        setUsersError(json.error);
+      } else {
+        setUsers(json.users || []);
+      }
+    } catch (err: any) {
+      setUsersError(err.message || 'Search failed');
+    } finally {
+      setUsersLoading(false);
+    }
+  }, [apiKey]);
+
+  const updateUserTier = useCallback(async (userId: string, field: 'call_lab_tier' | 'discovery_lab_tier', value: string | null) => {
+    if (!apiKey) return;
+    setUpdatingUser(userId);
+    try {
+      const res = await fetch('/api/admin/users', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({ userId, [field]: value }),
+      });
+      const json = await res.json();
+      if (json.error) {
+        alert(`Error: ${json.error}`);
+      } else {
+        // Update local state
+        setUsers(prev => prev.map(u => u.id === userId ? { ...u, [field]: value } : u));
+      }
+    } catch (err: any) {
+      alert(`Error: ${err.message || 'Update failed'}`);
+    } finally {
+      setUpdatingUser(null);
+    }
+  }, [apiKey]);
 
   useEffect(() => {
     if (apiKey) {
@@ -336,6 +405,14 @@ export default function AdminDashboardPage() {
         >
           Recent Reports
         </button>
+        <button
+          onClick={() => setActiveTab('users')}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+            activeTab === 'users' ? 'bg-[#00D4FF] text-slate-900' : 'text-slate-400 hover:text-white'
+          }`}
+        >
+          Users
+        </button>
       </div>
 
       {activeTab === 'overview' ? (
@@ -392,7 +469,7 @@ export default function AdminDashboardPage() {
             </div>
           </div>
         </>
-      ) : (
+      ) : activeTab === 'reports' ? (
         <>
           {/* Recent Reports tab */}
           <RecentTable
@@ -429,6 +506,121 @@ export default function AdminDashboardPage() {
               When: r.createdAt,
             }))}
           />
+        </>
+      ) : (
+        <>
+          {/* Users tab */}
+          <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 mb-6">
+            <h2 className="text-lg font-bold text-white mb-4">User Management</h2>
+            <p className="text-sm text-slate-400 mb-4">
+              Search for users by email and manage their Pro access.
+            </p>
+
+            {/* Search */}
+            <div className="flex gap-3 mb-6">
+              <input
+                type="text"
+                value={userSearch}
+                onChange={(e) => setUserSearch(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && searchUsers(userSearch)}
+                placeholder="Search by email (min 3 chars)"
+                className="flex-1 px-4 py-3 bg-slate-700/50 border-2 border-slate-600 rounded-xl text-white placeholder-slate-500 focus:border-[#00D4FF] focus:ring-0 focus:outline-none text-sm"
+              />
+              <button
+                onClick={() => searchUsers(userSearch)}
+                disabled={usersLoading || userSearch.length < 3}
+                className="px-6 py-3 rounded-xl bg-[#00D4FF] text-slate-900 font-bold text-sm disabled:opacity-50"
+              >
+                {usersLoading ? 'Searching...' : 'Search'}
+              </button>
+            </div>
+
+            {usersError && <p className="text-red-400 text-sm mb-4">{usersError}</p>}
+
+            {/* Results */}
+            {users.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-slate-600/50">
+                      <th className="text-left text-xs text-slate-500 pb-2 pr-4 font-medium">Email</th>
+                      <th className="text-left text-xs text-slate-500 pb-2 pr-4 font-medium">Name</th>
+                      <th className="text-center text-xs text-slate-500 pb-2 px-4 font-medium">Call Lab</th>
+                      <th className="text-center text-xs text-slate-500 pb-2 px-4 font-medium">Discovery Lab</th>
+                      <th className="text-left text-xs text-slate-500 pb-2 pl-4 font-medium">Joined</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {users.map((user) => (
+                      <tr key={user.id} className="border-b border-slate-700/30">
+                        <td className="py-3 pr-4 text-slate-300">{user.email}</td>
+                        <td className="py-3 pr-4 text-slate-300">
+                          {[user.first_name, user.last_name].filter(Boolean).join(' ') || '-'}
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="flex justify-center gap-1">
+                            <button
+                              onClick={() => updateUserTier(user.id, 'call_lab_tier', null)}
+                              disabled={updatingUser === user.id}
+                              className={`px-2 py-1 rounded text-xs font-medium transition-all ${
+                                !user.call_lab_tier
+                                  ? 'bg-slate-600 text-white'
+                                  : 'bg-slate-700/50 text-slate-400 hover:bg-slate-700'
+                              }`}
+                            >
+                              Free
+                            </button>
+                            <button
+                              onClick={() => updateUserTier(user.id, 'call_lab_tier', 'pro')}
+                              disabled={updatingUser === user.id}
+                              className={`px-2 py-1 rounded text-xs font-medium transition-all ${
+                                user.call_lab_tier === 'pro'
+                                  ? 'bg-[#E31B23] text-white'
+                                  : 'bg-slate-700/50 text-slate-400 hover:bg-slate-700'
+                              }`}
+                            >
+                              Pro
+                            </button>
+                          </div>
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="flex justify-center gap-1">
+                            <button
+                              onClick={() => updateUserTier(user.id, 'discovery_lab_tier', null)}
+                              disabled={updatingUser === user.id}
+                              className={`px-2 py-1 rounded text-xs font-medium transition-all ${
+                                !user.discovery_lab_tier
+                                  ? 'bg-slate-600 text-white'
+                                  : 'bg-slate-700/50 text-slate-400 hover:bg-slate-700'
+                              }`}
+                            >
+                              Free
+                            </button>
+                            <button
+                              onClick={() => updateUserTier(user.id, 'discovery_lab_tier', 'pro')}
+                              disabled={updatingUser === user.id}
+                              className={`px-2 py-1 rounded text-xs font-medium transition-all ${
+                                user.discovery_lab_tier === 'pro'
+                                  ? 'bg-[#E31B23] text-white'
+                                  : 'bg-slate-700/50 text-slate-400 hover:bg-slate-700'
+                              }`}
+                            >
+                              Pro
+                            </button>
+                          </div>
+                        </td>
+                        <td className="py-3 pl-4 text-slate-500 text-xs">
+                          {new Date(user.created_at).toLocaleDateString()}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : userSearch.length >= 3 && !usersLoading && !usersError ? (
+              <p className="text-sm text-slate-500">No users found matching &quot;{userSearch}&quot;</p>
+            ) : null}
+          </div>
         </>
       )}
     </div>

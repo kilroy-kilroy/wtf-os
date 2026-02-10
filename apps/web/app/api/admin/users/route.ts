@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
+import { createClient } from '@/lib/supabase-auth-server';
 
 /**
  * Admin Users API
@@ -30,7 +29,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const supabase = createRouteHandlerClient({ cookies });
+    const supabase = await createClient();
 
     const { data: users, error } = await supabase
       .from('users')
@@ -73,7 +72,7 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid discovery_lab_tier value' }, { status: 400 });
     }
 
-    const supabase = createRouteHandlerClient({ cookies });
+    const supabase = await createClient();
 
     // Build update object inline to avoid type issues
     const { data: user, error } = await supabase

@@ -8,21 +8,6 @@ export const metadata: Metadata = {
 export default function WTFSalesGuidePage() {
   return (
     <div className="min-h-screen bg-black text-white font-poppins">
-      {/* Header */}
-      <header className="border-b-2 border-[#E51B23] py-5">
-        <div className="max-w-[1200px] mx-auto px-5 flex justify-between items-center">
-          <a href="https://timkilroy.com">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/images/TKLogo.jpg" alt="Tim Kilroy" className="h-10" />
-          </a>
-          <nav className="hidden md:flex gap-8">
-            <a href="/" className="text-white text-sm font-semibold hover:text-[#E51B23] transition-colors">Home</a>
-            <a href="/call-lab" className="text-white text-sm font-semibold hover:text-[#E51B23] transition-colors">Call Lab</a>
-            <a href="/agency-inner-circle" className="text-white text-sm font-semibold hover:text-[#E51B23] transition-colors">Newsletter</a>
-          </nav>
-        </div>
-      </header>
-
       {/* Hero */}
       <section className="py-20 px-5 text-center border-b-2 border-[#333]">
         <h1 className="font-anton text-[clamp(48px,10vw,64px)] text-[#E51B23] tracking-wider mb-5">

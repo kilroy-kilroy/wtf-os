@@ -74,8 +74,12 @@ export async function PATCH(request: NextRequest) {
 
     const supabase = createServerClient();
 
-    // Build update object
-    const updates: Record<string, any> = {
+    // Build update object with explicit type for Supabase
+    const updates: {
+      updated_at: string;
+      call_lab_tier?: string | null;
+      discovery_lab_tier?: string | null;
+    } = {
       updated_at: new Date().toISOString(),
     };
 
@@ -88,7 +92,7 @@ export async function PATCH(request: NextRequest) {
 
     const { data: user, error } = await supabase
       .from('users')
-      .update(updates)
+      .update(updates as any)
       .eq('id', userId)
       .select('id, email, first_name, last_name, call_lab_tier, discovery_lab_tier')
       .single();

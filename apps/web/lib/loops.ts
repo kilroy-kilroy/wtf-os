@@ -24,6 +24,8 @@ interface LoopsContact {
   signupDate?: string;
   // Custom properties for Client Portal
   enrolledProgram?: string;
+  clientLoginUrl?: string;
+  clientTempPassword?: string;
 }
 
 interface LoopsEventPayload {
@@ -67,6 +69,8 @@ export async function createOrUpdateContact(contact: LoopsContact): Promise<{ su
         salesTeamSize: contact.salesTeamSize,
         signupDate: contact.signupDate || new Date().toISOString(),
         enrolledProgram: contact.enrolledProgram,
+        clientLoginUrl: contact.clientLoginUrl,
+        clientTempPassword: contact.clientTempPassword,
       }),
     });
 
@@ -416,7 +420,7 @@ export async function onClientInvited(
   loginUrl: string,
   tempPassword: string
 ): Promise<{ success: boolean; error?: string }> {
-  // Set enrolledProgram as a contact property for segmentation
+  // Set contact properties including login details for email templates
   await createOrUpdateContact({
     email,
     firstName,
@@ -424,6 +428,8 @@ export async function onClientInvited(
     subscribed: true,
     userGroup: 'client',
     enrolledProgram: programName,
+    clientLoginUrl: loginUrl,
+    clientTempPassword: tempPassword,
   });
 
   return sendEvent({

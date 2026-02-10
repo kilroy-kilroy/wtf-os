@@ -38,6 +38,7 @@ export default function AdminClientsPage() {
   const [inviteProgram, setInviteProgram] = useState('agency-studio');
   const [inviteRole, setInviteRole] = useState('primary');
   const [inviteStatus, setInviteStatus] = useState<string | null>(null);
+  const [resendingId, setResendingId] = useState<string | null>(null);
 
   useEffect(() => {
     const stored = sessionStorage.getItem('admin_api_key');
@@ -101,6 +102,29 @@ export default function AdminClientsPage() {
     } catch (err) {
       setInviteStatus('Failed to send invite');
     }
+  }
+
+  async function handleResend(enrollmentId: string) {
+    setResendingId(enrollmentId);
+    try {
+      const res = await fetch('/api/client/invite/resend', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({ enrollment_id: enrollmentId }),
+      });
+      if (res.ok) {
+        alert('Invite resent successfully with new temporary password!');
+      } else {
+        const err = await res.json();
+        alert(`Error: ${err.error || err.message}`);
+      }
+    } catch (err) {
+      alert('Failed to resend invite');
+    }
+    setResendingId(null);
   }
 
   if (!authed) {
@@ -192,13 +216,14 @@ export default function AdminClientsPage() {
                 <th className="text-left py-3 px-2 text-[11px] tracking-[2px] text-[#666666] uppercase">Status</th>
                 <th className="text-left py-3 px-2 text-[11px] tracking-[2px] text-[#666666] uppercase">Sales?</th>
                 <th className="text-left py-3 px-2 text-[11px] tracking-[2px] text-[#666666] uppercase">Enrolled</th>
+                <th className="text-left py-3 px-2 text-[11px] tracking-[2px] text-[#666666] uppercase">Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={7} className="py-8 text-center text-[#666666]">Loading...</td></tr>
+                <tr><td colSpan={8} className="py-8 text-center text-[#666666]">Loading...</td></tr>
               ) : clients.length === 0 ? (
-                <tr><td colSpan={7} className="py-8 text-center text-[#666666]">No clients yet. Send an invite above.</td></tr>
+                <tr><td colSpan={8} className="py-8 text-center text-[#666666]">No clients yet. Send an invite above.</td></tr>
               ) : (
                 clients.map((client) => (
                   <tr key={client.id} className="border-b border-[#222222] hover:bg-[#111111]">
@@ -224,6 +249,15 @@ export default function AdminClientsPage() {
                     </td>
                     <td className="py-3 px-2 text-[#666666] text-xs">
                       {new Date(client.enrolled_at).toLocaleDateString()}
+                    </td>
+                    <td className="py-3 px-2">
+                      <button
+                        onClick={() => handleResend(client.id)}
+                        disabled={resendingId === client.id}
+                        className="text-[10px] uppercase font-bold border border-[#333333] px-2 py-1 text-[#999999] hover:text-[#FFDE59] hover:border-[#FFDE59] transition-colors disabled:opacity-50"
+                      >
+                        {resendingId === client.id ? 'Sending...' : 'Resend Invite'}
+                      </button>
                     </td>
                   </tr>
                 ))

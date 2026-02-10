@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabase-server';
-import { createOrUpdateContact, sendEvent } from '@/lib/loops';
+import { onClientInvited } from '@/lib/loops';
 
 // Admin-only: Create a client invite and send onboarding email
 export async function POST(request: NextRequest) {
@@ -98,24 +98,13 @@ export async function POST(request: NextRequest) {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.timkilroy.com';
     const firstName = full_name?.split(' ')[0] || '';
 
-    await createOrUpdateContact({
-      email: email.toLowerCase(),
+    await onClientInvited(
+      email.toLowerCase(),
       firstName,
-      source: 'client_invite',
-      subscribed: true,
-      userGroup: `client_${program.slug}`,
-    });
-
-    await sendEvent({
-      email: email.toLowerCase(),
-      eventName: 'client_invited',
-      eventProperties: {
-        firstName,
-        programName: program.name,
-        loginUrl: `${appUrl}/client/login`,
-        tempPassword,
-      },
-    });
+      program.name,
+      `${appUrl}/client/login`,
+      tempPassword
+    );
 
     return NextResponse.json({
       success: true,

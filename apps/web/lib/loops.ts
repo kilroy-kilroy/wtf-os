@@ -397,3 +397,98 @@ export async function onCoachingReportReady(
     },
   });
 }
+
+// ============================================
+// CLIENT PORTAL EVENTS
+// ============================================
+
+/**
+ * Fire when a client is invited to a program
+ * Sends welcome email with login link and temp password
+ */
+export async function onClientInvited(
+  email: string,
+  firstName: string,
+  programName: string,
+  loginUrl: string,
+  tempPassword: string
+): Promise<{ success: boolean; error?: string }> {
+  return sendEvent({
+    email,
+    eventName: 'client_invited',
+    eventProperties: {
+      firstName: firstName || '',
+      programName,
+      loginUrl,
+      tempPassword,
+    },
+  });
+}
+
+/**
+ * Fire when a client completes onboarding
+ * Sends welcome-to-dashboard email
+ */
+export async function onClientOnboarded(
+  email: string,
+  firstName: string,
+  programName: string,
+  companyName: string
+): Promise<{ success: boolean; error?: string }> {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.timkilroy.com';
+
+  return sendEvent({
+    email,
+    eventName: 'client_onboarded',
+    eventProperties: {
+      firstName: firstName || '',
+      programName,
+      companyName,
+      dashboardUrl: `${appUrl}/client/dashboard`,
+    },
+  });
+}
+
+/**
+ * Fire every Friday morning to remind clients to submit their 5-Minute Friday
+ * Triggered by cron job
+ */
+export async function onFiveMinuteFridayReminder(
+  email: string,
+  firstName: string,
+  programName: string
+): Promise<{ success: boolean; error?: string }> {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.timkilroy.com';
+
+  return sendEvent({
+    email,
+    eventName: 'five_minute_friday_reminder',
+    eventProperties: {
+      firstName: firstName || 'there',
+      programName,
+      submitUrl: `${appUrl}/client/five-minute-friday`,
+    },
+  });
+}
+
+/**
+ * Fire when admin responds to a 5-Minute Friday submission
+ * Notifies client of the response
+ */
+export async function onFiveMinuteFridayResponse(
+  email: string,
+  weekOf: string,
+  responsePreview: string
+): Promise<{ success: boolean; error?: string }> {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.timkilroy.com';
+
+  return sendEvent({
+    email,
+    eventName: 'five_minute_friday_response',
+    eventProperties: {
+      weekOf,
+      responsePreview: responsePreview.substring(0, 200),
+      viewUrl: `${appUrl}/client/five-minute-friday/history`,
+    },
+  });
+}

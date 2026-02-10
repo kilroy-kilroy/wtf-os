@@ -44,6 +44,7 @@ export default function robots(): MetadataRoute.Robots {
           '/discovery-lab-pro/checkout',
           '/discovery-lab-pro/create',
           '/discovery-lab-pro/welcome',
+          '/client/',
         ],
       },
     ],

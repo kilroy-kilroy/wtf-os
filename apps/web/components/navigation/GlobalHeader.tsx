@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { Menu, X } from 'lucide-react';
 import { NavigationDropdown } from './NavigationDropdown';
 import { ProfileDropdown } from './ProfileDropdown';
+import { SearchBar } from './SearchBar';
 
 interface GlobalHeaderProps {
   userName?: string;
@@ -58,8 +59,13 @@ export function GlobalHeader({ userName, userEmail }: GlobalHeaderProps) {
             </nav>
           </div>
 
-          {/* Right Section: Profile */}
+          {/* Right Section: Search + Profile */}
           <div className="flex items-center gap-4">
+            {/* Search - Desktop Only */}
+            <div className="hidden md:block">
+              <SearchBar />
+            </div>
+
             {/* Profile - Desktop Only */}
             <div className="hidden md:block">
               <ProfileDropdown userName={userName} userEmail={userEmail} />

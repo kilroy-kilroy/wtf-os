@@ -345,16 +345,16 @@ export default function WTFSalesGuidePage() {
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <a
-            href="/call-lab-instant"
+            href="https://timkilroy.com/call-lab"
             className="inline-block bg-[#FFDE59] text-black px-12 py-5 font-anton text-lg tracking-wider hover:bg-white transition-colors"
           >
             [ TRY CALL LAB FREE ]
           </a>
           <a
-            href="/call-lab"
+            href="https://timkilroy.com/call-lab-pro"
             className="inline-block bg-black text-white px-12 py-5 font-anton text-lg tracking-wider hover:bg-[#333] transition-colors"
           >
-            [ GET CALL LAB PRO - $99/YEAR (SAVE $249) ]
+            [ GET CALL LAB PRO - $29/MO ]
           </a>
         </div>
       </section>
@@ -516,16 +516,16 @@ export default function WTFSalesGuidePage() {
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <a
-            href="/call-lab-instant"
+            href="https://timkilroy.com/call-lab"
             className="inline-block bg-[#FFDE59] text-black px-12 py-5 font-anton text-lg tracking-wider hover:bg-white transition-colors"
           >
             [ TRY CALL LAB FREE ]
           </a>
           <a
-            href="/call-lab"
+            href="https://timkilroy.com/call-lab-pro"
             className="inline-block bg-black text-white px-12 py-5 font-anton text-lg tracking-wider hover:bg-[#333] transition-colors"
           >
-            [ 12 MONTHS OF CALL LAB PRO $49 - SAVE $299 ]
+            [ GET CALL LAB PRO - $29/MO ]
           </a>
         </div>
       </section>

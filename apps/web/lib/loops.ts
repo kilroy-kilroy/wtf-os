@@ -22,6 +22,8 @@ interface LoopsContact {
   role?: string;
   salesTeamSize?: string;
   signupDate?: string;
+  // Custom properties for Client Portal
+  enrolledProgram?: string;
 }
 
 interface LoopsEventPayload {
@@ -64,6 +66,7 @@ export async function createOrUpdateContact(contact: LoopsContact): Promise<{ su
         role: contact.role,
         salesTeamSize: contact.salesTeamSize,
         signupDate: contact.signupDate || new Date().toISOString(),
+        enrolledProgram: contact.enrolledProgram,
       }),
     });
 
@@ -413,6 +416,16 @@ export async function onClientInvited(
   loginUrl: string,
   tempPassword: string
 ): Promise<{ success: boolean; error?: string }> {
+  // Set enrolledProgram as a contact property for segmentation
+  await createOrUpdateContact({
+    email,
+    firstName,
+    source: 'client_invite',
+    subscribed: true,
+    userGroup: 'client',
+    enrolledProgram: programName,
+  });
+
   return sendEvent({
     email,
     eventName: 'client_invited',
@@ -436,6 +449,12 @@ export async function onClientOnboarded(
   companyName: string
 ): Promise<{ success: boolean; error?: string }> {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.timkilroy.com';
+
+  // Update contact with company name and ensure enrolledProgram is set
+  await updateContact(email, {
+    companyName,
+    enrolledProgram: programName,
+  });
 
   return sendEvent({
     email,

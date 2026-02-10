@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerClient } from '@repo/db/client';
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { cookies } from 'next/headers';
 
 /**
  * Admin Users API
@@ -29,7 +30,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const supabase = createServerClient();
+    const supabase = createRouteHandlerClient({ cookies });
 
     const { data: users, error } = await supabase
       .from('users')
@@ -72,27 +73,16 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid discovery_lab_tier value' }, { status: 400 });
     }
 
-    const supabase = createServerClient();
+    const supabase = createRouteHandlerClient({ cookies });
 
-    // Build update object with explicit type for Supabase
-    const updates: {
-      updated_at: string;
-      call_lab_tier?: string | null;
-      discovery_lab_tier?: string | null;
-    } = {
-      updated_at: new Date().toISOString(),
-    };
-
-    if (call_lab_tier !== undefined) {
-      updates.call_lab_tier = call_lab_tier;
-    }
-    if (discovery_lab_tier !== undefined) {
-      updates.discovery_lab_tier = discovery_lab_tier;
-    }
-
+    // Build update object inline to avoid type issues
     const { data: user, error } = await supabase
       .from('users')
-      .update(updates as any)
+      .update({
+        updated_at: new Date().toISOString(),
+        ...(call_lab_tier !== undefined && { call_lab_tier }),
+        ...(discovery_lab_tier !== undefined && { discovery_lab_tier }),
+      })
       .eq('id', userId)
       .select('id, email, first_name, last_name, call_lab_tier, discovery_lab_tier')
       .single();

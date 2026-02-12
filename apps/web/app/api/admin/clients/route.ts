@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabase-server';
+import { onProUpgrade } from '@/lib/loops';
 
 function verifyAuth(request: NextRequest): boolean {
   const authHeader = request.headers.get('authorization');
@@ -134,6 +135,17 @@ export async function PATCH(request: NextRequest) {
       if (error) {
         console.error('[Admin Clients] Insert user for tier error:', error);
         return NextResponse.json({ error: 'Database error' }, { status: 500 });
+      }
+    }
+
+    // Fire Loops event when upgrading to Pro
+    if (call_lab_tier === 'pro' || discovery_lab_tier === 'pro') {
+      const { data: authUser } = await supabase.auth.admin.getUserById(user_id);
+      const email = authUser?.user?.email;
+      if (email) {
+        await onProUpgrade(email, 'solo').catch((err) =>
+          console.error('[Admin Clients] Loops onProUpgrade error:', err)
+        );
       }
     }
 

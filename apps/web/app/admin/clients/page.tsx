@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 interface ClientRow {
   id: string;
@@ -16,6 +16,16 @@ interface ClientRow {
   leads_sales_calls: boolean;
   call_lab_tier: string | null;
   discovery_lab_tier: string | null;
+}
+
+interface Roadmap {
+  id: string;
+  enrollment_id: string;
+  title: string;
+  description: string | null;
+  file_url: string;
+  file_name: string;
+  uploaded_at: string;
 }
 
 const PROGRAMS = [
@@ -43,6 +53,14 @@ export default function AdminClientsPage() {
   const [inviteStatus, setInviteStatus] = useState<string | null>(null);
   const [resendingId, setResendingId] = useState<string | null>(null);
   const [updatingTier, setUpdatingTier] = useState<string | null>(null);
+
+  // Roadmap state
+  const [expandedClient, setExpandedClient] = useState<string | null>(null);
+  const [roadmaps, setRoadmaps] = useState<Record<string, Roadmap[]>>({});
+  const [loadingRoadmaps, setLoadingRoadmaps] = useState<string | null>(null);
+  const [uploadingRoadmap, setUploadingRoadmap] = useState(false);
+  const [roadmapTitle, setRoadmapTitle] = useState('6-Month Go Forward Roadmap');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const stored = sessionStorage.getItem('admin_api_key');
@@ -156,6 +174,84 @@ export default function AdminClientsPage() {
     setUpdatingTier(null);
   }
 
+  async function toggleRoadmapPanel(client: ClientRow) {
+    if (expandedClient === client.id) {
+      setExpandedClient(null);
+      return;
+    }
+    setExpandedClient(client.id);
+    await loadRoadmaps(client.id);
+  }
+
+  async function loadRoadmaps(enrollmentId: string) {
+    setLoadingRoadmaps(enrollmentId);
+    try {
+      const res = await fetch(`/api/admin/roadmaps?enrollment_id=${enrollmentId}`, {
+        headers: { Authorization: `Bearer ${apiKey}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setRoadmaps(prev => ({ ...prev, [enrollmentId]: data.roadmaps || [] }));
+      }
+    } catch (err) {
+      console.error('Failed to load roadmaps:', err);
+    }
+    setLoadingRoadmaps(null);
+  }
+
+  async function handleRoadmapUpload(enrollmentId: string) {
+    const file = fileInputRef.current?.files?.[0];
+    if (!file) return;
+
+    setUploadingRoadmap(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('enrollment_id', enrollmentId);
+      formData.append('title', roadmapTitle);
+
+      const res = await fetch('/api/admin/roadmaps', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${apiKey}` },
+        body: formData,
+      });
+
+      if (res.ok) {
+        await loadRoadmaps(enrollmentId);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+        setRoadmapTitle('6-Month Go Forward Roadmap');
+      } else {
+        const err = await res.json();
+        alert(`Upload failed: ${err.error || 'Unknown error'}`);
+      }
+    } catch (err) {
+      alert('Failed to upload roadmap');
+    }
+    setUploadingRoadmap(false);
+  }
+
+  async function handleDeleteRoadmap(roadmapId: string, enrollmentId: string) {
+    if (!confirm('Delete this roadmap? The client will no longer be able to access it.')) return;
+
+    try {
+      const res = await fetch('/api/admin/roadmaps', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({ roadmap_id: roadmapId }),
+      });
+      if (res.ok) {
+        await loadRoadmaps(enrollmentId);
+      } else {
+        alert('Failed to delete roadmap');
+      }
+    } catch (err) {
+      alert('Failed to delete roadmap');
+    }
+  }
+
   if (!authed) {
     return (
       <div className="min-h-screen bg-black text-white flex items-center justify-center p-6">
@@ -257,92 +353,189 @@ export default function AdminClientsPage() {
                 <tr><td colSpan={10} className="py-8 text-center text-[#666666]">No clients yet. Send an invite above.</td></tr>
               ) : (
                 clients.map((client) => (
-                  <tr key={client.id} className="border-b border-[#222222] hover:bg-[#111111]">
-                    <td className="py-3 px-2 text-white">{client.full_name || '—'}</td>
-                    <td className="py-3 px-2 text-[#999999]">{client.email}</td>
-                    <td className="py-3 px-2">
-                      <span className="bg-[#1A1A1A] border border-[#333333] px-2 py-0.5 text-[10px] uppercase text-[#FFDE59]">
-                        {client.program_name}
-                      </span>
-                    </td>
-                    <td className="py-3 px-2 text-[#999999]">{client.company_name || '—'}</td>
-                    <td className="py-3 px-2">
-                      <span className={`text-[10px] uppercase font-bold ${
-                        client.onboarding_completed ? 'text-green-400' : client.status === 'active' ? 'text-[#FFDE59]' : 'text-[#666666]'
-                      }`}>
-                        {client.onboarding_completed ? 'Active' : 'Pending Onboarding'}
-                      </span>
-                    </td>
-                    <td className="py-3 px-2">
-                      <div className="flex justify-center gap-1">
-                        <button
-                          onClick={() => updateClientTier(client, 'call_lab_tier', null)}
-                          disabled={updatingTier === `${client.user_id}-call_lab_tier`}
-                          className={`px-2 py-0.5 text-[10px] font-bold uppercase transition-colors ${
-                            !client.call_lab_tier || client.call_lab_tier === 'free'
-                              ? 'bg-[#333333] text-white'
-                              : 'bg-transparent text-[#444444] hover:text-[#999999]'
-                          }`}
-                        >
-                          Free
-                        </button>
-                        <button
-                          onClick={() => updateClientTier(client, 'call_lab_tier', 'pro')}
-                          disabled={updatingTier === `${client.user_id}-call_lab_tier`}
-                          className={`px-2 py-0.5 text-[10px] font-bold uppercase transition-colors ${
-                            client.call_lab_tier === 'pro'
-                              ? 'bg-[#E51B23] text-white'
-                              : 'bg-transparent text-[#444444] hover:text-[#999999]'
-                          }`}
-                        >
-                          Pro
-                        </button>
-                      </div>
-                    </td>
-                    <td className="py-3 px-2">
-                      <div className="flex justify-center gap-1">
-                        <button
-                          onClick={() => updateClientTier(client, 'discovery_lab_tier', null)}
-                          disabled={updatingTier === `${client.user_id}-discovery_lab_tier`}
-                          className={`px-2 py-0.5 text-[10px] font-bold uppercase transition-colors ${
-                            !client.discovery_lab_tier || client.discovery_lab_tier === 'free'
-                              ? 'bg-[#333333] text-white'
-                              : 'bg-transparent text-[#444444] hover:text-[#999999]'
-                          }`}
-                        >
-                          Free
-                        </button>
-                        <button
-                          onClick={() => updateClientTier(client, 'discovery_lab_tier', 'pro')}
-                          disabled={updatingTier === `${client.user_id}-discovery_lab_tier`}
-                          className={`px-2 py-0.5 text-[10px] font-bold uppercase transition-colors ${
-                            client.discovery_lab_tier === 'pro'
-                              ? 'bg-[#E51B23] text-white'
-                              : 'bg-transparent text-[#444444] hover:text-[#999999]'
-                          }`}
-                        >
-                          Pro
-                        </button>
-                      </div>
-                    </td>
-                    <td className="py-3 px-2">
-                      <span className={`text-[10px] ${client.leads_sales_calls ? 'text-[#E51B23]' : 'text-[#444444]'}`}>
-                        {client.leads_sales_calls ? 'YES' : 'NO'}
-                      </span>
-                    </td>
-                    <td className="py-3 px-2 text-[#666666] text-xs">
-                      {new Date(client.enrolled_at).toLocaleDateString()}
-                    </td>
-                    <td className="py-3 px-2">
-                      <button
-                        onClick={() => handleResend(client.id)}
-                        disabled={resendingId === client.id}
-                        className="text-[10px] uppercase font-bold border border-[#333333] px-2 py-1 text-[#999999] hover:text-[#FFDE59] hover:border-[#FFDE59] transition-colors disabled:opacity-50"
-                      >
-                        {resendingId === client.id ? 'Sending...' : 'Resend Invite'}
-                      </button>
-                    </td>
-                  </tr>
+                  <>
+                    <tr key={client.id} className="border-b border-[#222222] hover:bg-[#111111]">
+                      <td className="py-3 px-2 text-white">{client.full_name || '—'}</td>
+                      <td className="py-3 px-2 text-[#999999]">{client.email}</td>
+                      <td className="py-3 px-2">
+                        <span className="bg-[#1A1A1A] border border-[#333333] px-2 py-0.5 text-[10px] uppercase text-[#FFDE59]">
+                          {client.program_name}
+                        </span>
+                      </td>
+                      <td className="py-3 px-2 text-[#999999]">{client.company_name || '—'}</td>
+                      <td className="py-3 px-2">
+                        <span className={`text-[10px] uppercase font-bold ${
+                          client.onboarding_completed ? 'text-green-400' : client.status === 'active' ? 'text-[#FFDE59]' : 'text-[#666666]'
+                        }`}>
+                          {client.onboarding_completed ? 'Active' : 'Pending Onboarding'}
+                        </span>
+                      </td>
+                      <td className="py-3 px-2">
+                        <div className="flex justify-center gap-1">
+                          <button
+                            onClick={() => updateClientTier(client, 'call_lab_tier', null)}
+                            disabled={updatingTier === `${client.user_id}-call_lab_tier`}
+                            className={`px-2 py-0.5 text-[10px] font-bold uppercase transition-colors ${
+                              !client.call_lab_tier || client.call_lab_tier === 'free'
+                                ? 'bg-[#333333] text-white'
+                                : 'bg-transparent text-[#444444] hover:text-[#999999]'
+                            }`}
+                          >
+                            Free
+                          </button>
+                          <button
+                            onClick={() => updateClientTier(client, 'call_lab_tier', 'pro')}
+                            disabled={updatingTier === `${client.user_id}-call_lab_tier`}
+                            className={`px-2 py-0.5 text-[10px] font-bold uppercase transition-colors ${
+                              client.call_lab_tier === 'pro'
+                                ? 'bg-[#E51B23] text-white'
+                                : 'bg-transparent text-[#444444] hover:text-[#999999]'
+                            }`}
+                          >
+                            Pro
+                          </button>
+                        </div>
+                      </td>
+                      <td className="py-3 px-2">
+                        <div className="flex justify-center gap-1">
+                          <button
+                            onClick={() => updateClientTier(client, 'discovery_lab_tier', null)}
+                            disabled={updatingTier === `${client.user_id}-discovery_lab_tier`}
+                            className={`px-2 py-0.5 text-[10px] font-bold uppercase transition-colors ${
+                              !client.discovery_lab_tier || client.discovery_lab_tier === 'free'
+                                ? 'bg-[#333333] text-white'
+                                : 'bg-transparent text-[#444444] hover:text-[#999999]'
+                            }`}
+                          >
+                            Free
+                          </button>
+                          <button
+                            onClick={() => updateClientTier(client, 'discovery_lab_tier', 'pro')}
+                            disabled={updatingTier === `${client.user_id}-discovery_lab_tier`}
+                            className={`px-2 py-0.5 text-[10px] font-bold uppercase transition-colors ${
+                              client.discovery_lab_tier === 'pro'
+                                ? 'bg-[#E51B23] text-white'
+                                : 'bg-transparent text-[#444444] hover:text-[#999999]'
+                            }`}
+                          >
+                            Pro
+                          </button>
+                        </div>
+                      </td>
+                      <td className="py-3 px-2">
+                        <span className={`text-[10px] ${client.leads_sales_calls ? 'text-[#E51B23]' : 'text-[#444444]'}`}>
+                          {client.leads_sales_calls ? 'YES' : 'NO'}
+                        </span>
+                      </td>
+                      <td className="py-3 px-2 text-[#666666] text-xs">
+                        {new Date(client.enrolled_at).toLocaleDateString()}
+                      </td>
+                      <td className="py-3 px-2">
+                        <div className="flex gap-1">
+                          <button
+                            onClick={() => toggleRoadmapPanel(client)}
+                            className={`text-[10px] uppercase font-bold border px-2 py-1 transition-colors ${
+                              expandedClient === client.id
+                                ? 'border-[#FFDE59] text-[#FFDE59]'
+                                : 'border-[#333333] text-[#999999] hover:text-[#FFDE59] hover:border-[#FFDE59]'
+                            }`}
+                          >
+                            Roadmap
+                          </button>
+                          <button
+                            onClick={() => handleResend(client.id)}
+                            disabled={resendingId === client.id}
+                            className="text-[10px] uppercase font-bold border border-[#333333] px-2 py-1 text-[#999999] hover:text-[#FFDE59] hover:border-[#FFDE59] transition-colors disabled:opacity-50"
+                          >
+                            {resendingId === client.id ? '...' : 'Resend'}
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+
+                    {/* Roadmap Panel (expandable) */}
+                    {expandedClient === client.id && (
+                      <tr key={`${client.id}-roadmap`} className="border-b border-[#222222]">
+                        <td colSpan={10} className="p-0">
+                          <div className="bg-[#0A0A0A] border-l-4 border-[#FFDE59] p-6">
+                            <div className="flex items-center justify-between mb-4">
+                              <h3 className="font-anton text-sm uppercase text-[#FFDE59]">
+                                Roadmaps for {client.full_name || client.email}
+                              </h3>
+                            </div>
+
+                            {/* Upload Form */}
+                            <div className="flex flex-wrap items-end gap-3 mb-4">
+                              <div>
+                                <label className="block text-[10px] tracking-[2px] text-[#666666] mb-1 uppercase">Title</label>
+                                <input
+                                  type="text"
+                                  value={roadmapTitle}
+                                  onChange={(e) => setRoadmapTitle(e.target.value)}
+                                  className="bg-black border border-[#333333] text-white px-3 py-1.5 text-sm focus:border-[#FFDE59] focus:outline-none w-64"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-[10px] tracking-[2px] text-[#666666] mb-1 uppercase">HTML File</label>
+                                <input
+                                  ref={fileInputRef}
+                                  type="file"
+                                  accept=".html,.htm"
+                                  className="text-sm text-[#999999] file:mr-3 file:py-1.5 file:px-3 file:border file:border-[#333333] file:text-[#999999] file:bg-black file:text-xs file:uppercase file:font-bold file:cursor-pointer hover:file:border-[#FFDE59] hover:file:text-[#FFDE59]"
+                                />
+                              </div>
+                              <button
+                                onClick={() => handleRoadmapUpload(client.id)}
+                                disabled={uploadingRoadmap}
+                                className="bg-[#FFDE59] text-black px-4 py-1.5 text-xs font-bold uppercase hover:bg-yellow-400 transition-colors disabled:opacity-50"
+                              >
+                                {uploadingRoadmap ? 'Uploading...' : 'Upload'}
+                              </button>
+                            </div>
+
+                            {/* Existing Roadmaps */}
+                            {loadingRoadmaps === client.id ? (
+                              <p className="text-[#666666] text-xs">Loading roadmaps...</p>
+                            ) : (roadmaps[client.id] || []).length === 0 ? (
+                              <p className="text-[#666666] text-xs">No roadmaps uploaded yet.</p>
+                            ) : (
+                              <div className="space-y-2">
+                                {(roadmaps[client.id] || []).map((rm) => (
+                                  <div key={rm.id} className="flex items-center justify-between bg-[#111111] border border-[#222222] px-4 py-2">
+                                    <div className="flex items-center gap-4">
+                                      <span className="text-[#FFDE59] text-xs font-bold uppercase">HTML</span>
+                                      <div>
+                                        <p className="text-white text-sm">{rm.title}</p>
+                                        <p className="text-[#666666] text-[10px]">
+                                          {rm.file_name} &middot; Uploaded {new Date(rm.uploaded_at).toLocaleDateString()}
+                                        </p>
+                                      </div>
+                                    </div>
+                                    <div className="flex gap-2">
+                                      <a
+                                        href={rm.file_url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-[10px] uppercase font-bold border border-[#333333] px-2 py-1 text-[#999999] hover:text-white hover:border-white transition-colors"
+                                      >
+                                        View
+                                      </a>
+                                      <button
+                                        onClick={() => handleDeleteRoadmap(rm.id, client.id)}
+                                        className="text-[10px] uppercase font-bold border border-[#333333] px-2 py-1 text-[#666666] hover:text-[#E51B23] hover:border-[#E51B23] transition-colors"
+                                      >
+                                        Delete
+                                      </button>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </>
                 ))
               )}
             </tbody>

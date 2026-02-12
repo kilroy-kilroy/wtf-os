@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 
 interface ClientRow {
   id: string;
+  user_id: string;
   email: string;
   full_name: string | null;
   program_name: string;
@@ -13,6 +14,8 @@ interface ClientRow {
   status: string;
   enrolled_at: string;
   leads_sales_calls: boolean;
+  call_lab_tier: string | null;
+  discovery_lab_tier: string | null;
 }
 
 const PROGRAMS = [
@@ -39,6 +42,7 @@ export default function AdminClientsPage() {
   const [inviteRole, setInviteRole] = useState('primary');
   const [inviteStatus, setInviteStatus] = useState<string | null>(null);
   const [resendingId, setResendingId] = useState<string | null>(null);
+  const [updatingTier, setUpdatingTier] = useState<string | null>(null);
 
   useEffect(() => {
     const stored = sessionStorage.getItem('admin_api_key');
@@ -125,6 +129,31 @@ export default function AdminClientsPage() {
       alert('Failed to resend invite');
     }
     setResendingId(null);
+  }
+
+  async function updateClientTier(client: ClientRow, field: 'call_lab_tier' | 'discovery_lab_tier', value: string | null) {
+    setUpdatingTier(`${client.user_id}-${field}`);
+    try {
+      const res = await fetch('/api/admin/clients', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({ user_id: client.user_id, [field]: value }),
+      });
+      if (res.ok) {
+        setClients(prev => prev.map(c =>
+          c.id === client.id ? { ...c, [field]: value } : c
+        ));
+      } else {
+        const err = await res.json();
+        alert(`Error: ${err.error || 'Update failed'}`);
+      }
+    } catch (err) {
+      alert('Failed to update tier');
+    }
+    setUpdatingTier(null);
   }
 
   if (!authed) {
@@ -214,6 +243,8 @@ export default function AdminClientsPage() {
                 <th className="text-left py-3 px-2 text-[11px] tracking-[2px] text-[#666666] uppercase">Program</th>
                 <th className="text-left py-3 px-2 text-[11px] tracking-[2px] text-[#666666] uppercase">Company</th>
                 <th className="text-left py-3 px-2 text-[11px] tracking-[2px] text-[#666666] uppercase">Status</th>
+                <th className="text-center py-3 px-2 text-[11px] tracking-[2px] text-[#666666] uppercase">Call Lab</th>
+                <th className="text-center py-3 px-2 text-[11px] tracking-[2px] text-[#666666] uppercase">Discovery</th>
                 <th className="text-left py-3 px-2 text-[11px] tracking-[2px] text-[#666666] uppercase">Sales?</th>
                 <th className="text-left py-3 px-2 text-[11px] tracking-[2px] text-[#666666] uppercase">Enrolled</th>
                 <th className="text-left py-3 px-2 text-[11px] tracking-[2px] text-[#666666] uppercase">Actions</th>
@@ -221,9 +252,9 @@ export default function AdminClientsPage() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={8} className="py-8 text-center text-[#666666]">Loading...</td></tr>
+                <tr><td colSpan={10} className="py-8 text-center text-[#666666]">Loading...</td></tr>
               ) : clients.length === 0 ? (
-                <tr><td colSpan={8} className="py-8 text-center text-[#666666]">No clients yet. Send an invite above.</td></tr>
+                <tr><td colSpan={10} className="py-8 text-center text-[#666666]">No clients yet. Send an invite above.</td></tr>
               ) : (
                 clients.map((client) => (
                   <tr key={client.id} className="border-b border-[#222222] hover:bg-[#111111]">
@@ -241,6 +272,58 @@ export default function AdminClientsPage() {
                       }`}>
                         {client.onboarding_completed ? 'Active' : 'Pending Onboarding'}
                       </span>
+                    </td>
+                    <td className="py-3 px-2">
+                      <div className="flex justify-center gap-1">
+                        <button
+                          onClick={() => updateClientTier(client, 'call_lab_tier', null)}
+                          disabled={updatingTier === `${client.user_id}-call_lab_tier`}
+                          className={`px-2 py-0.5 text-[10px] font-bold uppercase transition-colors ${
+                            !client.call_lab_tier || client.call_lab_tier === 'free'
+                              ? 'bg-[#333333] text-white'
+                              : 'bg-transparent text-[#444444] hover:text-[#999999]'
+                          }`}
+                        >
+                          Free
+                        </button>
+                        <button
+                          onClick={() => updateClientTier(client, 'call_lab_tier', 'pro')}
+                          disabled={updatingTier === `${client.user_id}-call_lab_tier`}
+                          className={`px-2 py-0.5 text-[10px] font-bold uppercase transition-colors ${
+                            client.call_lab_tier === 'pro'
+                              ? 'bg-[#E51B23] text-white'
+                              : 'bg-transparent text-[#444444] hover:text-[#999999]'
+                          }`}
+                        >
+                          Pro
+                        </button>
+                      </div>
+                    </td>
+                    <td className="py-3 px-2">
+                      <div className="flex justify-center gap-1">
+                        <button
+                          onClick={() => updateClientTier(client, 'discovery_lab_tier', null)}
+                          disabled={updatingTier === `${client.user_id}-discovery_lab_tier`}
+                          className={`px-2 py-0.5 text-[10px] font-bold uppercase transition-colors ${
+                            !client.discovery_lab_tier || client.discovery_lab_tier === 'free'
+                              ? 'bg-[#333333] text-white'
+                              : 'bg-transparent text-[#444444] hover:text-[#999999]'
+                          }`}
+                        >
+                          Free
+                        </button>
+                        <button
+                          onClick={() => updateClientTier(client, 'discovery_lab_tier', 'pro')}
+                          disabled={updatingTier === `${client.user_id}-discovery_lab_tier`}
+                          className={`px-2 py-0.5 text-[10px] font-bold uppercase transition-colors ${
+                            client.discovery_lab_tier === 'pro'
+                              ? 'bg-[#E51B23] text-white'
+                              : 'bg-transparent text-[#444444] hover:text-[#999999]'
+                          }`}
+                        >
+                          Pro
+                        </button>
+                      </div>
                     </td>
                     <td className="py-3 px-2">
                       <span className={`text-[10px] ${client.leads_sales_calls ? 'text-[#E51B23]' : 'text-[#444444]'}`}>

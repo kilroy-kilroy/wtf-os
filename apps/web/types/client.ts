@@ -272,6 +272,21 @@ export interface ClientContent {
 }
 
 // ============================================
+// CLIENT ROADMAPS
+// ============================================
+
+export interface ClientRoadmap {
+  id: string;
+  enrollment_id: string;
+  title: string;
+  description: string | null;
+  file_url: string;
+  file_name: string;
+  uploaded_at: string;
+  created_at: string;
+}
+
+// ============================================
 // SALES CALL ROLES (determines Call Lab Pro access)
 // ============================================
 

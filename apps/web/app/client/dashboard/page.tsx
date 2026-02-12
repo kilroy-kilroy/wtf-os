@@ -13,6 +13,7 @@ interface DashboardData {
   hasFiveMinuteFriday: boolean;
   hasCallLabPro: boolean;
   pendingFriday: boolean;
+  hasRoadmap: boolean;
 }
 
 export default function ClientDashboardPage() {
@@ -58,6 +59,13 @@ export default function ClientDashboardPage() {
         .eq('week_of', fridayStr)
         .single();
 
+      // Check if client has any roadmaps
+      const { data: roadmapCheck } = await supabase
+        .from('client_roadmaps')
+        .select('id')
+        .eq('enrollment_id', enrollment.id)
+        .limit(1);
+
       const program = enrollment.program as any;
       setData({
         enrollment: enrollment as any,
@@ -65,6 +73,7 @@ export default function ClientDashboardPage() {
         hasFiveMinuteFriday: program?.has_five_minute_friday || false,
         hasCallLabPro: enrollment.leads_sales_calls || program?.has_call_lab_pro || false,
         pendingFriday: !existingFriday && program?.has_five_minute_friday,
+        hasRoadmap: (roadmapCheck?.length || 0) > 0,
       });
       setLoading(false);
     }
@@ -199,6 +208,13 @@ export default function ClientDashboardPage() {
               className="border border-[#333333] p-4 hover:border-[#FFDE59] transition-colors">
               <h3 className="font-anton text-sm uppercase text-[#FFDE59]">Friday Check-ins</h3>
               <p className="text-[#666666] text-xs mt-1">View your weekly submissions & feedback</p>
+            </Link>
+          )}
+          {data.hasRoadmap && (
+            <Link href="/client/roadmap"
+              className="border border-[#E51B23] p-4 hover:border-[#FFDE59] transition-colors">
+              <h3 className="font-anton text-sm uppercase text-[#E51B23]">Your Roadmap</h3>
+              <p className="text-[#666666] text-xs mt-1">View your strategic go-forward plan</p>
             </Link>
           )}
           <Link href="/client/content"

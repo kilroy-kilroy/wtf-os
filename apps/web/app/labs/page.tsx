@@ -11,7 +11,7 @@ interface Lab {
   tier: 'Free' | 'Pro';
   icon: string;
   color: string;
-  product: 'call-lab' | 'discovery-lab' | 'visibility-lab';
+  product: 'call-lab' | 'discovery-lab' | 'visibility-lab' | 'wtf-assessment';
 }
 
 const allLabs: Lab[] = [
@@ -81,11 +81,11 @@ const allLabs: Lab[] = [
   {
     name: 'WTF Assessment',
     description: 'Evaluate your sales process and identify areas for improvement.',
-    href: '/wtf-assessment',
+    href: '/growthos',
     tier: 'Free',
     icon: '📊',
     color: '#E51B23',
-    product: 'call-lab',
+    product: 'wtf-assessment',
   },
 ];
 

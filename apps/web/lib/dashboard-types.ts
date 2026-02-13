@@ -75,6 +75,38 @@ export type CoachingReport = {
   created_at: string;
 };
 
+export type DiscoveryBriefSummary = {
+  id: string;
+  targetCompany: string;
+  targetContactName: string | null;
+  targetContactTitle: string | null;
+  version: string;
+  createdAt: string;
+  hasLinkedCall: boolean;
+};
+
+export type DiscoveryLabData = {
+  totalBriefs: number;
+  liteBriefs: number;
+  proBriefs: number;
+  companiesResearched: number;
+  prepToCallRate: number | null;
+  prepAdvantage: number | null;
+  recentBriefs: DiscoveryBriefSummary[];
+};
+
+export type OneThingEntry = {
+  callId: string;
+  behavior: string;
+  callDate: string;
+};
+
+export type ProInsightsData = {
+  oneThingTracker: OneThingEntry[];
+  avgProScores: { label: string; value: number }[];
+  totalProReports: number;
+};
+
 export type DashboardData = {
   metrics: DashboardMetrics;
   patternRadar: PatternRadarData;
@@ -83,4 +115,6 @@ export type DashboardData = {
   followUps: FollowUpTask[];
   charts: DashboardCharts;
   coachingReports: CoachingReport[];
+  discoveryLab: DiscoveryLabData;
+  proInsights: ProInsightsData;
 };

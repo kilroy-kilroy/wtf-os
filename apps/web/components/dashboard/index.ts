@@ -13,3 +13,8 @@ export { MomentumSignals } from './MomentumSignals';
 export { RecentCallsList } from './RecentCallsList';
 export { FollowUpIntelligence } from './FollowUpIntelligence';
 export { CoachingNarrative } from './CoachingNarrative';
+
+// Discovery Lab + Pro insights dashboard components
+export { DiscoveryLabActivity } from './DiscoveryLabActivity';
+export { RecentBriefsList } from './RecentBriefsList';
+export { ProInsightsPanel } from './ProInsightsPanel';

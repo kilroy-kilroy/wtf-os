@@ -9,6 +9,9 @@ import {
   RecentCallsList,
   FollowUpIntelligence,
   CoachingNarrative,
+  DiscoveryLabActivity,
+  RecentBriefsList,
+  ProInsightsPanel,
 } from "@/components/dashboard";
 import {
   MACRO_PATTERNS,
@@ -637,6 +640,148 @@ async function getDashboardData(
     ? "No calls analyzed yet. Submit a call transcript to get started with personalized coaching."
     : synthesizeCoachingNarrative(patternData, MACRO_PATTERNS);
 
+  // ============================================
+  // DISCOVERY LAB DATA
+  // ============================================
+  const { data: discoveryBriefs } = await (supabase as any)
+    .from("discovery_briefs")
+    .select("id, target_company, target_contact_name, target_contact_title, version, created_at")
+    .eq("user_id", userId)
+    .gte("created_at", thirtyDaysAgo.toISOString())
+    .order("created_at", { ascending: false })
+    .limit(10);
+
+  const briefs = (discoveryBriefs || []) as Array<{
+    id: string;
+    target_company: string;
+    target_contact_name: string | null;
+    target_contact_title: string | null;
+    version: string;
+    created_at: string;
+  }>;
+
+  const liteBriefs = briefs.filter((b) => b.version === "lite").length;
+  const proBriefs = briefs.filter((b) => b.version === "pro").length;
+  const companiesResearched = new Set(
+    briefs.map((b) => b.target_company?.toLowerCase()).filter(Boolean)
+  ).size;
+
+  // Check which briefs have linked call reports
+  const briefIds = briefs.map((b) => b.id);
+  let linkedBriefIds = new Set<string>();
+  if (briefIds.length > 0) {
+    const { data: linkedCalls } = await (supabase as any)
+      .from("call_lab_reports")
+      .select("discovery_brief_id")
+      .in("discovery_brief_id", briefIds);
+
+    if (linkedCalls) {
+      linkedBriefIds = new Set(
+        (linkedCalls as Array<{ discovery_brief_id: string }>)
+          .map((c) => c.discovery_brief_id)
+          .filter(Boolean)
+      );
+    }
+  }
+
+  const prepToCallRate =
+    briefs.length > 0 ? (linkedBriefIds.size / briefs.length) * 100 : null;
+
+  // Prep Advantage: avg score on calls with linked briefs vs without
+  // Requires call_lab_reports data — show null until enough linked pairs
+  const prepAdvantage: number | null = null; // Phase 2: requires cross-table join
+
+  const recentBriefs = briefs.slice(0, 5).map((b) => {
+    const date = new Date(b.created_at);
+    return {
+      id: b.id,
+      targetCompany: b.target_company || "Unknown Company",
+      targetContactName: b.target_contact_name,
+      targetContactTitle: b.target_contact_title,
+      version: b.version,
+      createdAt: date.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      }),
+      hasLinkedCall: linkedBriefIds.has(b.id),
+    };
+  });
+
+  const discoveryLab = {
+    totalBriefs: briefs.length,
+    liteBriefs,
+    proBriefs,
+    companiesResearched,
+    prepToCallRate,
+    prepAdvantage,
+    recentBriefs,
+  };
+
+  // ============================================
+  // PRO INSIGHTS (from Pro-version call reports)
+  // ============================================
+  const proScores = scores.filter((s) => s.version === "pro");
+
+  // Extract "The One Thing" from Pro markdown responses
+  const oneThingTracker: Array<{
+    callId: string;
+    behavior: string;
+    callDate: string;
+  }> = [];
+
+  const performanceScoreAccumulator: Record<string, number[]> = {};
+
+  for (const proReport of proScores.slice(0, 5)) {
+    const md = proReport.markdown_response || "";
+
+    // Extract THE ONE THING behavior
+    const oneThingMatch = md.match(
+      /THE\s+(?:ONE\s+)?BEHAVIOR[:\s]*\n?\s*(?:\*\*)?([^\n*]+)/i
+    );
+    if (oneThingMatch) {
+      const date = new Date(proReport.created_at);
+      oneThingTracker.push({
+        callId: proReport.id,
+        behavior: oneThingMatch[1].trim().replace(/\*+/g, ""),
+        callDate: date.toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+        }),
+      });
+    }
+
+    // Extract performance scores (9 dimensions, 0-10 scale)
+    const scoreRegex =
+      /(?:^|\n)\s*\d+\.\s*\*?\*?([A-Z][a-z]+(?:\s+[a-z]+)*)\*?\*?\s*[-–—:]\s*\*?\*?(\d+(?:\.\d+)?)\s*(?:\/\s*10)?/gi;
+    let scoreMatch;
+    while ((scoreMatch = scoreRegex.exec(md)) !== null) {
+      const label = scoreMatch[1].trim();
+      const value = parseFloat(scoreMatch[2]);
+      if (value >= 0 && value <= 10) {
+        if (!performanceScoreAccumulator[label]) {
+          performanceScoreAccumulator[label] = [];
+        }
+        performanceScoreAccumulator[label].push(value);
+      }
+    }
+  }
+
+  // Average performance scores across Pro reports
+  const avgProScores = Object.entries(performanceScoreAccumulator)
+    .map(([label, values]) => ({
+      label,
+      value: values.reduce((a, b) => a + b, 0) / values.length,
+    }))
+    .sort((a, b) => b.value - a.value)
+    .slice(0, 9);
+
+  const proInsights = {
+    oneThingTracker,
+    avgProScores,
+    totalProReports: proScores.length,
+  };
+
   return {
     patternData,
     nextCallFocus: worstPatternInfo
@@ -662,6 +807,8 @@ async function getDashboardData(
       overallScore: Math.round(avgScore * 10),
       trendVsPrevious: 0,
     },
+    discoveryLab,
+    proInsights,
   };
 }
 
@@ -699,7 +846,7 @@ export default async function DashboardPage() {
                 <span className="text-[#E51B23]">OS</span>
               </div>
               <div className="font-anton text-xs text-[#FFDE59] uppercase tracking-wider">
-                CALL LAB PRO
+                DASHBOARD
               </div>
             </div>
 
@@ -730,6 +877,20 @@ export default async function DashboardPage() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-8 space-y-8">
+        {/* ============================================
+            BLOCK 1.5: DISCOVERY LAB ACTIVITY (Prep Intelligence)
+            Purpose: Show pre-call research activity and prep-to-call pipeline
+            Rules: Always visible (even with zero calls), drives Discovery Lab usage
+            ============================================ */}
+        <DiscoveryLabActivity
+          totalBriefs={data.discoveryLab.totalBriefs}
+          liteBriefs={data.discoveryLab.liteBriefs}
+          proBriefs={data.discoveryLab.proBriefs}
+          companiesResearched={data.discoveryLab.companiesResearched}
+          prepToCallRate={data.discoveryLab.prepToCallRate}
+          prepAdvantage={data.discoveryLab.prepAdvantage}
+        />
+
         {/* Empty State */}
         {data.metrics.callsInRange === 0 ? (
           <div className="border border-[#333] rounded-lg p-12 text-center">
@@ -791,6 +952,13 @@ export default async function DashboardPage() {
                   patternData={data.patternData}
                   totalCalls={data.metrics.callsInRange}
                 />
+
+                {/* ============================================
+                    BLOCK 4.5: RECENT BRIEFS (Prep Evidence)
+                    Purpose: Show recent Discovery Lab briefs with call linkage status
+                    Rules: Up to 5 briefs, version badge, "Called" vs "Prepped" status
+                    ============================================ */}
+                <RecentBriefsList briefs={data.discoveryLab.recentBriefs} />
               </div>
 
               {/* Right Column */}
@@ -804,6 +972,18 @@ export default async function DashboardPage() {
                   mostImproved={data.momentum.mostImproved}
                   mostRegressed={data.momentum.mostRegressed}
                   hasEnoughData={data.momentum.hasEnoughData}
+                />
+
+                {/* ============================================
+                    BLOCK 5.5: PRO INSIGHTS (Call Lab Pro Aggregation)
+                    Purpose: Surface "The One Thing" tracker and performance
+                    dimension averages from Pro reports
+                    Rules: Only shown when Pro reports exist
+                    ============================================ */}
+                <ProInsightsPanel
+                  oneThingTracker={data.proInsights.oneThingTracker}
+                  avgProScores={data.proInsights.avgProScores}
+                  totalProReports={data.proInsights.totalProReports}
                 />
 
                 {/* ============================================
@@ -843,6 +1023,12 @@ export default async function DashboardPage() {
                 className="bg-[#E51B23] text-white px-6 py-3 font-anton text-sm uppercase tracking-wider hover:bg-[#C41820] transition-colors"
               >
                 Analyze New Call
+              </Link>
+              <Link
+                href="/discovery-lab-pro"
+                className="bg-[#FFDE59] text-black px-6 py-3 font-anton text-sm uppercase tracking-wider hover:bg-[#E5C84F] transition-colors"
+              >
+                Prep New Call
               </Link>
               <Link
                 href="/wtf-sales-guide"

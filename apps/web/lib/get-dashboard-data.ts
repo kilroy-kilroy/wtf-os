@@ -318,5 +318,19 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
       patternDensityTrend,
     },
     coachingReports,
+    discoveryLab: {
+      totalBriefs: 0,
+      liteBriefs: 0,
+      proBriefs: 0,
+      companiesResearched: 0,
+      prepToCallRate: null,
+      prepAdvantage: null,
+      recentBriefs: [],
+    },
+    proInsights: {
+      oneThingTracker: [],
+      avgProScores: [],
+      totalProReports: 0,
+    },
   };
 }

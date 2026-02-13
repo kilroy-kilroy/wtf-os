@@ -1,15 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
+import { createClient } from '@/lib/supabase-auth-server'
 import { createServerClient } from '@repo/db/client'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Auth check
-    const supabase = createRouteHandlerClient({ cookies })
+    const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
 
     if (authError || !user) {
@@ -17,7 +16,8 @@ export async function GET(
     }
 
     const serviceClient = createServerClient()
-    const sourceId = params.id
+    const { id } = await params
+    const sourceId = id
 
     // Fetch repurposes for this source
     // Include: all team-visible repurposes + user's own drafts

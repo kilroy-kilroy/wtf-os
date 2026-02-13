@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase-auth-server';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { getSubscriptionStatus } from '@/lib/subscription';
 
 interface Lab {
@@ -109,17 +110,27 @@ export default async function LabsPage() {
   const hasDiscoveryLabPro = subscriptionStatus.hasDiscoveryLabPro;
   const hasVisibilityLabPro = subscriptionStatus.hasVisibilityLabPro;
 
-  // Show all free tools + pro tools user has access to
+  // Show pro tools user has access to (at top), plus free tools only when user doesn't have the Pro version
   const filteredLabs = allLabs.filter((lab) => {
-    // Always show free tools
-    if (lab.tier === 'Free') return true;
-
     // Show Pro tools only if user has subscription
-    if (lab.name === 'Call Lab Pro') return hasCallLabPro;
-    if (lab.name === 'Discovery Lab Pro') return hasDiscoveryLabPro;
-    if (lab.name === 'Visibility Lab Pro') return hasVisibilityLabPro;
+    if (lab.tier === 'Pro') {
+      if (lab.name === 'Call Lab Pro') return hasCallLabPro;
+      if (lab.name === 'Discovery Lab Pro') return hasDiscoveryLabPro;
+      if (lab.name === 'Visibility Lab Pro') return hasVisibilityLabPro;
+      return false;
+    }
 
-    return false;
+    // Hide free versions when user has the corresponding Pro
+    if (lab.product === 'call-lab' && hasCallLabPro) return false;
+    if (lab.product === 'discovery-lab' && hasDiscoveryLabPro) return false;
+    if (lab.product === 'visibility-lab' && hasVisibilityLabPro) return false;
+
+    return true;
+  }).sort((a, b) => {
+    // Pro tools first
+    if (a.tier === 'Pro' && b.tier !== 'Pro') return -1;
+    if (a.tier !== 'Pro' && b.tier === 'Pro') return 1;
+    return 0;
   });
 
   // Determine upsell recommendation - recommend a Pro tool the user doesn't have
@@ -142,10 +153,13 @@ export default async function LabsPage() {
         <div className="border border-[#E51B23] rounded-lg px-6 py-6">
           <div className="flex items-start justify-between">
             <div>
-              <div className="font-anton text-3xl tracking-wide uppercase">
-                <span className="text-white">SALES</span>
-                <span className="text-[#E51B23]">OS</span>
-              </div>
+              <Image
+                src="/logos/trios-logo-sq-transparent.png"
+                alt="TriOS"
+                width={80}
+                height={80}
+                className="mb-1"
+              />
               <div className="font-anton text-xs text-[#FFDE59] uppercase mt-1">
                 YOUR LABS
               </div>

@@ -1,7 +1,6 @@
 import { redirect } from 'next/navigation'
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createClient } from '@/lib/supabase-auth-server'
 import { createServerClient } from '@repo/db/client'
-import { cookies } from 'next/headers'
 import Link from 'next/link'
 
 // Force dynamic rendering to always show fresh data
@@ -16,7 +15,7 @@ const theme4EColors: Record<string, { bg: string; text: string; primary: string 
 }
 
 async function getContentData() {
-  const supabase = createServerComponentClient({ cookies })
+  const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {

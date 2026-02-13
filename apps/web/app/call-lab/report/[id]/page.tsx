@@ -337,26 +337,69 @@ export default async function CallReportPage({
     .eq("user_id", user.id)
     .single<CallReport>();
 
+  // Fallback: the dashboard uses call_scores IDs, so check that table too
+  let finalReport = report;
   if (error || !report) {
+    const { data: callScore } = await supabase
+      .from("call_scores")
+      .select("id, overall_score, markdown_response, version, created_at, diagnosis_summary")
+      .eq("id", id)
+      .single();
+
+    if (callScore) {
+      // Adapt call_scores data to the CallReport shape
+      finalReport = {
+        id: callScore.id,
+        user_id: user.id,
+        buyer_name: null,
+        company_name: null,
+        call_type: null,
+        call_date: null,
+        duration_minutes: null,
+        overall_score: callScore.overall_score,
+        opening_score: null,
+        discovery_score: null,
+        diagnostic_score: null,
+        value_score: null,
+        objection_score: null,
+        commitment_score: null,
+        human_first_score: null,
+        trust_velocity: null,
+        agenda_control: null,
+        pattern_density: null,
+        patterns_detected: null,
+        primary_pattern: null,
+        improvement_highlight: callScore.diagnosis_summary,
+        key_moments: null,
+        full_report: callScore.markdown_response
+          ? { markdown: callScore.markdown_response }
+          : null,
+        tier: callScore.version || "lite",
+        created_at: callScore.created_at,
+      } as CallReport;
+    }
+  }
+
+  if (!finalReport) {
     redirect("/dashboard");
   }
 
   const scores = [
-    { label: "Opening", value: report.opening_score },
-    { label: "Discovery", value: report.discovery_score },
-    { label: "Diagnostic", value: report.diagnostic_score },
-    { label: "Value", value: report.value_score },
-    { label: "Objection", value: report.objection_score },
-    { label: "Commitment", value: report.commitment_score },
-    { label: "Human-First", value: report.human_first_score },
+    { label: "Opening", value: finalReport.opening_score },
+    { label: "Discovery", value: finalReport.discovery_score },
+    { label: "Diagnostic", value: finalReport.diagnostic_score },
+    { label: "Value", value: finalReport.value_score },
+    { label: "Objection", value: finalReport.objection_score },
+    { label: "Commitment", value: finalReport.commitment_score },
+    { label: "Human-First", value: finalReport.human_first_score },
   ].filter((s) => s.value != null && typeof s.value === 'number');
 
-  const callDate = report.call_date || report.created_at;
-  const prospect = report.buyer_name || report.company_name || "Unknown Prospect";
+  const callDate = finalReport.call_date || finalReport.created_at;
+  const prospect = finalReport.buyer_name || finalReport.company_name || "Unknown Prospect";
 
   // Try to extract Pro JSON report first
-  const proJsonReport = extractProReport(report.full_report);
-  const markdownContent = !proJsonReport ? extractMarkdown(report.full_report) : null;
+  const proJsonReport = extractProReport(finalReport.full_report);
+  const markdownContent = !proJsonReport ? extractMarkdown(finalReport.full_report) : null;
 
   return (
     <div className="min-h-screen bg-black py-12 px-4">
@@ -393,19 +436,19 @@ export default async function CallReportPage({
                 <div className="bg-[#1A1A1A] border border-[#333] rounded-lg p-4 text-center">
                   <div className="text-[#666] text-xs uppercase mb-1">Trust Velocity</div>
                   <div className="font-anton text-2xl text-white">
-                    {report.trust_velocity?.toFixed(0) ?? "--"}
+                    {finalReport.trust_velocity?.toFixed(0) ?? "--"}
                   </div>
                 </div>
                 <div className="bg-[#1A1A1A] border border-[#333] rounded-lg p-4 text-center">
                   <div className="text-[#666] text-xs uppercase mb-1">Agenda Control</div>
                   <div className="font-anton text-2xl text-white">
-                    {report.agenda_control?.toFixed(0) ?? "--"}
+                    {finalReport.agenda_control?.toFixed(0) ?? "--"}
                   </div>
                 </div>
                 <div className="bg-[#1A1A1A] border border-[#333] rounded-lg p-4 text-center">
                   <div className="text-[#666] text-xs uppercase mb-1">Red Flag Frequency</div>
                   <div className="font-anton text-2xl text-white">
-                    {report.pattern_density?.toFixed(0) ?? "--"}
+                    {finalReport.pattern_density?.toFixed(0) ?? "--"}
                   </div>
                 </div>
               </section>
@@ -430,33 +473,33 @@ export default async function CallReportPage({
               )}
 
               {/* Patterns Detected */}
-              {report.patterns_detected && report.patterns_detected.length > 0 && (
+              {finalReport.patterns_detected && finalReport.patterns_detected.length > 0 && (
                 <section className="border border-[#E51B23] rounded-lg px-6 py-4 mb-6">
                   <h2 className="font-anton text-lg uppercase tracking-wide text-[#FFDE59] mb-4">
                     Patterns Detected
                   </h2>
                   <div className="flex flex-wrap gap-2">
-                    {report.patterns_detected.map((pattern, i) => (
+                    {finalReport.patterns_detected!.map((pattern, i) => (
                       <PatternTag key={i} pattern={pattern} />
                     ))}
                   </div>
-                  {report.primary_pattern && (
+                  {finalReport.primary_pattern && (
                     <div className="mt-4 bg-[#1A1A1A] border border-[#333] rounded p-4">
                       <span className="text-[#666] text-xs uppercase">Primary Pattern:</span>
-                      <span className="ml-2 text-[#FFDE59] font-medium">{report.primary_pattern}</span>
+                      <span className="ml-2 text-[#FFDE59] font-medium">{finalReport.primary_pattern}</span>
                     </div>
                   )}
                 </section>
               )}
 
               {/* Key Moments */}
-              {report.key_moments && report.key_moments.length > 0 && (
+              {finalReport.key_moments && finalReport.key_moments.length > 0 && (
                 <section className="border border-[#E51B23] rounded-lg px-6 py-4 mb-6">
                   <h2 className="font-anton text-lg uppercase tracking-wide text-[#FFDE59] mb-4">
                     Key Moments
                   </h2>
                   <div className="space-y-3">
-                    {report.key_moments.map((moment, i) => (
+                    {finalReport.key_moments!.map((moment, i) => (
                       <div key={i} className="bg-[#1A1A1A] border border-[#333] rounded p-3">
                         <div className="flex items-center gap-2 mb-1">
                           {moment.timestamp && (
@@ -478,12 +521,12 @@ export default async function CallReportPage({
               )}
 
               {/* Improvement Highlight */}
-              {report.improvement_highlight && (
+              {finalReport.improvement_highlight && (
                 <section className="border border-[#FFDE59] rounded-lg px-6 py-4">
                   <h2 className="font-anton text-lg uppercase tracking-wide text-[#FFDE59] mb-2">
                     Focus Area
                   </h2>
-                  <p className="text-white">{report.improvement_highlight}</p>
+                  <p className="text-white">{finalReport.improvement_highlight}</p>
                 </section>
               )}
             </>

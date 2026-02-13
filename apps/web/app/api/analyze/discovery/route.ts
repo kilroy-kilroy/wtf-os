@@ -75,7 +75,10 @@ export async function POST(request: NextRequest) {
 
     if (version === 'pro') {
       // V2: Run full 5-source research chain (parallel)
-      console.log('Running v2 research chain for:', { target_company, domain, target_contact_name, target_linkedin });
+      if (!process.env.BRIGHT_DATA_API) {
+        console.error('[Discovery:Pro] BRIGHT_DATA_API env var is NOT set - LinkedIn and SERP sources will be unavailable. Add BRIGHT_DATA_API to your environment variables.');
+      }
+      console.log('Running v2 research chain for:', { target_company, domain, target_contact_name, target_linkedin, hasBrightDataKey: !!process.env.BRIGHT_DATA_API });
       v2Research = await runV2DiscoveryResearch({
         requestor_name,
         requestor_company,

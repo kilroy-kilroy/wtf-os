@@ -1662,6 +1662,12 @@ export async function runV2DiscoveryResearch(input: V2ResearchInput): Promise<V2
   // AbortController to cancel in-flight BrightData polls when chain timeout fires
   const chainAbort = new AbortController();
 
+  // Check Brightdata API key early and warn
+  if (!BRIGHT_DATA_API) {
+    console.warn('[Discovery:v2] BRIGHT_DATA_API is not set - LinkedIn, SERP, and ChatGPT sources will be skipped');
+    errors.push('BRIGHT_DATA_API not configured - LinkedIn profile, LinkedIn posts, and Google SERP data unavailable');
+  }
+
   // Run all 5 sources + Apollo enrichment in parallel
   const promises: Promise<void>[] = [];
 
@@ -1698,16 +1704,30 @@ export async function runV2DiscoveryResearch(input: V2ResearchInput): Promise<V2
   if (input.target_linkedin) {
     promises.push(
       researchLinkedInProfile(input.target_linkedin, chainAbort.signal)
-        .then(r => { result.linkedin_profile = r; })
+        .then(r => {
+          result.linkedin_profile = r;
+          if (!r) {
+            console.warn('[Discovery:v2] LinkedIn profile returned null for:', input.target_linkedin);
+            errors.push('LinkedIn profile scrape returned no data');
+          }
+        })
         .catch(e => { if (!chainAbort.signal.aborted) errors.push(`LinkedIn profile failed: ${e.message}`); })
     );
+  } else {
+    console.warn('[Discovery:v2] No target_linkedin URL provided - skipping LinkedIn profile');
   }
 
   // Source 3: BrightData LinkedIn Posts
   if (input.target_linkedin) {
     promises.push(
       researchLinkedInPosts(input.target_linkedin, chainAbort.signal)
-        .then(r => { result.linkedin_posts = r; })
+        .then(r => {
+          result.linkedin_posts = r;
+          if (!r) {
+            console.warn('[Discovery:v2] LinkedIn posts returned null for:', input.target_linkedin);
+            errors.push('LinkedIn posts scrape returned no data');
+          }
+        })
         .catch(e => { if (!chainAbort.signal.aborted) errors.push(`LinkedIn posts failed: ${e.message}`); })
     );
   }
@@ -1716,9 +1736,17 @@ export async function runV2DiscoveryResearch(input: V2ResearchInput): Promise<V2
   if (serpKeywords.length > 0 && domain) {
     promises.push(
       researchGoogleSerp(serpKeywords, domain, chainAbort.signal)
-        .then(r => { result.google_serp = r; })
+        .then(r => {
+          result.google_serp = r;
+          if (!r) {
+            console.warn('[Discovery:v2] Google SERP returned null for keywords:', serpKeywords);
+            errors.push('Google SERP search returned no data');
+          }
+        })
         .catch(e => { if (!chainAbort.signal.aborted) errors.push(`Google SERP failed: ${e.message}`); })
     );
+  } else {
+    console.warn('[Discovery:v2] No domain available for SERP search - skipping');
   }
 
   // Source 5: Website tech detection

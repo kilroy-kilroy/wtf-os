@@ -368,6 +368,11 @@ export async function onAssessmentCompleted(
 /**
  * Fire when a coaching report is ready (weekly, monthly, quarterly)
  * Triggers email with link to coaching report
+ *
+ * Uses separate Loops events for each report type:
+ * - coaching_weekly_ready
+ * - coaching_monthly_ready
+ * - coaching_quarterly_ready
  */
 export async function onCoachingReportReady(
   email: string,
@@ -382,18 +387,19 @@ export async function onCoachingReportReady(
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.timkilroy.com';
   const reportUrl = `${appUrl}/dashboard/coaching/${reportId}`;
 
-  // Format period for display
-  const reportTypeLabel = reportType === 'weekly'
-    ? 'Weekly'
-    : reportType === 'monthly'
-    ? 'Monthly'
-    : 'Quarterly';
+  // Map report type to specific Loops event
+  const eventNameMap = {
+    weekly: 'coaching_weekly_ready',
+    monthly: 'coaching_monthly_ready',
+    quarterly: 'coaching_quarterly_ready',
+  } as const;
+
+  const eventName = eventNameMap[reportType];
 
   return sendEvent({
     email,
-    eventName: 'coaching_report_ready',
+    eventName,
     eventProperties: {
-      reportType: reportTypeLabel,
       reportId,
       reportUrl,
       periodStart,

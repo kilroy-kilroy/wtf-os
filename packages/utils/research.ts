@@ -981,6 +981,30 @@ const BD_DISCOVERY_DATASETS = {
   googleSerp: 'gd_l1vijqt9jfj7olije8',
 };
 
+/**
+ * Compose an AbortSignal from a timeout + optional parent signal.
+ * Works on Node 18+ (unlike AbortSignal.any which requires Node 20.3+).
+ */
+function composedSignal(timeoutMs: number, parentSignal?: AbortSignal): AbortSignal {
+  if (!parentSignal) return AbortSignal.timeout(timeoutMs);
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  if (parentSignal.aborted) {
+    controller.abort();
+    clearTimeout(timer);
+    return controller.signal;
+  }
+
+  parentSignal.addEventListener('abort', () => {
+    controller.abort();
+    clearTimeout(timer);
+  }, { once: true });
+
+  return controller.signal;
+}
+
 async function bdDiscoveryTrigger(datasetId: string, input: any[]): Promise<string | null> {
   if (!BRIGHT_DATA_API) return null;
 
@@ -1035,9 +1059,7 @@ async function bdDiscoveryPoll(snapshotId: string, maxWaitMs: number = 60000, ab
     try {
       const response = await fetch(`${BRIGHT_DATA_BASE}/snapshot/${snapshotId}?format=json`, {
         headers: { 'Authorization': `Bearer ${BRIGHT_DATA_API}` },
-        signal: abortSignal
-          ? AbortSignal.any([AbortSignal.timeout(15000), abortSignal])
-          : AbortSignal.timeout(15000),
+        signal: composedSignal(15000, abortSignal),
       });
 
       if (response.status === 200) {
@@ -1081,9 +1103,7 @@ export async function researchLinkedInProfile(linkedinUrl: string, abortSignal?:
     console.log(`[Discovery:v2] Scraping LinkedIn profile: ${url}`);
 
     // Try synchronous /scrape endpoint first
-    const fetchSignal = abortSignal
-      ? AbortSignal.any([AbortSignal.timeout(120000), abortSignal])
-      : AbortSignal.timeout(120000);
+    const fetchSignal = composedSignal(120000, abortSignal);
     const response = await fetch(`${BRIGHT_DATA_BASE}/scrape?dataset_id=${BD_DISCOVERY_DATASETS.linkedinProfile}&format=json&include_errors=true`, {
       method: 'POST',
       headers: {
@@ -1215,9 +1235,7 @@ export async function researchLinkedInPosts(linkedinUrl: string, abortSignal?: A
     const url = linkedinUrl.trim().replace(/\/$/, '');
     console.log(`[Discovery:v2] Scraping LinkedIn posts: ${url}`);
 
-    const fetchSignal = abortSignal
-      ? AbortSignal.any([AbortSignal.timeout(120000), abortSignal])
-      : AbortSignal.timeout(120000);
+    const fetchSignal = composedSignal(120000, abortSignal);
     const response = await fetch(`${BRIGHT_DATA_BASE}/scrape?dataset_id=${BD_DISCOVERY_DATASETS.linkedinPosts}&format=json&include_errors=true`, {
       method: 'POST',
       headers: {
@@ -1331,9 +1349,7 @@ export async function researchGoogleSerp(
     const snapshotId = await bdDiscoveryTrigger(BD_DISCOVERY_DATASETS.googleSerp, input);
     if (!snapshotId) {
       // Try synchronous /scrape endpoint
-      const fetchSignal = abortSignal
-        ? AbortSignal.any([AbortSignal.timeout(120000), abortSignal])
-        : AbortSignal.timeout(120000);
+      const fetchSignal = composedSignal(120000, abortSignal);
       const response = await fetch(`${BRIGHT_DATA_BASE}/scrape?dataset_id=${BD_DISCOVERY_DATASETS.googleSerp}&format=json&include_errors=true`, {
         method: 'POST',
         headers: {

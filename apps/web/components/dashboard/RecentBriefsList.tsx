@@ -82,7 +82,7 @@ export function RecentBriefsList({ briefs }: RecentBriefsListProps) {
                   {brief.hasLinkedCall ? 'Called' : 'Prepped'}
                 </span>
                 <Link
-                  href={`/discovery-lab/brief/${brief.id}`}
+                  href={`/discovery-lab/report/${brief.id}`}
                   className="text-[#FFDE59] text-sm hover:text-white transition-colors whitespace-nowrap"
                 >
                   View →

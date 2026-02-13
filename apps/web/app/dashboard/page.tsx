@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase-auth-server';
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import {
   NextCallFocus,
   SituationSnapshot,
@@ -841,13 +842,13 @@ export default async function DashboardPage() {
           <div className="flex items-center gap-6">
             {/* Logo */}
             <div>
-              <div className="font-anton text-2xl tracking-wide uppercase">
-                <span className="text-white">SALES</span>
-                <span className="text-[#E51B23]">OS</span>
-              </div>
-              <div className="font-anton text-xs text-[#FFDE59] uppercase tracking-wider">
-                DASHBOARD
-              </div>
+              <Image
+                src="/logos/trios-logo-sq-transparent.png"
+                alt="TriOS"
+                width={140}
+                height={140}
+                className="h-10 w-auto"
+              />
             </div>
 
             {/* User */}

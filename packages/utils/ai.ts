@@ -49,6 +49,31 @@ const MODEL_CONFIGS: Record<string, ModelConfig> = {
     maxTokens: 8192,
     temperature: 0.4,
   },
+  // Content Engine tools
+  'content-engine-calibrate': {
+    provider: 'anthropic',
+    model: 'claude-sonnet-4-5-20250929',
+    maxTokens: 4096,
+    temperature: 0.4,
+  },
+  'content-engine-categorize': {
+    provider: 'anthropic',
+    model: 'claude-sonnet-4-5-20250929',
+    maxTokens: 2048,
+    temperature: 0.2,
+  },
+  'content-engine-repurpose': {
+    provider: 'anthropic',
+    model: 'claude-sonnet-4-5-20250929',
+    maxTokens: 4096,
+    temperature: 0.6,
+  },
+  'content-engine-moment-detection': {
+    provider: 'anthropic',
+    model: 'claude-sonnet-4-5-20250929',
+    maxTokens: 8192,
+    temperature: 0.3,
+  },
 };
 
 export interface ModelResponse {

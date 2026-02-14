@@ -257,9 +257,13 @@ export async function onReportGenerated(
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.timkilroy.com';
   const reportUrl = `${appUrl}/call-lab/report/${reportId}`;
 
+  const eventName = reportType === 'pro'
+    ? 'report_generated_pro'
+    : 'report_generated_lite';
+
   return sendEvent({
     email,
-    eventName: 'report_generated',
+    eventName,
     eventProperties: {
       reportId,
       reportUrl,
@@ -287,9 +291,13 @@ export async function onDiscoveryReportGenerated(
     ? 'SalesOS Discovery Lab Pro'
     : 'SalesOS Discovery Lab';
 
+  const eventName = reportType === 'pro'
+    ? 'discovery_report_generated_pro'
+    : 'discovery_report_generated_lite';
+
   return sendEvent({
     email,
-    eventName: 'discovery_report_generated',
+    eventName,
     eventProperties: {
       reportType: reportTypeLabel,
       targetCompany,

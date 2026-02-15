@@ -18,3 +18,6 @@ export { CoachingNarrative } from './CoachingNarrative';
 export { DiscoveryLabActivity } from './DiscoveryLabActivity';
 export { RecentBriefsList } from './RecentBriefsList';
 export { ProInsightsPanel } from './ProInsightsPanel';
+
+// Growth Quadrant
+export { GrowthQuadrantCard } from './GrowthQuadrantCard';

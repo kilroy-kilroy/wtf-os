@@ -121,25 +121,31 @@ export async function getSubscriptionStatus(
   }
 
   // Check Stripe subscriptions table by email
-  const { data: stripeSubscription } = await supabase
+  // A user may have multiple active subscriptions (e.g. upgraded from single to bundle)
+  const { data: stripeSubscriptions } = await supabase
     .from('subscriptions')
-    .select('status, plan_type')
+    .select('status, plan_type, product')
     .eq('customer_email', email)
-    .in('status', ['active', 'trialing'])
-    .limit(1)
-    .single();
+    .in('status', ['active', 'trialing']);
 
-  if (stripeSubscription) {
-    // Has active Stripe subscription - grant Discovery Lab Pro access
-    // (Discovery Lab Pro is the product sold via Stripe checkout)
+  if (stripeSubscriptions && stripeSubscriptions.length > 0) {
+    // Collect all products the user has active subscriptions for
+    const products = new Set(stripeSubscriptions.map(s => s.product || 'discovery-lab-pro'));
+
+    // Map products to access flags
+    // Bundles grant access to all included products
+    const hasCallLab = products.has('call-lab-pro') || products.has('bundle') || products.has('growth-bundle');
+    const hasDiscovery = products.has('discovery-lab-pro') || products.has('bundle') || products.has('growth-bundle');
+    const hasVisibility = products.has('visibility-lab-pro') || products.has('growth-bundle');
+
     return {
-      hasCallLabPro: false,
-      hasDiscoveryLabPro: true,
-      hasVisibilityLabPro: false,
+      hasCallLabPro: hasCallLab,
+      hasDiscoveryLabPro: hasDiscovery,
+      hasVisibilityLabPro: hasVisibility,
       source: 'stripe',
-      callLabTier: personalCallLabTier,
-      discoveryLabTier: 'pro',
-      visibilityLabTier: personalVisibilityLabTier,
+      callLabTier: hasCallLab ? 'pro' : personalCallLabTier,
+      discoveryLabTier: hasDiscovery ? 'pro' : personalDiscoveryLabTier,
+      visibilityLabTier: hasVisibility ? 'pro' : personalVisibilityLabTier,
       email,
     };
   }

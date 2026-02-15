@@ -11,7 +11,7 @@ import { ProReport } from '@/components/visibility-lab-pro/ProReport';
 import { ProLoadingScreen } from '@/components/visibility-lab-pro/ProLoadingScreen';
 import { ToolPageHeader } from '@/components/ToolPageHeader';
 import { VisibilityLabProInput, VisibilityLabProReport } from '@/lib/visibility-lab-pro/types';
-import { Lock, X, Save, Webhook, Eye } from 'lucide-react';
+import { Lock, X, Save, Webhook, Eye, ArrowRight } from 'lucide-react';
 
 // --- CONFIGURATION ---
 const HARDCODED_WEBHOOK_URL = "https://hooks.zapier.com/hooks/catch/1852580/uzksxsr/";
@@ -59,6 +59,9 @@ export default function VisibilityLabProPage() {
   const [showSettings, setShowSettings] = useState(false);
   const [tempWebhook, setTempWebhook] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [accessChecked, setAccessChecked] = useState(false);
+  const [hasAccess, setHasAccess] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   const [formData, setFormData] = useState<VisibilityLabProInput>({
     userName: '',
@@ -86,9 +89,22 @@ export default function VisibilityLabProPage() {
     twitterUrl: '',
   });
 
-  // Load saved data from localStorage on mount
+  // Check subscription access and load saved data on mount
   useEffect(() => {
     setMounted(true);
+
+    // Check subscription access
+    fetch('/api/subscription-status')
+      .then(res => res.json())
+      .then(data => {
+        setIsAuthenticated(data.authenticated !== false);
+        setHasAccess(data.hasVisibilityLabPro === true);
+        setAccessChecked(true);
+      })
+      .catch(() => {
+        setAccessChecked(true);
+      });
+
     try {
       const savedReport = localStorage.getItem('visibility_lab_pro_report');
       if (savedReport) {
@@ -206,7 +222,113 @@ export default function VisibilityLabProPage() {
       />
       {isLoading && <ProLoadingScreen />}
 
-      {!report ? (
+      {/* Access Gate - show pricing if user doesn't have pro access */}
+      {accessChecked && !hasAccess && !report && (
+        <div className="max-w-5xl mx-auto px-4 py-12">
+          <div className="text-center mb-16">
+            <h1 className="font-anton text-[clamp(36px,6vw,56px)] text-white mb-4 tracking-wide">
+              <span className="text-white">VISIBILITY LAB </span>
+              <span className="text-[#FFDE59]">PRO</span>
+            </h1>
+            <p className="text-lg text-[#B3B3B3] font-poppins max-w-2xl mx-auto">
+              Deep strategic visibility audit with competitive intelligence, buyer journey mapping,
+              operator profiling, and a custom 90-day growth playbook.
+            </p>
+          </div>
+
+          {/* What You Get */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16 max-w-4xl mx-auto">
+            {[
+              { title: 'KVI SCORE', desc: 'Kilroy Visibility Index across 7 weighted dimensions — content, social, SEO, thought leadership, community, paid, and ecosystem.' },
+              { title: 'COMPETITOR WAR ROOM', desc: 'Side-by-side teardown of how your competitors show up, where they dominate, and where you can exploit gaps.' },
+              { title: '90-DAY PLAYBOOK', desc: 'Phased growth plan with specific weekly actions, channel priorities, and metrics to hit.' },
+            ].map((item) => (
+              <div key={item.title} className="bg-[#1a1a1a] border border-[#333] p-6">
+                <h3 className="font-anton text-[#FFDE59] text-lg mb-2 tracking-wide">{item.title}</h3>
+                <p className="text-[#B3B3B3] text-sm font-poppins leading-relaxed">{item.desc}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Pricing Cards */}
+          <div id="pricing">
+            <h2 className="font-anton text-[clamp(32px,4vw,48px)] text-[#E51B23] mb-4 tracking-[2px] text-center">
+              CHOOSE YOUR DEPLOYMENT
+            </h2>
+            <p className="text-base text-[#666] text-center max-w-[600px] mx-auto mb-12">
+              See how your brand really shows up. Then fix it.
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-[800px] mx-auto">
+              {/* Solo */}
+              <div className="bg-[#1A1A1A] border-2 border-[#E51B23] p-12 text-center relative transition-all duration-300 hover:scale-105 cursor-pointer">
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#E51B23] text-white px-4 py-1 text-[11px] tracking-[2px] font-bold">
+                  SOLO OPERATOR
+                </div>
+                <div className="text-sm text-[#FFDE59] mb-4 tracking-wide font-semibold">
+                  Single Seat
+                </div>
+                <div className="font-anton text-[64px] text-white mb-2 leading-none">$29</div>
+                <div className="text-sm text-[#666] mb-6">/month</div>
+                <div className="text-base text-white mb-4 font-semibold">1 User License</div>
+                <p className="text-[13px] text-[#CCC] mb-8 min-h-[60px] leading-[1.5]">
+                  Perfect for founders and operators who want to own their visibility.
+                </p>
+                <a
+                  href="/visibility-lab-pro/checkout?plan=solo"
+                  className="block bg-[#E51B23] text-white border-none py-4 px-9 font-anton text-base font-bold tracking-[2px] cursor-pointer w-full transition-all duration-300 hover:bg-[#FFDE59] hover:text-black text-center no-underline"
+                >
+                  [ ACTIVATE PRO ]
+                </a>
+              </div>
+
+              {/* Team */}
+              <div className="bg-[#1A1A1A] border border-[#333] p-12 text-center relative transition-all duration-300 hover:scale-105 hover:border-[#E51B23] cursor-pointer">
+                <div className="text-sm text-[#FFDE59] mb-4 tracking-wide font-semibold">
+                  Team License
+                </div>
+                <div className="font-anton text-[64px] text-white mb-2 leading-none">$89</div>
+                <div className="text-sm text-[#666] mb-6">/month</div>
+                <div className="text-base text-white mb-4 font-semibold">5 User Licenses</div>
+                <p className="text-[13px] text-[#CCC] mb-8 min-h-[60px] leading-[1.5]">
+                  For agencies and teams. Run visibility audits for every client, every quarter.
+                </p>
+                <a
+                  href="/visibility-lab-pro/checkout?plan=team"
+                  className="block bg-[#333] text-white border-none py-4 px-9 font-anton text-base font-bold tracking-[2px] cursor-pointer w-full transition-all duration-300 hover:bg-[#FFDE59] hover:text-black text-center no-underline"
+                >
+                  [ ACTIVATE PRO ]
+                </a>
+              </div>
+            </div>
+
+            <p className="text-center mt-10 text-[13px] text-[#666]">
+              Cancel anytime. No long-term contracts. No bullshit.
+            </p>
+
+            {!isAuthenticated && (
+              <p className="text-center mt-6 text-sm text-[#999]">
+                Already have an account?{' '}
+                <a href="/login?returnTo=/visibility-lab-pro" className="text-[#FFDE59] hover:underline">
+                  Log in
+                </a>
+              </p>
+            )}
+          </div>
+
+          {/* See Example */}
+          <div className="text-center mt-16">
+            <a
+              href="/visibility-lab-examples/report-visibility-lab-pro"
+              className="inline-flex items-center gap-2 text-[#B3B3B3] hover:text-[#FFDE59] transition-colors font-poppins text-sm"
+            >
+              See an example Pro report <ArrowRight size={14} />
+            </a>
+          </div>
+        </div>
+      )}
+
+      {hasAccess && !report ? (
         <div className="max-w-5xl mx-auto px-4 py-12">
           <ConsolePanel>
             <div className="space-y-8 relative">
@@ -569,9 +691,9 @@ export default function VisibilityLabProPage() {
             </div>
           </ConsolePanel>
         </div>
-      ) : (
+      ) : report ? (
         <ProReport data={report} onReset={handleReset} />
-      )}
+      ) : null}
     </div>
   );
 }

@@ -33,10 +33,24 @@ export async function POST(request: NextRequest) {
         successUrl = `${appUrl}/discovery-lab-pro/welcome?session_id={CHECKOUT_SESSION_ID}`;
         cancelUrl = `${appUrl}/discovery-lab-pro?checkout=cancelled`;
         break;
+      case 'visibility-lab-pro':
+        priceId = priceType === 'team'
+          ? process.env.STRIPE_PRICE_VISIBILITY_TEAM
+          : process.env.STRIPE_PRICE_VISIBILITY_SOLO;
+        successUrl = `${appUrl}/visibility-lab-pro/welcome?session_id={CHECKOUT_SESSION_ID}`;
+        cancelUrl = `${appUrl}/visibility-lab-pro?checkout=cancelled`;
+        break;
       case 'bundle':
         priceId = priceType === 'team'
           ? process.env.STRIPE_PRICE_BUNDLE_TEAM
           : process.env.STRIPE_PRICE_BUNDLE_SOLO;
+        successUrl = `${appUrl}/pro/welcome?session_id={CHECKOUT_SESSION_ID}`;
+        cancelUrl = `${appUrl}/pricing?checkout=cancelled`;
+        break;
+      case 'growth-bundle':
+        priceId = priceType === 'team'
+          ? process.env.STRIPE_PRICE_GROWTHBUNDLE_TEAM
+          : process.env.STRIPE_PRICE_GROWTHBUNDLE_SOLO;
         successUrl = `${appUrl}/pro/welcome?session_id={CHECKOUT_SESSION_ID}`;
         cancelUrl = `${appUrl}/pricing?checkout=cancelled`;
         break;

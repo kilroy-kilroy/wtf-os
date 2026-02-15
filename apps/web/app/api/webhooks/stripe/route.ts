@@ -85,6 +85,7 @@ export async function POST(request: NextRequest) {
               user_id: userId,
               customer_email: session.customer_email || '',
               plan_type: session.metadata?.priceType || 'solo',
+              product: session.metadata?.product || 'discovery-lab-pro',
               status: subscription.status,
               current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
               current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),

@@ -34,11 +34,11 @@ export const Dashboard: React.FC<Props> = ({ data, onReset }) => {
   };
 
   const handleShare = () => {
-    const shareUrl = "https://engine.timkilroy.com";
-    const text = `Wow - just got my DemandOS Visibility Score: ${data.visibilityScore}/100\n\nMy leader archetype is ${data.brandArchetype.name}\n\nGet your DemandOS Visibility score at ${shareUrl}\n\nThanks @timkilroy!`;
+    const explainerUrl = `${window.location.origin}/growth-quadrant`;
+    const text = `Just ran my Visibility Lab on TriOS.\n\nVisibility Score: ${data.visibilityScore}/100\n\nDiscover your agency growth archetype at ${explainerUrl}\n\nThanks @timkilroy!`;
     const linkedInUrl = `https://www.linkedin.com/feed/?shareActive=true&text=${encodeURIComponent(text)}`;
     window.open(linkedInUrl, '_blank');
-  }
+  };
 
   const handleGenerateDraft = async (topic: string) => {
     setDraftTopic(topic);
@@ -171,8 +171,22 @@ export const Dashboard: React.FC<Props> = ({ data, onReset }) => {
               </div>
             </div>
             <div className="mt-6 text-center w-full">
-              <div className="text-brand-yellow font-anton text-2xl uppercase mb-2 leading-none">{data.brandArchetype.name}</div>
-              <div className="text-[10px] text-gray-300 border-t border-gray-700 pt-2 italic">&quot;{data.brandArchetype.reasoning}&quot;</div>
+              {data.brandArchetype?.name && (
+                <>
+                  <div className="text-brand-yellow font-anton text-xl uppercase mb-1 leading-none">
+                    AI Assessment: {data.brandArchetype.name}
+                  </div>
+                  <div className="text-[10px] text-gray-400 italic mb-3">
+                    &quot;{data.brandArchetype.reasoning}&quot;
+                  </div>
+                </>
+              )}
+              <a
+                href="/growth-quadrant"
+                className="inline-block text-xs text-brand-red hover:text-brand-yellow transition-colors uppercase font-bold tracking-wider border border-brand-red/30 px-3 py-1 hover:border-brand-yellow/50"
+              >
+                View Your Growth Quadrant Placement &rarr;
+              </a>
             </div>
           </div>
 

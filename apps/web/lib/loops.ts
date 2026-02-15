@@ -252,7 +252,10 @@ export async function onReportGenerated(
   reportId: string,
   reportType: 'lite' | 'pro' = 'lite',
   prospectName?: string,
-  companyName?: string
+  companyName?: string,
+  archetype?: string,
+  executionScore?: number,
+  positioningScore?: number
 ): Promise<{ success: boolean; error?: string }> {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.timkilroy.com';
   const reportUrl = `${appUrl}/call-lab/report/${reportId}`;
@@ -266,6 +269,9 @@ export async function onReportGenerated(
       reportType,
       prospectName: prospectName || '',
       companyName: companyName || '',
+      archetype: archetype || '',
+      executionScore: executionScore ?? 0,
+      positioningScore: positioningScore ?? 0,
     },
   });
 }
@@ -281,7 +287,10 @@ export async function onDiscoveryReportGenerated(
   targetContact?: string,
   targetContactTitle?: string,
   reportId?: string,
-  reportUrl?: string
+  reportUrl?: string,
+  archetype?: string,
+  executionScore?: number,
+  positioningScore?: number
 ): Promise<{ success: boolean; error?: string }> {
   const reportTypeLabel = reportType === 'pro'
     ? 'SalesOS Discovery Lab Pro'
@@ -297,6 +306,9 @@ export async function onDiscoveryReportGenerated(
       targetContactTitle: targetContactTitle || '',
       reportId: reportId || '',
       reportUrl: reportUrl || '',
+      archetype: archetype || '',
+      executionScore: executionScore ?? 0,
+      positioningScore: positioningScore ?? 0,
     },
   });
 }
@@ -337,7 +349,10 @@ export async function onAssessmentCompleted(
   firstName: string,
   agencyName: string,
   assessmentId: string,
-  overallScore: number
+  overallScore: number,
+  archetype?: string,
+  executionScore?: number,
+  positioningScore?: number
 ): Promise<{ success: boolean; error?: string }> {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.timkilroy.com';
   const resultsUrl = `${appUrl}/growthos/results/${assessmentId}`;
@@ -361,6 +376,40 @@ export async function onAssessmentCompleted(
       assessmentId,
       overallScore,
       resultsUrl,
+      archetype: archetype || '',
+      executionScore: executionScore ?? 0,
+      positioningScore: positioningScore ?? 0,
+    },
+  });
+}
+
+/**
+ * Fire when a Visibility Lab report is generated
+ * Triggers email sequence with link to visibility report
+ */
+export async function onVisibilityReportGenerated(
+  email: string,
+  reportId: string,
+  visibilityScore: number,
+  brandName: string,
+  archetype?: string,
+  executionScore?: number,
+  positioningScore?: number
+): Promise<{ success: boolean; error?: string }> {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.timkilroy.com';
+  const reportUrl = `${appUrl}/visibility-lab/report/${reportId}`;
+
+  return sendEvent({
+    email,
+    eventName: 'visibility_report_generated',
+    eventProperties: {
+      reportId,
+      reportUrl,
+      visibilityScore,
+      brandName,
+      archetype: archetype || '',
+      executionScore: executionScore ?? 0,
+      positioningScore: positioningScore ?? 0,
     },
   });
 }

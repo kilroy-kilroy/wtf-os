@@ -30,6 +30,7 @@ import {
 } from '@repo/prompts';
 import { onReportGenerated } from '@/lib/loops';
 import { addCallLabSubscriber } from '@/lib/beehiiv';
+import { getArchetypeForLoops } from '@/lib/growth-quadrant';
 
 // Helper to send report generated email via Loops and add to Beehiiv
 async function sendReportEmail(
@@ -51,13 +52,24 @@ async function sendReportEmail(
       .single();
 
     if (user?.email) {
+      // Compute current archetype for Loops event
+      let quadrant = { archetype: '', executionScore: 0, positioningScore: 0 };
+      try {
+        quadrant = await getArchetypeForLoops(supabase, userId);
+      } catch (err) {
+        console.error('Failed to compute archetype for Loops:', err);
+      }
+
       // Send Loops event
       await onReportGenerated(
         user.email,
         reportId,
         reportType,
         prospectName,
-        companyName
+        companyName,
+        quadrant.archetype,
+        quadrant.executionScore,
+        quadrant.positioningScore
       ).catch(err => {
         console.error('Failed to send Loops report email:', err);
       });

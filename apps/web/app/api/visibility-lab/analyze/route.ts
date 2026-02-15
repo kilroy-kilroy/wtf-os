@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { AnalysisInput, AnalysisReport } from '@/lib/visibility-lab/types';
-import { DEMAND_OS_ARCHETYPES } from '@/lib/visibility-lab/archetypes';
+import { getSupabaseServerClient } from '@/lib/supabase-server';
+import { onVisibilityReportGenerated } from '@/lib/loops';
+import { getArchetypeForLoops } from '@/lib/growth-quadrant';
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,8 +15,6 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
-
-    const archetypeList = DEMAND_OS_ARCHETYPES.map(a => `- "${a.name}": ${a.description}`).join("\n");
 
     const systemPrompt = `
     You are the "DemandOS Visibility Engine", an AI analyst modeled after Tim Kilroy's methodology.
@@ -45,10 +45,9 @@ export async function POST(request: NextRequest) {
     ANALYSIS REQUIREMENTS:
     1.  **Executive Summary:** Brutal honesty based on your search results. Are they an "Order-Taker" or a "Strategic Partner"?
     2.  **Visibility Score:** 0-100 based on signal vs. noise (use search result volume/quality as a proxy).
-    3.  **Brand Archetype (CRITICAL):**
-        You MUST classify this brand into exactly ONE of the following DemandOS Archetypes. Do not make up a new one.
-        ${archetypeList}
-        Choose the one that best fits their *current* reality based on your search results, not their aspirations.
+    3.  **Brand Characterization:**
+        In 2-3 words, characterize this brand's current market posture (e.g., "Reactive Generalist", "Invisible Expert", "Passive Broadcaster").
+        Provide brief reasoning.
 
     4.  **VVV Audit & Radar:**
         - Analyze Vibes, Vision, Values.
@@ -82,7 +81,7 @@ export async function POST(request: NextRequest) {
       "executiveSummary": "string",
       "visibilityScore": number,
       "brandArchetype": {
-        "name": "string (Must be exact match from list)",
+        "name": "string",
         "reasoning": "string"
       },
       "vvvAudit": { "vibes": "string", "vision": "string", "values": "string", "clarityScore": number },
@@ -153,7 +152,72 @@ export async function POST(request: NextRequest) {
 
     try {
       const report = JSON.parse(cleanedText) as AnalysisReport;
-      return NextResponse.json(report);
+
+      // Save to database (non-blocking)
+      const supabase = getSupabaseServerClient();
+      let reportId: string | null = null;
+      try {
+        const { data: savedReport, error: saveError } = await supabase
+          .from('visibility_lab_reports')
+          .insert({
+            email: input.userEmail,
+            brand_name: report.brandName,
+            visibility_score: report.visibilityScore,
+            vvv_clarity_score: report.vvvAudit?.clarityScore || null,
+            brand_archetype_name: report.brandArchetype?.name || null,
+            brand_archetype_reasoning: report.brandArchetype?.reasoning || null,
+            full_report: report,
+            input_data: input,
+          })
+          .select('id')
+          .single();
+
+        if (saveError) {
+          console.error('Failed to save visibility report:', saveError);
+        } else {
+          reportId = savedReport?.id || null;
+        }
+      } catch (saveErr) {
+        console.error('DB save error (non-blocking):', saveErr);
+      }
+
+      // Fire Loops event (fire-and-forget)
+      if (reportId) {
+        let archetype = '';
+        let executionScore = 0;
+        let positioningScore = 0;
+
+        // Try to find user by email for archetype computation
+        try {
+          const { data: userRecord } = await supabase
+            .from('users')
+            .select('id')
+            .eq('email', input.userEmail)
+            .single();
+          if (userRecord?.id) {
+            const quadrant = await getArchetypeForLoops(supabase, userRecord.id);
+            archetype = quadrant.archetype;
+            executionScore = quadrant.executionScore;
+            positioningScore = quadrant.positioningScore;
+          }
+        } catch (err) {
+          console.error('Failed to compute archetype for Visibility Loops:', err);
+        }
+
+        onVisibilityReportGenerated(
+          input.userEmail,
+          reportId,
+          report.visibilityScore,
+          report.brandName,
+          archetype,
+          executionScore,
+          positioningScore
+        ).catch(err => {
+          console.error('Failed to send Visibility Lab Loops event:', err);
+        });
+      }
+
+      return NextResponse.json({ ...report, reportId });
     } catch {
       console.error("Failed to parse JSON. Raw text:", text.substring(0, 500));
 

@@ -19,6 +19,8 @@ import {
   getPatternById,
   MacroPattern,
 } from "@/lib/macro-patterns";
+import { GrowthQuadrantCard } from '@/components/dashboard/GrowthQuadrantCard';
+import { computeGrowthQuadrant } from '@/lib/growth-quadrant';
 
 // Types for database results
 interface CallScoreRow {
@@ -830,6 +832,9 @@ export default async function DashboardPage() {
   // Get dashboard data from database
   const data = await getDashboardData(supabase, user.id, user.email || '');
 
+  // Compute Growth Quadrant placement
+  const quadrant = await computeGrowthQuadrant(supabase, user.id);
+
   return (
     <div className="min-h-screen bg-black">
       {/* ============================================
@@ -878,6 +883,13 @@ export default async function DashboardPage() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-8 space-y-8">
+        {/* ============================================
+            BLOCK 0.5: GROWTH QUADRANT
+            Purpose: Cross-lab archetype placement
+            Rules: Always visible, shows locked state if incomplete
+            ============================================ */}
+        <GrowthQuadrantCard quadrant={quadrant} />
+
         {/* ============================================
             BLOCK 1.5: DISCOVERY LAB ACTIVITY (Prep Intelligence)
             Purpose: Show pre-call research activity and prep-to-call pipeline

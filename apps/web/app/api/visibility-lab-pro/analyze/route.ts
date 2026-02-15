@@ -72,8 +72,8 @@ export async function POST(request: NextRequest) {
           .insert({
             email: input.userEmail,
             brand_name: report.brandName,
-            visibility_score: report.visibilityScore,
-            vvv_clarity_score: report.vvvAudit?.clarityScore || null,
+            visibility_score: report.kvi?.compositeScore || null,
+            vvv_clarity_score: report.narrativeForensics?.overallConsistencyScore || null,
             brand_archetype_name: report.brandArchetype?.name || null,
             brand_archetype_reasoning: report.brandArchetype?.reasoning || null,
             full_report: report,

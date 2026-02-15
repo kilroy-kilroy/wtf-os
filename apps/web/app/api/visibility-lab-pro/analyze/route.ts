@@ -50,22 +50,36 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Clean potential Markdown formatting
-    const cleanedText = text.replace(/```json/g, '').replace(/```/g, '').trim();
+    // Clean potential Markdown formatting and extract JSON
+    let cleanedText = text.replace(/```json/g, '').replace(/```/g, '').trim();
+
+    // Try to extract JSON object if there's surrounding text
+    const jsonMatch = cleanedText.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      cleanedText = jsonMatch[0];
+    }
 
     try {
       const report = JSON.parse(cleanedText) as VisibilityLabProReport;
       return NextResponse.json(report);
     } catch {
-      console.error("Failed to parse JSON. Raw text:", text);
-      if (text.includes("sorry") || text.includes("cannot")) {
+      console.error("Failed to parse JSON. Raw text:", text.substring(0, 500));
+
+      // Only flag as safety filter if the AI explicitly refused the request
+      const lowerText = text.toLowerCase();
+      const isRefusal = (
+        (lowerText.includes("i'm sorry") || lowerText.includes("i cannot") || lowerText.includes("i can't")) &&
+        (lowerText.includes("assist") || lowerText.includes("provide") || lowerText.includes("generate") || lowerText.includes("help"))
+      );
+
+      if (isRefusal) {
         return NextResponse.json(
           { error: 'AI Safety Filter Triggered. Please try again with different inputs.' },
           { status: 400 }
         );
       }
       return NextResponse.json(
-        { error: 'System Error: AI returned invalid data format' },
+        { error: 'Analysis failed: AI returned invalid data. Please try again.' },
         { status: 500 }
       );
     }

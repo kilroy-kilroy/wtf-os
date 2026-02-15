@@ -42,10 +42,10 @@ export const LoadingScreen: React.FC = () => {
         </div>
 
         {/* Terminal Output */}
-        <div className="bg-gray-900/50 border border-gray-800 p-4 font-mono text-xs h-48 overflow-hidden flex flex-col justify-end">
+        <div className="bg-gray-900/80 border border-gray-700 p-4 font-mono text-xs h-48 overflow-hidden flex flex-col justify-end">
             {logs.slice(0, logIndex + 1).map((log, i) => (
-                <div key={i} className={`mb-1 flex items-center gap-2 ${i === logIndex ? 'text-brand-yellow animate-pulse' : 'text-gray-500'}`}>
-                    <span className="opacity-50">{`>`}</span> {log}
+                <div key={i} className={`mb-1 flex items-center gap-2 ${i === logIndex ? 'text-brand-yellow animate-pulse' : 'text-gray-300'}`}>
+                    <span className="opacity-70">{`>`}</span> {log}
                 </div>
             ))}
             <div className="text-brand-red animate-pulse mt-2">_PROCESSING</div>

@@ -337,9 +337,26 @@ export default async function CallReportPage({
     .eq("user_id", user.id)
     .single<CallReport>();
 
-  // Fallback: the dashboard uses call_scores IDs, so check that table too
+  // Fallback 1: the dashboard links use call_scores IDs, so look up by call_id
+  // (call_lab_reports.call_id references call_scores.id)
   let finalReport = report;
   if (error || !report) {
+    const { data: reportByCallId } = await supabase
+      .from("call_lab_reports")
+      .select("*")
+      .eq("call_id", id)
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .single<CallReport>();
+
+    if (reportByCallId) {
+      finalReport = reportByCallId;
+    }
+  }
+
+  // Fallback 2: try call_scores table directly
+  if (!finalReport) {
     const { data: callScore } = await supabase
       .from("call_scores")
       .select("id, overall_score, markdown_response, version, created_at, diagnosis_summary")
@@ -347,7 +364,21 @@ export default async function CallReportPage({
       .single();
 
     if (callScore) {
-      // Adapt call_scores data to the CallReport shape
+      // Check if markdown_response is actually JSON (Pro report stored as text)
+      let fullReport: Record<string, unknown> | null = null;
+      if (callScore.markdown_response) {
+        try {
+          const parsed = JSON.parse(callScore.markdown_response);
+          if (typeof parsed === 'object' && parsed !== null) {
+            // It's JSON - could be a Pro report wrapped in { report: ... }
+            fullReport = parsed;
+          }
+        } catch {
+          // Not JSON - treat as markdown
+          fullReport = { markdown: callScore.markdown_response };
+        }
+      }
+
       finalReport = {
         id: callScore.id,
         user_id: user.id,
@@ -371,9 +402,7 @@ export default async function CallReportPage({
         primary_pattern: null,
         improvement_highlight: callScore.diagnosis_summary,
         key_moments: null,
-        full_report: callScore.markdown_response
-          ? { markdown: callScore.markdown_response }
-          : null,
+        full_report: fullReport,
         tier: callScore.version || "lite",
         created_at: callScore.created_at,
       } as CallReport;

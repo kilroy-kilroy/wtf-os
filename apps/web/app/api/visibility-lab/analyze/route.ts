@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { AnalysisInput, AnalysisReport } from '@/lib/visibility-lab/types';
-import { DEMAND_OS_ARCHETYPES } from '@/lib/visibility-lab/archetypes';
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,8 +12,6 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
-
-    const archetypeList = DEMAND_OS_ARCHETYPES.map(a => `- "${a.name}": ${a.description}`).join("\n");
 
     const systemPrompt = `
     You are the "DemandOS Visibility Engine", an AI analyst modeled after Tim Kilroy's methodology.
@@ -45,10 +42,9 @@ export async function POST(request: NextRequest) {
     ANALYSIS REQUIREMENTS:
     1.  **Executive Summary:** Brutal honesty based on your search results. Are they an "Order-Taker" or a "Strategic Partner"?
     2.  **Visibility Score:** 0-100 based on signal vs. noise (use search result volume/quality as a proxy).
-    3.  **Brand Archetype (CRITICAL):**
-        You MUST classify this brand into exactly ONE of the following DemandOS Archetypes. Do not make up a new one.
-        ${archetypeList}
-        Choose the one that best fits their *current* reality based on your search results, not their aspirations.
+    3.  **Brand Characterization:**
+        In 2-3 words, characterize this brand's current market posture (e.g., "Reactive Generalist", "Invisible Expert", "Passive Broadcaster").
+        Provide brief reasoning.
 
     4.  **VVV Audit & Radar:**
         - Analyze Vibes, Vision, Values.
@@ -82,7 +78,7 @@ export async function POST(request: NextRequest) {
       "executiveSummary": "string",
       "visibilityScore": number,
       "brandArchetype": {
-        "name": "string (Must be exact match from list)",
+        "name": "string",
         "reasoning": "string"
       },
       "vvvAudit": { "vibes": "string", "vision": "string", "values": "string", "clarityScore": number },

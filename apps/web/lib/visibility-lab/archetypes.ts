@@ -1,3 +1,8 @@
+/**
+ * @deprecated These standalone archetypes have been replaced by the Growth Quadrant system.
+ * See apps/web/lib/growth-quadrant.ts for the new data-driven archetype computation.
+ * Keeping this file temporarily for backward compatibility with existing reports.
+ */
 export const DEMAND_OS_ARCHETYPES = [
   {
     name: "The Maverick",

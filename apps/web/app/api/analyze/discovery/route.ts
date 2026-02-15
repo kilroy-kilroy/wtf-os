@@ -21,6 +21,7 @@ import {
 } from '@repo/prompts';
 import { onDiscoveryReportGenerated } from '@/lib/loops';
 import { addDiscoveryLabSubscriber } from '@/lib/beehiiv';
+import { getArchetypeForLoops } from '@/lib/growth-quadrant';
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
@@ -347,6 +348,22 @@ export async function POST(request: NextRequest) {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.timkilroy.com';
     const reportUrl = reportId ? `${appUrl}/discovery-lab/report/${reportId}` : undefined;
 
+    // Compute archetype if user exists
+    let quadrant = { archetype: '', executionScore: 0, positioningScore: 0 };
+    try {
+      const supabaseForQuadrant = createServerClient();
+      const { data: userRecord } = await (supabaseForQuadrant as any)
+        .from('users')
+        .select('id')
+        .eq('email', requestor_email)
+        .single();
+      if (userRecord?.id) {
+        quadrant = await getArchetypeForLoops(supabaseForQuadrant, userRecord.id);
+      }
+    } catch (err) {
+      console.error('Failed to compute archetype for Discovery Loops:', err);
+    }
+
     // Fire Loops event for email delivery and analytics
     // For Pro reports, this triggers the email with report link
     let emailSent = false;
@@ -358,7 +375,10 @@ export async function POST(request: NextRequest) {
         target_contact_name,
         target_contact_title,
         reportId,
-        reportUrl
+        reportUrl,
+        quadrant.archetype,
+        quadrant.executionScore,
+        quadrant.positioningScore
       );
       emailSent = loopsResult.success;
       if (!loopsResult.success) {
@@ -373,7 +393,10 @@ export async function POST(request: NextRequest) {
         target_contact_name,
         target_contact_title,
         reportId,
-        reportUrl
+        reportUrl,
+        quadrant.archetype,
+        quadrant.executionScore,
+        quadrant.positioningScore
       ).catch((err) => console.error('Loops event failed:', err));
     }
 

@@ -10,6 +10,7 @@ import type { IntakeData } from '@repo/utils/src/assessment/scoring';
 import type { RevelationIntakeData } from '@repo/utils/src/assessment/revelations';
 import { addAssessmentSubscriber } from '@/lib/beehiiv';
 import { onAssessmentCompleted } from '@/lib/loops';
+import { getArchetypeForLoops } from '@/lib/growth-quadrant';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -293,13 +294,24 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Compute archetype for Loops event
+    let quadrant = { archetype: '', executionScore: 0, positioningScore: 0 };
+    try {
+      quadrant = await getArchetypeForLoops(supabase, userId);
+    } catch (err) {
+      console.error('Failed to compute archetype for assessment Loops:', err);
+    }
+
     // Trigger Loops email sequence (fire-and-forget)
     onAssessmentCompleted(
       intakeData.email,
       nameParts[0] || '',
       intakeData.agencyName,
       assessmentId,
-      scores.overall
+      scores.overall,
+      quadrant.archetype,
+      quadrant.executionScore,
+      quadrant.positioningScore
     ).catch((err) => {
       console.error('[GrowthOS] Loops assessment email trigger failed:', err);
     });

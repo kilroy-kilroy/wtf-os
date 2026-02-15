@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { AnalysisInput, AnalysisReport } from '@/lib/visibility-lab/types';
+import { getSupabaseServerClient } from '@/lib/supabase-server';
 
 export async function POST(request: NextRequest) {
   try {
@@ -149,7 +150,36 @@ export async function POST(request: NextRequest) {
 
     try {
       const report = JSON.parse(cleanedText) as AnalysisReport;
-      return NextResponse.json(report);
+
+      // Save to database (non-blocking)
+      let reportId: string | null = null;
+      try {
+        const supabase = getSupabaseServerClient();
+        const { data: savedReport, error: saveError } = await supabase
+          .from('visibility_lab_reports')
+          .insert({
+            email: input.userEmail,
+            brand_name: report.brandName,
+            visibility_score: report.visibilityScore,
+            vvv_clarity_score: report.vvvAudit?.clarityScore || null,
+            brand_archetype_name: report.brandArchetype?.name || null,
+            brand_archetype_reasoning: report.brandArchetype?.reasoning || null,
+            full_report: report,
+            input_data: input,
+          })
+          .select('id')
+          .single();
+
+        if (saveError) {
+          console.error('Failed to save visibility report:', saveError);
+        } else {
+          reportId = savedReport?.id || null;
+        }
+      } catch (saveErr) {
+        console.error('DB save error (non-blocking):', saveErr);
+      }
+
+      return NextResponse.json({ ...report, reportId });
     } catch {
       console.error("Failed to parse JSON. Raw text:", text.substring(0, 500));
 

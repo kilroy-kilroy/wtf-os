@@ -203,16 +203,28 @@ export async function onFirstCallAnalysis(
 }
 
 /**
- * Fire when user upgrades to Call Lab Pro
- * This should stop the nurture sequence
+ * Fire when user upgrades to any Pro product
+ * This should stop the nurture sequence for that product
  */
 export async function onProUpgrade(
   email: string,
-  planType: 'solo' | 'team' = 'solo'
+  planType: 'solo' | 'team' = 'solo',
+  product: string = 'call-lab-pro'
 ): Promise<{ success: boolean; error?: string }> {
+  // Map product to appropriate user group
+  const userGroupMap: Record<string, string> = {
+    'call-lab-pro': 'call_lab_pro',
+    'discovery-lab-pro': 'discovery_lab_pro',
+    'visibility-lab-pro': 'visibility_lab_pro',
+    'bundle': 'salesos_pro',
+    'growth-bundle': 'growthos_pro',
+  };
+
+  const userGroup = userGroupMap[product] || 'call_lab_pro';
+
   // Update their user group to stop nurture sequences
   await updateContact(email, {
-    userGroup: 'call_lab_pro',
+    userGroup,
     callLabTier: planType,
   });
 
@@ -222,6 +234,7 @@ export async function onProUpgrade(
     eventName: 'upgraded_to_pro',
     eventProperties: {
       planType,
+      product,
     },
   });
 }
@@ -415,6 +428,42 @@ export async function onVisibilityReportGenerated(
       reportUrl,
       visibilityScore,
       brandName,
+      archetype: archetype || '',
+      executionScore: executionScore ?? 0,
+      positioningScore: positioningScore ?? 0,
+    },
+  });
+}
+
+/**
+ * Fire when a Visibility Lab Pro report is generated
+ * Triggers email sequence with link to the Pro visibility report
+ */
+export async function onVisibilityProReportGenerated(
+  email: string,
+  reportId: string,
+  kviScore: number,
+  brandName: string,
+  diagnosisSeverity?: string,
+  brandArchetype?: string,
+  archetype?: string,
+  executionScore?: number,
+  positioningScore?: number
+): Promise<{ success: boolean; error?: string }> {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.timkilroy.com';
+  const reportUrl = `${appUrl}/visibility-lab-pro/report/${reportId}`;
+
+  return sendEvent({
+    email,
+    eventName: 'visibility_pro_report_generated',
+    eventProperties: {
+      reportId,
+      reportUrl,
+      reportType: 'DemandOS Visibility Lab Pro',
+      kviScore,
+      brandName,
+      diagnosisSeverity: diagnosisSeverity || '',
+      brandArchetype: brandArchetype || '',
       archetype: archetype || '',
       executionScore: executionScore ?? 0,
       positioningScore: positioningScore ?? 0,

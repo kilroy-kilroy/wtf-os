@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { VisibilityLabProInput, VisibilityLabProReport } from '@/lib/visibility-lab-pro/types';
 import { buildVisibilityLabProPrompt } from '@repo/prompts';
 import { getSupabaseServerClient } from '@/lib/supabase-server';
+import { onVisibilityProReportGenerated } from '@/lib/loops';
+import { getArchetypeForLoops } from '@/lib/growth-quadrant';
 
 export const maxDuration = 120;
 
@@ -64,9 +66,9 @@ export async function POST(request: NextRequest) {
       const report = JSON.parse(cleanedText) as VisibilityLabProReport;
 
       // Save to database (non-blocking)
+      const supabase = getSupabaseServerClient();
       let reportId: string | null = null;
       try {
-        const supabase = getSupabaseServerClient();
         const { data: savedReport, error: saveError } = await supabase
           .from('visibility_lab_reports')
           .insert({
@@ -89,6 +91,43 @@ export async function POST(request: NextRequest) {
         }
       } catch (saveErr) {
         console.error('DB save error (non-blocking):', saveErr);
+      }
+
+      // Fire Loops event (fire-and-forget)
+      if (reportId) {
+        let archetype = '';
+        let executionScore = 0;
+        let positioningScore = 0;
+
+        try {
+          const { data: userRecord } = await supabase
+            .from('users')
+            .select('id')
+            .eq('email', input.userEmail)
+            .single();
+          if (userRecord?.id) {
+            const quadrant = await getArchetypeForLoops(supabase, userRecord.id);
+            archetype = quadrant.archetype;
+            executionScore = quadrant.executionScore;
+            positioningScore = quadrant.positioningScore;
+          }
+        } catch (err) {
+          console.error('Failed to compute archetype for Visibility Pro Loops:', err);
+        }
+
+        onVisibilityProReportGenerated(
+          input.userEmail,
+          reportId,
+          report.kvi?.compositeScore || 0,
+          report.brandName,
+          report.diagnosisSeverity,
+          report.brandArchetype?.name,
+          archetype,
+          executionScore,
+          positioningScore
+        ).catch(err => {
+          console.error('Failed to send Visibility Lab Pro Loops event:', err);
+        });
       }
 
       return NextResponse.json({ ...report, reportId });

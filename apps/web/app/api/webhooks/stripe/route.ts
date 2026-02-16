@@ -108,9 +108,9 @@ export async function POST(request: NextRequest) {
               subscriptionId: subscription.id,
             });
 
-            // Fire Loops event for Pro upgrade
+            // Fire Loops event for Pro upgrade (product-aware)
             if (session.customer_email) {
-              await onProUpgrade(session.customer_email, planType as 'solo' | 'team').catch(err => {
+              await onProUpgrade(session.customer_email, planType as 'solo' | 'team', product).catch(err => {
                 console.error('Failed to send Loops Pro upgrade event:', err);
               });
             }

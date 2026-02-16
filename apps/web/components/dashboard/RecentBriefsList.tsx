@@ -24,7 +24,7 @@ interface RecentBriefsListProps {
  *
  * Rules:
  * - Shows up to 5 briefs
- * - Version badge (Lite/Pro)
+ * - Version badge (Lab/Pro)
  * - Status: "Called" if linked to a call report, "Prepped" if not
  * - Click through to the brief or linked call
  */
@@ -58,7 +58,7 @@ export function RecentBriefsList({ briefs }: RecentBriefsListProps) {
                         : 'bg-[#333] text-[#999]'
                     }`}
                   >
-                    {brief.version}
+                    {brief.version === 'pro' ? 'PRO' : 'LAB'}
                   </span>
                 </div>
                 {(brief.targetContactName || brief.targetContactTitle) && (

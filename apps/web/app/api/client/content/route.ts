@@ -79,3 +79,94 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+/**
+ * PATCH /api/client/content
+ * Update a content item
+ */
+export async function PATCH(request: NextRequest) {
+  try {
+    const authHeader = request.headers.get('authorization');
+    const apiKey = authHeader?.replace('Bearer ', '');
+    if (apiKey !== process.env.ADMIN_API_KEY) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const { id, ...updates } = body;
+
+    if (!id) {
+      return NextResponse.json({ error: 'id is required' }, { status: 400 });
+    }
+
+    const supabase = getSupabaseServerClient();
+
+    // Resolve program slugs to IDs if provided
+    if (updates.program_slugs) {
+      const { data: programs } = await supabase
+        .from('client_programs')
+        .select('id')
+        .in('slug', updates.program_slugs);
+      updates.program_ids = programs?.map((p: any) => p.id) || [];
+      delete updates.program_slugs;
+    }
+
+    // Handle published toggle
+    if ('published' in updates) {
+      updates.published_at = updates.published ? new Date().toISOString() : null;
+    }
+
+    const { data: content, error } = await supabase
+      .from('client_content')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      return NextResponse.json({ error: 'Update failed', message: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true, content });
+  } catch (error) {
+    console.error('Content update error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+/**
+ * DELETE /api/client/content
+ * Delete a content item
+ */
+export async function DELETE(request: NextRequest) {
+  try {
+    const authHeader = request.headers.get('authorization');
+    const apiKey = authHeader?.replace('Bearer ', '');
+    if (apiKey !== process.env.ADMIN_API_KEY) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const { id } = body;
+
+    if (!id) {
+      return NextResponse.json({ error: 'id is required' }, { status: 400 });
+    }
+
+    const supabase = getSupabaseServerClient();
+
+    const { error } = await supabase
+      .from('client_content')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      return NextResponse.json({ error: 'Delete failed', message: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Content delete error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}

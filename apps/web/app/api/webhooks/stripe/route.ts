@@ -3,6 +3,7 @@ import { getStripe } from '@/lib/stripe'
 import { createClient } from '@supabase/supabase-js'
 import Stripe from 'stripe'
 import { onProUpgrade, onSubscriptionCancelled, onGrowthOSBundlePurchased } from '@/lib/loops'
+import { addProSubscriber } from '@/lib/beehiiv'
 import { trackPurchaseCompleted, trackSubscriptionCancelled } from '@/lib/analytics'
 
 export const runtime = 'nodejs'
@@ -120,6 +121,11 @@ export async function POST(request: NextRequest) {
                   console.error('Failed to send GrowthOS bundle Loops event:', err);
                 });
               }
+
+              // Add to Beehiiv newsletter as Pro subscriber
+              await addProSubscriber(session.customer_email, product).catch(err => {
+                console.error('Failed to add Beehiiv Pro subscriber:', err);
+              });
             }
           }
         } catch (err) {

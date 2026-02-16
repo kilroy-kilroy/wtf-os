@@ -315,9 +315,24 @@ export async function POST(request: NextRequest) {
 
     // Store report in database (cast to any since discovery_briefs not in generated types)
     const supabase = createServerClient();
+
+    // Look up user by email to attach report to profile
+    let userId: string | null = null;
+    try {
+      const { data: userRecord } = await (supabase as any)
+        .from('users')
+        .select('id')
+        .eq('email', requestor_email)
+        .single();
+      userId = userRecord?.id || null;
+    } catch {
+      // User may not exist — that's fine for lead magnet flows
+    }
+
     const { data: insertedReport, error: insertError } = await (supabase as any)
       .from('discovery_briefs')
       .insert({
+        user_id: userId,
         lead_email: requestor_email,
         lead_name: requestor_name,
         lead_company: requestor_company || null,

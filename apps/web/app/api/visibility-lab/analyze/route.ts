@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { AnalysisInput, AnalysisReport } from '@/lib/visibility-lab/types';
 import { getSupabaseServerClient } from '@/lib/supabase-server';
 import { onVisibilityReportGenerated } from '@/lib/loops';
+import { addVisibilityLabSubscriber } from '@/lib/beehiiv';
 import { getArchetypeForLoops } from '@/lib/growth-quadrant';
 
 export async function POST(request: NextRequest) {
@@ -156,10 +157,21 @@ export async function POST(request: NextRequest) {
       // Save to database (non-blocking)
       const supabase = getSupabaseServerClient();
       let reportId: string | null = null;
+
+      // Look up user by email to attach report to profile
+      let userId: string | null = null;
+      try {
+        const { data: authUser } = await supabase.auth.admin.getUserByEmail(input.userEmail);
+        userId = authUser?.user?.id || null;
+      } catch {
+        // User may not exist — that's fine for lead magnet flows
+      }
+
       try {
         const { data: savedReport, error: saveError } = await supabase
           .from('visibility_lab_reports')
           .insert({
+            user_id: userId,
             email: input.userEmail,
             brand_name: report.brandName,
             visibility_score: report.visibilityScore,
@@ -181,13 +193,17 @@ export async function POST(request: NextRequest) {
         console.error('DB save error (non-blocking):', saveErr);
       }
 
+      // Add to Beehiiv newsletter (fire-and-forget)
+      addVisibilityLabSubscriber(input.userEmail, input.userName, input.brandName).catch(err => {
+        console.error('Beehiiv visibility lab subscriber failed:', err);
+      });
+
       // Fire Loops event (fire-and-forget)
       if (reportId) {
         let archetype = '';
         let executionScore = 0;
         let positioningScore = 0;
 
-        // Try to find user by email for archetype computation
         try {
           const { data: userRecord } = await supabase
             .from('users')

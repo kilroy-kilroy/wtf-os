@@ -207,11 +207,34 @@ export async function addAssessmentSubscriber(
 }
 
 /**
+ * Add subscriber from Visibility Lab submission
+ */
+export async function addVisibilityLabSubscriber(
+  email: string,
+  name?: string,
+  brandName?: string
+): Promise<{ success: boolean; id?: string; error?: string }> {
+  const [firstName, ...lastNameParts] = (name || '').split(' ');
+  const lastName = lastNameParts.join(' ');
+
+  return addSubscriber({
+    email,
+    first_name: firstName || undefined,
+    last_name: lastName || undefined,
+    utm_source: 'visibility-lab',
+    utm_medium: 'lead-magnet',
+    custom_fields: brandName
+      ? [{ name: 'company', value: brandName }]
+      : undefined,
+  });
+}
+
+/**
  * Add subscriber from Stripe checkout (Pro upgrade)
  */
 export async function addProSubscriber(
   email: string,
-  product: 'call-lab-pro' | 'discovery-lab-pro' | 'bundle'
+  product: string
 ): Promise<{ success: boolean; id?: string; error?: string }> {
   return addSubscriber({
     email,

@@ -3,6 +3,7 @@ import { VisibilityLabProInput, VisibilityLabProReport } from '@/lib/visibility-
 import { buildVisibilityLabProPrompt } from '@repo/prompts';
 import { getSupabaseServerClient } from '@/lib/supabase-server';
 import { onVisibilityProReportGenerated } from '@/lib/loops';
+import { addVisibilityLabSubscriber } from '@/lib/beehiiv';
 import { getArchetypeForLoops } from '@/lib/growth-quadrant';
 
 export const maxDuration = 120;
@@ -68,10 +69,21 @@ export async function POST(request: NextRequest) {
       // Save to database (non-blocking)
       const supabase = getSupabaseServerClient();
       let reportId: string | null = null;
+
+      // Look up user by email to attach report to profile
+      let userId: string | null = null;
+      try {
+        const { data: authUser } = await supabase.auth.admin.getUserByEmail(input.userEmail);
+        userId = authUser?.user?.id || null;
+      } catch {
+        // User may not exist — that's fine
+      }
+
       try {
         const { data: savedReport, error: saveError } = await supabase
           .from('visibility_lab_reports')
           .insert({
+            user_id: userId,
             email: input.userEmail,
             brand_name: report.brandName,
             visibility_score: report.kvi?.compositeScore || null,
@@ -92,6 +104,11 @@ export async function POST(request: NextRequest) {
       } catch (saveErr) {
         console.error('DB save error (non-blocking):', saveErr);
       }
+
+      // Add to Beehiiv newsletter (fire-and-forget)
+      addVisibilityLabSubscriber(input.userEmail, input.userName, input.brandName).catch(err => {
+        console.error('Beehiiv visibility lab pro subscriber failed:', err);
+      });
 
       // Fire Loops event (fire-and-forget)
       if (reportId) {

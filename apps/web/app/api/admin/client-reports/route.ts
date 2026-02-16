@@ -28,6 +28,7 @@ export async function GET(request: NextRequest) {
       callLabResult,
       discoveryResult,
       assessmentsResult,
+      visibilityResult,
     ] = await Promise.all([
       (supabase as any)
         .from('agencies')
@@ -56,6 +57,11 @@ export async function GET(request: NextRequest) {
         .eq('status', 'completed')
         .order('created_at', { ascending: false })
         .limit(1000),
+      (supabase as any)
+        .from('visibility_lab_reports')
+        .select('id, user_id, email, brand_name, visibility_score, vvv_clarity_score, brand_archetype_name, created_at')
+        .order('created_at', { ascending: false })
+        .limit(1000),
     ]);
 
     const agencies = agenciesResult.data || [];
@@ -64,6 +70,7 @@ export async function GET(request: NextRequest) {
     const callLabReports = callLabResult.data || [];
     const discoveryBriefs = discoveryResult.data || [];
     const assessments = assessmentsResult.data || [];
+    const visibilityReports = visibilityResult.data || [];
 
     // Build lookup maps
     const userMap = new Map<string, any>();
@@ -105,6 +112,7 @@ export async function GET(request: NextRequest) {
       discoveryLite: 0,
       discoveryPro: 0,
       assessments: 0,
+      visibilityLab: 0,
     });
 
     for (const r of callLabReports) {
@@ -127,6 +135,12 @@ export async function GET(request: NextRequest) {
       if (!r.user_id) continue;
       if (!userReportCounts.has(r.user_id)) userReportCounts.set(r.user_id, initCounts());
       userReportCounts.get(r.user_id)!.assessments++;
+    }
+
+    for (const r of visibilityReports) {
+      if (!r.user_id) continue;
+      if (!userReportCounts.has(r.user_id)) userReportCounts.set(r.user_id, initCounts());
+      userReportCounts.get(r.user_id)!.visibilityLab++;
     }
 
     // Helpers
@@ -202,6 +216,18 @@ export async function GET(request: NextRequest) {
           founderName: r.intake_data?.founderName || null,
           assessmentType: r.assessment_type,
           overallScore: r.overall_score,
+          createdAt: r.created_at,
+        })),
+        visibility: visibilityReports.map((r: any) => ({
+          id: r.id,
+          userId: r.user_id,
+          userName: r.user_id ? getUserName(r.user_id) : (r.email || 'Unknown'),
+          userEmail: r.user_id ? getUserEmail(r.user_id) : (r.email || ''),
+          agencyName: getAgencyNameForUser(r.user_id),
+          brandName: r.brand_name,
+          visibilityScore: r.visibility_score,
+          clarityScore: r.vvv_clarity_score,
+          archetypeName: r.brand_archetype_name,
           createdAt: r.created_at,
         })),
       },

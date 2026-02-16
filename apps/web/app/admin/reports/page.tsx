@@ -25,6 +25,7 @@ interface UserData {
     discoveryLite: number;
     discoveryPro: number;
     assessments: number;
+    visibilityLab: number;
   };
 }
 
@@ -67,6 +68,19 @@ interface AssessmentReport {
   createdAt: string;
 }
 
+interface VisibilityReport {
+  id: string;
+  userId: string | null;
+  userName: string;
+  userEmail: string;
+  agencyName: string | null;
+  brandName: string;
+  visibilityScore: number | null;
+  clarityScore: number | null;
+  archetypeName: string | null;
+  createdAt: string;
+}
+
 interface ReportsData {
   agencies: AgencyData[];
   users: UserData[];
@@ -74,11 +88,12 @@ interface ReportsData {
     callLab: CallLabReport[];
     discovery: DiscoveryReport[];
     assessments: AssessmentReport[];
+    visibility: VisibilityReport[];
   };
 }
 
 type TabType = 'agency' | 'user' | 'product';
-type ProductFilter = 'all' | 'callLabLite' | 'callLabPro' | 'discoveryLite' | 'discoveryPro' | 'assessments';
+type ProductFilter = 'all' | 'callLabLite' | 'callLabPro' | 'discoveryLite' | 'discoveryPro' | 'assessments' | 'visibilityLab';
 
 const PRODUCT_LABELS: Record<string, string> = {
   callLabLite: 'Call Lab',
@@ -86,6 +101,7 @@ const PRODUCT_LABELS: Record<string, string> = {
   discoveryLite: 'Discovery Lab',
   discoveryPro: 'Discovery Lab Pro',
   assessments: 'WTF Assessment',
+  visibilityLab: 'Visibility Lab',
 };
 
 const PRODUCT_COLORS: Record<string, string> = {
@@ -94,6 +110,7 @@ const PRODUCT_COLORS: Record<string, string> = {
   discoveryLite: '#00D4FF',
   discoveryPro: '#E51B23',
   assessments: '#f59e0b',
+  visibilityLab: '#a855f7',
 };
 
 // ============================================
@@ -126,7 +143,7 @@ function scoreColor(score: number | null, max: number = 10): string {
 }
 
 function totalReports(counts: UserData['reportCounts']): number {
-  return counts.callLabLite + counts.callLabPro + counts.discoveryLite + counts.discoveryPro + counts.assessments;
+  return counts.callLabLite + counts.callLabPro + counts.discoveryLite + counts.discoveryPro + counts.assessments + (counts.visibilityLab || 0);
 }
 
 // ============================================
@@ -251,7 +268,7 @@ function AgencyView({
         const usersWithCounts = agency.users.map((u) => ({
           ...u,
           reportCounts: userCountsMap.get(u.id) || {
-            callLabLite: 0, callLabPro: 0, discoveryLite: 0, discoveryPro: 0, assessments: 0,
+            callLabLite: 0, callLabPro: 0, discoveryLite: 0, discoveryPro: 0, assessments: 0, visibilityLab: 0,
           },
         }));
         const agencyReportCount = usersWithCounts.reduce((sum, u) => sum + totalReports(u.reportCounts), 0);
@@ -284,6 +301,7 @@ function AgencyView({
     if (product === 'discoveryLite') return data.reports.discovery.filter((r) => r.userId === userId && r.version !== 'pro');
     if (product === 'discoveryPro') return data.reports.discovery.filter((r) => r.userId === userId && r.version === 'pro');
     if (product === 'assessments') return data.reports.assessments.filter((r) => r.userId === userId);
+    if (product === 'visibilityLab') return data.reports.visibility.filter((r) => r.userId === userId);
     return [];
   };
 
@@ -345,8 +363,13 @@ function AgencyView({
                             {formatScore(r.overallScore, r.assessmentType ? 5 : 10)}
                           </span>
                         )}
+                        {'visibilityScore' in r && (
+                          <span className="font-mono w-12" style={{ color: scoreColor(r.visibilityScore, 100) }}>
+                            {r.visibilityScore != null ? `${r.visibilityScore}` : '-'}
+                          </span>
+                        )}
                         <span className="text-slate-300 truncate flex-1">
-                          {r.buyerName || r.targetCompany || r.founderName || r.companyName || '-'}
+                          {r.buyerName || r.targetCompany || r.founderName || r.brandName || r.companyName || '-'}
                           {r.companyName && r.buyerName ? ` @ ${r.companyName}` : ''}
                         </span>
                         <span className="text-slate-600 shrink-0">{formatTimeAgo(r.createdAt)}</span>
@@ -490,13 +513,15 @@ function UserView({
       discoveryLite: data.reports.discovery.filter((r) => r.userId === userId && r.version !== 'pro'),
       discoveryPro: data.reports.discovery.filter((r) => r.userId === userId && r.version === 'pro'),
       assessments: data.reports.assessments.filter((r) => r.userId === userId),
+      visibilityLab: data.reports.visibility.filter((r) => r.userId === userId),
     };
   };
 
   const renderReport = (r: any, product: string) => {
     const isAssessment = product === 'assessments';
     const isDiscovery = product.startsWith('discovery');
-    const maxScore = isAssessment ? 5 : 10;
+    const isVisibility = product === 'visibilityLab';
+    const maxScore = isAssessment ? 5 : isVisibility ? 100 : 10;
 
     return (
       <div key={r.id} className="flex items-center gap-3 text-xs text-slate-400 py-1.5 border-b border-slate-800/50 last:border-0">
@@ -505,10 +530,16 @@ function UserView({
             {formatScore(r.overallScore, maxScore)}
           </span>
         )}
+        {'visibilityScore' in r && (
+          <span className="font-mono w-14 shrink-0" style={{ color: scoreColor(r.visibilityScore, 100) }}>
+            {r.visibilityScore != null ? `${r.visibilityScore}/100` : '-'}
+          </span>
+        )}
         <span className="text-slate-300 truncate flex-1">
-          {r.buyerName || r.targetCompany || r.founderName || '-'}
+          {r.buyerName || r.targetCompany || r.founderName || r.brandName || '-'}
           {r.companyName && r.buyerName ? <span className="text-slate-500"> @ {r.companyName}</span> : null}
           {r.contactName ? <span className="text-slate-500"> ({r.contactName})</span> : null}
+          {r.archetypeName ? <span className="text-slate-500"> ({r.archetypeName})</span> : null}
         </span>
         {r.callType && (
           <span className="text-slate-600 bg-slate-800 px-1.5 py-0.5 rounded text-[10px] uppercase shrink-0">{r.callType}</span>
@@ -673,11 +704,13 @@ function ProductView({
     { key: 'callLabLite', label: 'Call Lab' },
     { key: 'discoveryPro', label: 'Discovery Pro' },
     { key: 'discoveryLite', label: 'Discovery Lab' },
+    { key: 'visibilityLab', label: 'Visibility Lab' },
     { key: 'assessments', label: 'WTF Assessment' },
   ];
 
   const showCallLab = selectedProduct === 'all' || selectedProduct === 'callLabLite' || selectedProduct === 'callLabPro';
   const showDiscovery = selectedProduct === 'all' || selectedProduct === 'discoveryLite' || selectedProduct === 'discoveryPro';
+  const showVisibility = selectedProduct === 'all' || selectedProduct === 'visibilityLab';
   const showAssessments = selectedProduct === 'all' || selectedProduct === 'assessments';
 
   const callLabReports = useMemo(() => {
@@ -697,6 +730,10 @@ function ProductView({
   const assessmentReports = useMemo(() => {
     return sortReports(applyUserFilter(data.reports.assessments));
   }, [data.reports.assessments, sortReports, applyUserFilter]);
+
+  const visibilityReports = useMemo(() => {
+    return sortReports(applyUserFilter(data.reports.visibility));
+  }, [data.reports.visibility, sortReports, applyUserFilter]);
 
   return (
     <div>
@@ -839,6 +876,57 @@ function ProductView({
         </div>
       )}
 
+      {/* Visibility Lab table */}
+      {showVisibility && visibilityReports.length > 0 && (
+        <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4 mb-4">
+          <h3 className="text-sm font-bold text-white mb-3">
+            Visibility Lab Reports
+            <span className="text-slate-500 font-normal ml-2">({visibilityReports.length})</span>
+          </h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-600/50">
+                  <SortHeader field="visibilityScore">Score</SortHeader>
+                  <SortHeader field="brandName">Brand</SortHeader>
+                  <SortHeader field="archetypeName">Archetype</SortHeader>
+                  <SortHeader field="userName">User</SortHeader>
+                  <SortHeader field="agencyName">Agency</SortHeader>
+                  <SortHeader field="createdAt">Date</SortHeader>
+                </tr>
+              </thead>
+              <tbody>
+                {visibilityReports.map((r: any) => (
+                  <tr key={r.id} className="border-b border-slate-700/30">
+                    <td className="py-2 pr-4">
+                      <span className="font-mono text-xs" style={{ color: scoreColor(r.visibilityScore, 100) }}>
+                        {r.visibilityScore != null ? `${r.visibilityScore}/100` : '-'}
+                      </span>
+                    </td>
+                    <td className="py-2 pr-4 text-white text-xs font-medium">{r.brandName || '-'}</td>
+                    <td className="py-2 pr-4">
+                      {r.archetypeName ? (
+                        <span className="text-[10px] font-medium uppercase px-1.5 py-0.5 rounded" style={{ color: '#a855f7', backgroundColor: '#a855f720' }}>
+                          {r.archetypeName}
+                        </span>
+                      ) : (
+                        <span className="text-slate-600 text-xs">-</span>
+                      )}
+                    </td>
+                    <td className="py-2 pr-4 text-xs">
+                      <span className="text-white">{r.userName}</span>
+                      <span className="text-slate-600 ml-1 text-[10px]">{r.userEmail}</span>
+                    </td>
+                    <td className="py-2 pr-4 text-slate-500 text-xs">{r.agencyName || '-'}</td>
+                    <td className="py-2 pr-4 text-slate-500 text-xs">{formatTimeAgo(r.createdAt)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
       {/* Assessments table */}
       {showAssessments && assessmentReports.length > 0 && (
         <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4 mb-4">
@@ -896,6 +984,9 @@ function ProductView({
       )}
       {showDiscovery && discoveryReports.length === 0 && selectedProduct !== 'all' && (
         <EmptyState message="No Discovery Lab reports found" />
+      )}
+      {showVisibility && visibilityReports.length === 0 && selectedProduct !== 'all' && (
+        <EmptyState message="No Visibility Lab reports found" />
       )}
       {showAssessments && assessmentReports.length === 0 && selectedProduct !== 'all' && (
         <EmptyState message="No assessments found" />
@@ -1043,7 +1134,8 @@ export default function AdminReportsPage() {
   const totalCallLab = data.reports.callLab.length;
   const totalDiscovery = data.reports.discovery.length;
   const totalAssessments = data.reports.assessments.length;
-  const totalAllReports = totalCallLab + totalDiscovery + totalAssessments;
+  const totalVisibility = data.reports.visibility?.length || 0;
+  const totalAllReports = totalCallLab + totalDiscovery + totalAssessments + totalVisibility;
 
   const tabs: Array<{ key: TabType; label: string }> = [
     { key: 'agency', label: 'By Agency' },
@@ -1072,6 +1164,7 @@ export default function AdminReportsPage() {
             <span style={{ color: '#00D4FF' }}>{data.reports.callLab.filter((r) => r.tier !== 'pro').length} Call Lab</span>
             <span style={{ color: '#E51B23' }}>{data.reports.discovery.filter((r) => r.version === 'pro').length} Disc Pro</span>
             <span style={{ color: '#00D4FF' }}>{data.reports.discovery.filter((r) => r.version !== 'pro').length} Disc</span>
+            <span style={{ color: '#a855f7' }}>{totalVisibility} Visibility</span>
             <span style={{ color: '#f59e0b' }}>{totalAssessments} Assessment</span>
           </div>
         </div>

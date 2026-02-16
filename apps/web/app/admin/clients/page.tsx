@@ -28,6 +28,20 @@ interface Roadmap {
   uploaded_at: string;
 }
 
+interface ClientDocument {
+  id: string;
+  enrollment_id: string;
+  title: string;
+  description: string | null;
+  document_type: 'file' | 'link' | 'text';
+  file_url: string | null;
+  file_name: string | null;
+  external_url: string | null;
+  content_body: string | null;
+  category: string;
+  created_at: string;
+}
+
 const PROGRAMS = [
   { slug: 'agency-studio', name: 'Agency Studio' },
   { slug: 'agency-studio-plus', name: 'Agency Studio+' },
@@ -61,6 +75,19 @@ export default function AdminClientsPage() {
   const [uploadingRoadmap, setUploadingRoadmap] = useState(false);
   const [roadmapTitle, setRoadmapTitle] = useState('6-Month Go Forward Roadmap');
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Documents state
+  const [docsExpanded, setDocsExpanded] = useState<string | null>(null);
+  const [documents, setDocuments] = useState<Record<string, ClientDocument[]>>({});
+  const [loadingDocs, setLoadingDocs] = useState<string | null>(null);
+  const [uploadingDoc, setUploadingDoc] = useState(false);
+  const [docTitle, setDocTitle] = useState('');
+  const [docDescription, setDocDescription] = useState('');
+  const [docCategory, setDocCategory] = useState('other');
+  const [docType, setDocType] = useState<'file' | 'link' | 'text'>('file');
+  const [docUrl, setDocUrl] = useState('');
+  const [docText, setDocText] = useState('');
+  const docFileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const stored = sessionStorage.getItem('admin_api_key');
@@ -249,6 +276,109 @@ export default function AdminClientsPage() {
       }
     } catch (err) {
       alert('Failed to delete roadmap');
+    }
+  }
+
+  async function toggleDocsPanel(client: ClientRow) {
+    if (docsExpanded === client.id) {
+      setDocsExpanded(null);
+      return;
+    }
+    setDocsExpanded(client.id);
+    await loadDocuments(client.id);
+  }
+
+  async function loadDocuments(enrollmentId: string) {
+    setLoadingDocs(enrollmentId);
+    try {
+      const res = await fetch(`/api/admin/documents?enrollment_id=${enrollmentId}`, {
+        headers: { Authorization: `Bearer ${apiKey}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setDocuments(prev => ({ ...prev, [enrollmentId]: data.documents || [] }));
+      }
+    } catch (err) {
+      console.error('Failed to load documents:', err);
+    }
+    setLoadingDocs(null);
+  }
+
+  async function handleDocUpload(enrollmentId: string) {
+    if (!docTitle.trim()) { alert('Title is required'); return; }
+    setUploadingDoc(true);
+    try {
+      let res: Response;
+
+      if (docType === 'file') {
+        const file = docFileRef.current?.files?.[0];
+        if (!file) { alert('Please select a file'); setUploadingDoc(false); return; }
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('enrollment_id', enrollmentId);
+        formData.append('title', docTitle);
+        formData.append('description', docDescription);
+        formData.append('category', docCategory);
+        res = await fetch('/api/admin/documents', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${apiKey}` },
+          body: formData,
+        });
+      } else {
+        res = await fetch('/api/admin/documents', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({
+            enrollment_id: enrollmentId,
+            title: docTitle,
+            description: docDescription || null,
+            document_type: docType,
+            category: docCategory,
+            external_url: docType === 'link' ? docUrl : null,
+            content_body: docType === 'text' ? docText : null,
+          }),
+        });
+      }
+
+      if (res.ok) {
+        await loadDocuments(enrollmentId);
+        setDocTitle('');
+        setDocDescription('');
+        setDocCategory('other');
+        setDocUrl('');
+        setDocText('');
+        if (docFileRef.current) docFileRef.current.value = '';
+      } else {
+        const err = await res.json();
+        alert(`Upload failed: ${err.error || 'Unknown error'}`);
+      }
+    } catch (err) {
+      alert('Failed to upload document');
+    }
+    setUploadingDoc(false);
+  }
+
+  async function handleDeleteDoc(docId: string, enrollmentId: string) {
+    if (!confirm('Delete this document? The client will no longer be able to access it.')) return;
+    try {
+      const res = await fetch('/api/admin/documents', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({ document_id: docId }),
+      });
+      if (res.ok) {
+        await loadDocuments(enrollmentId);
+      } else {
+        alert('Failed to delete document');
+      }
+    } catch (err) {
+      alert('Failed to delete document');
     }
   }
 
@@ -443,6 +573,16 @@ export default function AdminClientsPage() {
                             Roadmap
                           </button>
                           <button
+                            onClick={() => toggleDocsPanel(client)}
+                            className={`text-[10px] uppercase font-bold border px-2 py-1 transition-colors ${
+                              docsExpanded === client.id
+                                ? 'border-[#00D4FF] text-[#00D4FF]'
+                                : 'border-[#333333] text-[#999999] hover:text-[#00D4FF] hover:border-[#00D4FF]'
+                            }`}
+                          >
+                            Docs
+                          </button>
+                          <button
                             onClick={() => handleResend(client.id)}
                             disabled={resendingId === client.id}
                             className="text-[10px] uppercase font-bold border border-[#333333] px-2 py-1 text-[#999999] hover:text-[#FFDE59] hover:border-[#FFDE59] transition-colors disabled:opacity-50"
@@ -522,6 +662,182 @@ export default function AdminClientsPage() {
                                       </a>
                                       <button
                                         onClick={() => handleDeleteRoadmap(rm.id, client.id)}
+                                        className="text-[10px] uppercase font-bold border border-[#333333] px-2 py-1 text-[#666666] hover:text-[#E51B23] hover:border-[#E51B23] transition-colors"
+                                      >
+                                        Delete
+                                      </button>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+
+                    {/* Documents Panel (expandable) */}
+                    {docsExpanded === client.id && (
+                      <tr key={`${client.id}-docs`} className="border-b border-[#222222]">
+                        <td colSpan={10} className="p-0">
+                          <div className="bg-[#0A0A0A] border-l-4 border-[#00D4FF] p-6">
+                            <div className="flex items-center justify-between mb-4">
+                              <h3 className="font-anton text-sm uppercase text-[#00D4FF]">
+                                Documents for {client.full_name || client.email}
+                              </h3>
+                            </div>
+
+                            {/* Document Type Tabs */}
+                            <div className="flex gap-2 mb-4">
+                              {(['file', 'link', 'text'] as const).map(t => (
+                                <button
+                                  key={t}
+                                  onClick={() => setDocType(t)}
+                                  className={`px-3 py-1.5 text-[10px] font-bold uppercase border transition-colors ${
+                                    docType === t
+                                      ? 'border-[#00D4FF] text-[#00D4FF]'
+                                      : 'border-[#333333] text-[#666666] hover:text-white'
+                                  }`}
+                                >
+                                  {t === 'file' ? 'File Upload' : t === 'link' ? 'Link' : 'Text Note'}
+                                </button>
+                              ))}
+                            </div>
+
+                            {/* Upload Form */}
+                            <div className="space-y-3 mb-4">
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                <div>
+                                  <label className="block text-[10px] tracking-[2px] text-[#666666] mb-1 uppercase">Title *</label>
+                                  <input
+                                    type="text"
+                                    value={docTitle}
+                                    onChange={(e) => setDocTitle(e.target.value)}
+                                    placeholder="Document title"
+                                    className="w-full bg-black border border-[#333333] text-white px-3 py-1.5 text-sm focus:border-[#00D4FF] focus:outline-none"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-[10px] tracking-[2px] text-[#666666] mb-1 uppercase">Category</label>
+                                  <select
+                                    value={docCategory}
+                                    onChange={(e) => setDocCategory(e.target.value)}
+                                    className="w-full bg-black border border-[#333333] text-white px-3 py-1.5 text-sm focus:border-[#00D4FF] focus:outline-none"
+                                  >
+                                    <option value="roadmap">Roadmap</option>
+                                    <option value="transcript">Transcript</option>
+                                    <option value="plan">Plan</option>
+                                    <option value="resource">Resource</option>
+                                    <option value="other">Other</option>
+                                  </select>
+                                </div>
+                                <div>
+                                  <label className="block text-[10px] tracking-[2px] text-[#666666] mb-1 uppercase">Description</label>
+                                  <input
+                                    type="text"
+                                    value={docDescription}
+                                    onChange={(e) => setDocDescription(e.target.value)}
+                                    placeholder="Optional note"
+                                    className="w-full bg-black border border-[#333333] text-white px-3 py-1.5 text-sm focus:border-[#00D4FF] focus:outline-none"
+                                  />
+                                </div>
+                              </div>
+
+                              {docType === 'file' && (
+                                <div>
+                                  <label className="block text-[10px] tracking-[2px] text-[#666666] mb-1 uppercase">File</label>
+                                  <input
+                                    ref={docFileRef}
+                                    type="file"
+                                    className="text-sm text-[#999999] file:mr-3 file:py-1.5 file:px-3 file:border file:border-[#333333] file:text-[#999999] file:bg-black file:text-xs file:uppercase file:font-bold file:cursor-pointer hover:file:border-[#00D4FF] hover:file:text-[#00D4FF]"
+                                  />
+                                </div>
+                              )}
+
+                              {docType === 'link' && (
+                                <div>
+                                  <label className="block text-[10px] tracking-[2px] text-[#666666] mb-1 uppercase">URL</label>
+                                  <input
+                                    type="url"
+                                    value={docUrl}
+                                    onChange={(e) => setDocUrl(e.target.value)}
+                                    placeholder="https://..."
+                                    className="w-full bg-black border border-[#333333] text-white px-3 py-1.5 text-sm focus:border-[#00D4FF] focus:outline-none"
+                                  />
+                                </div>
+                              )}
+
+                              {docType === 'text' && (
+                                <div>
+                                  <label className="block text-[10px] tracking-[2px] text-[#666666] mb-1 uppercase">Content</label>
+                                  <textarea
+                                    value={docText}
+                                    onChange={(e) => setDocText(e.target.value)}
+                                    rows={4}
+                                    placeholder="Write your note..."
+                                    className="w-full bg-black border border-[#333333] text-white px-3 py-2 text-sm focus:border-[#00D4FF] focus:outline-none resize-y"
+                                  />
+                                </div>
+                              )}
+
+                              <button
+                                onClick={() => handleDocUpload(client.id)}
+                                disabled={uploadingDoc}
+                                className="bg-[#00D4FF] text-black px-4 py-1.5 text-xs font-bold uppercase hover:bg-cyan-400 transition-colors disabled:opacity-50"
+                              >
+                                {uploadingDoc ? 'Sharing...' : 'Share with Client'}
+                              </button>
+                            </div>
+
+                            {/* Existing Documents */}
+                            {loadingDocs === client.id ? (
+                              <p className="text-[#666666] text-xs">Loading documents...</p>
+                            ) : (documents[client.id] || []).length === 0 ? (
+                              <p className="text-[#666666] text-xs">No documents shared yet.</p>
+                            ) : (
+                              <div className="space-y-2">
+                                {(documents[client.id] || []).map((doc) => (
+                                  <div key={doc.id} className="flex items-center justify-between bg-[#111111] border border-[#222222] px-4 py-2">
+                                    <div className="flex items-center gap-4">
+                                      <span className="text-[10px] font-bold uppercase w-8" style={{
+                                        color: doc.document_type === 'file' ? '#FFDE59' : doc.document_type === 'link' ? '#00D4FF' : '#a855f7'
+                                      }}>
+                                        {doc.document_type === 'file' ? (doc.file_name?.split('.').pop()?.toUpperCase() || 'FILE') : doc.document_type === 'link' ? 'LINK' : 'TXT'}
+                                      </span>
+                                      <div>
+                                        <div className="flex items-center gap-2">
+                                          <p className="text-white text-sm">{doc.title}</p>
+                                          <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 bg-[#1A1A1A] border border-[#333333] text-[#666666]">
+                                            {doc.category}
+                                          </span>
+                                        </div>
+                                        <p className="text-[#666666] text-[10px]">
+                                          {doc.description && <span>{doc.description} &middot; </span>}
+                                          {new Date(doc.created_at).toLocaleDateString()}
+                                        </p>
+                                      </div>
+                                    </div>
+                                    <div className="flex gap-2">
+                                      {doc.document_type === 'file' && doc.file_url && (
+                                        <a href={doc.file_url} target="_blank" rel="noopener noreferrer"
+                                          className="text-[10px] uppercase font-bold border border-[#333333] px-2 py-1 text-[#999999] hover:text-white hover:border-white transition-colors">
+                                          View
+                                        </a>
+                                      )}
+                                      {doc.document_type === 'link' && doc.external_url && (
+                                        <a href={doc.external_url} target="_blank" rel="noopener noreferrer"
+                                          className="text-[10px] uppercase font-bold border border-[#333333] px-2 py-1 text-[#999999] hover:text-white hover:border-white transition-colors">
+                                          Open
+                                        </a>
+                                      )}
+                                      {doc.document_type === 'text' && (
+                                        <button onClick={() => alert(doc.content_body || '')}
+                                          className="text-[10px] uppercase font-bold border border-[#333333] px-2 py-1 text-[#999999] hover:text-white hover:border-white transition-colors">
+                                          Read
+                                        </button>
+                                      )}
+                                      <button
+                                        onClick={() => handleDeleteDoc(doc.id, client.id)}
                                         className="text-[10px] uppercase font-bold border border-[#333333] px-2 py-1 text-[#666666] hover:text-[#E51B23] hover:border-[#E51B23] transition-colors"
                                       >
                                         Delete

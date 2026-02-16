@@ -74,8 +74,9 @@ export async function POST(request: NextRequest) {
       // Look up user by email to attach report to profile
       let userId: string | null = null;
       try {
-        const { data: authUser } = await supabase.auth.admin.getUserByEmail(input.userEmail);
-        userId = authUser?.user?.id || null;
+        const { data: { users } } = await supabase.auth.admin.listUsers();
+        const matchedUser = users?.find(u => u.email === input.userEmail);
+        userId = matchedUser?.id || null;
       } catch {
         // User may not exist — that's fine
       }

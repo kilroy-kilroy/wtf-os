@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabase-server';
-import { alertClientInactive, alertFridayOverdue } from '@/lib/slack';
+import { sendSlackAlert, alertFridayOverdue } from '@/lib/slack';
 
 export const runtime = 'nodejs';
 
@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
 
     if (enrollments && enrollments.length > 0) {
       // Get auth user data for last_sign_in_at and email/name
-      const { data: authData } = await supabase.auth.admin.listUsers();
+      const { data: authData } = await supabase.auth.admin.listUsers({ perPage: 1000 });
       const authUserMap = new Map<string, { lastSignIn: string | null; email: string; name: string | null }>();
       for (const u of authData?.users || []) {
         authUserMap.set(u.id, {
@@ -44,6 +44,7 @@ export async function GET(request: NextRequest) {
       }
 
       const now = new Date();
+      const inactiveClients: Array<{ name: string; days: number }> = [];
       for (const enrollment of enrollments) {
         if (!enrollment.user_id) continue;
         const authUser = authUserMap.get(enrollment.user_id);
@@ -54,12 +55,23 @@ export async function GET(request: NextRequest) {
           (now.getTime() - lastLogin.getTime()) / (1000 * 60 * 60 * 24)
         );
         if (daysSince >= 7) {
-          alertClientInactive(
-            authUser.name || authUser.email || 'Unknown',
-            daysSince
-          );
+          inactiveClients.push({
+            name: authUser.name || authUser.email || 'Unknown',
+            days: daysSince,
+          });
           inactiveCount++;
         }
+      }
+
+      // Send a single digest message for all inactive clients
+      if (inactiveClients.length > 0) {
+        const lines = inactiveClients
+          .sort((a, b) => b.days - a.days)
+          .map(c => `• *${c.name}* — ${c.days} days`);
+        sendSlackAlert({
+          text: `:warning: *${inactiveClients.length} inactive client${inactiveClients.length > 1 ? 's' : ''}* (7+ days)\n${lines.join('\n')}`,
+          color: 'warning',
+        }).catch(err => console.error('[Slack] Inactivity digest failed:', err));
       }
     }
 
@@ -71,9 +83,13 @@ export async function GET(request: NextRequest) {
       .order('submitted_at', { ascending: false })
       .limit(50);
 
-    const { data: allResponses } = await supabase
-      .from('five_minute_friday_responses')
-      .select('friday_id');
+    const fridayIds = (allFridays || []).map((f: any) => f.id);
+    const { data: allResponses } = fridayIds.length > 0
+      ? await supabase
+          .from('five_minute_friday_responses')
+          .select('friday_id')
+          .in('friday_id', fridayIds)
+      : { data: [] };
 
     const respondedIds = new Set(
       (allResponses || []).map((r: any) => r.friday_id)

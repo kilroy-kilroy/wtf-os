@@ -169,7 +169,7 @@ export async function POST(request: NextRequest) {
       .from('client_documents')
       .insert({
         enrollment_id: enrollmentId,
-        uploaded_by: 'admin',
+        // uploaded_by left null — admin routes use service role, not a specific user
         title,
         description,
         document_type: documentType,

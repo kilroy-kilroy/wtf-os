@@ -93,7 +93,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { id, ...updates } = body;
+    const { id } = body;
 
     if (!id) {
       return NextResponse.json({ error: 'id is required' }, { status: 400 });
@@ -101,14 +101,23 @@ export async function PATCH(request: NextRequest) {
 
     const supabase = getSupabaseServerClient();
 
+    // Allowlist updatable fields to prevent mass assignment
+    const allowedFields = [
+      'title', 'description', 'content_type', 'content_url',
+      'content_body', 'thumbnail_url', 'program_ids', 'sort_order', 'published',
+    ];
+    const updates: Record<string, any> = {};
+    for (const key of allowedFields) {
+      if (key in body) updates[key] = body[key];
+    }
+
     // Resolve program slugs to IDs if provided
-    if (updates.program_slugs) {
+    if (body.program_slugs) {
       const { data: programs } = await supabase
         .from('client_programs')
         .select('id')
-        .in('slug', updates.program_slugs);
+        .in('slug', body.program_slugs);
       updates.program_ids = programs?.map((p: any) => p.id) || [];
-      delete updates.program_slugs;
     }
 
     // Handle published toggle

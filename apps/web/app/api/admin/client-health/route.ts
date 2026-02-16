@@ -4,7 +4,7 @@ import { getSupabaseServerClient } from '@/lib/supabase-server';
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get('authorization');
   const apiKey = process.env.ADMIN_API_KEY;
-  if (apiKey && authHeader !== `Bearer ${apiKey}`) {
+  if (!apiKey || authHeader !== `Bearer ${apiKey}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get auth user data for last_sign_in_at, email, name
-    const { data: authData } = await supabase.auth.admin.listUsers();
+    const { data: authData } = await supabase.auth.admin.listUsers({ perPage: 1000 });
     const authMap = new Map<string, { lastSignIn: string | null; email: string; name: string | null }>();
     for (const u of authData?.users || []) {
       authMap.set(u.id, {

@@ -14,6 +14,7 @@ interface DashboardData {
   hasCallLabPro: boolean;
   pendingFriday: boolean;
   hasRoadmap: boolean;
+  recentDocs: Array<{ id: string; title: string; category: string; created_at: string }>;
 }
 
 export default function ClientDashboardPage() {
@@ -66,6 +67,14 @@ export default function ClientDashboardPage() {
         .eq('enrollment_id', enrollment.id)
         .limit(1);
 
+      // Check for recent documents
+      const { data: recentDocs } = await supabase
+        .from('client_documents')
+        .select('id, title, category, created_at')
+        .eq('enrollment_id', enrollment.id)
+        .order('created_at', { ascending: false })
+        .limit(3);
+
       const program = enrollment.program as any;
       setData({
         enrollment: enrollment as any,
@@ -74,6 +83,7 @@ export default function ClientDashboardPage() {
         hasCallLabPro: enrollment.leads_sales_calls || program?.has_call_lab_pro || false,
         pendingFriday: !existingFriday && program?.has_five_minute_friday,
         hasRoadmap: (roadmapCheck?.length || 0) > 0,
+        recentDocs: recentDocs || [],
       });
       setLoading(false);
     }
@@ -222,6 +232,18 @@ export default function ClientDashboardPage() {
             <h3 className="font-anton text-sm uppercase text-[#FFDE59]">Resource Library</h3>
             <p className="text-[#666666] text-xs mt-1">Videos, decks, and program materials</p>
           </Link>
+          {data.recentDocs.length > 0 && (
+            <Link href="/client/documents"
+              className="border border-[#333333] p-4 hover:border-[#00D4FF] transition-colors">
+              <h3 className="font-anton text-sm uppercase text-[#00D4FF]">Recent Documents</h3>
+              <div className="mt-2 space-y-1">
+                {data.recentDocs.map((doc) => (
+                  <p key={doc.id} className="text-[#999999] text-xs truncate">{doc.title}</p>
+                ))}
+              </div>
+              <p className="text-[#00D4FF] text-[10px] mt-2 uppercase font-bold">View All &rarr;</p>
+            </Link>
+          )}
           <Link href="/settings"
             className="border border-[#333333] p-4 hover:border-[#FFDE59] transition-colors">
             <h3 className="font-anton text-sm uppercase text-[#FFDE59]">Settings</h3>

@@ -55,6 +55,25 @@ interface AdminUser {
   created_at: string;
 }
 
+interface ClientHealth {
+  enrollmentId: string;
+  userId: string;
+  name: string;
+  email: string;
+  companyName: string | null;
+  programName: string;
+  programSlug: string;
+  enrolledAt: string;
+  lastSignIn: string | null;
+  daysSinceLogin: number | null;
+  reportsThisMonth: number;
+  fridaySubmissions: number;
+  expectedFridays: number;
+  missedFridays: number;
+  documentsShared: number;
+  health: 'green' | 'yellow' | 'red';
+}
+
 // ============================================
 // COMPONENTS
 // ============================================
@@ -172,6 +191,78 @@ function RecentTable({
   );
 }
 
+const HEALTH_COLORS = {
+  green: { dot: 'bg-emerald-400', border: 'border-emerald-500/30' },
+  yellow: { dot: 'bg-amber-400', border: 'border-amber-500/30' },
+  red: { dot: 'bg-red-400', border: 'border-red-500/30' },
+};
+
+function HealthCard({ client }: { client: ClientHealth }) {
+  const colors = HEALTH_COLORS[client.health];
+  return (
+    <div className={`bg-slate-800/50 border ${colors.border} rounded-xl p-5 relative`}>
+      {/* Health dot */}
+      <div className="absolute top-4 right-4">
+        <span className={`inline-block w-3 h-3 rounded-full ${colors.dot}`} />
+      </div>
+
+      {/* Heading */}
+      <h3 className="text-sm font-bold text-white pr-6 truncate">
+        {client.companyName || client.name}
+      </h3>
+      <p className="text-xs text-slate-400 mt-0.5 truncate">{client.name}</p>
+      <p className="text-xs text-slate-500 truncate">{client.email}</p>
+      <p className="text-[11px] text-[#00D4FF] mt-1 font-medium">{client.programName}</p>
+
+      {/* Metrics 2x2 */}
+      <div className="grid grid-cols-2 gap-2 mt-4">
+        <div className="bg-slate-700/30 rounded-lg px-3 py-2">
+          <p className="text-[10px] text-slate-500 uppercase tracking-wider">Last Login</p>
+          <p className="text-sm font-semibold text-white mt-0.5">
+            {client.daysSinceLogin === null ? 'Never' : client.daysSinceLogin === 0 ? 'Today' : `${client.daysSinceLogin}d ago`}
+          </p>
+        </div>
+        <div className="bg-slate-700/30 rounded-lg px-3 py-2">
+          <p className="text-[10px] text-slate-500 uppercase tracking-wider">Reports (Mo)</p>
+          <p className="text-sm font-semibold text-white mt-0.5">{client.reportsThisMonth}</p>
+        </div>
+        <div className="bg-slate-700/30 rounded-lg px-3 py-2">
+          <p className="text-[10px] text-slate-500 uppercase tracking-wider">Fridays</p>
+          <p className="text-sm font-semibold text-white mt-0.5">
+            {client.fridaySubmissions}/{client.expectedFridays}
+          </p>
+        </div>
+        <div className="bg-slate-700/30 rounded-lg px-3 py-2">
+          <p className="text-[10px] text-slate-500 uppercase tracking-wider">Documents</p>
+          <p className="text-sm font-semibold text-white mt-0.5">{client.documentsShared}</p>
+        </div>
+      </div>
+
+      {/* Action links */}
+      <div className="flex gap-3 mt-4 pt-3 border-t border-slate-700/30">
+        <Link
+          href={`/admin/reports?client=${client.userId}`}
+          className="text-xs text-[#00D4FF] hover:text-white transition-colors font-medium"
+        >
+          Reports
+        </Link>
+        <Link
+          href={`/admin/clients?enrollment=${client.enrollmentId}`}
+          className="text-xs text-[#00D4FF] hover:text-white transition-colors font-medium"
+        >
+          Documents
+        </Link>
+        <Link
+          href={`/admin/five-minute-friday?enrollment=${client.enrollmentId}`}
+          className="text-xs text-[#00D4FF] hover:text-white transition-colors font-medium"
+        >
+          Fridays
+        </Link>
+      </div>
+    </div>
+  );
+}
+
 function formatTimeAgo(dateStr: string): string {
   if (!dateStr) return '-';
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -226,6 +317,10 @@ export default function AdminDashboardPage() {
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState<'overview' | 'reports' | 'users'>('overview');
 
+  // Client health state
+  const [healthData, setHealthData] = useState<ClientHealth[]>([]);
+  const [healthLoading, setHealthLoading] = useState(false);
+
   // User management state
   const [userSearch, setUserSearch] = useState('');
   const [users, setUsers] = useState<AdminUser[]>([]);
@@ -258,6 +353,23 @@ export default function AdminDashboardPage() {
       setError(err.message || 'Failed to fetch');
     } finally {
       setLoading(false);
+    }
+  }, []);
+
+  const fetchHealthData = useCallback(async (key: string) => {
+    setHealthLoading(true);
+    try {
+      const res = await fetch('/api/admin/client-health', {
+        headers: { Authorization: `Bearer ${key}` },
+      });
+      if (res.ok) {
+        const json = await res.json();
+        setHealthData(json.clients || []);
+      }
+    } catch {
+      // Silently fail — health cards are supplemental
+    } finally {
+      setHealthLoading(false);
     }
   }, []);
 
@@ -316,8 +428,9 @@ export default function AdminDashboardPage() {
     if (apiKey) {
       sessionStorage.setItem('admin_api_key', apiKey);
       fetchData(apiKey);
+      fetchHealthData(apiKey);
     }
-  }, [apiKey, fetchData]);
+  }, [apiKey, fetchData, fetchHealthData]);
 
   if (!apiKey) {
     return <AuthGate onAuth={setApiKey} />;
@@ -366,32 +479,14 @@ export default function AdminDashboardPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-white">WTF Admin Dashboard</h1>
+          <h1 className="text-2xl font-bold text-white">Dashboard</h1>
           <p className="text-xs text-slate-500 mt-1">
             Last updated: {new Date(d.generatedAt).toLocaleString()}
           </p>
         </div>
         <div className="flex gap-2">
-          <Link
-            href="/admin/clients"
-            className="px-4 py-2 rounded-lg bg-[#E51B23] text-white text-sm font-medium hover:bg-[#c81720]"
-          >
-            Clients
-          </Link>
-          <Link
-            href="/admin/five-minute-friday"
-            className="px-4 py-2 rounded-lg bg-[#FFDE59] text-black text-sm font-medium hover:bg-[#e6c94f]"
-          >
-            5MF
-          </Link>
-          <Link
-            href="/admin/reports"
-            className="px-4 py-2 rounded-lg bg-slate-700 text-slate-300 text-sm font-medium hover:bg-slate-600"
-          >
-            Reports
-          </Link>
           <button
-            onClick={() => fetchData(apiKey)}
+            onClick={() => { fetchData(apiKey); fetchHealthData(apiKey); }}
             disabled={loading}
             className="px-4 py-2 rounded-lg bg-slate-700 text-slate-300 text-sm font-medium hover:bg-slate-600 disabled:opacity-50"
           >
@@ -405,6 +500,37 @@ export default function AdminDashboardPage() {
           </button>
         </div>
       </div>
+
+      {/* Client Health Cards */}
+      {healthData.length > 0 && (
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-bold text-white">Client Health</h2>
+            <div className="flex items-center gap-4 text-xs text-slate-500">
+              <span className="flex items-center gap-1.5">
+                <span className="inline-block w-2 h-2 rounded-full bg-red-400" /> Needs Attention
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="inline-block w-2 h-2 rounded-full bg-amber-400" /> At Risk
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="inline-block w-2 h-2 rounded-full bg-emerald-400" /> Healthy
+              </span>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {healthData.map((client) => (
+              <HealthCard key={client.enrollmentId} client={client} />
+            ))}
+          </div>
+        </div>
+      )}
+      {healthLoading && healthData.length === 0 && (
+        <div className="mb-8 flex items-center gap-3 text-sm text-slate-500">
+          <div className="w-5 h-5 border-2 border-slate-700 border-t-[#00D4FF] rounded-full animate-spin" />
+          Loading client health data...
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="flex gap-1 mb-6 bg-slate-800/50 rounded-xl p-1 w-fit">

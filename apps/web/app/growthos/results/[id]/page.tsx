@@ -1,5 +1,7 @@
 import { createClient } from '@/lib/supabase-auth-server';
+import { getSupabaseServerClient } from '@/lib/supabase-server';
 import { redirect, notFound } from 'next/navigation';
+import { cookies } from 'next/headers';
 import Link from 'next/link';
 import { FollowUpQuestionsSection, LTVSection } from './FollowUpSection';
 
@@ -215,20 +217,54 @@ function DiagnosisSection({ title, content, color = '#E31B23' }: {
 // MAIN RESULTS PAGE
 // ============================================
 
-export default async function ResultsPage({ params }: { params: { id: string } }) {
-  const supabase = await createClient();
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
+export default async function ResultsPage({
+  params,
+  searchParams
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ admin?: string }>
+}) {
+  const { id } = await params;
+  const { admin } = await searchParams;
 
-  if (authError || !user) redirect('/growthos');
+  let assessment: any = null;
+  let isAdmin = false;
 
-  const { data: assessment, error } = await supabase
-    .from('assessments')
-    .select('*')
-    .eq('id', params.id)
-    .eq('user_id', user.id)
-    .single();
+  // Admin bypass: validate cookie against env var
+  if (admin === '1') {
+    const cookieStore = await cookies();
+    const adminKey = cookieStore.get('admin_api_key')?.value;
+    if (adminKey && adminKey === process.env.ADMIN_API_KEY) {
+      const adminSupabase = getSupabaseServerClient();
+      const { data, error } = await adminSupabase
+        .from('assessments')
+        .select('*')
+        .eq('id', id)
+        .single();
+      if (!error && data) {
+        assessment = data;
+        isAdmin = true;
+      }
+    }
+  }
 
-  if (error || !assessment) notFound();
+  // Normal user flow (only if admin bypass didn't succeed)
+  if (!assessment) {
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) redirect('/growthos');
+
+    const { data, error } = await supabase
+      .from('assessments')
+      .select('*')
+      .eq('id', id)
+      .eq('user_id', user.id)
+      .single();
+
+    if (error || !data) notFound();
+    assessment = data;
+  }
 
   const scores = assessment.scores as any;
   const intake = assessment.intake_data as any;
@@ -588,7 +624,7 @@ export default async function ResultsPage({ params }: { params: { id: string } }
       {(scores.followUpQuestions?.length > 0 || scores.followUpInsights?.length > 0) && (
         <FollowUpQuestionsSection
           questions={scores.followUpQuestions || []}
-          assessmentId={params.id}
+          assessmentId={id}
           existingInsights={scores.followUpInsights}
         />
       )}

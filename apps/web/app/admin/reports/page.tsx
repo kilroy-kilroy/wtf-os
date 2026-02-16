@@ -229,16 +229,56 @@ function ReportLink({ href, children }: { href: string; children: React.ReactNod
 function AgencyView({
   data,
   search,
+  apiKey,
   onNavigateToUser,
   onNavigateToProduct,
+  onAgencyRenamed,
 }: {
   data: ReportsData;
   search: string;
+  apiKey: string;
   onNavigateToUser: (userId: string) => void;
   onNavigateToProduct: (product: ProductFilter, userId?: string) => void;
+  onAgencyRenamed: (agencyId: string, newName: string) => void;
 }) {
   const [expandedAgencies, setExpandedAgencies] = useState<Set<string>>(new Set());
   const [expandedUsers, setExpandedUsers] = useState<Set<string>>(new Set());
+  const [editingAgencyId, setEditingAgencyId] = useState<string | null>(null);
+  const [agencyNameInput, setAgencyNameInput] = useState('');
+  const [updatingAgency, setUpdatingAgency] = useState(false);
+
+  const handleSaveAgencyName = async () => {
+    if (!editingAgencyId || !agencyNameInput.trim() || updatingAgency) return;
+    setUpdatingAgency(true);
+    try {
+      const res = await fetch(`/api/admin/agencies/${editingAgencyId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({ name: agencyNameInput.trim() }),
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        alert(`Failed to rename agency: ${errData.error || res.statusText}`);
+        return;
+      }
+      onAgencyRenamed(editingAgencyId, agencyNameInput.trim());
+      setEditingAgencyId(null);
+      setAgencyNameInput('');
+    } catch (err: any) {
+      console.error('Failed to rename agency:', err);
+      alert(`Failed to rename agency: ${err.message || 'Unknown error'}`);
+    } finally {
+      setUpdatingAgency(false);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingAgencyId(null);
+    setAgencyNameInput('');
+  };
 
   const toggleAgency = (id: string) => {
     setExpandedAgencies((prev) => {
@@ -400,13 +440,62 @@ function AgencyView({
       {filteredAgencies.map((agency) => (
         <div key={agency.id} className="bg-slate-800/50 border border-slate-700/50 rounded-xl mb-3 overflow-hidden">
           <div
-            className="flex items-center gap-3 px-4 py-3.5 cursor-pointer hover:bg-slate-700/30"
+            className="group flex items-center gap-3 px-4 py-3.5 cursor-pointer hover:bg-slate-700/30"
             onClick={() => toggleAgency(agency.id)}
           >
             <ChevronIcon expanded={expandedAgencies.has(agency.id)} />
             <div className="flex-1">
-              <span className="text-white font-semibold">{agency.name}</span>
-              {agency.url && <span className="text-slate-600 text-xs ml-2">{agency.url}</span>}
+              {editingAgencyId === agency.id ? (
+                <div
+                  className="flex items-center gap-2"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <input
+                    type="text"
+                    value={agencyNameInput}
+                    onChange={(e) => setAgencyNameInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleSaveAgencyName();
+                      if (e.key === 'Escape') handleCancelEdit();
+                    }}
+                    className="bg-slate-700/50 border border-slate-600 rounded-lg text-white text-sm px-2 py-1 focus:border-[#00D4FF] focus:ring-0 focus:outline-none"
+                    autoFocus
+                    disabled={updatingAgency}
+                  />
+                  <button
+                    onClick={handleSaveAgencyName}
+                    disabled={updatingAgency || !agencyNameInput.trim()}
+                    className="text-[#00D4FF] text-xs font-medium disabled:opacity-50"
+                  >
+                    {updatingAgency ? 'Saving...' : 'Save'}
+                  </button>
+                  <button
+                    onClick={handleCancelEdit}
+                    disabled={updatingAgency}
+                    className="text-slate-500 text-xs"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="text-white font-semibold">{agency.name}</span>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setEditingAgencyId(agency.id);
+                      setAgencyNameInput(agency.name);
+                    }}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity"
+                    title="Rename agency"
+                  >
+                    <svg className="w-3.5 h-3.5 text-slate-500 hover:text-[#00D4FF]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                    </svg>
+                  </button>
+                </span>
+              )}
+              {editingAgencyId !== agency.id && agency.url && <span className="text-slate-600 text-xs ml-2">{agency.url}</span>}
             </div>
             <div className="flex items-center gap-3 text-xs">
               <span className="text-slate-500">
@@ -968,7 +1057,7 @@ function ProductView({
                     </td>
                     <td className="py-2 pr-4 text-slate-500 text-xs">{formatTimeAgo(r.createdAt)}</td>
                     <td className="py-2">
-                      <ReportLink href={`/growthos/results/${r.id}`}>View</ReportLink>
+                      <ReportLink href={`/growthos/results/${r.id}?admin=1`}>View</ReportLink>
                     </td>
                   </tr>
                 ))}
@@ -1058,6 +1147,7 @@ export default function AdminReportsPage() {
         setError('Invalid API key');
         setApiKey(null);
         sessionStorage.removeItem('admin_api_key');
+        document.cookie = 'admin_api_key=; path=/; max-age=0';
         return;
       }
       const json = await res.json();
@@ -1072,6 +1162,8 @@ export default function AdminReportsPage() {
   useEffect(() => {
     if (apiKey) {
       sessionStorage.setItem('admin_api_key', apiKey);
+      // Set cookie for server component access (admin assessment viewing)
+      document.cookie = `admin_api_key=${apiKey}; path=/; max-age=${60 * 60 * 24}; SameSite=Lax`;
       fetchData(apiKey);
     }
   }, [apiKey, fetchData]);
@@ -1177,7 +1269,7 @@ export default function AdminReportsPage() {
             {loading ? 'Refreshing...' : 'Refresh'}
           </button>
           <button
-            onClick={() => { sessionStorage.removeItem('admin_api_key'); setApiKey(null); }}
+            onClick={() => { sessionStorage.removeItem('admin_api_key'); document.cookie = 'admin_api_key=; path=/; max-age=0'; setApiKey(null); }}
             className="px-4 py-2 rounded-lg bg-slate-800 text-slate-500 text-sm hover:text-slate-300"
           >
             Logout
@@ -1218,8 +1310,20 @@ export default function AdminReportsPage() {
         <AgencyView
           data={data}
           search={search}
+          apiKey={apiKey}
           onNavigateToUser={navigateToUser}
           onNavigateToProduct={navigateToProduct}
+          onAgencyRenamed={(agencyId, newName) => {
+            setData((prev) => {
+              if (!prev) return prev;
+              return {
+                ...prev,
+                agencies: prev.agencies.map((a) =>
+                  a.id === agencyId ? { ...a, name: newName } : a
+                ),
+              };
+            });
+          }}
         />
       )}
 

@@ -5,6 +5,7 @@ import Stripe from 'stripe'
 import { onProUpgrade, onSubscriptionCancelled, onGrowthOSBundlePurchased } from '@/lib/loops'
 import { addProSubscriber } from '@/lib/beehiiv'
 import { trackPurchaseCompleted, trackSubscriptionCancelled } from '@/lib/analytics'
+import { alertNewSubscription, alertSubscriptionCancelled } from '@/lib/slack'
 
 export const runtime = 'nodejs'
 
@@ -109,6 +110,13 @@ export async function POST(request: NextRequest) {
               subscriptionId: subscription.id,
             });
 
+            // Slack alert
+            alertNewSubscription(
+              session.customer_email || 'unknown',
+              product,
+              planType
+            );
+
             // Fire Loops event for Pro upgrade (product-aware)
             if (session.customer_email) {
               await onProUpgrade(session.customer_email, planType as 'solo' | 'team', product).catch(err => {
@@ -203,6 +211,9 @@ export async function POST(request: NextRequest) {
         await trackSubscriptionCancelled({
           subscriptionId: subscription.id,
         });
+
+        // Slack alert
+        alertSubscriptionCancelled(cancelledSub?.customer_email || 'unknown');
 
         if (cancelledSub?.customer_email) {
           // Fire Loops event for subscription cancellation

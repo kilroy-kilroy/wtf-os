@@ -4,6 +4,7 @@ import { getSupabaseServerClient } from '@/lib/supabase-server';
 import { onVisibilityReportGenerated } from '@/lib/loops';
 import { addVisibilityLabSubscriber } from '@/lib/beehiiv';
 import { getArchetypeForLoops } from '@/lib/growth-quadrant';
+import { alertReportGenerated } from '@/lib/slack';
 
 export async function POST(request: NextRequest) {
   try {
@@ -191,6 +192,11 @@ export async function POST(request: NextRequest) {
         }
       } catch (saveErr) {
         console.error('DB save error (non-blocking):', saveErr);
+      }
+
+      // Slack alert
+      if (userId) {
+        alertReportGenerated(input.userName, 'visibility-free', input.brandName);
       }
 
       // Add to Beehiiv newsletter (fire-and-forget)

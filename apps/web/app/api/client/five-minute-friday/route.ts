@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabase-server';
 import { createClient } from '@/lib/supabase-auth-server';
+import { alertFridaySubmitted } from '@/lib/slack';
 
 export async function POST(request: NextRequest) {
   try {
@@ -22,7 +23,7 @@ export async function POST(request: NextRequest) {
     // Get active enrollment with 5MF enabled
     const { data: enrollment } = await supabase
       .from('client_enrollments')
-      .select('id, program:client_programs(has_five_minute_friday)')
+      .select('id, full_name, email, program:client_programs(has_five_minute_friday)')
       .eq('user_id', user.id)
       .eq('status', 'active')
       .single();
@@ -82,6 +83,12 @@ export async function POST(request: NextRequest) {
       console.error('Friday submission error:', error);
       return NextResponse.json({ error: 'Failed to submit', message: error.message }, { status: 500 });
     }
+
+    // Slack alert
+    alertFridaySubmitted(
+      (enrollment as any).full_name || (enrollment as any).email || 'Unknown client',
+      null
+    );
 
     return NextResponse.json({ success: true, id: friday_record.id });
   } catch (error) {

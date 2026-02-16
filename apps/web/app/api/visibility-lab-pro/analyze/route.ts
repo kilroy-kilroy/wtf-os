@@ -5,6 +5,7 @@ import { getSupabaseServerClient } from '@/lib/supabase-server';
 import { onVisibilityProReportGenerated } from '@/lib/loops';
 import { addVisibilityLabSubscriber } from '@/lib/beehiiv';
 import { getArchetypeForLoops } from '@/lib/growth-quadrant';
+import { alertReportGenerated } from '@/lib/slack';
 
 export const maxDuration = 120;
 
@@ -103,6 +104,11 @@ export async function POST(request: NextRequest) {
         }
       } catch (saveErr) {
         console.error('DB save error (non-blocking):', saveErr);
+      }
+
+      // Slack alert
+      if (userId) {
+        alertReportGenerated(input.userName, 'visibility-pro', input.brandName);
       }
 
       // Add to Beehiiv newsletter (fire-and-forget)

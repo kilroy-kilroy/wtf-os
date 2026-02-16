@@ -22,6 +22,7 @@ import {
 import { onDiscoveryReportGenerated } from '@/lib/loops';
 import { addDiscoveryLabSubscriber } from '@/lib/beehiiv';
 import { getArchetypeForLoops } from '@/lib/growth-quadrant';
+import { alertReportGenerated } from '@/lib/slack';
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
@@ -360,6 +361,12 @@ export async function POST(request: NextRequest) {
     }
 
     const reportId = insertedReport?.id;
+
+    // Slack alert
+    if (userId) {
+      alertReportGenerated(requestor_name, `discovery-${version}`, target_company);
+    }
+
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.timkilroy.com';
     const reportUrl = reportId ? `${appUrl}/discovery-lab/report/${reportId}` : undefined;
 

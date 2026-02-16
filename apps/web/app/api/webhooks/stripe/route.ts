@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getStripe } from '@/lib/stripe'
 import { createClient } from '@supabase/supabase-js'
 import Stripe from 'stripe'
-import { onProUpgrade, onSubscriptionCancelled } from '@/lib/loops'
+import { onProUpgrade, onSubscriptionCancelled, onGrowthOSBundlePurchased } from '@/lib/loops'
 import { trackPurchaseCompleted, trackSubscriptionCancelled } from '@/lib/analytics'
 
 export const runtime = 'nodejs'
@@ -113,6 +113,13 @@ export async function POST(request: NextRequest) {
               await onProUpgrade(session.customer_email, planType as 'solo' | 'team', product).catch(err => {
                 console.error('Failed to send Loops Pro upgrade event:', err);
               });
+
+              // Fire dedicated GrowthOS bundle event for welcome series
+              if (product === 'growth-bundle') {
+                await onGrowthOSBundlePurchased(session.customer_email, planType as 'solo' | 'team').catch(err => {
+                  console.error('Failed to send GrowthOS bundle Loops event:', err);
+                });
+              }
             }
           }
         } catch (err) {

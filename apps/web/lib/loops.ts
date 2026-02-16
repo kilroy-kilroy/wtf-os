@@ -240,6 +240,25 @@ export async function onProUpgrade(
 }
 
 /**
+ * Fire when a GrowthOS Pro Bundle is purchased
+ * Triggers dedicated welcome series for the full bundle
+ */
+export async function onGrowthOSBundlePurchased(
+  email: string,
+  planType: 'solo' | 'team' = 'solo'
+): Promise<{ success: boolean; error?: string }> {
+  return sendEvent({
+    email,
+    eventName: 'growthos_bundle_purchased',
+    eventProperties: {
+      planType,
+      product: 'growth-bundle',
+      includedProducts: 'Call Lab Pro, Discovery Lab Pro, Visibility Lab Pro',
+    },
+  });
+}
+
+/**
  * Fire when subscription is cancelled
  */
 export async function onSubscriptionCancelled(

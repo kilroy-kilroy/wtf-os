@@ -21,3 +21,6 @@ export { ProInsightsPanel } from './ProInsightsPanel';
 
 // Growth Quadrant
 export { GrowthQuadrantCard } from './GrowthQuadrantCard';
+
+// Activity History
+export { ActivityHistory } from './ActivityHistory';

@@ -14,6 +14,7 @@ import {
   RecentBriefsList,
   ProInsightsPanel,
 } from "@/components/dashboard";
+import { ActivityHistory, type ActivityRecord } from "@/components/dashboard/ActivityHistory";
 import {
   MACRO_PATTERNS,
   getPatternById,
@@ -815,6 +816,179 @@ async function getDashboardData(
   };
 }
 
+// Fetch unified activity history across all tools
+async function getActivityHistory(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  userEmail: string
+): Promise<ActivityRecord[]> {
+  const records: ActivityRecord[] = [];
+
+  // 1. Call Lab analyses (call_scores)
+  const { data: callScoresHistory } = await supabase
+    .from("call_scores")
+    .select("id, overall_score, overall_grade, diagnosis_summary, version, created_at, ingestion_items (transcript_metadata)")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(50);
+
+  // Also fetch via email (tool_runs lookup for lead magnet users)
+  const { data: emailToolRuns } = await supabase
+    .from("tool_runs")
+    .select("ingestion_item_id, tool_name, created_at")
+    .eq("lead_email", userEmail)
+    .not("ingestion_item_id", "is", null)
+    .order("created_at", { ascending: false })
+    .limit(50);
+
+  let emailCallScores: typeof callScoresHistory = null;
+  if (emailToolRuns && emailToolRuns.length > 0) {
+    const ingestionIds = emailToolRuns
+      .map((t: { ingestion_item_id: string | null }) => t.ingestion_item_id)
+      .filter((id): id is string => id !== null);
+
+    if (ingestionIds.length > 0) {
+      const { data } = await supabase
+        .from("call_scores")
+        .select("id, overall_score, overall_grade, diagnosis_summary, version, created_at, ingestion_items (transcript_metadata)")
+        .in("ingestion_item_id", ingestionIds)
+        .order("created_at", { ascending: false })
+        .limit(50);
+      emailCallScores = data;
+    }
+  }
+
+  // Merge and deduplicate call scores
+  const seenCallIds = new Set<string>();
+  const allCallScores = [...(callScoresHistory || []), ...(emailCallScores || [])];
+  for (const cs of allCallScores) {
+    if (seenCallIds.has(cs.id)) continue;
+    seenCallIds.add(cs.id);
+
+    const metadata = (cs.ingestion_items as { transcript_metadata?: Record<string, unknown> } | null)?.transcript_metadata;
+    const title_from_meta = metadata?.title as string | undefined;
+    const participants = metadata?.participants as Array<{ name?: string; displayName?: string }> | undefined;
+    const prospectName = participants && participants.length > 1
+      ? (participants[1]?.displayName || participants[1]?.name || null)
+      : null;
+
+    const title = prospectName || title_from_meta || cs.diagnosis_summary?.slice(0, 60) || 'Call Analysis';
+
+    records.push({
+      id: cs.id,
+      toolType: 'call_lab',
+      toolLabel: 'Call Lab',
+      version: (cs.version === 'pro' ? 'pro' : 'lite') as 'lite' | 'pro',
+      title,
+      subtitle: cs.overall_grade ? `Grade: ${cs.overall_grade}` : null,
+      score: cs.overall_score ? Math.round(cs.overall_score * 10) : null,
+      status: 'completed',
+      createdAt: cs.created_at,
+      href: `/call-lab/report/${cs.id}`,
+    });
+  }
+
+  // 2. Discovery Lab briefs
+  const { data: briefs } = await (supabase as any)
+    .from("discovery_briefs")
+    .select("id, target_company, target_contact_name, target_contact_title, version, created_at")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(50);
+
+  if (briefs) {
+    for (const b of briefs as Array<{
+      id: string;
+      target_company: string;
+      target_contact_name: string | null;
+      target_contact_title: string | null;
+      version: string;
+      created_at: string;
+    }>) {
+      records.push({
+        id: b.id,
+        toolType: 'discovery_lab',
+        toolLabel: 'Discovery Lab',
+        version: (b.version === 'pro' ? 'pro' : 'lite') as 'lite' | 'pro',
+        title: b.target_company || 'Company Research',
+        subtitle: [b.target_contact_name, b.target_contact_title].filter(Boolean).join(' - ') || null,
+        score: null,
+        status: 'completed',
+        createdAt: b.created_at,
+        href: `/discovery-lab/report/${b.id}`,
+      });
+    }
+  }
+
+  // 3. Visibility Lab / Instant reports
+  const { data: instantReports } = await (supabase as any)
+    .from("instant_reports")
+    .select("id, email, score, scenario_type, created_at")
+    .eq("email", userEmail)
+    .order("created_at", { ascending: false })
+    .limit(50);
+
+  if (instantReports) {
+    for (const ir of instantReports as Array<{
+      id: string;
+      email: string;
+      score: number | null;
+      scenario_type: string | null;
+      created_at: string;
+    }>) {
+      records.push({
+        id: ir.id,
+        toolType: 'visibility_lab',
+        toolLabel: 'Visibility Lab',
+        version: null,
+        title: ir.scenario_type || 'Visibility Report',
+        subtitle: null,
+        score: ir.score,
+        status: 'completed',
+        createdAt: ir.created_at,
+        href: `/visibility-lab/report/${ir.id}`,
+      });
+    }
+  }
+
+  // 4. Assessments
+  const { data: assessments } = await (supabase as any)
+    .from("assessments")
+    .select("id, assessment_type, overall_score, status, created_at")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(50);
+
+  if (assessments) {
+    for (const a of assessments as Array<{
+      id: string;
+      assessment_type: string;
+      overall_score: number | null;
+      status: string;
+      created_at: string;
+    }>) {
+      const typeLabel = a.assessment_type === 'agency' ? 'Agency Assessment' : 'Sales Assessment';
+      records.push({
+        id: a.id,
+        toolType: 'assessment',
+        toolLabel: 'Assessment',
+        version: null,
+        title: typeLabel,
+        subtitle: a.status === 'completed' ? null : `Status: ${a.status}`,
+        score: a.overall_score ? Math.round(a.overall_score * 20) : null, // 1-5 scale -> 0-100
+        status: a.status,
+        createdAt: a.created_at,
+        href: `/growthos/results/${a.id}`,
+      });
+    }
+  }
+
+  // Sort all records by date, newest first
+  records.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+  return records;
+}
+
 export default async function DashboardPage() {
   const supabase = await createClient();
   const {
@@ -830,10 +1004,11 @@ export default async function DashboardPage() {
     user.user_metadata?.first_name || user.email?.split("@")[0] || "there";
 
   // Get dashboard data from database
-  const data = await getDashboardData(supabase, user.id, user.email || '');
-
-  // Compute Growth Quadrant placement
-  const quadrant = await computeGrowthQuadrant(supabase, user.id);
+  const [data, activityHistory, quadrant] = await Promise.all([
+    getDashboardData(supabase, user.id, user.email || ''),
+    getActivityHistory(supabase, user.id, user.email || ''),
+    computeGrowthQuadrant(supabase, user.id),
+  ]);
 
   return (
     <div className="min-h-screen bg-black">
@@ -1023,6 +1198,16 @@ export default async function DashboardPage() {
             <RecentCallsList calls={data.recentCalls} />
           </>
         )}
+
+        {/* ============================================
+            BLOCK 8.5: ACTIVITY HISTORY (Full Record)
+            Purpose: Give users a persistent, filterable record of ALL
+            tool usage — the reason to log in and come back.
+            Rules: Shows all-time history, not just last 30 days
+                   Filterable by tool type
+                   Every record links to its full report
+            ============================================ */}
+        <ActivityHistory records={activityHistory} />
 
         {/* ============================================
             BLOCK 9: FOOTER ACTIONS

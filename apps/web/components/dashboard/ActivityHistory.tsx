@@ -7,7 +7,7 @@ export interface ActivityRecord {
   id: string;
   toolType: 'call_lab' | 'discovery_lab' | 'visibility_lab' | 'assessment';
   toolLabel: string;
-  version: 'lite' | 'pro' | null;
+  version: 'lab' | 'pro' | null;
   title: string;
   subtitle: string | null;
   score: number | null;
@@ -69,7 +69,7 @@ function formatTime(dateStr: string): string {
  * - Filterable by tool type
  * - Each record links to its full report
  * - Grouped by date for scanability
- * - Version badge (Lite/Pro) where applicable
+ * - Version badge (Lab/Pro) where applicable
  * - Score displayed where applicable
  */
 export function ActivityHistory({ records }: ActivityHistoryProps) {
@@ -200,7 +200,7 @@ export function ActivityHistory({ records }: ActivityHistoryProps) {
                                     : 'bg-[#333] text-[#999]'
                                 }`}
                               >
-                                {record.version}
+                                {record.version === 'pro' ? 'PRO' : 'LAB'}
                               </span>
                             )}
                           </div>

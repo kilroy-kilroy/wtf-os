@@ -34,7 +34,7 @@ export function DiscoveryLabActivity({
     {
       label: 'BRIEFS CREATED',
       value: totalBriefs.toString(),
-      detail: totalBriefs > 0 ? `${liteBriefs} Lite · ${proBriefs} Pro` : null,
+      detail: totalBriefs > 0 ? `${liteBriefs} Lab · ${proBriefs} Pro` : null,
     },
     {
       label: 'COMPANIES RESEARCHED',

@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
     // Get active enrollment with 5MF enabled
     const { data: enrollment } = await supabase
       .from('client_enrollments')
-      .select('id, full_name, email, program:client_programs(has_five_minute_friday)')
+      .select('id, program:client_programs(has_five_minute_friday)')
       .eq('user_id', user.id)
       .eq('status', 'active')
       .single();
@@ -84,9 +84,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to submit', message: error.message }, { status: 500 });
     }
 
-    // Slack alert
+    // Slack alert — use auth user info since enrollment doesn't have name/email
     alertFridaySubmitted(
-      (enrollment as any).full_name || (enrollment as any).email || 'Unknown client',
+      user.user_metadata?.full_name || user.email || 'Unknown client',
       null
     );
 

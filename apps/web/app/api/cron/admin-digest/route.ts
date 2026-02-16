@@ -26,32 +26,36 @@ export async function GET(request: NextRequest) {
     // 1. Find inactive clients (7+ days since last login)
     const { data: enrollments } = await supabase
       .from('client_enrollments')
-      .select('user_id, full_name, email, status')
+      .select('user_id, status')
       .eq('status', 'active');
 
     let inactiveCount = 0;
 
     if (enrollments && enrollments.length > 0) {
-      // Get last sign-in from auth.users
+      // Get auth user data for last_sign_in_at and email/name
       const { data: authData } = await supabase.auth.admin.listUsers();
-      const authUserMap = new Map<string, string | null>();
+      const authUserMap = new Map<string, { lastSignIn: string | null; email: string; name: string | null }>();
       for (const u of authData?.users || []) {
-        authUserMap.set(u.id, u.last_sign_in_at || null);
+        authUserMap.set(u.id, {
+          lastSignIn: u.last_sign_in_at || null,
+          email: u.email || '',
+          name: u.user_metadata?.full_name || null,
+        });
       }
 
       const now = new Date();
       for (const enrollment of enrollments) {
         if (!enrollment.user_id) continue;
-        const lastSignInStr = authUserMap.get(enrollment.user_id);
-        if (!lastSignInStr) continue; // Never logged in — handled by invite flow
+        const authUser = authUserMap.get(enrollment.user_id);
+        if (!authUser?.lastSignIn) continue; // Never logged in — handled by invite flow
 
-        const lastLogin = new Date(lastSignInStr);
+        const lastLogin = new Date(authUser.lastSignIn);
         const daysSince = Math.floor(
           (now.getTime() - lastLogin.getTime()) / (1000 * 60 * 60 * 24)
         );
         if (daysSince >= 7) {
           alertClientInactive(
-            enrollment.full_name || enrollment.email || 'Unknown',
+            authUser.name || authUser.email || 'Unknown',
             daysSince
           );
           inactiveCount++;

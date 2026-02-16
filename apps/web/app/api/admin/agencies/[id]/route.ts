@@ -3,7 +3,7 @@ import { getSupabaseServerClient } from '@/lib/supabase-server';
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const authHeader = request.headers.get('authorization');
   const apiKey = process.env.ADMIN_API_KEY;

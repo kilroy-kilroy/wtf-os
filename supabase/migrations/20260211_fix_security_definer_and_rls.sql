@@ -20,7 +20,7 @@ SELECT
   COUNT(DISTINCT email) as unique_leads,
   AVG(score) as avg_score,
   COUNT(CASE WHEN email IS NOT NULL THEN 1 END) as emails_captured,
-  ROUND(COUNT(CASE WHEN email IS NOT NULL THEN 1 END)::NUMERIC / COUNT(*)::NUMERIC * 100, 2) as capture_rate
+  ROUND(COUNT(CASE WHEN email IS NOT NULL THEN 1 END)::NUMERIC / NULLIF(COUNT(*)::NUMERIC, 0) * 100, 2) as capture_rate
 FROM instant_reports
 GROUP BY DATE(created_at)
 ORDER BY date DESC;
@@ -59,6 +59,7 @@ ALTER TABLE public.client_services ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.client_portfolio ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.client_ops_capacity ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.client_competitors ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.visibility_lab_reports ENABLE ROW LEVEL SECURITY;
 
 -- ============================================
 -- 3. RLS POLICIES FOR TABLES ALREADY HANDLED
@@ -278,9 +279,22 @@ CREATE POLICY "Service role full access client_competitors" ON public.client_com
     (select auth.role()) = 'service_role'
   );
 
+-- visibility_lab_reports: users see their own reports
+DROP POLICY IF EXISTS "Users can read own reports" ON public.visibility_lab_reports;
+DROP POLICY IF EXISTS "Service role full access" ON public.visibility_lab_reports;
+DROP POLICY IF EXISTS "Service role full access visibility_lab_reports" ON public.visibility_lab_reports;
+CREATE POLICY "Users read own visibility reports" ON public.visibility_lab_reports
+  FOR SELECT USING (
+    user_id = (select auth.uid())
+  );
+CREATE POLICY "Service role full access visibility_lab_reports" ON public.visibility_lab_reports
+  FOR ALL USING (
+    (select auth.role()) = 'service_role'
+  );
+
 -- ============================================
 -- DONE
 -- This migration resolves:
 -- - 2x security_definer_view errors
--- - 14x rls_disabled_in_public errors
+-- - 15x rls_disabled_in_public errors
 -- ============================================

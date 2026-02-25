@@ -1537,6 +1537,211 @@ export async function researchWebsiteTech(websiteUrl: string): Promise<WebsiteTe
   }
 }
 
+// ---------- Target Company Deep-Dive (Perplexity) ----------
+
+export interface CompanyDeepDiveResult {
+  summary: string;
+  positioning: string;
+  services: string;
+  key_people: string;
+  website_observations: string;
+  competitors: string;
+  raw_response: string;
+}
+
+/**
+ * Deep-dive research on the target company using Perplexity.
+ * This is the "read their website and tell me everything" call that
+ * produces the kind of rich context Perplexity gives natively.
+ */
+export async function researchTargetCompanyDeepDive(
+  companyName: string,
+  domain?: string,
+  contactName?: string
+): Promise<CompanyDeepDiveResult | null> {
+  const systemPrompt = `You are a competitive intelligence analyst preparing a briefing for a sales professional. Your job is to deeply research a specific company - read their website, LinkedIn, and any public sources. Be thorough, specific, and factual. Extract verbatim phrases from their website where possible. Do NOT fabricate information - if something is unknown, say so.`;
+
+  const domainContext = domain ? ` (${domain})` : '';
+  const contactContext = contactName ? `\n\nAlso research ${contactName} at ${companyName}. Find their LinkedIn profile URL, role, background, and any public content they've produced.` : '';
+
+  const userQuery = `Research ${companyName}${domainContext} in depth. I need a comprehensive briefing.
+${contactContext}
+Provide:
+
+1. COMPANY SUMMARY
+Who are they? What do they do? Who are their customers? How big are they (employees, revenue if findable)? Where are they located? When were they founded?
+
+2. POSITIONING & MESSAGING
+How do they describe themselves? What language do they use? What are their core value propositions? Extract verbatim phrases from their website and LinkedIn.
+
+3. SERVICES & OFFERINGS
+What specific services or products do they offer? How are they structured? What's their pricing model (if visible)?
+
+4. KEY PEOPLE
+Who are the founders/leaders? What are their LinkedIn URLs? What's their background?
+
+5. WEBSITE OBSERVATIONS
+What's notable about their website? Is there a blog - when was it last updated? Do they have email capture? Any prominent CTAs, banners, or apps being promoted? What platform is the site built on?
+
+6. COMPETITORS & MARKET POSITION
+Who are their direct competitors? Name specific companies. How do they differentiate from competitors? What market segment do they occupy? What's their competitive advantage and disadvantage?
+
+Be specific. Use real data. Include LinkedIn URLs where available. If you can't find something, explicitly say so.`;
+
+  try {
+    const response = await queryPerplexity(systemPrompt, userQuery, {
+      maxTokens: 3000,
+    });
+
+    return {
+      summary: extractSection(response, 'COMPANY SUMMARY', 'POSITIONING'),
+      positioning: extractSection(response, 'POSITIONING', 'SERVICES'),
+      services: extractSection(response, 'SERVICES', 'KEY PEOPLE'),
+      key_people: extractSection(response, 'KEY PEOPLE', 'WEBSITE'),
+      website_observations: extractSection(response, 'WEBSITE OBSERVATIONS', 'COMPETITORS'),
+      competitors: extractSection(response, 'COMPETITORS', ''),
+      raw_response: response,
+    };
+  } catch (error: any) {
+    console.error('[Discovery:v2] Company deep-dive research error:', error.message);
+    return null;
+  }
+}
+
+// ---------- Competitor Discovery (Perplexity) ----------
+
+export interface CompetitorResearchResult {
+  competitors: Array<{
+    name: string;
+    description: string;
+    why_relevant: string;
+    differentiation: string;
+  }>;
+  market_landscape: string;
+  raw_response: string;
+}
+
+/**
+ * Research competitors of the target company.
+ * This identifies and analyzes the TARGET's competitors (not the requestor's).
+ */
+export async function researchCompetitors(
+  companyName: string,
+  companyDescription: string,
+  domain?: string
+): Promise<CompetitorResearchResult | null> {
+  const systemPrompt = `You are a competitive intelligence analyst. Identify and analyze competitors for a specific company. Be thorough and specific - name real companies, not generic categories. Focus on companies the target actually competes against in their market.`;
+
+  const domainContext = domain ? ` (${domain})` : '';
+  const userQuery = `Identify the top 3-5 competitors of ${companyName}${domainContext}.
+
+Context about the company: ${companyDescription || `Research ${companyName} and identify their competitors.`}
+
+For each competitor, provide:
+1. COMPETITOR NAME (must be a real, named company)
+2. WHAT THEY DO (1-2 sentences)
+3. WHY THEY'RE A COMPETITOR (how do they compete with ${companyName}?)
+4. KEY DIFFERENTIATOR (what makes them different from ${companyName}?)
+
+Format each competitor as:
+- [Name] | [What they do] | [Why competitor] | [Key differentiator]
+
+Also provide:
+MARKET LANDSCAPE: A 2-3 sentence overview of the competitive landscape. Where does ${companyName} sit relative to competitors - are they the leader, a specialist, a challenger? What's the competitive dynamic?
+
+Be specific. Name real companies only. If you're not confident a company is a real competitor, don't include them.`;
+
+  try {
+    const response = await queryPerplexity(systemPrompt, userQuery, {
+      maxTokens: 2000,
+    });
+
+    // Parse competitors from response
+    const competitors: CompetitorResearchResult['competitors'] = [];
+    const lines = response.split('\n');
+    for (const line of lines) {
+      const match = line.match(/^[-•*]\s*\[?(.+?)\]?\s*\|\s*(.+?)\s*\|\s*(.+?)\s*\|\s*(.+)$/);
+      if (match) {
+        competitors.push({
+          name: match[1].trim(),
+          description: match[2].trim(),
+          why_relevant: match[3].trim(),
+          differentiation: match[4].trim(),
+        });
+      }
+    }
+
+    // If structured parsing failed, extract from raw text
+    if (competitors.length === 0) {
+      const bulletLines = lines.filter(l => l.trim().match(/^[-•*]\s*\*?\*?[A-Z]/));
+      for (const line of bulletLines) {
+        const cleanLine = line.replace(/^[-•*]\s*\*?\*?/, '').replace(/\*?\*?$/, '').trim();
+        if (cleanLine.length > 10 && cleanLine.length < 200) {
+          const parts = cleanLine.split(/\s*[-–:]\s*/);
+          if (parts.length >= 2) {
+            competitors.push({
+              name: parts[0].trim(),
+              description: parts.slice(1).join(' - ').trim(),
+              why_relevant: '',
+              differentiation: '',
+            });
+          }
+        }
+      }
+    }
+
+    const marketLandscape = extractSection(response, 'MARKET LANDSCAPE', '');
+
+    return {
+      competitors: competitors.slice(0, 5),
+      market_landscape: marketLandscape || response.substring(response.lastIndexOf('\n\n')).trim(),
+      raw_response: response,
+    };
+  } catch (error: any) {
+    console.error('[Discovery:v2] Competitor research error:', error.message);
+    return null;
+  }
+}
+
+// ---------- LinkedIn URL Discovery (Perplexity) ----------
+
+/**
+ * Find a person's LinkedIn URL using Perplexity search.
+ * Used when the user provides a contact name but no LinkedIn URL.
+ */
+export async function findLinkedInUrl(
+  contactName: string,
+  companyName: string,
+  contactTitle?: string
+): Promise<string | null> {
+  const systemPrompt = `You are a research assistant. Find the LinkedIn profile URL for a specific person. Return ONLY the LinkedIn URL if found, or "NOT FOUND" if you cannot locate them. Do not make up URLs.`;
+
+  const titleContext = contactTitle ? `, ${contactTitle}` : '';
+  const userQuery = `Find the LinkedIn profile URL for ${contactName}${titleContext} at ${companyName}.
+
+Return ONLY the LinkedIn URL (e.g., https://www.linkedin.com/in/username) if you can find it.
+If you cannot find the exact person, return "NOT FOUND".
+Do NOT guess or make up a URL.`;
+
+  try {
+    const response = await queryPerplexity(systemPrompt, userQuery, {
+      maxTokens: 200,
+      temperature: 0.1,
+    });
+
+    // Extract LinkedIn URL from response
+    const urlMatch = response.match(/https?:\/\/(?:www\.)?linkedin\.com\/in\/[a-zA-Z0-9_-]+\/?/);
+    if (urlMatch) {
+      return urlMatch[0].replace(/\/$/, '');
+    }
+
+    return null;
+  } catch (error: any) {
+    console.error('[Discovery:v2] LinkedIn URL discovery error:', error.message);
+    return null;
+  }
+}
+
 // ---------- SERP Keyword Generator ----------
 
 export function generateSerpKeywords(
@@ -1619,6 +1824,12 @@ export interface V2ResearchResult {
   // Source 1b: Perplexity Job Postings
   job_postings: Array<{ title: string; department: string; signal: string }> | null;
 
+  // Source 1c: Perplexity Company Deep-Dive
+  company_deep_dive: CompanyDeepDiveResult | null;
+
+  // Source 1d: Perplexity Competitor Research
+  competitor_research: CompetitorResearchResult | null;
+
   // Source 2: LinkedIn Profile
   linkedin_profile: LinkedInProfileResult | null;
 
@@ -1635,6 +1846,9 @@ export interface V2ResearchResult {
   apollo_company: ApolloCompanyData | null;
   apollo_contact: ApolloContactData | null;
 
+  // Discovered LinkedIn URL (when not provided by user)
+  discovered_linkedin_url: string | null;
+
   errors: string[];
 }
 
@@ -1646,12 +1860,15 @@ export async function runV2DiscoveryResearch(input: V2ResearchInput): Promise<V2
   const result: V2ResearchResult = {
     perplexity: null,
     job_postings: null,
+    company_deep_dive: null,
+    competitor_research: null,
     linkedin_profile: null,
     linkedin_posts: null,
     google_serp: null,
     website_tech: null,
     apollo_company: null,
     apollo_contact: null,
+    discovered_linkedin_url: null,
     errors: [],
   };
 
@@ -1716,36 +1933,105 @@ export async function runV2DiscoveryResearch(input: V2ResearchInput): Promise<V2
     })()
   );
 
-  // Source 2: BrightData LinkedIn Profile
-  if (input.target_linkedin) {
+  // Source 1c: Perplexity Company Deep-Dive
+  promises.push(
+    researchTargetCompanyDeepDive(input.target_company, domain, input.target_contact)
+      .then(r => {
+        result.company_deep_dive = r;
+        if (!r) {
+          errors.push('Company deep-dive research returned no data');
+        }
+      })
+      .catch(e => { errors.push(`Company deep-dive failed: ${e.message}`); })
+  );
+
+  // Source 1d: Competitor Research (when competitors not provided by user)
+  if (!input.competitors) {
     promises.push(
-      researchLinkedInProfile(input.target_linkedin, chainAbort.signal)
+      (async () => {
+        // Wait briefly for deep-dive to potentially provide company context
+        // But don't block - use whatever we have
+        try {
+          const companyContext = input.target_icp
+            ? `${input.target_company} serves ${input.target_icp}`
+            : input.target_company;
+          const competitorResult = await researchCompetitors(input.target_company, companyContext, domain);
+          result.competitor_research = competitorResult;
+          if (!competitorResult || competitorResult.competitors.length === 0) {
+            errors.push('Competitor research found no competitors');
+          }
+        } catch (e: any) {
+          errors.push(`Competitor research failed: ${e.message}`);
+        }
+      })()
+    );
+  }
+
+  // Source 2: LinkedIn - Discover URL if not provided, then scrape
+  const linkedinUrl = input.target_linkedin;
+  if (linkedinUrl) {
+    // LinkedIn URL provided - scrape directly
+    promises.push(
+      researchLinkedInProfile(linkedinUrl, chainAbort.signal)
         .then(r => {
           result.linkedin_profile = r;
           if (!r) {
-            console.warn('[Discovery:v2] LinkedIn profile returned null for:', input.target_linkedin);
+            console.warn('[Discovery:v2] LinkedIn profile returned null for:', linkedinUrl);
             errors.push('LinkedIn profile scrape returned no data');
           }
         })
         .catch(e => { if (!chainAbort.signal.aborted) errors.push(`LinkedIn profile failed: ${e.message}`); })
     );
-  } else {
-    console.warn('[Discovery:v2] No target_linkedin URL provided - skipping LinkedIn profile');
-  }
-
-  // Source 3: BrightData LinkedIn Posts
-  if (input.target_linkedin) {
+    // Source 3: BrightData LinkedIn Posts
     promises.push(
-      researchLinkedInPosts(input.target_linkedin, chainAbort.signal)
+      researchLinkedInPosts(linkedinUrl, chainAbort.signal)
         .then(r => {
           result.linkedin_posts = r;
           if (!r) {
-            console.warn('[Discovery:v2] LinkedIn posts returned null for:', input.target_linkedin);
+            console.warn('[Discovery:v2] LinkedIn posts returned null for:', linkedinUrl);
             errors.push('LinkedIn posts scrape returned no data');
           }
         })
         .catch(e => { if (!chainAbort.signal.aborted) errors.push(`LinkedIn posts failed: ${e.message}`); })
     );
+  } else if (input.target_contact) {
+    // No LinkedIn URL - try to discover it, then scrape
+    console.log('[Discovery:v2] No LinkedIn URL provided, attempting to discover for:', input.target_contact);
+    promises.push(
+      (async () => {
+        try {
+          const discoveredUrl = await findLinkedInUrl(
+            input.target_contact,
+            input.target_company,
+            input.target_title
+          );
+          if (discoveredUrl) {
+            console.log('[Discovery:v2] Discovered LinkedIn URL:', discoveredUrl);
+            result.discovered_linkedin_url = discoveredUrl;
+            // Now scrape the discovered profile
+            const [profile, posts] = await Promise.all([
+              researchLinkedInProfile(discoveredUrl, chainAbort.signal).catch(e => {
+                if (!chainAbort.signal.aborted) errors.push(`LinkedIn profile scrape failed: ${e.message}`);
+                return null;
+              }),
+              researchLinkedInPosts(discoveredUrl, chainAbort.signal).catch(e => {
+                if (!chainAbort.signal.aborted) errors.push(`LinkedIn posts scrape failed: ${e.message}`);
+                return null;
+              }),
+            ]);
+            result.linkedin_profile = profile;
+            result.linkedin_posts = posts;
+          } else {
+            console.warn('[Discovery:v2] Could not discover LinkedIn URL for:', input.target_contact);
+            errors.push('LinkedIn URL not provided and could not be discovered');
+          }
+        } catch (e: any) {
+          errors.push(`LinkedIn URL discovery failed: ${e.message}`);
+        }
+      })()
+    );
+  } else {
+    console.warn('[Discovery:v2] No target contact or LinkedIn URL - skipping LinkedIn research');
   }
 
   // Source 4: BrightData Google SERP

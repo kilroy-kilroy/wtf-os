@@ -17,8 +17,10 @@ CONSTRAINTS:
 - Questions should be conversational, not interrogation-style.
 - Every question has a PURPOSE (authority, depth, or guidance). Label them.
 - Hooks are designed to make the prospect lean in, not push back.
-- Competitors are inference-friendly - if none provided, suggest likely ones.
+- Competitors are inference-friendly - if none provided, suggest likely ones based on category.
 - This is not a research report. This is a tactical weapon.
+- NEVER make claims about the REQUESTOR that aren't in their input. Do not fabricate the requestor's experience, geographic reach, or client base. You only know what they sell - that's it.
+- NEVER put words in the requestor's mouth like "I work with X" unless they said it.
 
 REQUIRED OUTPUT STRUCTURE:
 
@@ -133,10 +135,26 @@ CONSTRAINTS:
 - Word target: 2,500-3,500 words. Pro is thorough but not bloated.
 - Questions are conversational, not interrogation-style.
 - Every question has a PURPOSE. Label them.
-- Do NOT fabricate news, funding, or quotes.
+- Do NOT fabricate news, funding, quotes, or relationships. NOTHING MADE UP. EVER.
 - Use 2-3 concrete details from research throughout.
 - If information is unavailable, say so and move on. Never fabricate.
 - CONFIDENCE TAGS: Every factual claim must include a confidence tag at the end: [HIGH - verified from multiple sources], [MEDIUM - single source or inference], or [LOW - educated guess]. Include the source in parentheses. Example: "Revenue is approximately $39M [HIGH (NCUA Call Report)]" or "They're likely evaluating new vendors [MEDIUM (job postings)]"
+
+CRITICAL ANTI-FABRICATION RULES:
+
+- NEVER make claims about the REQUESTOR that aren't in the input. Do not fabricate the requestor's experience, expertise, geographic reach, client base, or capabilities. You only know what they told you about themselves.
+- NEVER put words in the requestor's mouth. The requestor is the person USING this playbook. Don't write "I work with agencies across APAC" unless the requestor literally said that in their input. The requestor's service description is ALL you know about them.
+- NEVER invent competitors. Use ONLY the competitors identified in the research data. If no competitors were found, say "Competitors not identified - research manually" and skip the competitor section.
+- NEVER fabricate LinkedIn activity, blog posts, news, funding rounds, or partnerships.
+- NEVER fabricate website observations. Only reference what's actually in the research data.
+- When research data is thin, the playbook should be SHORTER, not padded with invented context. A shorter honest playbook beats a longer fabricated one.
+
+REQUESTOR vs TARGET - KEEP THEM STRAIGHT:
+
+- The REQUESTOR is the person who will USE this playbook. They are the seller. You know their name, company, and what they sell. That's it. Do not embellish their credentials.
+- The TARGET is the prospect they are selling to. This is the company and person you're researching.
+- The Authority Line and opening should position the REQUESTOR's expertise against the TARGET's reality - but only claim expertise the requestor actually described.
+- Scripts speak TO the target prospect. "You've built..." not "They've built..."
 
 REQUIRED OUTPUT STRUCTURE:
 
@@ -384,6 +402,9 @@ CRITICAL REMINDERS:
 - AVOID questions that are too personal or presumptuous for an intro call
 - When citing news or recent events, include the source where possible
 - Every insight must connect to "so what?" -- no orphan facts
+- USE THE WEBSITE OBSERVATIONS: If research found their blog is dormant, there's no email capture, they're promoting a specific app/product, or any other tactical observation -- these are HIGH VALUE findings. A stale blog, missing email capture, or prominently featured product are all conversation hooks.
+- USE COMPETITOR DATA: If competitors were identified in research, reference them by name. Don't substitute generic category descriptions for specific named companies.
+- NEVER claim the requestor has experience, clients, or geographic presence not stated in their input. The requestor's service description is the ONLY source of truth about the requestor.
 
 GRACEFUL DEGRADATION:
 
@@ -445,6 +466,27 @@ export interface DiscoveryLabPromptParams {
     perplexity_snapshot?: string;
     industry_momentum?: string;
     momentum_read?: string;
+    // Source 1b: Job Postings
+    job_postings?: Array<{ title: string; department: string; signal: string }>;
+    // Source 1c: Company Deep-Dive
+    company_deep_dive?: {
+      summary: string;
+      positioning: string;
+      services: string;
+      key_people: string;
+      website_observations: string;
+      competitors: string;
+    };
+    // Source 1d: Competitor Research
+    competitor_research?: {
+      competitors: Array<{
+        name: string;
+        description: string;
+        why_relevant: string;
+        differentiation: string;
+      }>;
+      market_landscape: string;
+    };
     // Source 2: LinkedIn Profile
     linkedin_profile?: {
       name: string;
@@ -456,6 +498,8 @@ export interface DiscoveryLabPromptParams {
       education: string;
       archetype: string;
     };
+    // Discovered LinkedIn URL (when not provided by user)
+    discovered_linkedin_url?: string;
     // Source 3: LinkedIn Posts
     linkedin_posts?: {
       posts: Array<{ text: string; date: string; likes: number; comments: number }>;
@@ -471,8 +515,6 @@ export interface DiscoveryLabPromptParams {
       target_rank: number | null;
       top_results: Array<{ position: number; title: string; domain: string }>;
     }>;
-    // Source 1b: Job Postings
-    job_postings?: Array<{ title: string; department: string; signal: string }>;
     // Source 5: Website Tech
     website_tech?: {
       platform: string;
@@ -548,10 +590,40 @@ function formatV2Research(data: DiscoveryLabPromptParams['v2_research']): string
     sections.push(parts.join('\n'));
   }
 
+  // Source 1c: Company Deep-Dive
+  if (data.company_deep_dive) {
+    const dd = data.company_deep_dive;
+    const parts: string[] = ['## SOURCE 1C: COMPANY DEEP-DIVE (Perplexity)'];
+    if (dd.summary) parts.push(`\nCompany Summary:\n${dd.summary}`);
+    if (dd.positioning) parts.push(`\nPositioning & Messaging:\n${dd.positioning}`);
+    if (dd.services) parts.push(`\nServices & Offerings:\n${dd.services}`);
+    if (dd.key_people) parts.push(`\nKey People:\n${dd.key_people}`);
+    if (dd.website_observations) parts.push(`\nWebsite Observations (USE THESE - stale blogs, missing email capture, promoted products are high-value hooks):\n${dd.website_observations}`);
+    if (dd.competitors) parts.push(`\nCompetitors Found:\n${dd.competitors}`);
+    sections.push(parts.join('\n'));
+  }
+
+  // Source 1d: Competitor Research
+  if (data.competitor_research) {
+    const cr = data.competitor_research;
+    const parts: string[] = ['## SOURCE 1D: COMPETITOR RESEARCH (Perplexity)'];
+    if (cr.competitors.length > 0) {
+      parts.push('Named competitors (USE THESE in the Competitive Landscape section):');
+      cr.competitors.forEach(c => {
+        parts.push(`- ${c.name}: ${c.description}${c.why_relevant ? ` | Why relevant: ${c.why_relevant}` : ''}${c.differentiation ? ` | Differentiator: ${c.differentiation}` : ''}`);
+      });
+    }
+    if (cr.market_landscape) parts.push(`\nMarket Landscape: ${cr.market_landscape}`);
+    sections.push(parts.join('\n'));
+  }
+
   // Source 2: LinkedIn Profile
   if (data.linkedin_profile) {
     const p = data.linkedin_profile;
     const parts: string[] = ['## SOURCE 2: LINKEDIN PERSONAL PROFILE'];
+    if (data.discovered_linkedin_url) {
+      parts.push(`(LinkedIn URL discovered via search: ${data.discovered_linkedin_url})`);
+    }
     parts.push(`Name: ${p.name}`);
     parts.push(`Headline: ${p.headline}`);
     parts.push(`Current Title: ${p.current_title}`);

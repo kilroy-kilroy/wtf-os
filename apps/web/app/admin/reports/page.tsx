@@ -12,13 +12,17 @@ interface AgencyData {
   name: string;
   url: string | null;
   users: Array<{ id: string; name: string; email: string; role: string }>;
+  isInferred?: boolean;
+  domain?: string;
 }
 
 interface UserData {
   id: string;
   name: string;
   email: string;
+  domain?: string | null;
   agencies: Array<{ id: string; name: string; role: string }>;
+  inferredAgency?: string | null;
   reportCounts: {
     callLabLite: number;
     callLabPro: number;
@@ -83,6 +87,7 @@ interface VisibilityReport {
 
 interface ReportsData {
   agencies: AgencyData[];
+  inferredAgencies?: AgencyData[];
   users: UserData[];
   reports: {
     callLab: CallLabReport[];
@@ -296,36 +301,48 @@ function AgencyView({
     });
   };
 
-  // Build agency data with report counts
+  // Build agency data with report counts (explicit + inferred)
   const agenciesWithCounts = useMemo(() => {
     const userCountsMap = new Map<string, UserData['reportCounts']>();
     for (const u of data.users) {
       userCountsMap.set(u.id, u.reportCounts);
     }
 
-    return data.agencies
-      .map((agency) => {
-        const usersWithCounts = agency.users.map((u) => ({
-          ...u,
-          reportCounts: userCountsMap.get(u.id) || {
-            callLabLite: 0, callLabPro: 0, discoveryLite: 0, discoveryPro: 0, assessments: 0, visibilityLab: 0,
-          },
-        }));
-        const agencyReportCount = usersWithCounts.reduce((sum, u) => sum + totalReports(u.reportCounts), 0);
-        return { ...agency, usersWithCounts, reportCount: agencyReportCount };
-      })
+    const buildAgency = (agency: AgencyData) => {
+      const usersWithCounts = agency.users.map((u) => ({
+        ...u,
+        reportCounts: userCountsMap.get(u.id) || {
+          callLabLite: 0, callLabPro: 0, discoveryLite: 0, discoveryPro: 0, assessments: 0, visibilityLab: 0,
+        },
+      }));
+      const agencyReportCount = usersWithCounts.reduce((sum, u) => sum + totalReports(u.reportCounts), 0);
+      return { ...agency, usersWithCounts, reportCount: agencyReportCount };
+    };
+
+    // Explicit agencies
+    const explicit = data.agencies
+      .map(buildAgency)
       .filter((a) => a.users.length > 0 || a.reportCount > 0);
+
+    // Inferred (domain-based) agencies
+    const inferred = (data.inferredAgencies || [])
+      .map(buildAgency)
+      .filter((a) => a.users.length > 0 || a.reportCount > 0);
+
+    return [...explicit, ...inferred];
   }, [data]);
 
-  // Unassigned users (have reports but no agency)
+  // Truly unassigned users (no explicit agency AND no domain-inferred agency)
   const unassignedUsers = useMemo(() => {
-    const assignedUserIds = new Set(data.agencies.flatMap((a) => a.users.map((u) => u.id)));
+    const allAgencies = [...data.agencies, ...(data.inferredAgencies || [])];
+    const assignedUserIds = new Set(allAgencies.flatMap((a) => a.users.map((u) => u.id)));
     return data.users.filter((u) => !assignedUserIds.has(u.id) && totalReports(u.reportCounts) > 0);
   }, [data]);
 
   const lowerSearch = search.toLowerCase();
   const filteredAgencies = agenciesWithCounts.filter((a) =>
     !search || a.name.toLowerCase().includes(lowerSearch) ||
+    (a.domain && a.domain.toLowerCase().includes(lowerSearch)) ||
     a.usersWithCounts.some((u) =>
       u.name.toLowerCase().includes(lowerSearch) || u.email.toLowerCase().includes(lowerSearch)
     )
@@ -496,6 +513,11 @@ function AgencyView({
                 </span>
               )}
               {editingAgencyId !== agency.id && agency.url && <span className="text-slate-600 text-xs ml-2">{agency.url}</span>}
+              {agency.isInferred && (
+                <span className="text-[10px] text-amber-400/70 bg-amber-400/10 px-1.5 py-0.5 rounded ml-2">
+                  auto-grouped by domain
+                </span>
+              )}
             </div>
             <div className="flex items-center gap-3 text-xs">
               <span className="text-slate-500">
@@ -592,7 +614,8 @@ function UserView({
     !search ||
     u.name.toLowerCase().includes(lowerSearch) ||
     u.email.toLowerCase().includes(lowerSearch) ||
-    u.agencies.some((a) => a.name.toLowerCase().includes(lowerSearch))
+    u.agencies.some((a) => a.name.toLowerCase().includes(lowerSearch)) ||
+    (u.inferredAgency && u.inferredAgency.toLowerCase().includes(lowerSearch))
   );
 
   const getUserReports = (userId: string) => {
@@ -669,13 +692,18 @@ function UserView({
                   <span className="text-white font-semibold truncate">{user.name}</span>
                   <span className="text-slate-600 text-xs truncate">{user.email}</span>
                 </div>
-                {user.agencies.length > 0 && (
+                {(user.agencies.length > 0 || user.inferredAgency) && (
                   <div className="flex gap-1.5 mt-1">
                     {user.agencies.map((a) => (
                       <span key={a.id} className="text-[10px] text-slate-500 bg-slate-800 px-2 py-0.5 rounded">
                         {a.name} ({a.role})
                       </span>
                     ))}
+                    {user.agencies.length === 0 && user.inferredAgency && (
+                      <span className="text-[10px] text-amber-400/70 bg-amber-400/10 px-2 py-0.5 rounded">
+                        {user.inferredAgency} (by domain)
+                      </span>
+                    )}
                   </div>
                 )}
               </div>
@@ -1221,7 +1249,9 @@ export default function AdminReportsPage() {
   if (!data) return null;
 
   // Summary stats
-  const totalAgencies = data.agencies.filter((a) => a.users.length > 0).length;
+  const explicitAgencyCount = data.agencies.filter((a) => a.users.length > 0).length;
+  const inferredAgencyCount = (data.inferredAgencies || []).filter((a) => a.users.length > 0).length;
+  const totalAgencies = explicitAgencyCount + inferredAgencyCount;
   const totalUsers = data.users.length;
   const totalCallLab = data.reports.callLab.length;
   const totalDiscovery = data.reports.discovery.length;

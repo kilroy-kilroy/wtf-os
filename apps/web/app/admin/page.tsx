@@ -60,6 +60,7 @@ interface ClientHealth {
   userId: string;
   name: string;
   email: string;
+  domain: string | null;
   companyName: string | null;
   programName: string;
   programSlug: string;
@@ -72,7 +73,33 @@ interface ClientHealth {
   missedFridays: number;
   documentsShared: number;
   health: 'green' | 'yellow' | 'red';
+  agencyId: string | null;
+  agencyName: string | null;
 }
+
+interface AgencyHealth {
+  key: string;
+  agencyId: string | null;
+  name: string;
+  domain: string | null;
+  health: 'green' | 'yellow' | 'red';
+  userCount: number;
+  totals: {
+    reportsThisMonth: number;
+    fridaySubmissions: number;
+    expectedFridays: number;
+    documentsShared: number;
+  };
+  users: ClientHealth[];
+}
+
+interface HealthResponse {
+  agencies: AgencyHealth[];
+  ungrouped: ClientHealth[];
+  clients: ClientHealth[];
+}
+
+type HealthViewMode = 'agency' | 'individual';
 
 // ============================================
 // COMPONENTS
@@ -263,6 +290,135 @@ function HealthCard({ client }: { client: ClientHealth }) {
   );
 }
 
+function AgencyHealthCard({ agency }: { agency: AgencyHealth }) {
+  const [expanded, setExpanded] = useState(false);
+  const colors = HEALTH_COLORS[agency.health];
+
+  return (
+    <div className={`bg-slate-800/50 border ${colors.border} rounded-xl overflow-hidden`}>
+      {/* Agency header - clickable */}
+      <div
+        className="p-5 cursor-pointer hover:bg-slate-700/20 transition-colors relative"
+        onClick={() => setExpanded(!expanded)}
+      >
+        {/* Health dot */}
+        <div className="absolute top-4 right-4 flex items-center gap-2">
+          <span className={`inline-block w-3 h-3 rounded-full ${colors.dot}`} />
+        </div>
+
+        {/* Agency name */}
+        <h3 className="text-sm font-bold text-white pr-10 truncate">
+          {agency.name}
+        </h3>
+        {agency.domain && (
+          <p className="text-xs text-slate-500 mt-0.5">{agency.domain}</p>
+        )}
+        <div className="flex items-center gap-3 mt-1.5">
+          <span className="text-xs text-slate-400">
+            <span className="text-white font-medium">{agency.userCount}</span> {agency.userCount === 1 ? 'user' : 'users'}
+          </span>
+          {!agency.agencyId && (
+            <span className="text-[10px] text-amber-400/70 bg-amber-400/10 px-1.5 py-0.5 rounded">
+              auto-grouped by domain
+            </span>
+          )}
+        </div>
+
+        {/* Aggregate metrics */}
+        <div className="grid grid-cols-4 gap-2 mt-4">
+          <div className="bg-slate-700/30 rounded-lg px-2 py-1.5 text-center">
+            <p className="text-[9px] text-slate-500 uppercase tracking-wider">Reports</p>
+            <p className="text-sm font-semibold text-white">{agency.totals.reportsThisMonth}</p>
+          </div>
+          <div className="bg-slate-700/30 rounded-lg px-2 py-1.5 text-center">
+            <p className="text-[9px] text-slate-500 uppercase tracking-wider">Fridays</p>
+            <p className="text-sm font-semibold text-white">
+              {agency.totals.fridaySubmissions}/{agency.totals.expectedFridays}
+            </p>
+          </div>
+          <div className="bg-slate-700/30 rounded-lg px-2 py-1.5 text-center">
+            <p className="text-[9px] text-slate-500 uppercase tracking-wider">Docs</p>
+            <p className="text-sm font-semibold text-white">{agency.totals.documentsShared}</p>
+          </div>
+          <div className="bg-slate-700/30 rounded-lg px-2 py-1.5 text-center">
+            <p className="text-[9px] text-slate-500 uppercase tracking-wider">Health</p>
+            <div className="flex justify-center gap-1 mt-0.5">
+              {agency.users.map((u) => (
+                <span
+                  key={u.enrollmentId}
+                  className={`inline-block w-2 h-2 rounded-full ${HEALTH_COLORS[u.health].dot}`}
+                  title={`${u.name}: ${u.health}`}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Expand indicator */}
+        <div className="flex items-center justify-center mt-3">
+          <svg
+            className={`w-4 h-4 text-slate-500 transition-transform ${expanded ? 'rotate-180' : ''}`}
+            fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+          </svg>
+        </div>
+      </div>
+
+      {/* Expanded: show individual users */}
+      {expanded && (
+        <div className="border-t border-slate-700/30">
+          {agency.users.map((user) => {
+            const uColors = HEALTH_COLORS[user.health];
+            return (
+              <div key={user.enrollmentId} className="px-5 py-3 border-b border-slate-700/20 last:border-0">
+                <div className="flex items-start gap-3">
+                  <span className={`inline-block w-2 h-2 rounded-full mt-1.5 shrink-0 ${uColors.dot}`} />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-white font-medium truncate">{user.name}</span>
+                      <span className="text-xs text-slate-600 truncate">{user.email}</span>
+                    </div>
+                    <p className="text-[11px] text-[#00D4FF] font-medium mt-0.5">{user.programName}</p>
+                    <div className="flex gap-4 mt-2 text-xs text-slate-400">
+                      <span>
+                        Login: {user.daysSinceLogin === null ? <span className="text-red-400">Never</span> : user.daysSinceLogin === 0 ? 'Today' : `${user.daysSinceLogin}d ago`}
+                      </span>
+                      <span>Reports: <span className="text-white">{user.reportsThisMonth}</span></span>
+                      <span>Fridays: <span className="text-white">{user.fridaySubmissions}/{user.expectedFridays}</span></span>
+                      <span>Docs: <span className="text-white">{user.documentsShared}</span></span>
+                    </div>
+                    <div className="flex gap-3 mt-2">
+                      <Link
+                        href={`/admin/reports?client=${user.userId}`}
+                        className="text-[11px] text-[#00D4FF] hover:text-white transition-colors font-medium"
+                      >
+                        Reports
+                      </Link>
+                      <Link
+                        href={`/admin/clients?enrollment=${user.enrollmentId}`}
+                        className="text-[11px] text-[#00D4FF] hover:text-white transition-colors font-medium"
+                      >
+                        Documents
+                      </Link>
+                      <Link
+                        href={`/admin/five-minute-friday?enrollment=${user.enrollmentId}`}
+                        className="text-[11px] text-[#00D4FF] hover:text-white transition-colors font-medium"
+                      >
+                        Fridays
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function formatTimeAgo(dateStr: string): string {
   if (!dateStr) return '-';
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -318,8 +474,11 @@ export default function AdminDashboardPage() {
   const [activeTab, setActiveTab] = useState<'overview' | 'reports' | 'users'>('overview');
 
   // Client health state
+  const [healthAgencies, setHealthAgencies] = useState<AgencyHealth[]>([]);
+  const [healthUngrouped, setHealthUngrouped] = useState<ClientHealth[]>([]);
   const [healthData, setHealthData] = useState<ClientHealth[]>([]);
   const [healthLoading, setHealthLoading] = useState(false);
+  const [healthView, setHealthView] = useState<HealthViewMode>('agency');
 
   // User management state
   const [userSearch, setUserSearch] = useState('');
@@ -363,7 +522,9 @@ export default function AdminDashboardPage() {
         headers: { Authorization: `Bearer ${key}` },
       });
       if (res.ok) {
-        const json = await res.json();
+        const json: HealthResponse = await res.json();
+        setHealthAgencies(json.agencies || []);
+        setHealthUngrouped(json.ungrouped || []);
         setHealthData(json.clients || []);
       }
     } catch {
@@ -502,10 +663,31 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Client Health Cards */}
-      {healthData.length > 0 && (
+      {(healthAgencies.length > 0 || healthUngrouped.length > 0 || healthData.length > 0) && (
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-bold text-white">Client Health</h2>
+            <div className="flex items-center gap-4">
+              <h2 className="text-lg font-bold text-white">Client Health</h2>
+              {/* View toggle */}
+              <div className="flex gap-1 bg-slate-800/50 rounded-lg p-0.5">
+                <button
+                  onClick={() => setHealthView('agency')}
+                  className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
+                    healthView === 'agency' ? 'bg-[#00D4FF] text-slate-900' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  By Agency
+                </button>
+                <button
+                  onClick={() => setHealthView('individual')}
+                  className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
+                    healthView === 'individual' ? 'bg-[#00D4FF] text-slate-900' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  By Individual
+                </button>
+              </div>
+            </div>
             <div className="flex items-center gap-4 text-xs text-slate-500">
               <span className="flex items-center gap-1.5">
                 <span className="inline-block w-2 h-2 rounded-full bg-red-400" /> Needs Attention
@@ -518,14 +700,49 @@ export default function AdminDashboardPage() {
               </span>
             </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {healthData.map((client) => (
-              <HealthCard key={client.enrollmentId} client={client} />
-            ))}
-          </div>
+
+          {healthView === 'agency' ? (
+            <>
+              {/* Agency-grouped view */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {healthAgencies.map((agency) => (
+                  <AgencyHealthCard key={agency.key} agency={agency} />
+                ))}
+              </div>
+
+              {/* Ungrouped individuals (free email domains) */}
+              {healthUngrouped.length > 0 && (
+                <div className="mt-6">
+                  <h3 className="text-sm font-medium text-slate-400 mb-3">
+                    Individual Users <span className="text-slate-600">(no agency domain)</span>
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {healthUngrouped.map((client) => (
+                      <HealthCard key={client.enrollmentId} client={client} />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {healthAgencies.length === 0 && healthUngrouped.length === 0 && healthData.length > 0 && (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {healthData.map((client) => (
+                    <HealthCard key={client.enrollmentId} client={client} />
+                  ))}
+                </div>
+              )}
+            </>
+          ) : (
+            /* Individual view - flat list like before */
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {healthData.map((client) => (
+                <HealthCard key={client.enrollmentId} client={client} />
+              ))}
+            </div>
+          )}
         </div>
       )}
-      {healthLoading && healthData.length === 0 && (
+      {healthLoading && healthAgencies.length === 0 && healthData.length === 0 && (
         <div className="mb-8 flex items-center gap-3 text-sm text-slate-500">
           <div className="w-5 h-5 border-2 border-slate-700 border-t-[#00D4FF] rounded-full animate-spin" />
           Loading client health data...

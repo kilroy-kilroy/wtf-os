@@ -1,10 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@repo/db/client';
 
+// Free email providers — users with these domains won't be auto-grouped
+const FREE_EMAIL_DOMAINS = new Set([
+  'gmail.com', 'googlemail.com', 'yahoo.com', 'yahoo.co.uk', 'hotmail.com',
+  'outlook.com', 'live.com', 'msn.com', 'aol.com', 'icloud.com', 'me.com',
+  'mac.com', 'mail.com', 'protonmail.com', 'proton.me', 'zoho.com',
+  'ymail.com', 'comcast.net', 'verizon.net', 'att.net', 'sbcglobal.net',
+  'cox.net', 'charter.net', 'earthlink.net', 'juno.com', 'optonline.net',
+  'frontier.com', 'windstream.net', 'roadrunner.com',
+]);
+
+function extractDomain(email: string): string | null {
+  const parts = email.split('@');
+  if (parts.length !== 2) return null;
+  const domain = parts[1].toLowerCase().trim();
+  if (FREE_EMAIL_DOMAINS.has(domain)) return null;
+  return domain;
+}
+
+function domainToAgencyName(domain: string): string {
+  const name = domain.replace(/\.(com|net|org|io|co|agency|digital|media|studio|group|consulting|marketing)$/i, '');
+  return name
+    .split(/[-_.]/)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+}
+
 /**
  * Admin Client Reports API
  *
  * Returns agencies, users, and all reports for the admin reports page.
+ * Now includes domain-inferred agencies for unassigned users.
  * Auth: ADMIN_API_KEY bearer token
  *
  * GET /api/admin/client-reports
@@ -83,7 +110,7 @@ export async function GET(request: NextRequest) {
       agencyMap.set(a.id, a);
     }
 
-    // User → agencies and Agency → users
+    // User → agencies and Agency → users (explicit assignments)
     const userAgencies = new Map<string, Array<{ id: string; name: string; role: string }>>();
     const agencyUsers = new Map<string, Array<{ id: string; name: string; email: string; role: string }>>();
 
@@ -158,9 +185,58 @@ export async function GET(request: NextRequest) {
 
     const getAgencyNameForUser = (userId: string | null) => {
       if (!userId) return null;
-      const agencies = userAgencies.get(userId);
-      return agencies?.[0]?.name || null;
+      // Check explicit assignment first
+      const explicitAgencies = userAgencies.get(userId);
+      if (explicitAgencies?.[0]?.name) return explicitAgencies[0].name;
+      // Fall back to domain-based inference
+      const email = getUserEmail(userId);
+      if (email) {
+        const domain = extractDomain(email);
+        if (domain) return domainToAgencyName(domain);
+      }
+      return null;
     };
+
+    // Build domain-inferred agencies for unassigned users
+    const assignedUserIds = new Set(assignments.map((a: any) => a.user_id));
+    const domainAgencies = new Map<string, {
+      id: string;
+      name: string;
+      domain: string;
+      url: string | null;
+      users: Array<{ id: string; name: string; email: string; role: string }>;
+      isInferred: boolean;
+    }>();
+
+    // Group unassigned users by email domain
+    for (const u of users) {
+      if (assignedUserIds.has(u.id)) continue;
+      // Only include users who have reports or are otherwise active
+      if (!userReportCounts.has(u.id)) continue;
+
+      const domain = extractDomain(u.email);
+      if (!domain) continue;
+
+      if (!domainAgencies.has(domain)) {
+        domainAgencies.set(domain, {
+          id: `domain:${domain}`,
+          name: domainToAgencyName(domain),
+          domain,
+          url: domain,
+          users: [],
+          isInferred: true,
+        });
+      }
+      domainAgencies.get(domain)!.users.push({
+        id: u.id,
+        name: [u.first_name, u.last_name].filter(Boolean).join(' ') || u.email,
+        email: u.email,
+        role: 'member',
+      });
+    }
+
+    // Only include domain agencies with 1+ users (they all have reports by filter above)
+    const inferredAgencies = Array.from(domainAgencies.values()).filter((a) => a.users.length > 0);
 
     // Build response
     const response = {
@@ -169,17 +245,33 @@ export async function GET(request: NextRequest) {
         name: a.name,
         url: a.url,
         users: agencyUsers.get(a.id) || [],
+        isInferred: false,
+      })),
+
+      // Add domain-inferred agencies
+      inferredAgencies: inferredAgencies.map((a) => ({
+        id: a.id,
+        name: a.name,
+        domain: a.domain,
+        url: a.url,
+        users: a.users,
+        isInferred: true,
       })),
 
       users: users
         .filter((u: any) => userReportCounts.has(u.id) || userAgencies.has(u.id))
-        .map((u: any) => ({
-          id: u.id,
-          name: [u.first_name, u.last_name].filter(Boolean).join(' ') || u.email,
-          email: u.email,
-          agencies: userAgencies.get(u.id) || [],
-          reportCounts: userReportCounts.get(u.id) || initCounts(),
-        })),
+        .map((u: any) => {
+          const domain = extractDomain(u.email);
+          return {
+            id: u.id,
+            name: [u.first_name, u.last_name].filter(Boolean).join(' ') || u.email,
+            email: u.email,
+            domain,
+            agencies: userAgencies.get(u.id) || [],
+            inferredAgency: domain && !userAgencies.has(u.id) ? domainToAgencyName(domain) : null,
+            reportCounts: userReportCounts.get(u.id) || initCounts(),
+          };
+        }),
 
       reports: {
         callLab: callLabReports.map((r: any) => ({

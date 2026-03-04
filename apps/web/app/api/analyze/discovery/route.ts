@@ -108,12 +108,15 @@ export async function POST(request: NextRequest) {
 
       console.log('V2 research results:', {
         hasPerplexity: !!v2Research.perplexity,
+        hasCompanyDeepDive: !!v2Research.company_deep_dive,
+        hasCompetitorResearch: !!v2Research.competitor_research,
         hasLinkedInProfile: !!v2Research.linkedin_profile,
         hasLinkedInPosts: !!v2Research.linkedin_posts,
         hasSerp: !!v2Research.google_serp,
         hasWebsiteTech: !!v2Research.website_tech,
         hasApolloCompany: !!v2Research.apollo_company,
         hasApolloContact: !!v2Research.apollo_contact,
+        discoveredLinkedInUrl: v2Research.discovered_linkedin_url,
         errors: v2Research.errors,
       });
     } else {
@@ -203,6 +206,22 @@ export async function POST(request: NextRequest) {
             industry_momentum: v2Research.perplexity?.industry_momentum,
             momentum_read: v2Research.perplexity?.momentum_read,
             job_postings: v2Research.job_postings || undefined,
+            company_deep_dive: v2Research.company_deep_dive
+              ? {
+                  summary: v2Research.company_deep_dive.summary,
+                  positioning: v2Research.company_deep_dive.positioning,
+                  services: v2Research.company_deep_dive.services,
+                  key_people: v2Research.company_deep_dive.key_people,
+                  website_observations: v2Research.company_deep_dive.website_observations,
+                  competitors: v2Research.company_deep_dive.competitors,
+                }
+              : undefined,
+            competitor_research: v2Research.competitor_research
+              ? {
+                  competitors: v2Research.competitor_research.competitors,
+                  market_landscape: v2Research.competitor_research.market_landscape,
+                }
+              : undefined,
             linkedin_profile: v2Research.linkedin_profile
               ? {
                   name: v2Research.linkedin_profile.name,
@@ -215,6 +234,7 @@ export async function POST(request: NextRequest) {
                   archetype: v2Research.linkedin_profile.archetype,
                 }
               : undefined,
+            discovered_linkedin_url: v2Research.discovered_linkedin_url || undefined,
             linkedin_posts: v2Research.linkedin_posts
               ? {
                   posts: v2Research.linkedin_posts.posts.map(p => ({

@@ -8,7 +8,7 @@ export async function createCallScore(
     agency_id: string;
     user_id?: string;
     deal_id?: string;
-    version: 'lite' | 'full';
+    version: 'lite' | 'full' | 'pro';
     overall_score: number;
     overall_grade: string;
     lite_scores?: Record<string, any>;

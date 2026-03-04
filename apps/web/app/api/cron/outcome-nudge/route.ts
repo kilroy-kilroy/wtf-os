@@ -33,21 +33,11 @@ export async function GET(request: NextRequest) {
     // Also check that we haven't nudged them in the last 2 days
     const twoDaysAgo = subDays(now, 2).toISOString();
 
+    // Fetch calls without outcomes in the nudge window
+    // Note: no FK from call_lab_reports to users, so we fetch users separately via auth.users
     const { data: callsToNudge, error: fetchError } = await supabase
       .from('call_lab_reports')
-      .select(`
-        id,
-        user_id,
-        buyer_name,
-        company_name,
-        call_date,
-        created_at,
-        last_nudge_at,
-        users!inner (
-          email,
-          first_name
-        )
-      `)
+      .select('id, user_id, buyer_name, company_name, call_date, created_at, last_nudge_at')
       .or('outcome.is.null,outcome.eq.unknown')
       .gte('created_at', nudgeStart)
       .lte('created_at', nudgeEnd)
@@ -63,6 +53,22 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: true, nudged: 0 });
     }
 
+    // Batch-fetch user details from auth.users for all unique user_ids
+    const userIds = [...new Set(callsToNudge.map(c => c.user_id).filter(Boolean))];
+    const userMap = new Map<string, { email: string; first_name: string }>();
+
+    if (userIds.length > 0) {
+      const { data: { users: authUsers } } = await supabase.auth.admin.listUsers();
+      for (const u of authUsers || []) {
+        if (userIds.includes(u.id)) {
+          userMap.set(u.id, {
+            email: u.email || '',
+            first_name: u.user_metadata?.first_name || '',
+          });
+        }
+      }
+    }
+
     const results = {
       nudged: 0,
       failed: 0,
@@ -71,9 +77,7 @@ export async function GET(request: NextRequest) {
 
     for (const call of callsToNudge) {
       try {
-        // Supabase returns users as an array when using joins
-        const usersData = call.users as unknown as { email: string; first_name: string }[];
-        const user = Array.isArray(usersData) ? usersData[0] : usersData;
+        const user = userMap.get(call.user_id);
 
         if (!user?.email) {
           console.error(`No user email for call ${call.id}`);

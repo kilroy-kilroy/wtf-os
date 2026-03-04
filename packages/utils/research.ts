@@ -710,6 +710,153 @@ function formatEmployeeCount(count: number): string {
   return '5000+ employees';
 }
 
+// ============================================================================
+// INSTANTLY.AI API - Contact Enrichment via SuperSearch
+// ============================================================================
+
+/**
+ * Enrich contact data using Instantly.ai SuperSearch API
+ * Searches 450M+ contact database by name + domain, returns enriched profile
+ * with waterfall email finding from 5+ providers
+ */
+export async function enrichContactWithInstantly(
+  contactName: string,
+  companyDomain: string
+): Promise<ApolloContactData | null> {
+  const apiKey = process.env.INSTANTLY_API_KEY;
+  if (!apiKey) {
+    console.warn('INSTANTLY_API_KEY not set, skipping Instantly enrichment');
+    return null;
+  }
+
+  try {
+    const nameParts = contactName.trim().split(/\s+/);
+    const searchName = contactName.trim();
+
+    const listName = `discovery-enrichment-${Date.now()}`;
+    console.log(`[Instantly] Searching for: ${searchName} at ${companyDomain}`);
+
+    const searchResponse = await fetch(
+      'https://api.instantly.ai/api/v2/supersearch-enrichment/enrich-leads-from-supersearch',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          search_filters: {
+            name: [searchName],
+            domains: [companyDomain],
+          },
+          work_email_enrichment: true,
+          fully_enriched_profile: true,
+          limit: 1,
+          skip_rows_without_email: false,
+          list_name: listName,
+        }),
+      }
+    );
+
+    if (!searchResponse.ok) {
+      const errorText = await searchResponse.text();
+      console.error(`[Instantly] SuperSearch error: ${searchResponse.status} - ${errorText}`);
+      return null;
+    }
+
+    const searchResult = await searchResponse.json();
+    console.log('[Instantly] SuperSearch result:', JSON.stringify(searchResult).substring(0, 500));
+
+    const resourceId = searchResult.resource_id || searchResult.list_id || searchResult.id;
+    const leadsAdded = searchResult.leads_added || searchResult.total || 0;
+
+    if (!leadsAdded || leadsAdded === 0) {
+      console.warn(`[Instantly] No leads found for ${searchName} at ${companyDomain}`);
+      return null;
+    }
+
+    // Wait briefly for enrichment to complete
+    await new Promise(resolve => setTimeout(resolve, 3000));
+
+    let leadData: any = null;
+
+    if (resourceId) {
+      const leadsResponse = await fetch(
+        `https://api.instantly.ai/api/v2/leads?list_id=${resourceId}&limit=1`,
+        {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+          },
+        }
+      );
+
+      if (leadsResponse.ok) {
+        const leadsResult = await leadsResponse.json();
+        console.log('[Instantly] Leads fetch result:', JSON.stringify(leadsResult).substring(0, 500));
+        const leads = leadsResult.items || leadsResult.leads || leadsResult;
+        leadData = Array.isArray(leads) ? leads[0] : leads;
+      } else {
+        console.error(`[Instantly] Leads fetch error: ${leadsResponse.status} - ${await leadsResponse.text()}`);
+      }
+    }
+
+    if (!leadData && searchResult.leads) {
+      leadData = Array.isArray(searchResult.leads) ? searchResult.leads[0] : searchResult.leads;
+    }
+
+    if (!leadData) {
+      console.warn('[Instantly] Could not retrieve lead data after enrichment');
+      return null;
+    }
+
+    return mapInstantlyLeadToContact(leadData, nameParts);
+  } catch (error) {
+    console.error('[Instantly] Contact enrichment error:', error);
+    return null;
+  }
+}
+
+function mapInstantlyLeadToContact(lead: any, nameParts: string[]): ApolloContactData {
+  return {
+    first_name: lead.first_name || lead.firstName || nameParts[0] || '',
+    last_name: lead.last_name || lead.lastName || nameParts.slice(1).join(' ') || '',
+    name: lead.name || lead.full_name || `${lead.first_name || nameParts[0] || ''} ${lead.last_name || nameParts.slice(1).join(' ') || ''}`.trim(),
+    title: lead.title || lead.job_title || lead.position || '',
+    email: lead.email || lead.work_email || '',
+    linkedin_url: lead.linkedin_url || lead.linkedin || lead.li_url || '',
+    headline: lead.headline || lead.title || lead.job_title || '',
+    employment_history: parseInstantlyEmploymentHistory(lead),
+    seniority: lead.seniority || lead.level || '',
+    departments: lead.department ? [lead.department] : lead.departments || [],
+    raw_data: lead,
+  };
+}
+
+function parseInstantlyEmploymentHistory(lead: any): ApolloContactData['employment_history'] {
+  if (lead.employment_history && Array.isArray(lead.employment_history)) {
+    return lead.employment_history.map((job: any) => ({
+      title: job.title || '',
+      organization_name: job.organization_name || job.company || '',
+      start_date: job.start_date || '',
+      end_date: job.end_date || null,
+      current: job.current || false,
+    }));
+  }
+
+  if (lead.title || lead.job_title) {
+    return [{
+      title: lead.title || lead.job_title || '',
+      organization_name: lead.company_name || lead.company || '',
+      start_date: '',
+      end_date: null,
+      current: true,
+    }];
+  }
+
+  return [];
+}
+
 /**
  * Fetch job posting signals using Perplexity (real-time search)
  * Returns open roles that signal priorities, gaps, or budget allocation
@@ -2060,21 +2207,13 @@ export async function runV2DiscoveryResearch(input: V2ResearchInput): Promise<V2
     );
   }
 
-  // Apollo company enrichment
-  if (domain) {
-    promises.push(
-      enrichCompanyWithApollo(domain)
-        .then(r => { result.apollo_company = r; })
-        .catch(e => { errors.push(`Apollo company failed: ${e.message}`); })
-    );
-  }
-
-  // Apollo contact enrichment
+  // Contact enrichment via Instantly.ai (replaces Apollo)
+  // Note: Apollo company enrichment removed — Perplexity covers company intel
   if (input.target_contact && domain) {
     promises.push(
-      enrichContactWithApollo(input.target_contact, domain)
+      enrichContactWithInstantly(input.target_contact, domain)
         .then(r => { result.apollo_contact = r; })
-        .catch(e => { errors.push(`Apollo contact failed: ${e.message}`); })
+        .catch(e => { errors.push(`Instantly contact enrichment failed: ${e.message}`); })
     );
   }
 

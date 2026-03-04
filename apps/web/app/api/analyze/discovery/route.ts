@@ -5,8 +5,7 @@ import { createServerClient } from '@repo/db/client';
 import {
   runModel,
   retryWithBackoff,
-  enrichCompanyWithApollo,
-  enrichContactWithApollo,
+  enrichContactWithInstantly,
   fetchCompanyNews,
   runV2DiscoveryResearch,
   type V2ResearchResult,
@@ -69,10 +68,10 @@ export async function POST(request: NextRequest) {
     }
 
     // For Pro v2: run 5-source research chain
-    // For Lite: run lightweight enrichment (Apollo + Perplexity news)
+    // For Lite: run lightweight enrichment (Instantly contact + Perplexity news)
     let v2Research: V2ResearchResult | null = null;
-    let apolloCompany: Awaited<ReturnType<typeof enrichCompanyWithApollo>> = null;
-    let apolloContact: Awaited<ReturnType<typeof enrichContactWithApollo>> = null;
+    let apolloCompany: V2ResearchResult['apollo_company'] = null;
+    let apolloContact: V2ResearchResult['apollo_contact'] = null;
     let newsData: Awaited<ReturnType<typeof fetchCompanyNews>> = { recent_news: [], funding_info: null, raw_response: '' };
 
     if (version === 'pro') {
@@ -114,8 +113,7 @@ export async function POST(request: NextRequest) {
         hasLinkedInPosts: !!v2Research.linkedin_posts,
         hasSerp: !!v2Research.google_serp,
         hasWebsiteTech: !!v2Research.website_tech,
-        hasApolloCompany: !!v2Research.apollo_company,
-        hasApolloContact: !!v2Research.apollo_contact,
+        hasInstantlyContact: !!v2Research.apollo_contact,
         discoveredLinkedInUrl: v2Research.discovered_linkedin_url,
         errors: v2Research.errors,
       });
@@ -123,15 +121,9 @@ export async function POST(request: NextRequest) {
       // Lite: lightweight enrichment
       console.log('Fetching enriched data for:', { target_company, domain, target_contact_name });
       const results = await Promise.all([
-        domain
-          ? enrichCompanyWithApollo(domain).catch((e) => {
-              console.warn('Apollo company enrichment failed:', e.message);
-              return null;
-            })
-          : Promise.resolve(null),
         domain && target_contact_name
-          ? enrichContactWithApollo(target_contact_name, domain).catch((e) => {
-              console.warn('Apollo contact enrichment failed:', e.message);
+          ? enrichContactWithInstantly(target_contact_name, domain).catch((e) => {
+              console.warn('Instantly contact enrichment failed:', e.message);
               return null;
             })
           : Promise.resolve(null),
@@ -140,13 +132,11 @@ export async function POST(request: NextRequest) {
           return { recent_news: [] as any[], funding_info: null, raw_response: '' };
         }),
       ]);
-      apolloCompany = results[0];
-      apolloContact = results[1];
-      newsData = results[2];
+      apolloContact = results[0];
+      newsData = results[1];
 
       console.log('Enrichment results:', {
-        hasApolloCompany: !!apolloCompany,
-        hasApolloContact: !!apolloContact,
+        hasInstantlyContact: !!apolloContact,
         newsCount: newsData.recent_news.length,
         hasFunding: !!newsData.funding_info,
       });

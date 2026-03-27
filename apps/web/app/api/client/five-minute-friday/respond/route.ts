@@ -1,15 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabase-server';
+import { createClient } from '@/lib/supabase-auth-server';
 import { sendEvent } from '@/lib/loops';
 
 // Admin-only endpoint for responding to 5-Minute Fridays
 export async function POST(request: NextRequest) {
   try {
-    // Verify admin API key
-    const authHeader = request.headers.get('authorization');
-    const apiKey = authHeader?.replace('Bearer ', '');
-    if (apiKey !== process.env.ADMIN_API_KEY) {
+    // Session-based admin auth check
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { data: userData } = await supabase
+      .from('users')
+      .select('is_admin')
+      .eq('id', user.id)
+      .single();
+
+    if (!userData?.is_admin) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const { friday_id, response_text, responder_id } = await request.json();
@@ -18,10 +30,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'friday_id and response_text are required' }, { status: 400 });
     }
 
-    const supabase = getSupabaseServerClient();
+    // Use service role client for data queries
+    const serviceClient = getSupabaseServerClient();
 
     // Get the friday submission with user info
-    const { data: friday } = await supabase
+    const { data: friday } = await serviceClient
       .from('five_minute_fridays')
       .select('id, user_id, week_of')
       .eq('id', friday_id)
@@ -32,11 +45,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Get user email for notification
-    const { data: userData } = await supabase.auth.admin.getUserById(friday.user_id);
-    const userEmail = userData?.user?.email;
+    const { data: userInfo } = await serviceClient.auth.admin.getUserById(friday.user_id);
+    const userEmail = userInfo?.user?.email;
 
     // Insert response
-    const { data: response, error } = await supabase
+    const { data: response, error } = await serviceClient
       .from('five_minute_friday_responses')
       .insert({
         friday_id,
@@ -64,7 +77,7 @@ export async function POST(request: NextRequest) {
       });
 
       // Mark email as sent
-      await supabase
+      await serviceClient
         .from('five_minute_friday_responses')
         .update({ email_sent: true, email_sent_at: new Date().toISOString() })
         .eq('id', response.id);

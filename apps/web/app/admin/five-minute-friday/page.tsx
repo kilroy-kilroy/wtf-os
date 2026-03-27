@@ -19,8 +19,6 @@ interface FridaySubmission {
 }
 
 export default function AdminFiveMinuteFridayPage() {
-  const [apiKey, setApiKey] = useState('');
-  const [authed, setAuthed] = useState(false);
   const [fridays, setFridays] = useState<FridaySubmission[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedFriday, setSelectedFriday] = useState<FridaySubmission | null>(null);
@@ -29,20 +27,13 @@ export default function AdminFiveMinuteFridayPage() {
   const [filter, setFilter] = useState<'all' | 'needs_response'>('needs_response');
 
   useEffect(() => {
-    const stored = sessionStorage.getItem('admin_api_key');
-    if (stored) {
-      setApiKey(stored);
-      setAuthed(true);
-      loadFridays(stored);
-    }
+    loadFridays();
   }, []);
 
-  async function loadFridays(key: string) {
+  async function loadFridays() {
     setLoading(true);
     try {
-      const res = await fetch('/api/admin/five-minute-friday', {
-        headers: { Authorization: `Bearer ${key}` },
-      });
+      const res = await fetch('/api/admin/five-minute-friday');
       if (res.ok) {
         const data = await res.json();
         setFridays(data.fridays || []);
@@ -51,13 +42,6 @@ export default function AdminFiveMinuteFridayPage() {
       console.error(err);
     }
     setLoading(false);
-  }
-
-  function handleAuth(e: React.FormEvent) {
-    e.preventDefault();
-    sessionStorage.setItem('admin_api_key', apiKey);
-    setAuthed(true);
-    loadFridays(apiKey);
   }
 
   async function handleRespond(e: React.FormEvent) {
@@ -70,7 +54,6 @@ export default function AdminFiveMinuteFridayPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
           friday_id: selectedFriday.id,
@@ -81,7 +64,7 @@ export default function AdminFiveMinuteFridayPage() {
       if (res.ok) {
         setResponseText('');
         setSelectedFriday(null);
-        loadFridays(apiKey);
+        loadFridays();
       } else {
         const err = await res.json();
         alert(err.error || 'Failed to send response');
@@ -95,20 +78,6 @@ export default function AdminFiveMinuteFridayPage() {
   const filtered = filter === 'needs_response'
     ? fridays.filter(f => !f.has_response)
     : fridays;
-
-  if (!authed) {
-    return (
-      <div className="min-h-screen bg-black text-white flex items-center justify-center p-6">
-        <form onSubmit={handleAuth} className="max-w-md w-full space-y-4">
-          <h1 className="text-2xl font-anton uppercase text-[#E51B23]">Admin: 5-Minute Friday</h1>
-          <input type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)}
-            placeholder="Admin API Key"
-            className="w-full bg-black border border-[#333333] text-white px-4 py-3 focus:border-[#E51B23] focus:outline-none" />
-          <button type="submit" className="w-full bg-[#E51B23] text-white py-3 font-anton uppercase">Access</button>
-        </form>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-black text-white p-6 md:p-8">

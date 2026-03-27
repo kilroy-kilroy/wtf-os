@@ -59,11 +59,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to create invite', message: error.message }, { status: 500 });
     }
 
-    // Create user account with temp password
-    const tempPassword = `Welcome${Date.now().toString(36)}!`;
+    // Create user without password — they'll use magic links
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email: email.toLowerCase(),
-      password: tempPassword,
       email_confirm: true,
       user_metadata: {
         full_name: full_name || '',
@@ -94,17 +92,24 @@ export async function POST(request: NextRequest) {
         .eq('id', invite.id);
     }
 
-    // Send invite email via Loops
+    // Generate magic link and send via Loops
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.timkilroy.com';
-    const firstName = full_name?.split(' ')[0] || '';
+    const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
+      type: 'magiclink',
+      email: email.toLowerCase(),
+      options: {
+        redirectTo: `${appUrl}/client/onboarding`,
+      },
+    });
 
-    await onClientInvited(
-      email.toLowerCase(),
-      firstName,
-      program.name,
-      `${appUrl}/client/login`,
-      tempPassword
-    );
+    if (linkError) {
+      console.error('Failed to generate magic link:', linkError);
+    }
+
+    const magicLink = linkData?.properties?.action_link || `${appUrl}/client/login`;
+    const firstName = (full_name || '').split(' ')[0] || '';
+
+    await onClientInvited(email, firstName, program.name, magicLink);
 
     return NextResponse.json({
       success: true,

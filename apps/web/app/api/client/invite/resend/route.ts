@@ -3,7 +3,7 @@ import { getSupabaseServerClient } from '@/lib/supabase-server';
 import { onClientInvited } from '@/lib/loops';
 
 // Admin-only: Resend invite email for an existing enrollment
-// Does NOT create a new account or password — resets password and re-triggers Loops event
+// Generates a new magic link and re-triggers Loops event
 export async function POST(request: NextRequest) {
   try {
     const authHeader = request.headers.get('authorization');
@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
     // Look up enrollment with user and program info
     const { data: enrollment } = await supabase
       .from('client_enrollments')
-      .select('id, user_id, program:client_programs(name, slug)')
+      .select('id, user_id, onboarding_completed, program:client_programs(name, slug)')
       .eq('id', enrollment_id)
       .single();
 
@@ -38,32 +38,32 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // Generate new temp password and update the user's account
-    const tempPassword = `Welcome${Date.now().toString(36)}!`;
-    const { error: updateError } = await supabase.auth.admin.updateUserById(enrollment.user_id, {
-      password: tempPassword,
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.timkilroy.com';
+    const redirectTo = enrollment.onboarding_completed
+      ? `${appUrl}/client/dashboard`
+      : `${appUrl}/client/onboarding`;
+
+    const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
+      type: 'magiclink',
+      email: user.email!,
+      options: { redirectTo },
     });
 
-    if (updateError) {
-      return NextResponse.json({ error: 'Failed to reset password', message: updateError.message }, { status: 500 });
+    if (linkError) {
+      return NextResponse.json({ error: 'Failed to generate magic link' }, { status: 500 });
     }
 
+    const magicLink = linkData?.properties?.action_link || `${appUrl}/client/login`;
+
     // Re-trigger Loops event
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.timkilroy.com';
     const program = enrollment.program as any;
     const firstName = user.user_metadata?.full_name?.split(' ')[0] || '';
 
-    await onClientInvited(
-      user.email!,
-      firstName,
-      program?.name || 'Unknown Program',
-      `${appUrl}/client/login`,
-      tempPassword
-    );
+    await onClientInvited(user.email!, firstName, program?.name || 'Unknown Program', magicLink);
 
     return NextResponse.json({
       success: true,
-      message: `Invite resent to ${user.email} with new temporary password`,
+      message: `Invite resent to ${user.email} with magic link`,
     });
   } catch (error) {
     console.error('Resend invite error:', error);

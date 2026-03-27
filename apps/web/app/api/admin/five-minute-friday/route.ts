@@ -1,18 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabase-server';
+import { createClient } from '@/lib/supabase-auth-server';
 
 export async function GET(request: NextRequest) {
   try {
-    const authHeader = request.headers.get('authorization');
-    const apiKey = authHeader?.replace('Bearer ', '');
-    if (apiKey !== process.env.ADMIN_API_KEY) {
+    // Session-based admin auth check
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const supabase = getSupabaseServerClient();
+    const { data: userData } = await supabase
+      .from('users')
+      .select('is_admin')
+      .eq('id', user.id)
+      .single();
+
+    if (!userData?.is_admin) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    // Use service role client for data queries
+    const serviceClient = getSupabaseServerClient();
 
     // Get all friday submissions with response status
-    const { data: submissions } = await supabase
+    const { data: submissions } = await serviceClient
       .from('five_minute_fridays')
       .select(`
         id,
@@ -40,13 +54,13 @@ export async function GET(request: NextRequest) {
     // Enrich with user data
     const fridays = [];
     for (const sub of submissions) {
-      const { data: userData } = await supabase.auth.admin.getUserById(sub.user_id);
+      const { data: userInfo } = await serviceClient.auth.admin.getUserById(sub.user_id);
       const enrollment = sub.enrollment as any;
 
       fridays.push({
         id: sub.id,
-        user_email: userData?.user?.email || 'unknown',
-        user_name: userData?.user?.user_metadata?.full_name || null,
+        user_email: userInfo?.user?.email || 'unknown',
+        user_name: userInfo?.user?.user_metadata?.full_name || null,
         company_name: enrollment?.company?.company_name || null,
         program_name: enrollment?.program?.name || 'Unknown',
         week_of: sub.week_of,

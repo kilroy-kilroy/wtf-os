@@ -52,7 +52,7 @@ export default function OnboardingWizard({ enrollmentId }: OnboardingWizardProps
       });
 
       if (response.ok) {
-        router.push('/client/dashboard');
+        router.push('/client/set-password');
       } else {
         const error = await response.json();
         alert(`Error: ${error.message || 'Failed to submit onboarding data'}`);

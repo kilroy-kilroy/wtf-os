@@ -25,7 +25,6 @@ interface LoopsContact {
   // Custom properties for Client Portal
   enrolledProgram?: string;
   clientLoginUrl?: string;
-  clientTempPassword?: string;
 }
 
 interface LoopsEventPayload {
@@ -70,7 +69,6 @@ export async function createOrUpdateContact(contact: LoopsContact): Promise<{ su
         signupDate: contact.signupDate || new Date().toISOString(),
         enrolledProgram: contact.enrolledProgram,
         clientLoginUrl: contact.clientLoginUrl,
-        clientTempPassword: contact.clientTempPassword,
       }),
     });
 
@@ -542,16 +540,14 @@ export async function onCoachingReportReady(
 
 /**
  * Fire when a client is invited to a program
- * Sends welcome email with login link and temp password
+ * Sends welcome email with magic link login
  */
 export async function onClientInvited(
   email: string,
   firstName: string,
   programName: string,
-  loginUrl: string,
-  tempPassword: string
+  magicLink: string
 ): Promise<{ success: boolean; error?: string }> {
-  // Set contact properties including login details for email templates
   await createOrUpdateContact({
     email,
     firstName,
@@ -559,8 +555,7 @@ export async function onClientInvited(
     subscribed: true,
     userGroup: 'client',
     enrolledProgram: programName,
-    clientLoginUrl: loginUrl,
-    clientTempPassword: tempPassword,
+    clientLoginUrl: magicLink,
   });
 
   return sendEvent({
@@ -569,8 +564,7 @@ export async function onClientInvited(
     eventProperties: {
       firstName: firstName || '',
       programName,
-      loginUrl,
-      tempPassword,
+      loginUrl: magicLink,
     },
   });
 }

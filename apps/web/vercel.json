@@ -29,6 +29,10 @@
     {
       "path": "/api/cron/admin-digest",
       "schedule": "0 14 * * *"
+    },
+    {
+      "path": "/api/cron/five-minute-friday",
+      "schedule": "0 12 * * 5"
     }
   ]
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabase-server';
 import { createClient } from '@/lib/supabase-auth-server';
+import { onClientOnboarded } from '@/lib/loops';
 import type { OnboardingFormData } from '@/types/client';
 
 export async function POST(request: NextRequest) {
@@ -116,6 +117,17 @@ export async function POST(request: NextRequest) {
       .from('client_enrollments')
       .update({ onboarding_completed: true, company_id: companyId })
       .eq('id', enrollmentId);
+
+    // Send welcome-to-dashboard email
+    if (user) {
+      const firstName = (user.user_metadata?.full_name || '').split(' ')[0] || '';
+      const programName = '';
+      const companyName = data.company?.company_name || '';
+
+      await onClientOnboarded(user.email!, firstName, programName, companyName).catch((err) => {
+        console.error('Failed to send onboarding email:', err);
+      });
+    }
 
     return NextResponse.json({ success: true, company_id: companyId });
   } catch (error) {

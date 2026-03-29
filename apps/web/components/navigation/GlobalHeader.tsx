@@ -27,7 +27,7 @@ export function GlobalHeader({ userName, userEmail }: GlobalHeaderProps) {
   const proTools = [
     { label: 'Call Lab Pro', href: '/call-lab-pro', description: 'Advanced call analysis' },
     { label: 'Discovery Lab Pro', href: '/discovery-lab-pro', description: 'Deep prospect research' },
-    { label: 'Visibility Lab Pro', href: '/visibility-lab-pro', description: 'Enhanced visibility tracking', comingSoon: true },
+    { label: 'Visibility Lab Pro', href: '/visibility-lab-pro', description: 'Enhanced visibility tracking' },
   ];
 
   return (

@@ -25,9 +25,9 @@ export default async function VisibilityLabProCheckoutPage({ searchParams }: Che
     return (
       <div className="min-h-screen bg-black flex items-center justify-center p-4">
         <div className="bg-[#1a1a1a] border border-[#333] p-8 max-w-md text-center">
-          <h1 className="text-2xl font-bold text-white mb-4">Coming Soon</h1>
+          <h1 className="text-2xl font-bold text-white mb-4">Checkout Unavailable</h1>
           <p className="text-gray-400 mb-6">
-            Visibility Lab Pro checkout is being set up. Please check back shortly.
+            Checkout is temporarily unavailable. Please try again shortly or contact support.
           </p>
           <a
             href="/visibility-lab-pro"

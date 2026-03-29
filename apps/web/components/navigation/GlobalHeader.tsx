@@ -126,16 +126,9 @@ export function GlobalHeader({ userName, userEmail }: GlobalHeaderProps) {
                   key={tool.href}
                   href={tool.href}
                   onClick={() => setMobileMenuOpen(false)}
-                  className={`block px-2 py-2 text-[14px] font-poppins transition-colors ${
-                    tool.comingSoon
-                      ? 'text-[#666666] cursor-not-allowed'
-                      : 'text-white hover:text-[#FFDE59]'
-                  }`}
+                  className="block px-2 py-2 text-[14px] font-poppins text-white hover:text-[#FFDE59] transition-colors"
                 >
-                  <span>{tool.label}</span>
-                  {tool.comingSoon && (
-                    <span className="ml-2 text-[10px] text-[#E51B23] font-medium">SOON</span>
-                  )}
+                  {tool.label}
                 </Link>
               ))}
             </div>

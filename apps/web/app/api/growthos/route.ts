@@ -12,14 +12,17 @@ import { addAssessmentSubscriber } from '@/lib/beehiiv';
 import { onAssessmentCompleted } from '@/lib/loops';
 import { getArchetypeForLoops } from '@/lib/growth-quadrant';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  { auth: { persistSession: false } }
-);
+function getSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { persistSession: false } }
+  );
+}
 
 export async function POST(request: NextRequest) {
   try {
+    const supabase = getSupabase();
     // Get authenticated user (secure, validates with Supabase Auth server)
     const authClient = await createAuthClient();
     const { data: { user }, error: authError } = await authClient.auth.getUser();

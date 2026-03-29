@@ -42,30 +42,35 @@ export async function GET(request: NextRequest) {
     if (dayOfWeek === 6) friday.setDate(friday.getDate() - 1); // Saturday -> Friday
     const fridayStr = friday.toISOString().split('T')[0];
 
-    // Get all active enrollments with 5MF enabled
-    const { data: enrollments } = await supabase
-      .from('client_enrollments')
-      .select(`
-        id,
-        user_id,
-        timezone,
-        program:client_programs(has_five_minute_friday, name)
-      `)
-      .eq('status', 'active')
-      .eq('onboarding_completed', true);
+    // Get all active enrollments and programs separately to avoid PostgREST join issues
+    const [enrollmentsResult, programsResult] = await Promise.all([
+      supabase
+        .from('client_enrollments')
+        .select('id, user_id, program_id, timezone')
+        .eq('status', 'active')
+        .eq('onboarding_completed', true),
+      supabase
+        .from('client_programs')
+        .select('id, name, has_five_minute_friday')
+        .eq('has_five_minute_friday', true),
+    ]);
 
-    if (!enrollments) {
+    const enrollments = enrollmentsResult.data || [];
+    const fmfProgramIds = new Set((programsResult.data || []).map(p => p.id));
+    const programMap = new Map((programsResult.data || []).map(p => [p.id, p]));
+
+    if (enrollments.length === 0) {
       return NextResponse.json({ message: 'No enrollments found', sent: 0 });
     }
 
     // Filter to only 5MF programs
-    const fmfEnrollments = enrollments.filter(e => (e.program as any)?.has_five_minute_friday);
+    const fmfEnrollments = enrollments.filter(e => fmfProgramIds.has(e.program_id));
 
     let sent = 0;
     let skipped = 0;
 
     for (const enrollment of fmfEnrollments) {
-      const program = enrollment.program as any;
+      const program = programMap.get(enrollment.program_id);
 
       // Check timezone - should we send now?
       // Simple approach: check if it's between 8 AM and 11 AM in their timezone
@@ -73,8 +78,8 @@ export async function GET(request: NextRequest) {
         const clientTime = new Date(now.toLocaleString('en-US', { timeZone: enrollment.timezone || 'America/New_York' }));
         const clientHour = clientTime.getHours();
 
-        // Only send between 8-11 AM in client's timezone
-        if (clientHour < 8 || clientHour > 11) {
+        // Only send between 7 AM - 12 PM in client's timezone
+        if (clientHour < 7 || clientHour > 12) {
           skipped++;
           continue;
         }

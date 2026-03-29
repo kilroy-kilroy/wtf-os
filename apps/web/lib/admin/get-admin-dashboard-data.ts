@@ -66,22 +66,27 @@ export async function getAdminDashboardData(): Promise<AdminDashboardData> {
 
   const currentFriday = getWeekFriday(now);
 
-  // Parallel data fetches
+  // Parallel data fetches — separate queries to avoid PostgREST join issues
   const [
     enrollmentsResult,
+    programsResult,
+    allUsersResult,
     fridaysResult,
     recentSignupsResult,
-    userCountsResult,
     weeklyToolRunsResult,
   ] = await Promise.all([
     supabase
       .from('client_enrollments')
-      .select(`
-        id, user_id, enrolled_at, status,
-        users (id, email, first_name, last_name, last_sign_in_at),
-        client_programs (name, slug, has_five_minute_friday, has_call_lab_pro)
-      `)
+      .select('id, user_id, program_id, enrolled_at, status')
       .eq('status', 'active'),
+
+    supabase
+      .from('client_programs')
+      .select('id, name, slug, has_five_minute_friday, has_call_lab_pro'),
+
+    supabase
+      .from('users')
+      .select('id, email, first_name, last_name, last_sign_in_at, created_at, call_lab_tier, discovery_lab_tier, visibility_lab_tier, subscription_tier'),
 
     supabase
       .from('five_minute_fridays')
@@ -95,20 +100,28 @@ export async function getAdminDashboardData(): Promise<AdminDashboardData> {
       .order('created_at', { ascending: false }),
 
     supabase
-      .from('users')
-      .select('id, call_lab_tier, discovery_lab_tier, visibility_lab_tier, subscription_tier'),
-
-    supabase
       .from('tool_runs')
       .select('id, tool_type')
       .gte('created_at', weekAgo.toISOString()),
   ]);
 
-  const enrollments = enrollmentsResult.data || [];
+  const rawEnrollments = enrollmentsResult.data || [];
+  const programs = programsResult.data || [];
+  const allUsers = allUsersResult.data || [];
   const fridays = fridaysResult.data || [];
   const recentSignups = recentSignupsResult.data || [];
-  const allUsers = userCountsResult.data || [];
   const weeklyToolRuns = weeklyToolRunsResult.data || [];
+
+  // Build lookup maps
+  const userMap = new Map(allUsers.map((u) => [u.id, u]));
+  const programMap = new Map(programs.map((p) => [p.id, p]));
+
+  // Merge enrollments with user and program data
+  const enrollments = rawEnrollments.map((e) => ({
+    ...e,
+    users: userMap.get(e.user_id) || null,
+    client_programs: programMap.get(e.program_id) || null,
+  }));
 
   // Unresponded Friday submissions
   const fridayIds = fridays.map((f) => f.id);

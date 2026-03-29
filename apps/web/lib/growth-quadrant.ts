@@ -96,13 +96,10 @@ function determineArchetype(
 ): GrowthArchetype | null {
   if (executionScore === null && positioningScore === null) return null;
 
-  // If only one axis has data, we can still place them in a quadrant
-  // by treating the missing axis as below threshold
+  // If only one axis has data, treat the missing axis as below threshold
+  // so users get placed in a quadrant as soon as they have any data
   const exec = executionScore ?? 0;
   const pos = positioningScore ?? 0;
-
-  // But if BOTH are null, return null (handled above)
-  if (executionScore === null || positioningScore === null) return null;
 
   if (exec >= 50 && pos >= 50) return 'The Machine';
   if (exec >= 50 && pos < 50) return 'The Hidden Gem';

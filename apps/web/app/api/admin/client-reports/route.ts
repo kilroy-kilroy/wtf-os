@@ -53,6 +53,7 @@ export async function GET(request: NextRequest) {
       usersResult,
       assignmentsResult,
       callLabResult,
+      callScoresResult,
       discoveryResult,
       assessmentsResult,
       visibilityResult,
@@ -71,6 +72,11 @@ export async function GET(request: NextRequest) {
       (supabase as any)
         .from('call_lab_reports')
         .select('id, user_id, buyer_name, company_name, overall_score, tier, call_type, created_at')
+        .order('created_at', { ascending: false })
+        .limit(1000),
+      (supabase as any)
+        .from('call_scores')
+        .select('id, user_id, overall_score, overall_grade, diagnosis_summary, version, created_at')
         .order('created_at', { ascending: false })
         .limit(1000),
       (supabase as any)
@@ -95,6 +101,7 @@ export async function GET(request: NextRequest) {
     const users = usersResult.data || [];
     const assignments = assignmentsResult.data || [];
     const callLabReports = callLabResult.data || [];
+    const callScores = callScoresResult.data || [];
     const discoveryBriefs = discoveryResult.data || [];
     const assessments = assessmentsResult.data || [];
     const visibilityReports = visibilityResult.data || [];
@@ -136,6 +143,7 @@ export async function GET(request: NextRequest) {
     const initCounts = () => ({
       callLabLite: 0,
       callLabPro: 0,
+      callLabInstant: 0,
       discoveryLite: 0,
       discoveryPro: 0,
       assessments: 0,
@@ -148,6 +156,17 @@ export async function GET(request: NextRequest) {
       const counts = userReportCounts.get(r.user_id)!;
       if (r.tier === 'pro') counts.callLabPro++;
       else counts.callLabLite++;
+    }
+
+    // Deduplicate: call_scores that already exist in call_lab_reports shouldn't be double-counted
+    const callLabReportUserIds = new Set(callLabReports.map((r: any) => `${r.user_id}:${r.created_at}`));
+    for (const r of callScores) {
+      if (!r.user_id) continue;
+      if (!userReportCounts.has(r.user_id)) userReportCounts.set(r.user_id, initCounts());
+      const counts = userReportCounts.get(r.user_id)!;
+      if (r.version === 'pro') counts.callLabPro++;
+      else if (r.version === 'full') counts.callLabLite++;
+      else counts.callLabInstant++;
     }
 
     for (const r of discoveryBriefs) {
@@ -285,6 +304,18 @@ export async function GET(request: NextRequest) {
           overallScore: r.overall_score,
           tier: r.tier,
           callType: r.call_type,
+          createdAt: r.created_at,
+        })),
+        callScores: callScores.map((r: any) => ({
+          id: r.id,
+          userId: r.user_id,
+          userName: getUserName(r.user_id),
+          userEmail: getUserEmail(r.user_id),
+          agencyName: getAgencyNameForUser(r.user_id),
+          overallScore: r.overall_score,
+          overallGrade: r.overall_grade,
+          diagnosisSummary: r.diagnosis_summary,
+          version: r.version,
           createdAt: r.created_at,
         })),
         discovery: discoveryBriefs.map((r: any) => ({

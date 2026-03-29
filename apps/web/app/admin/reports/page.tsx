@@ -26,6 +26,7 @@ interface UserData {
   reportCounts: {
     callLabLite: number;
     callLabPro: number;
+    callLabInstant: number;
     discoveryLite: number;
     discoveryPro: number;
     assessments: number;
@@ -44,6 +45,19 @@ interface CallLabReport {
   overallScore: number | null;
   tier: string;
   callType: string | null;
+  createdAt: string;
+}
+
+interface CallScoreReport {
+  id: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  agencyName: string | null;
+  overallScore: number | null;
+  overallGrade: string | null;
+  diagnosisSummary: string | null;
+  version: string;
   createdAt: string;
 }
 
@@ -91,6 +105,7 @@ interface ReportsData {
   users: UserData[];
   reports: {
     callLab: CallLabReport[];
+    callScores: CallScoreReport[];
     discovery: DiscoveryReport[];
     assessments: AssessmentReport[];
     visibility: VisibilityReport[];
@@ -98,9 +113,10 @@ interface ReportsData {
 }
 
 type TabType = 'agency' | 'user' | 'product';
-type ProductFilter = 'all' | 'callLabLite' | 'callLabPro' | 'discoveryLite' | 'discoveryPro' | 'assessments' | 'visibilityLab';
+type ProductFilter = 'all' | 'callLabLite' | 'callLabPro' | 'callLabInstant' | 'discoveryLite' | 'discoveryPro' | 'assessments' | 'visibilityLab';
 
 const PRODUCT_LABELS: Record<string, string> = {
+  callLabInstant: 'Call Lab Instant',
   callLabLite: 'Call Lab',
   callLabPro: 'Call Lab Pro',
   discoveryLite: 'Discovery Lab',
@@ -110,6 +126,7 @@ const PRODUCT_LABELS: Record<string, string> = {
 };
 
 const PRODUCT_COLORS: Record<string, string> = {
+  callLabInstant: '#FFDE59',
   callLabLite: '#00D4FF',
   callLabPro: '#E51B23',
   discoveryLite: '#00D4FF',
@@ -148,7 +165,7 @@ function scoreColor(score: number | null, max: number = 10): string {
 }
 
 function totalReports(counts: UserData['reportCounts']): number {
-  return counts.callLabLite + counts.callLabPro + counts.discoveryLite + counts.discoveryPro + counts.assessments + (counts.visibilityLab || 0);
+  return counts.callLabLite + counts.callLabPro + (counts.callLabInstant || 0) + counts.discoveryLite + counts.discoveryPro + counts.assessments + (counts.visibilityLab || 0);
 }
 
 // ============================================
@@ -353,6 +370,7 @@ function AgencyView({
   );
 
   const getUserReportsForProduct = (userId: string, product: string) => {
+    if (product === 'callLabInstant') return (data.reports.callScores || []).filter((r) => r.userId === userId && r.version !== 'pro' && r.version !== 'full');
     if (product === 'callLabLite') return data.reports.callLab.filter((r) => r.userId === userId && r.tier !== 'pro');
     if (product === 'callLabPro') return data.reports.callLab.filter((r) => r.userId === userId && r.tier === 'pro');
     if (product === 'discoveryLite') return data.reports.discovery.filter((r) => r.userId === userId && r.version !== 'pro');
@@ -620,6 +638,7 @@ function UserView({
 
   const getUserReports = (userId: string) => {
     return {
+      callLabInstant: (data.reports.callScores || []).filter((r) => r.userId === userId && r.version !== 'pro' && r.version !== 'full'),
       callLabLite: data.reports.callLab.filter((r) => r.userId === userId && r.tier !== 'pro'),
       callLabPro: data.reports.callLab.filter((r) => r.userId === userId && r.tier === 'pro'),
       discoveryLite: data.reports.discovery.filter((r) => r.userId === userId && r.version !== 'pro'),
@@ -819,6 +838,7 @@ function ProductView({
     { key: 'all', label: 'All Products' },
     { key: 'callLabPro', label: 'Call Lab Pro' },
     { key: 'callLabLite', label: 'Call Lab' },
+    { key: 'callLabInstant', label: 'Call Lab Instant' },
     { key: 'discoveryPro', label: 'Discovery Pro' },
     { key: 'discoveryLite', label: 'Discovery Lab' },
     { key: 'visibilityLab', label: 'Visibility Lab' },
@@ -826,6 +846,7 @@ function ProductView({
   ];
 
   const showCallLab = selectedProduct === 'all' || selectedProduct === 'callLabLite' || selectedProduct === 'callLabPro';
+  const showCallLabInstant = selectedProduct === 'all' || selectedProduct === 'callLabInstant';
   const showDiscovery = selectedProduct === 'all' || selectedProduct === 'discoveryLite' || selectedProduct === 'discoveryPro';
   const showVisibility = selectedProduct === 'all' || selectedProduct === 'visibilityLab';
   const showAssessments = selectedProduct === 'all' || selectedProduct === 'assessments';
@@ -836,6 +857,10 @@ function ProductView({
     if (selectedProduct === 'callLabPro') reports = reports.filter((r) => r.tier === 'pro');
     return sortReports(applyUserFilter(reports));
   }, [data.reports.callLab, selectedProduct, sortReports, applyUserFilter]);
+
+  const callScoreReports = useMemo(() => {
+    return sortReports(applyUserFilter(data.reports.callScores || []));
+  }, [data.reports.callScores, sortReports, applyUserFilter]);
 
   const discoveryReports = useMemo(() => {
     let reports = data.reports.discovery;
@@ -924,6 +949,57 @@ function ProductView({
                         }}
                       >
                         {r.tier}
+                      </span>
+                    </td>
+                    <td className="py-2 pr-4 text-slate-500 text-xs">{formatTimeAgo(r.createdAt)}</td>
+                    <td className="py-2">
+                      <ReportLink href={`/call-lab/report/${r.id}`}>View</ReportLink>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Call Lab Instant (call_scores) table */}
+      {showCallLabInstant && callScoreReports.length > 0 && (
+        <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4 mb-4">
+          <h3 className="text-sm font-bold text-white mb-3">
+            Call Lab Instant Reports
+            <span className="text-slate-500 font-normal ml-2">({callScoreReports.length})</span>
+          </h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-600/50">
+                  <SortHeader field="overallScore">Score</SortHeader>
+                  <SortHeader field="overallGrade">Grade</SortHeader>
+                  <SortHeader field="userName">User</SortHeader>
+                  <SortHeader field="agencyName">Agency</SortHeader>
+                  <th className="text-left text-xs text-slate-500 pb-2 pr-4 font-medium">Version</th>
+                  <SortHeader field="createdAt">Date</SortHeader>
+                  <th className="text-left text-xs text-slate-500 pb-2 font-medium"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {callScoreReports.map((r: CallScoreReport) => (
+                  <tr key={r.id} className="border-b border-slate-700/30">
+                    <td className="py-2 pr-4">
+                      <span className="font-mono text-xs" style={{ color: scoreColor(r.overallScore) }}>
+                        {formatScore(r.overallScore)}
+                      </span>
+                    </td>
+                    <td className="py-2 pr-4 text-slate-300 text-xs">{r.overallGrade || '-'}</td>
+                    <td className="py-2 pr-4 text-xs">
+                      <span className="text-white">{r.userName}</span>
+                      <span className="text-slate-600 ml-1 text-[10px]">{r.userEmail}</span>
+                    </td>
+                    <td className="py-2 pr-4 text-slate-500 text-xs">{r.agencyName || '-'}</td>
+                    <td className="py-2 pr-4">
+                      <span className="text-[10px] font-medium uppercase px-1.5 py-0.5 rounded" style={{ color: '#FFDE59', backgroundColor: '#FFDE5920' }}>
+                        {r.version}
                       </span>
                     </td>
                     <td className="py-2 pr-4 text-slate-500 text-xs">{formatTimeAgo(r.createdAt)}</td>
@@ -1254,10 +1330,11 @@ export default function AdminReportsPage() {
   const totalAgencies = explicitAgencyCount + inferredAgencyCount;
   const totalUsers = data.users.length;
   const totalCallLab = data.reports.callLab.length;
+  const totalCallScores = (data.reports.callScores || []).length;
   const totalDiscovery = data.reports.discovery.length;
   const totalAssessments = data.reports.assessments.length;
   const totalVisibility = data.reports.visibility?.length || 0;
-  const totalAllReports = totalCallLab + totalDiscovery + totalAssessments + totalVisibility;
+  const totalAllReports = totalCallLab + totalCallScores + totalDiscovery + totalAssessments + totalVisibility;
 
   const tabs: Array<{ key: TabType; label: string }> = [
     { key: 'agency', label: 'By Agency' },
@@ -1284,6 +1361,7 @@ export default function AdminReportsPage() {
             <span className="text-slate-700">|</span>
             <span style={{ color: '#E51B23' }}>{data.reports.callLab.filter((r) => r.tier === 'pro').length} Call Lab Pro</span>
             <span style={{ color: '#00D4FF' }}>{data.reports.callLab.filter((r) => r.tier !== 'pro').length} Call Lab</span>
+            <span style={{ color: '#FFDE59' }}>{totalCallScores} Instant</span>
             <span style={{ color: '#E51B23' }}>{data.reports.discovery.filter((r) => r.version === 'pro').length} Disc Pro</span>
             <span style={{ color: '#00D4FF' }}>{data.reports.discovery.filter((r) => r.version !== 'pro').length} Disc</span>
             <span style={{ color: '#a855f7' }}>{totalVisibility} Visibility</span>

@@ -4,6 +4,7 @@ import { format } from "date-fns";
 import Link from "next/link";
 import { ConsolePanel, ConsoleHeading, CallLabProReport } from "@/components/console";
 import { PatternTag } from "@/components/pattern-tag";
+import { DiscoveryBriefLink } from "./discovery-brief-link";
 
 interface CallReport {
   id: string;
@@ -30,6 +31,16 @@ interface CallReport {
   key_moments: { timestamp: string; description: string; type: string }[] | null;
   full_report: Record<string, unknown> | null;
   tier: string;
+  created_at: string;
+  discovery_brief_id: string | null;
+}
+
+interface DiscoveryBrief {
+  id: string;
+  target_company: string;
+  target_contact_name: string | null;
+  target_contact_title: string | null;
+  version: string;
   created_at: string;
 }
 
@@ -413,6 +424,25 @@ export default async function CallReportPage({
     redirect("/dashboard");
   }
 
+  // Fetch linked discovery brief (if any)
+  let linkedBrief: DiscoveryBrief | null = null;
+  if (finalReport.discovery_brief_id) {
+    const { data: briefData } = await supabase
+      .from("discovery_briefs")
+      .select("id, target_company, target_contact_name, target_contact_title, version, created_at")
+      .eq("id", finalReport.discovery_brief_id)
+      .single();
+    linkedBrief = briefData as DiscoveryBrief | null;
+  }
+
+  // Fetch user's recent briefs for retroactive linking
+  const { data: userBriefs } = await supabase
+    .from("discovery_briefs")
+    .select("id, target_company, target_contact_name, target_contact_title, version, created_at")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false })
+    .limit(30);
+
   const scores = [
     { label: "Opening", value: finalReport.opening_score },
     { label: "Discovery", value: finalReport.discovery_score },
@@ -448,6 +478,13 @@ export default async function CallReportPage({
             NEW ANALYSIS
           </Link>
         </div>
+
+        {/* Discovery Brief Link */}
+        <DiscoveryBriefLink
+          reportId={finalReport.id}
+          linkedBrief={linkedBrief}
+          userBriefs={(userBriefs || []) as DiscoveryBrief[]}
+        />
 
         {/* Main Report */}
         <ConsolePanel>

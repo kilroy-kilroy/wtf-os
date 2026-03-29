@@ -329,7 +329,7 @@ function AgencyView({
       const usersWithCounts = agency.users.map((u) => ({
         ...u,
         reportCounts: userCountsMap.get(u.id) || {
-          callLabLite: 0, callLabPro: 0, discoveryLite: 0, discoveryPro: 0, assessments: 0, visibilityLab: 0,
+          callLabLite: 0, callLabPro: 0, callLabInstant: 0, discoveryLite: 0, discoveryPro: 0, assessments: 0, visibilityLab: 0,
         },
       }));
       const agencyReportCount = usersWithCounts.reduce((sum, u) => sum + totalReports(u.reportCounts), 0);

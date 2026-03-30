@@ -1,11 +1,14 @@
 export const maxDuration = 300; // 5 minutes - Perplexity research + Claude analysis
 
 import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@/lib/supabase-auth-server';
 import { runModel } from '@repo/utils';
 import {
   buildOneShotResearchPrompt,
   buildOneShotAnalysisPrompt,
 } from '@repo/prompts';
+
+const ALLOWED_EMAILS = ['tim@timkilroy.com'];
 
 // ============================================================================
 // Perplexity research step
@@ -53,6 +56,13 @@ export async function POST(request: NextRequest) {
   const startTime = Date.now();
 
   try {
+    // Auth check - only allowed emails can use this endpoint
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user || !ALLOWED_EMAILS.includes(user.email ?? '')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const body = await request.json();
 
     if (!body.agency_url) {

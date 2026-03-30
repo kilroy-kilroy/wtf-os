@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase-auth-server';
 
 const ALLOWED_EMAILS = [
   'tim@timkilroy.com',
+  'tk@timkilroy.com',
 ];
 
 export default async function OneShotLayout({

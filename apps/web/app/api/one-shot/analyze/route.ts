@@ -8,7 +8,7 @@ import {
   buildOneShotAnalysisPrompt,
 } from '@repo/prompts';
 
-const ALLOWED_EMAILS = ['tim@timkilroy.com'];
+const ALLOWED_EMAILS = ['tim@timkilroy.com', 'tk@timkilroy.com'];
 
 // ============================================================================
 // Perplexity research step

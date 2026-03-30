@@ -74,6 +74,12 @@ const MODEL_CONFIGS: Record<string, ModelConfig> = {
     maxTokens: 8192,
     temperature: 0.3,
   },
+  'one-shot': {
+    provider: 'anthropic',
+    model: 'claude-sonnet-4-5-20250929',
+    maxTokens: 8192,
+    temperature: 0.4,
+  },
 };
 
 export interface ModelResponse {

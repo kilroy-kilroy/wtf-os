@@ -90,14 +90,14 @@ export async function POST(request: NextRequest) {
 
     // Step 2: Claude analysis + one-shot rewrite
     console.log('[OneShot] Step 2: Claude analysis + rewrite...');
-    const { system, user } = buildOneShotAnalysisPrompt({
+    const { system, user: userPrompt } = buildOneShotAnalysisPrompt({
       agencyUrl: normalizedUrl,
       researchData,
       ceoName: ceo_name,
       agencyName: agency_name,
     });
 
-    const result = await runModel('one-shot', system, user);
+    const result = await runModel('one-shot', system, userPrompt);
     console.log(
       `[OneShot] Analysis complete (${result.usage.input} in, ${result.usage.output} out)`
     );

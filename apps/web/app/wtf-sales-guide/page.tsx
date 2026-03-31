@@ -515,6 +515,144 @@ export default function WTFSalesGuidePage() {
         </div>
       </section>
 
+      {/* Pattern Glossary */}
+      <section className="max-w-[800px] mx-auto px-5 py-16" id="pattern-glossary">
+        <h2 className="font-anton text-[42px] text-[#E51B23] tracking-wider mb-4">
+          PATTERN GLOSSARY
+        </h2>
+        <p className="text-lg text-[#CCC] leading-relaxed mb-10">
+          The 18 canonical patterns Call Lab detects in every call. Positive patterns are what wins deals. Negative patterns are what kills them.
+        </p>
+
+        {/* Positive Patterns */}
+        <h3 className="font-anton text-2xl text-green-500 tracking-wider mb-6">POSITIVE PATTERNS</h3>
+
+        <div className="space-y-6 mb-12">
+          <div id="cultural-handshake" className="bg-[#111] border-l-4 border-green-500 p-5 rounded-r scroll-mt-24">
+            <h4 className="text-white font-bold text-lg mb-1">The Cultural Handshake</h4>
+            <p className="text-[#666] text-xs uppercase tracking-wider mb-2">Connection</p>
+            <p className="text-[#CCC]">Fast shared context and comfort that accelerates trust. You find common ground quickly and make the buyer feel like they&apos;re talking to someone who gets their world.</p>
+          </div>
+
+          <div id="peer-validation-engine" className="bg-[#111] border-l-4 border-green-500 p-5 rounded-r scroll-mt-24">
+            <h4 className="text-white font-bold text-lg mb-1">The Peer Validation Engine</h4>
+            <p className="text-[#666] text-xs uppercase tracking-wider mb-2">Connection</p>
+            <p className="text-[#CCC]">Buyer treats you like a peer or advisor and adopts your language. They stop seeing you as a vendor and start seeing you as a thought partner.</p>
+          </div>
+
+          <div id="vulnerability-flip" className="bg-[#111] border-l-4 border-green-500 p-5 rounded-r scroll-mt-24">
+            <h4 className="text-white font-bold text-lg mb-1">The Vulnerability Flip</h4>
+            <p className="text-[#666] text-xs uppercase tracking-wider mb-2">Connection</p>
+            <p className="text-[#CCC]">A personal story unlocks truth and reduces buyer shame. By sharing your own struggles first, you create safety for the buyer to be honest about theirs.</p>
+          </div>
+
+          <div id="diagnostic-reveal" className="bg-[#111] border-l-4 border-green-500 p-5 rounded-r scroll-mt-24">
+            <h4 className="text-white font-bold text-lg mb-1">The Diagnostic Reveal</h4>
+            <p className="text-[#666] text-xs uppercase tracking-wider mb-2">Diagnosis</p>
+            <p className="text-[#CCC]">You articulate the real problem before the buyer fully says it. This demonstrates deep understanding and builds instant credibility.</p>
+          </div>
+
+          <div id="self-diagnosis-pull" className="bg-[#111] border-l-4 border-green-500 p-5 rounded-r scroll-mt-24">
+            <h4 className="text-white font-bold text-lg mb-1">The Self Diagnosis Pull</h4>
+            <p className="text-[#666] text-xs uppercase tracking-wider mb-2">Diagnosis</p>
+            <p className="text-[#CCC]">Questions lead the buyer to discover their own truth. Instead of telling them what&apos;s wrong, you guide them to articulate it themselves - creating ownership of the problem.</p>
+          </div>
+
+          <div id="framework-drop" className="bg-[#111] border-l-4 border-green-500 p-5 rounded-r scroll-mt-24">
+            <h4 className="text-white font-bold text-lg mb-1">The Framework Drop</h4>
+            <p className="text-[#666] text-xs uppercase tracking-wider mb-2">Control</p>
+            <p className="text-[#CCC]">A simple model organizes the buyer&apos;s chaos and builds authority. You give them a lens to see their situation differently, positioning yourself as the expert.</p>
+          </div>
+
+          <div id="mirror-close" className="bg-[#111] border-l-4 border-green-500 p-5 rounded-r scroll-mt-24">
+            <h4 className="text-white font-bold text-lg mb-1">The Mirror Close</h4>
+            <p className="text-[#666] text-xs uppercase tracking-wider mb-2">Activation</p>
+            <p className="text-[#CCC]">You reflect the buyer&apos;s own desires and stakes back to them. By mirroring what they&apos;ve told you matters most, the close feels like their idea, not yours.</p>
+          </div>
+
+          <div id="permission-builder" className="bg-[#111] border-l-4 border-green-500 p-5 rounded-r scroll-mt-24">
+            <h4 className="text-white font-bold text-lg mb-1">The Permission Builder</h4>
+            <p className="text-[#666] text-xs uppercase tracking-wider mb-2">Activation</p>
+            <p className="text-[#CCC]">You make the decision feel safe and pressure-free. Micro-commitments and permission-based language reduce buyer anxiety and increase conversion.</p>
+          </div>
+        </div>
+
+        {/* Negative Patterns */}
+        <h3 className="font-anton text-2xl text-[#E51B23] tracking-wider mb-6">NEGATIVE PATTERNS</h3>
+
+        <div className="space-y-6 mb-12">
+          <div id="scenic-route" className="bg-[#111] border-l-4 border-[#E51B23] p-5 rounded-r scroll-mt-24">
+            <h4 className="text-white font-bold text-lg mb-1">The Scenic Route</h4>
+            <p className="text-[#666] text-xs uppercase tracking-wider mb-2">Connection</p>
+            <p className="text-[#CCC]">Rapport drifts into tangents and control is lost. Small talk becomes the whole talk.</p>
+            <p className="text-green-400 text-sm mt-2">Counter: <strong>The Framework Drop</strong></p>
+          </div>
+
+          <div id="business-blitzer" className="bg-[#111] border-l-4 border-[#E51B23] p-5 rounded-r scroll-mt-24">
+            <h4 className="text-white font-bold text-lg mb-1">The Business Blitzer</h4>
+            <p className="text-[#666] text-xs uppercase tracking-wider mb-2">Connection</p>
+            <p className="text-[#CCC]">You rush into business without emotional calibration. No warmth, no human moment - straight to the pitch.</p>
+            <p className="text-green-400 text-sm mt-2">Counter: <strong>The Cultural Handshake</strong></p>
+          </div>
+
+          <div id="generous-professor" className="bg-[#111] border-l-4 border-[#E51B23] p-5 rounded-r scroll-mt-24">
+            <h4 className="text-white font-bold text-lg mb-1">The Generous Professor</h4>
+            <p className="text-[#666] text-xs uppercase tracking-wider mb-2">Diagnosis</p>
+            <p className="text-[#CCC]">You teach too much and diagnose too little. The buyer gets a free education instead of a reason to hire you.</p>
+            <p className="text-green-400 text-sm mt-2">Counter: <strong>The Diagnostic Reveal</strong></p>
+          </div>
+
+          <div id="advice-avalanche" className="bg-[#111] border-l-4 border-[#E51B23] p-5 rounded-r scroll-mt-24">
+            <h4 className="text-white font-bold text-lg mb-1">The Advice Avalanche</h4>
+            <p className="text-[#666] text-xs uppercase tracking-wider mb-2">Diagnosis</p>
+            <p className="text-[#CCC]">You give away full solutions during discovery. The buyer leaves with everything they need and no reason to pay you.</p>
+            <p className="text-green-400 text-sm mt-2">Counter: <strong>The Self Diagnosis Pull</strong></p>
+          </div>
+
+          <div id="surface-scanner" className="bg-[#111] border-l-4 border-[#E51B23] p-5 rounded-r scroll-mt-24">
+            <h4 className="text-white font-bold text-lg mb-1">The Surface Scanner</h4>
+            <p className="text-[#666] text-xs uppercase tracking-wider mb-2">Diagnosis</p>
+            <p className="text-[#CCC]">Discovery stays shallow and never hits impact or criteria. You ask questions but never dig into the real pain.</p>
+            <p className="text-green-400 text-sm mt-2">Counter: <strong>The Diagnostic Reveal</strong></p>
+          </div>
+
+          <div id="agenda-abandoner" className="bg-[#111] border-l-4 border-[#E51B23] p-5 rounded-r scroll-mt-24">
+            <h4 className="text-white font-bold text-lg mb-1">The Agenda Abandoner</h4>
+            <p className="text-[#666] text-xs uppercase tracking-wider mb-2">Control</p>
+            <p className="text-[#CCC]">You set an agenda but never return to it. Structure dissolves and the call meanders.</p>
+            <p className="text-green-400 text-sm mt-2">Counter: <strong>The Framework Drop</strong></p>
+          </div>
+
+          <div id="passenger" className="bg-[#111] border-l-4 border-[#E51B23] p-5 rounded-r scroll-mt-24">
+            <h4 className="text-white font-bold text-lg mb-1">The Passenger</h4>
+            <p className="text-[#666] text-xs uppercase tracking-wider mb-2">Control</p>
+            <p className="text-[#CCC]">Buyer leads the call while you follow. You become reactive instead of strategic.</p>
+            <p className="text-green-400 text-sm mt-2">Counter: <strong>The Framework Drop</strong></p>
+          </div>
+
+          <div id="premature-solution" className="bg-[#111] border-l-4 border-[#E51B23] p-5 rounded-r scroll-mt-24">
+            <h4 className="text-white font-bold text-lg mb-1">The Premature Solution</h4>
+            <p className="text-[#666] text-xs uppercase tracking-wider mb-2">Control</p>
+            <p className="text-[#CCC]">Solution talk appears before discovery is complete. You prescribe before you diagnose.</p>
+            <p className="text-green-400 text-sm mt-2">Counter: <strong>The Self Diagnosis Pull</strong></p>
+          </div>
+
+          <div id="soft-close-fade" className="bg-[#111] border-l-4 border-[#E51B23] p-5 rounded-r scroll-mt-24">
+            <h4 className="text-white font-bold text-lg mb-1">The Soft Close Fade</h4>
+            <p className="text-[#666] text-xs uppercase tracking-wider mb-2">Activation</p>
+            <p className="text-[#CCC]">The close loses energy due to vague next steps. &quot;Let me know&quot; replaces a clear calendar invite.</p>
+            <p className="text-green-400 text-sm mt-2">Counter: <strong>The Mirror Close</strong></p>
+          </div>
+
+          <div id="over-explain-loop" className="bg-[#111] border-l-4 border-[#E51B23] p-5 rounded-r scroll-mt-24">
+            <h4 className="text-white font-bold text-lg mb-1">The Over Explain Loop</h4>
+            <p className="text-[#666] text-xs uppercase tracking-wider mb-2">Activation</p>
+            <p className="text-[#CCC]">You try to explain your way out instead of asking or reframing. More words, less progress.</p>
+            <p className="text-green-400 text-sm mt-2">Counter: <strong>The Permission Builder</strong></p>
+          </div>
+        </div>
+      </section>
+
       {/* Footer */}
       <footer className="border-t-2 border-[#333] py-10 px-5 text-center">
         <p className="text-[#666] text-sm mb-2">

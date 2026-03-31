@@ -1,88 +1,112 @@
 'use client';
 
 import Link from 'next/link';
+import { ConsolePanel, ConsoleHeading, ConsoleMarkdownRenderer } from '@/components/console';
 
 /**
  * Example Call Lab Report Page
  *
  * Public showcase of a Call Lab (free) analysis with synthetic data.
  * No auth required - all data is hardcoded.
+ * Uses the same ConsoleMarkdownRenderer as the real Call Lab reports.
  */
 
-// Synthetic markdown report matching the lite format
-const SYNTHETIC_LITE_MARKDOWN = `## 📊 SNAP SCORE: 72/100
+const SYNTHETIC_REPORT = `**Call:** Sarah Chen / TechCorp
+**Duration:** 34 minutes
+**Score:** 7/10 | Effectiveness: Medium-High
+**Dynamics Profile:** High-Trust Coaching, Weak Commercial Close
 
-**Effectiveness Rating: SOLID** — You're building trust and creating momentum. A few adjustments will push you into the top tier.
-
----
-
-## ✅ WHAT WORKED
-
-### 1. Strong Opening Hook
-> "I noticed TechCorp just raised Series B — congrats. That usually means the scaling problems we talked about are about to get a lot more real."
-
-**Why it worked:** You immediately demonstrated you did homework and connected it to their world. Sarah leaned in from the start.
-
-### 2. Self-Diagnosis Pull
-> "So when you say things are 'starting to break' — what specifically is breaking first?"
-
-**Why it worked:** Instead of assuming her problem, you made her articulate it. This creates ownership and makes your solution more compelling.
-
-### 3. Mirror Language
-Throughout the call, you used Sarah's exact phrases back to her: "scaling wall," "good enough for now," "Q2 deadline." This builds unconscious rapport.
+**Snap Take:** This was a coaching session disguised as a discovery call. Tim diagnosed Sarah's core problem in the first 10 minutes and spent the rest of the call teaching her how to reframe her value. The trust was instant. The insight was surgical. But the commercial momentum never materialized. Tim gave away the entire strategic roadmap without anchoring it to a paid engagement. Sarah left inspired but not committed. This was generous consulting, not sales.
 
 ---
 
-## ⚠️ WHAT TO WATCH
+## WHAT WORKED
 
-### 1. Soft Close Fade
-> "Great conversation. Let me send you some info and you can let me know what you think."
+**[The Vulnerability Flip](/wtf-sales-guide#vulnerability-flip)** (Connection) Sarah opened with raw honesty about her agency struggles, and Tim matched it immediately with his own self-deprecating humor about starting agencies. This created instant safety.
 
-**The problem:** "Let me know" is the weakest close possible. You did all the hard work of building trust and then left without a commitment.
+"I started a paid media agency... because I thought, God, I hate myself, or I don't hate myself enough."
 
-**The fix:** Always propose a specific next step with date/time: *"Let's schedule 30 minutes Tuesday at 2pm to walk through how this could work for TechCorp."*
+**[The Diagnostic Reveal](/wtf-sales-guide#diagnostic-reveal)** (Diagnosis) Tim articulated Sarah's unspoken fear before she fully named it. He saw through the data obsession to the imposter syndrome underneath.
 
-### 2. Premature Product Mention
-At 35:00, when Sarah asked "so what do you do?" you went straight into product features.
+"Every fiber of your being... you're thinking, I can't sell this if I cannot provide the most incredible data resolution in the world... you feel like a fraud."
 
-**The problem:** She wasn't asking for a pitch — she was testing if you'd stay in consultation mode or flip to sales mode.
+**[The Framework Drop](/wtf-sales-guide#framework-drop)** (Control) Tim gave Sarah a simple organizing principle: your job ends at the click. This reframed her entire value proposition and gave her a clear boundary.
 
-**The fix:** Redirect with *"Before I answer that — I want to make sure what I share is actually relevant to what you're dealing with. Can I ask one more question?"*
+"Your responsibility, your ability to influence purchase ends as soon as somebody clicks on an ad."
 
 ---
 
-## 🎯 YOUR ONE MOVE
+## WHAT TO WATCH
 
-**Fix the close.** You're doing 90% of the work right and losing deals at the finish line. Before ANY call ends, lock in a specific next step with a calendar invite.
+**[The Generous Professor](/wtf-sales-guide#generous-professor)** (Diagnosis) Tim taught the entire strategic framework without creating any commercial tension. He gave away positioning, pricing defense, client selection criteria, and differentiation strategy for free.
 
-Practice this phrase until it feels natural:
-> "Based on what you shared about [their stated priority], I'd suggest we reconnect [specific day] to [specific agenda]. I have [time A] or [time B] — which works better?"
+"More than being a data and technology partner, you're a marketing partner... lean into the fact that you're gonna tell a story that is so fucking fabulous..."
 
----
+Fix: Save the full strategic roadmap for paying clients. Give one insight, then bridge to the paid engagement.
 
-## 📋 IMMEDIATE ACTIONS
+→ **COUNTER:** [The Self Diagnosis Pull](/wtf-sales-guide#self-diagnosis-pull) - Ask Sarah what she thinks her real value is, then build on her answer instead of delivering the full solution.
 
-1. **Send follow-up email TODAY** with a specific meeting request
-2. **Include the case study** you mentioned — deliver on your promise
-3. **Reference "the scaling wall"** — show you were listening
-4. **Add a calendar link** — make saying yes frictionless
+**[The Soft Close Fade](/wtf-sales-guide#soft-close-fade)** (Activation) The call ended with Sarah asking about packages and Tim promising to "send something later today." No calendar invite. No clear next step. No mutual commitment.
 
----
+"I'll send you something later today, okay?"
 
-## 📈 SCORES BREAKDOWN
+Fix: Before hanging up, say: "Let's get 60 minutes on the calendar this week to map out what working together looks like. Does Thursday or Friday work better?"
 
-| Category | Score | Note |
-|----------|-------|------|
-| Discovery | 81 | Strong diagnostic questions |
-| Rapport | 76 | Good mirror language |
-| Control | 68 | Lost some momentum mid-call |
-| Qualification | 74 | Covered key criteria |
-| Close | 52 | Soft fade — needs work |
-| **Overall** | **72** | **Solid with clear upside** |
+→ **COUNTER:** [The Mirror Close](/wtf-sales-guide#mirror-close) - Reflect back Sarah's stated timeline (one year to scale) and her need for help, then propose a specific engagement structure.
 
 ---
 
-*This is your Call Lab analysis. For pattern recognition, framework scoring, tactical rewrites, and trust mapping, upgrade to Call Lab Pro.*`;
+## WHY THIS CALL WORKED
+
+Sarah came in desperate for validation and Tim gave it to her immediately. She needed someone to tell her she wasn't crazy for struggling with attribution, that her instincts about creative differentiation were right, and that she didn't need to be a data wizard to be valuable. Tim delivered all of that with warmth and authority.
+
+But Sarah also came in ready to buy. She asked directly about packages and pricing. She said "I'd love to know what it entails of working with you." She was qualifying herself as a buyer, not just seeking free advice. Tim missed that signal because he was in coaching mode, not sales mode. The call worked emotionally but failed commercially.
+
+---
+
+## ONE MOVE TO LEVEL UP
+
+Stop giving away the strategic roadmap before the commercial conversation.
+
+When Sarah asks "what am I actually offering?" don't answer it fully. Give her one reframe, then pivot:
+
+Try this: "That's exactly the question we need to unpack together. Here's what I know in 30 seconds: you're not selling data, you're selling story. But the real work is figuring out how to package that in a way that makes you money and attracts the right clients. That's what I help people build. Want to spend an hour mapping that out this week?"
+
+This creates hunger instead of satisfaction. She leaves wanting more, not feeling complete.
+
+---
+
+## CALL SIGNALS DETECTED
+
+- Buyer revealed deep vulnerability early (fraud feelings, money loss)
+- Buyer asked directly about working together
+- Buyer stayed engaged for 34 minutes despite Tim being sick
+- Buyer laughed with you multiple times
+- Buyer took notes (implied by "I want this feedback")
+- Pricing not raised as objection by buyer
+- Buyer asked for packages and pricing explicitly
+- No next meeting scheduled before ending call
+
+---
+
+## UNLOCK THE FULL ANALYSIS
+
+Call Lab shows what worked, what didn't, and one move to level up.
+
+Call Lab Pro shows the full sales architecture:
+
+- Trust Curve Analysis: where emotional safety peaked and when commercial tension should have entered
+- Ambiguity Detection: the 4 moments Sarah signaled buying intent that went unaddressed
+- Pattern Sequencing: how The Generous Professor killed The Mirror Close before it could happen
+- Predictable Close Path: the exact moment to transition from coaching to commerce
+
+This call had all the ingredients for a close. Pro shows you how to cook them.
+
+---
+
+## BOTTOM LINE
+
+You crushed the diagnosis and built massive trust. Your blind spot is transitioning from coach to closer. Fix that and you'll convert these high-trust calls into high-value clients. This was a strong call. Let's make the next one undeniable.`;
 
 export default function ExampleLiteReportPage() {
   return (
@@ -112,194 +136,20 @@ export default function ExampleLiteReportPage() {
             Call Lab - Diagnostic Snapshot
           </h1>
           <p className="text-[#666] text-sm">
-            Sarah Chen — TechCorp • Discovery Call • Dec 12, 2024
+            Sarah Chen — TechCorp - Discovery Call - Dec 12, 2024
           </p>
         </div>
 
-        {/* Markdown Report */}
-        <div className="bg-[#111] border border-[#333] rounded-lg p-6 mb-8">
-          <div className="prose prose-invert prose-sm max-w-none">
-            {/* Snap Score */}
-            <div className="flex items-center gap-4 mb-6 pb-6 border-b border-[#333]">
-              <div className="text-5xl font-anton text-[#FFDE59]">72</div>
-              <div>
-                <div className="text-[#666] text-xs tracking-wider">SNAP SCORE</div>
-                <div className="text-white font-semibold">SOLID</div>
-                <div className="text-[#B3B3B3] text-sm">Building trust and creating momentum</div>
-              </div>
-            </div>
-
-            {/* What Worked */}
-            <section className="mb-8">
-              <h2 className="font-anton text-xl text-green-500 uppercase tracking-wider mb-4 flex items-center gap-2">
-                <span>✅</span> WHAT WORKED
-              </h2>
-
-              <div className="space-y-6">
-                <div className="bg-[#1A1A1A] border-l-4 border-green-500 p-4 rounded-r">
-                  <h3 className="text-white font-semibold mb-2">1. Strong Opening Hook</h3>
-                  <blockquote className="text-[#B3B3B3] italic border-l-2 border-[#333] pl-3 mb-2">
-                    &quot;I noticed TechCorp just raised Series B — congrats. That usually means the scaling problems we talked about are about to get a lot more real.&quot;
-                  </blockquote>
-                  <p className="text-green-400 text-sm">
-                    <strong>Why it worked:</strong> You immediately demonstrated you did homework and connected it to their world. Sarah leaned in from the start.
-                  </p>
-                </div>
-
-                <div className="bg-[#1A1A1A] border-l-4 border-green-500 p-4 rounded-r">
-                  <h3 className="text-white font-semibold mb-2">2. Self-Diagnosis Pull</h3>
-                  <blockquote className="text-[#B3B3B3] italic border-l-2 border-[#333] pl-3 mb-2">
-                    &quot;So when you say things are &apos;starting to break&apos; — what specifically is breaking first?&quot;
-                  </blockquote>
-                  <p className="text-green-400 text-sm">
-                    <strong>Why it worked:</strong> Instead of assuming her problem, you made her articulate it. This creates ownership and makes your solution more compelling.
-                  </p>
-                </div>
-
-                <div className="bg-[#1A1A1A] border-l-4 border-green-500 p-4 rounded-r">
-                  <h3 className="text-white font-semibold mb-2">3. Mirror Language</h3>
-                  <p className="text-[#B3B3B3] mb-2">
-                    Throughout the call, you used Sarah&apos;s exact phrases back to her: &quot;scaling wall,&quot; &quot;good enough for now,&quot; &quot;Q2 deadline.&quot;
-                  </p>
-                  <p className="text-green-400 text-sm">
-                    <strong>Why it worked:</strong> This builds unconscious rapport and makes her feel understood.
-                  </p>
-                </div>
-              </div>
-            </section>
-
-            {/* What to Watch */}
-            <section className="mb-8">
-              <h2 className="font-anton text-xl text-orange-400 uppercase tracking-wider mb-4 flex items-center gap-2">
-                <span>⚠️</span> WHAT TO WATCH
-              </h2>
-
-              <div className="space-y-6">
-                <div className="bg-[#1A1A1A] border-l-4 border-[#E51B23] p-4 rounded-r">
-                  <h3 className="text-white font-semibold mb-2">1. Soft Close Fade</h3>
-                  <blockquote className="text-[#B3B3B3] italic border-l-2 border-[#333] pl-3 mb-2">
-                    &quot;Great conversation. Let me send you some info and you can let me know what you think.&quot;
-                  </blockquote>
-                  <p className="text-[#E51B23] text-sm mb-2">
-                    <strong>The problem:</strong> &quot;Let me know&quot; is the weakest close possible. You did all the hard work of building trust and then left without a commitment.
-                  </p>
-                  <p className="text-[#FFDE59] text-sm">
-                    <strong>The fix:</strong> Always propose a specific next step with date/time: <em>&quot;Let&apos;s schedule 30 minutes Tuesday at 2pm to walk through how this could work for TechCorp.&quot;</em>
-                  </p>
-                </div>
-
-                <div className="bg-[#1A1A1A] border-l-4 border-orange-500 p-4 rounded-r">
-                  <h3 className="text-white font-semibold mb-2">2. Premature Product Mention</h3>
-                  <p className="text-[#B3B3B3] mb-2">
-                    At 35:00, when Sarah asked &quot;so what do you do?&quot; you went straight into product features.
-                  </p>
-                  <p className="text-[#E51B23] text-sm mb-2">
-                    <strong>The problem:</strong> She wasn&apos;t asking for a pitch — she was testing if you&apos;d stay in consultation mode or flip to sales mode.
-                  </p>
-                  <p className="text-[#FFDE59] text-sm">
-                    <strong>The fix:</strong> Redirect with <em>&quot;Before I answer that — I want to make sure what I share is actually relevant to what you&apos;re dealing with. Can I ask one more question?&quot;</em>
-                  </p>
-                </div>
-              </div>
-            </section>
-
-            {/* Your One Move */}
-            <section className="mb-8">
-              <div className="bg-[#FFDE59]/10 border-l-4 border-[#FFDE59] p-6 rounded-r">
-                <h2 className="font-anton text-xl text-[#FFDE59] uppercase tracking-wider mb-4 flex items-center gap-2">
-                  <span>🎯</span> YOUR ONE MOVE
-                </h2>
-                <p className="text-white text-lg mb-4">
-                  <strong>Fix the close.</strong> You&apos;re doing 90% of the work right and losing deals at the finish line. Before ANY call ends, lock in a specific next step with a calendar invite.
-                </p>
-                <p className="text-[#B3B3B3] mb-3">Practice this phrase until it feels natural:</p>
-                <blockquote className="text-[#FFDE59] italic text-lg">
-                  &quot;Based on what you shared about [their stated priority], I&apos;d suggest we reconnect [specific day] to [specific agenda]. I have [time A] or [time B] — which works better?&quot;
-                </blockquote>
-              </div>
-            </section>
-
-            {/* Immediate Actions */}
-            <section className="mb-8">
-              <h2 className="font-anton text-xl text-white uppercase tracking-wider mb-4 flex items-center gap-2">
-                <span>📋</span> IMMEDIATE ACTIONS
-              </h2>
-              <div className="bg-[#1A1A1A] border border-[#333] p-4 rounded">
-                <ol className="space-y-2 text-[#B3B3B3]">
-                  <li className="flex items-start gap-3">
-                    <span className="text-[#FFDE59] font-bold">1.</span>
-                    <span><strong className="text-white">Send follow-up email TODAY</strong> with a specific meeting request</span>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <span className="text-[#FFDE59] font-bold">2.</span>
-                    <span><strong className="text-white">Include the case study</strong> you mentioned — deliver on your promise</span>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <span className="text-[#FFDE59] font-bold">3.</span>
-                    <span><strong className="text-white">Reference &quot;the scaling wall&quot;</strong> — show you were listening</span>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <span className="text-[#FFDE59] font-bold">4.</span>
-                    <span><strong className="text-white">Add a calendar link</strong> — make saying yes frictionless</span>
-                  </li>
-                </ol>
-              </div>
-            </section>
-
-            {/* Scores */}
-            <section className="mb-8">
-              <h2 className="font-anton text-xl text-white uppercase tracking-wider mb-4 flex items-center gap-2">
-                <span>📈</span> SCORES BREAKDOWN
-              </h2>
-              <div className="bg-[#1A1A1A] border border-[#333] rounded overflow-hidden">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-[#333]">
-                      <th className="text-left text-[#666] font-normal p-3">Category</th>
-                      <th className="text-center text-[#666] font-normal p-3">Score</th>
-                      <th className="text-left text-[#666] font-normal p-3">Note</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr className="border-b border-[#333]">
-                      <td className="p-3 text-white">Discovery</td>
-                      <td className="p-3 text-center text-green-500 font-bold">81</td>
-                      <td className="p-3 text-[#B3B3B3]">Strong diagnostic questions</td>
-                    </tr>
-                    <tr className="border-b border-[#333]">
-                      <td className="p-3 text-white">Rapport</td>
-                      <td className="p-3 text-center text-green-500 font-bold">76</td>
-                      <td className="p-3 text-[#B3B3B3]">Good mirror language</td>
-                    </tr>
-                    <tr className="border-b border-[#333]">
-                      <td className="p-3 text-white">Control</td>
-                      <td className="p-3 text-center text-[#FFDE59] font-bold">68</td>
-                      <td className="p-3 text-[#B3B3B3]">Lost some momentum mid-call</td>
-                    </tr>
-                    <tr className="border-b border-[#333]">
-                      <td className="p-3 text-white">Qualification</td>
-                      <td className="p-3 text-center text-green-500 font-bold">74</td>
-                      <td className="p-3 text-[#B3B3B3]">Covered key criteria</td>
-                    </tr>
-                    <tr className="border-b border-[#333]">
-                      <td className="p-3 text-white">Close</td>
-                      <td className="p-3 text-center text-[#E51B23] font-bold">52</td>
-                      <td className="p-3 text-[#B3B3B3]">Soft fade — needs work</td>
-                    </tr>
-                    <tr className="bg-[#0a0a0a]">
-                      <td className="p-3 text-white font-bold">Overall</td>
-                      <td className="p-3 text-center text-[#FFDE59] font-bold text-lg">72</td>
-                      <td className="p-3 text-white font-semibold">Solid with clear upside</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </section>
-          </div>
-        </div>
+        {/* Report - Same renderer as actual Call Lab reports */}
+        <ConsolePanel>
+          <ConsoleHeading level={1} variant="yellow" className="mb-6">
+            CALL LAB - DIAGNOSTIC SNAPSHOT
+          </ConsoleHeading>
+          <ConsoleMarkdownRenderer content={SYNTHETIC_REPORT} />
+        </ConsolePanel>
 
         {/* Upgrade CTA */}
-        <div className="bg-[#111] border-2 border-[#E51B23] rounded-lg p-8 mb-8">
+        <div className="bg-[#111] border-2 border-[#E51B23] rounded-lg p-8 my-8">
           <div className="text-center mb-6">
             <h2 className="font-anton text-2xl text-[#FFDE59] uppercase tracking-wide mb-2">
               Call Lab showed you what happened.
@@ -357,7 +207,7 @@ export default function ExampleLiteReportPage() {
             >
               ← Back to Call Lab Examples
             </Link>
-            <span className="text-[#666] text-sm">Example data • Not a real report</span>
+            <span className="text-[#666] text-sm">Example data - Not a real report</span>
           </div>
         </footer>
       </main>

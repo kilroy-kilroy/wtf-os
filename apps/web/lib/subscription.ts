@@ -47,19 +47,15 @@ export async function getSubscriptionStatus(
   const email = userEmail.toLowerCase().trim();
 
   // Query user's personal tiers
-  // Note: only select columns that exist in the users table.
-  // visibility_lab_tier is not yet a DB column, so omitting it to avoid
-  // a PostgREST error that would null out the entire result.
   const { data: userData } = await supabase
     .from('users')
-    .select('call_lab_tier, discovery_lab_tier')
+    .select('call_lab_tier, discovery_lab_tier, visibility_lab_tier')
     .eq('id', userId)
     .single();
 
   const personalCallLabTier = userData?.call_lab_tier || 'free';
   const personalDiscoveryLabTier = userData?.discovery_lab_tier || null;
-  // visibility_lab_tier column does not exist in the DB yet
-  const personalVisibilityLabTier: string | null = null;
+  const personalVisibilityLabTier = userData?.visibility_lab_tier || null;
 
   // Check personal access first
   if (personalCallLabTier === 'pro' || personalDiscoveryLabTier === 'pro' || personalVisibilityLabTier === 'pro') {
@@ -92,18 +88,17 @@ export async function getSubscriptionStatus(
   if (assignmentData?.agency_id) {
     const { data: agencyData } = await supabase
       .from('agencies')
-      .select('name, call_lab_tier, discovery_lab_tier')
+      .select('name, call_lab_tier, discovery_lab_tier, visibility_lab_tier')
       .eq('id', assignmentData.agency_id)
       .single();
 
-    agency = agencyData;
+    agency = agencyData as any;
   }
 
   if (agency) {
     const agencyCallLabTier = agency.call_lab_tier || 'free';
     const agencyDiscoveryLabTier = agency.discovery_lab_tier || null;
-    // visibility_lab_tier column does not exist in the DB yet
-    const agencyVisibilityLabTier: string | null = null;
+    const agencyVisibilityLabTier = (agency as any).visibility_lab_tier || null;
 
     if (agencyCallLabTier === 'pro' || agencyDiscoveryLabTier === 'pro' || agencyVisibilityLabTier === 'pro') {
       return {

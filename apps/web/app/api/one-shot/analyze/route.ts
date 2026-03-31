@@ -14,6 +14,26 @@ const ALLOWED_EMAILS = ['tim@timkilroy.com', 'tk@timkilroy.com'];
 // Direct website scrape (gets CURRENT live content)
 // ============================================================================
 
+function stripHtml(html: string): string {
+  return html
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+    .replace(/<nav[^>]*>[\s\S]*?<\/nav>/gi, '')
+    .replace(/<footer[^>]*>[\s\S]*?<\/footer>/gi, '')
+    .replace(/<h[1-6][^>]*>([\s\S]*?)<\/h[1-6]>/gi, '\n## $1\n')
+    .replace(/<p[^>]*>([\s\S]*?)<\/p>/gi, '\n$1\n')
+    .replace(/<li[^>]*>([\s\S]*?)<\/li>/gi, '- $1\n')
+    .replace(/<a[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/gi, '$2 ($1)')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&#\d+;/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 async function scrapeWebsite(url: string): Promise<string> {
   try {
     const response = await fetch(url, {
@@ -27,31 +47,80 @@ async function scrapeWebsite(url: string): Promise<string> {
     if (!response.ok) return '';
 
     const html = await response.text();
-
-    // Strip HTML tags, scripts, styles to get raw text
-    const text = html
-      .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
-      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
-      .replace(/<nav[^>]*>[\s\S]*?<\/nav>/gi, '')
-      .replace(/<footer[^>]*>[\s\S]*?<\/footer>/gi, '')
-      .replace(/<header[^>]*>[\s\S]*?<\/header>/gi, ' [HEADER] ')
-      .replace(/<h[1-6][^>]*>([\s\S]*?)<\/h[1-6]>/gi, '\n## $1\n')
-      .replace(/<p[^>]*>([\s\S]*?)<\/p>/gi, '\n$1\n')
-      .replace(/<li[^>]*>([\s\S]*?)<\/li>/gi, '- $1\n')
-      .replace(/<a[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/gi, '$2 ($1)')
-      .replace(/<[^>]+>/g, ' ')
-      .replace(/&nbsp;/g, ' ')
-      .replace(/&amp;/g, '&')
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>')
-      .replace(/&#\d+;/g, '')
-      .replace(/\s+/g, ' ')
-      .trim();
-
-    // Truncate to ~4000 chars to keep it manageable
+    const text = stripHtml(html);
     return text.slice(0, 4000);
   } catch (error) {
-    console.warn(`[OneShot] Website scrape failed for ${url}:`, error);
+    console.warn(`[OneShot] Basic scrape failed for ${url}:`, error);
+    return '';
+  }
+}
+
+// Apify fallback for JS-rendered sites
+async function scrapeWithApify(url: string): Promise<string> {
+  const apiKey = process.env.APIFY_API_KEY;
+  if (!apiKey) return '';
+
+  try {
+    console.log('[OneShot] Falling back to Apify scraper...');
+
+    // Start the Website Content Crawler actor
+    const startResponse = await fetch(
+      `https://api.apify.com/v2/acts/apify~website-content-crawler/runs?token=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          startUrls: [{ url }],
+          maxCrawlPages: 3,
+          maxCrawlDepth: 1,
+          crawlerType: 'playwright:firefox',
+        }),
+      }
+    );
+
+    if (!startResponse.ok) {
+      console.warn('[OneShot] Apify start failed:', startResponse.status);
+      return '';
+    }
+
+    const runData = await startResponse.json();
+    const runId = runData.data?.id;
+    if (!runId) return '';
+
+    // Poll for completion (max 60s)
+    const deadline = Date.now() + 60000;
+    let status = 'RUNNING';
+    while (status === 'RUNNING' && Date.now() < deadline) {
+      await new Promise(r => setTimeout(r, 3000));
+      const statusResponse = await fetch(
+        `https://api.apify.com/v2/actor-runs/${runId}?token=${apiKey}`
+      );
+      const statusData = await statusResponse.json();
+      status = statusData.data?.status || 'FAILED';
+    }
+
+    if (status !== 'SUCCEEDED') {
+      console.warn(`[OneShot] Apify run ended with status: ${status}`);
+      return '';
+    }
+
+    // Fetch results
+    const datasetId = runData.data?.defaultDatasetId;
+    if (!datasetId) return '';
+
+    const dataResponse = await fetch(
+      `https://api.apify.com/v2/datasets/${datasetId}/items?token=${apiKey}&limit=3`
+    );
+    const items = await dataResponse.json();
+
+    const content = (items as Array<{ title?: string; text?: string }>)
+      .map((item) => `## ${item.title || 'Page'}\n${item.text || ''}`)
+      .join('\n\n');
+
+    console.log(`[OneShot] Apify returned ${content.length} chars from ${(items as unknown[]).length} pages`);
+    return content.slice(0, 6000);
+  } catch (error) {
+    console.warn('[OneShot] Apify scrape failed:', error);
     return '';
   }
 }
@@ -98,11 +167,22 @@ async function researchAgency(agencyUrl: string): Promise<string> {
     })(),
   ]);
 
+  // If basic scrape returned thin results (JS-rendered site), try Apify
+  let finalContent = liveContent;
+  if (liveContent.length < 300) {
+    console.log(`[OneShot] Basic scrape thin (${liveContent.length} chars), trying Apify...`);
+    const apifyContent = await scrapeWithApify(agencyUrl);
+    if (apifyContent.length > liveContent.length) {
+      finalContent = apifyContent;
+      console.log(`[OneShot] Apify provided better content (${apifyContent.length} chars)`);
+    }
+  }
+
   // Combine: live scrape is the source of truth for current copy
   const parts: string[] = [];
 
-  if (liveContent) {
-    parts.push(`=== LIVE WEBSITE CONTENT (scraped directly from ${agencyUrl} right now) ===\n${liveContent}\n`);
+  if (finalContent) {
+    parts.push(`=== LIVE WEBSITE CONTENT (scraped directly from ${agencyUrl} right now) ===\n${finalContent}\n`);
   }
 
   if (perplexityResult) {

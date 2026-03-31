@@ -178,7 +178,7 @@ export default function CallLabPage() {
       {/* Report Content */}
       <ConsolePanel>
         <ConsoleHeading level={1} variant="yellow" className="mb-6">
-          CALL LAB LITE - DIAGNOSTIC SNAPSHOT
+          CALL LAB - DIAGNOSTIC SNAPSHOT
         </ConsoleHeading>
         <ConsoleMarkdownRenderer content={mdResult.markdown} />
       </ConsolePanel>
@@ -187,7 +187,7 @@ export default function CallLabPage() {
       <ConsolePanel variant="red-highlight">
         <div className="text-center space-y-4">
           <ConsoleHeading level={2} variant="yellow">
-            CALL LAB LITE SHOWED YOU WHAT HAPPENED.<br />CALL LAB PRO SHOWS YOU THE SYSTEM.
+            CALL LAB SHOWED YOU WHAT HAPPENED.<br />CALL LAB PRO SHOWS YOU THE SYSTEM.
           </ConsoleHeading>
           <div className="text-left space-y-2 text-white font-poppins">
             <div>→ Pattern Library: The 47 trust-building moves you&apos;re using (or missing)</div>

@@ -36,7 +36,7 @@ export function parseCallLabLiteMarkdown(markdown: string): ReportData {
   };
 
   // Extract header info (call name, score, effectiveness)
-  const headerMatch = markdown.match(/##\s*CALL LAB LITE.*?DIAGNOSTIC SNAPSHOT\s*(.*?)(?=##)/is);
+  const headerMatch = markdown.match(/##\s*CALL LAB(?:\s+LITE)?.*?DIAGNOSTIC SNAPSHOT\s*(.*?)(?=##)/is);
   if (headerMatch) {
     const headerText = headerMatch[1];
 

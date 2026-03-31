@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
             html = generateDiscoveryLabProHTML(reportData);
             filename = `discovery-lab-pro-${metadata?.prospectCompany?.replace(/\s+/g, '-').toLowerCase() || 'playbook'}-${Date.now()}.pdf`;
           } else {
-            // Discovery Lab Lite
+            // Discovery Lab
             const reportData = parseDiscoveryLabMarkdown(result);
             reportData.date = metadata?.date || reportData.date;
             html = generateDiscoveryLabHTML(reportData);

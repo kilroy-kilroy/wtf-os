@@ -35,7 +35,7 @@ const HTML_TEMPLATE = `
             margin: 0.6in;
             background: var(--black);
             @bottom-center {
-                content: "Call Lab Lite — Sales Call Analysis Report | SalesOS";
+                content: "Call Lab — Sales Call Analysis Report | SalesOS";
                 font-family: 'Poppins', sans-serif;
                 font-size: 8pt;
                 color: var(--light-gray);
@@ -297,7 +297,7 @@ const HTML_TEMPLATE = `
 <!-- HEADER -->
 <div class="header">
     <div class="sys-status">SYS_READY <span class="dot">●</span> ANALYSIS COMPLETE</div>
-    <div class="main-title">CALL LAB LITE</div>
+    <div class="main-title">CALL LAB</div>
     <div class="subtitle">DIAGNOSTIC SNAPSHOT</div>
     <div class="call-meta">
         <span class="name">{{call_name}}</span> | {{duration}} | {{date}}
@@ -354,7 +354,7 @@ const HTML_TEMPLATE = `
 
 <!-- CTA -->
 <div class="cta-card">
-    <div class="cta-header">CALL LAB LITE SHOWED YOU WHAT HAPPENED.<br>CALL LAB PRO SHOWS YOU THE SYSTEM.</div>
+    <div class="cta-header">CALL LAB SHOWED YOU WHAT HAPPENED.<br>CALL LAB PRO SHOWS YOU THE SYSTEM.</div>
     <div class="cta-bullet">→ Pattern Library: The 47 trust-building moves you're using (or missing)</div>
     <div class="cta-bullet">→ Trust Acceleration Map: See exactly when buyers go from skeptical to sold</div>
     <div class="cta-bullet">→ Tactical Rewrites: Word-for-word fixes for every weak moment</div>

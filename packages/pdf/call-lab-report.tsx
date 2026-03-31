@@ -161,7 +161,7 @@ export const CallLabReport: React.FC<CallLabReportProps> = ({ result, metadata }
       <Page size="A4" style={styles.page}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.title}>Call Lab Lite - Analysis Report</Text>
+          <Text style={styles.title}>Call Lab - Analysis Report</Text>
           {metadata?.date && (
             <Text style={styles.subtitle}>Generated: {metadata.date}</Text>
           )}
@@ -259,7 +259,7 @@ export const CallLabReport: React.FC<CallLabReportProps> = ({ result, metadata }
 
         {/* Footer */}
         <Text style={styles.footer}>
-          Call Lab Lite - Sales Call Analysis Report
+          Call Lab - Sales Call Analysis Report
         </Text>
       </Page>
     </Document>

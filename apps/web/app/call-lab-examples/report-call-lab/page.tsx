@@ -82,7 +82,7 @@ Practice this phrase until it feels natural:
 
 ---
 
-*This is your Call Lab Lite analysis. For pattern recognition, framework scoring, tactical rewrites, and trust mapping, upgrade to Call Lab Pro.*`;
+*This is your Call Lab analysis. For pattern recognition, framework scoring, tactical rewrites, and trust mapping, upgrade to Call Lab Pro.*`;
 
 export default function ExampleLiteReportPage() {
   return (

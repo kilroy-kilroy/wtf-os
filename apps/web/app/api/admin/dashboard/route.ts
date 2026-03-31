@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
       instantUsersWeek,
       instantUsersMonth,
 
-      // Call Lab Lite
+      // Call Lab
       callLabLiteAll,
       callLabLiteDay,
       callLabLiteWeek,
@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
       callLabProMonth,
       callLabProUsersAll,
 
-      // Discovery Lab Lite
+      // Discovery Lab
       discoveryLiteAll,
       discoveryLiteDay,
       discoveryLiteWeek,
@@ -99,7 +99,7 @@ export async function GET(request: NextRequest) {
       countDistinctUsers(supabase, 'instant_reports', 'email', weekAgo),
       countDistinctUsers(supabase, 'instant_reports', 'email', monthAgo),
 
-      // --- CALL LAB LITE ---
+      // --- CALL LAB ---
       supabase.from('call_lab_reports').select('*', { count: 'exact', head: true }).eq('tier', 'lite'),
       supabase.from('call_lab_reports').select('*', { count: 'exact', head: true }).eq('tier', 'lite').gte('created_at', dayAgo),
       supabase.from('call_lab_reports').select('*', { count: 'exact', head: true }).eq('tier', 'lite').gte('created_at', weekAgo),
@@ -161,7 +161,7 @@ export async function GET(request: NextRequest) {
     const response = {
       generatedAt: now.toISOString(),
 
-      // Section 1: Free tier (Call Lab Instant, Call Lab Lite, Discovery Lab Lite)
+      // Section 1: Free tier (Call Lab Instant, Call Lab, Discovery Lab)
       free: {
         callLabInstant: {
           reports: { day: instantDay.count || 0, week: instantWeek.count || 0, month: instantMonth.count || 0, allTime: instantAll.count || 0 },

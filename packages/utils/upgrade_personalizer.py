@@ -2,7 +2,7 @@
 Call Lab Pro Upgrade Page - Dynamic Personalization System
 
 This module generates personalized upgrade page copy based on the user's
-Call Lab Lite report data. The more specific and personal the copy,
+Call Lab report data. The more specific and personal the copy,
 the higher the conversion rate.
 """
 
@@ -12,7 +12,7 @@ import re
 
 class UpgradePagePersonalizer:
     """
-    Takes data from a Call Lab Lite report and generates personalized
+    Takes data from a Call Lab report and generates personalized
     copy for the Pro upgrade page.
     """
 

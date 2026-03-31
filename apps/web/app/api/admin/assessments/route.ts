@@ -8,9 +8,9 @@ import { createServerClient } from '@repo/db/client';
  *
  * Usage:
  *   GET /api/admin/assessments                              — agency assessment intelligence (default)
- *   GET /api/admin/assessments?product=call-lab             — Call Lab Lite intelligence
+ *   GET /api/admin/assessments?product=call-lab             — Call Lab intelligence
  *   GET /api/admin/assessments?product=call-lab-pro         — Call Lab Pro intelligence
- *   GET /api/admin/assessments?product=discovery-lab        — Discovery Lab Lite intelligence
+ *   GET /api/admin/assessments?product=discovery-lab        — Discovery Lab intelligence
  *   GET /api/admin/assessments?product=discovery-lab-pro    — Discovery Lab Pro intelligence
  *   GET /api/admin/assessments?product=assessments          — agency assessment intelligence
  *   GET /api/admin/assessments?product=all                  — all products combined

@@ -88,11 +88,16 @@ export async function POST(request: NextRequest) {
       `[OneShot] Research complete (${researchData.length} chars)`
     );
 
+    // Check if research is thin or likely irrelevant
+    if (researchData.length < 200) {
+      console.warn(`[OneShot] Research very thin (${researchData.length} chars) - proceeding with limited data`);
+    }
+
     // Step 2: Claude analysis + one-shot rewrite
     console.log('[OneShot] Step 2: Claude analysis + rewrite...');
     const { system, user: userPrompt } = buildOneShotAnalysisPrompt({
       agencyUrl: normalizedUrl,
-      researchData,
+      researchData: researchData || `No research data available for ${normalizedUrl}. Analyze based on URL and any provided context.`,
       ceoName: ceo_name,
       agencyName: agency_name,
     });

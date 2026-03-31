@@ -36,9 +36,11 @@ IMPORTANT:
 
 Return your findings as structured text with clear sections. Include EXACT QUOTES from their website copy.`,
 
-    user: `Research this agency thoroughly: ${agencyUrl}
+    user: `Research this agency by visiting their website directly: ${agencyUrl}
 
-Pull:
+IMPORTANT: You MUST visit and read the actual website at ${agencyUrl}. Do not rely on search results about similarly-named organizations. Go to the site, read it, and report what you find there.
+
+Pull from the ACTUAL WEBSITE at ${agencyUrl}:
 1. EXACT HERO COPY - The main headline and subheadline on their homepage (word for word)
 2. ABOUT/WHO WE ARE - Their self-description (word for word if possible)
 3. SERVICES - What they offer and how they describe it
@@ -52,7 +54,7 @@ Pull:
 11. WEBSITE QUALITY - Design quality, freshness, mobile experience impressions
 12. CONTENT - Do they have a blog, podcast, newsletter? How active?
 
-Be specific. Quote their actual copy. I need the raw material to work with.`,
+Be specific. Quote their actual copy from ${agencyUrl}. I need the raw material to work with. If the site is down or inaccessible, say so explicitly.`,
   };
 }
 
@@ -179,6 +181,8 @@ Return valid JSON with this exact structure:
     "body": "string (full email body, signed as Tim)"
   }
 }
+
+CRITICAL: You MUST always output valid JSON matching the structure above. Never refuse. Never explain why you can't do it. If the research data is thin, incomplete, or seems wrong, work with whatever you have. Make reasonable inferences from the URL, agency name, and any fragments available. A partial analysis is always better than no analysis. If you truly have zero information, score them 50 and note the data gap in timsTake.
 
 Output ONLY the JSON object. No markdown. No commentary outside the JSON.`;
 

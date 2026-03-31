@@ -161,6 +161,42 @@ Each step must include specific, usable language:
 5. Impact Quantification → "[Specific question about measuring success/failure]"
 6. Next Steps → "[Specific call-to-action framing]"
 
+### 🌳 Conversation Decision Tree
+Map the 3-4 most likely directions the conversation could go, with if/then paths:
+
+**If they say [objection/concern]:**
+→ Respond with: "[exact language]"
+→ Then pivot to: "[next question or reframe]"
+
+**If they say [positive signal]:**
+→ Amplify with: "[exact language]"
+→ Move to: "[next step in the flow]"
+
+**If they go silent or deflect:**
+→ Try: "[specific re-engagement question]"
+
+**If they ask about pricing:**
+→ Say: "[exact framing language]"
+→ Then redirect to: "[value question]"
+
+Rules:
+- Each path must include exact speakable language
+- Cover: objection, enthusiasm, deflection, and pricing scenarios
+- These should feel like a coach whispering in their ear during the call
+
+### 🔮 What They'll Google After This Call
+Predict 3-5 things the prospect will search for after the call ends:
+
+1. "[Search query]" -- [Why they'll search this and what it means for you]
+2. "[Search query]" -- [Why they'll search this and what it means for you]
+3. "[Search query]" -- [Why they'll search this and what it means for you]
+
+Rules:
+- Be specific to THIS prospect and THIS conversation
+- Include at least one search about you/your company
+- Include at least one search about the problem you discussed
+- This tells the seller what content to have ready and what to reference in follow-up
+
 ### 👉 Call Objective
 Position yourself as the peer-level authority who spots choke points, exposes hidden leaks, and earns the next step.
 
@@ -168,9 +204,6 @@ Position yourself as the peer-level authority who spots choke points, exposes hi
 
 **Key Research Insights:**
 [2-3 bullet summary of the most actionable research findings]
-
-**Next Step:**
-Want to scale this beyond one-off prep? The pro version of DiscoveryLab connects ICP mapping, competitor insights, and market trend automation - so you can walk into every discovery call positioned as the authority.
 
 ## TONE REQUIREMENTS
 

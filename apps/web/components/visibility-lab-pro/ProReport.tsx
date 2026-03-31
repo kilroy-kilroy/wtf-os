@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Image from 'next/image';
 import {
   VisibilityLabProReport,
   KilroyVisibilityIndex,
@@ -188,14 +189,22 @@ export const ProReport: React.FC<Props> = ({ data, onReset }) => {
       {/* ════════════════════════════════════════ */}
       <header className="border-b-4 border-[#E51B23] bg-[#1a1a1a] p-6 sticky top-0 z-50 shadow-lg print:hidden">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4 md:gap-0">
-          <div>
-            <div className="flex items-center gap-3 mb-1">
-              <span className="text-[#FFDE59] text-xs font-mono">DEMAND_OS PRO REPORT // {new Date().toLocaleDateString()}</span>
-              <span className="bg-[#FFDE59] text-black text-[10px] font-anton uppercase px-2 py-0.5">PRO</span>
+          <div className="flex items-center gap-4">
+            <Image
+              src="/logos/VisibilityLabProSQTransparent.png"
+              alt="Visibility Lab Pro"
+              width={60}
+              height={60}
+              className="h-12 w-auto"
+            />
+            <div>
+              <div className="flex items-center gap-3 mb-1">
+                <span className="text-[#FFDE59] text-xs font-mono">VISIBILITY LAB PRO // {new Date().toLocaleDateString()}</span>
+              </div>
+              <h1 className="text-3xl md:text-4xl text-white font-anton uppercase tracking-wide">
+                VISIBILITY LAB: <span className="text-[#E51B23]">{data.brandName}</span>
+              </h1>
             </div>
-            <h1 className="text-3xl md:text-4xl text-white font-anton uppercase tracking-wide">
-              VISIBILITY LAB: <span className="text-[#E51B23]">{data.brandName}</span>
-            </h1>
           </div>
           <div className="flex flex-wrap gap-3 justify-center">
             <button onClick={onReset} className="px-4 py-2 border border-gray-600 hover:border-white text-sm font-poppins uppercase transition-colors">
@@ -676,7 +685,7 @@ export const ProReport: React.FC<Props> = ({ data, onReset }) => {
         {/* ════════════════════════════════════════ */}
         {data.channelCalendars && data.channelCalendars.length > 0 && (
           <div>
-            <h3 className="text-3xl text-white mb-6 pl-4 border-l-8 border-[#FFDE59] font-anton uppercase">DemandOS Execution</h3>
+            <h3 className="text-3xl text-white mb-6 pl-4 border-l-8 border-[#FFDE59] font-anton uppercase">Demand Execution</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {data.channelCalendars.map((cal, idx) => {
                 const colors = ['#FF0000', '#FFDE59', '#E51B23', '#4CAF50'];

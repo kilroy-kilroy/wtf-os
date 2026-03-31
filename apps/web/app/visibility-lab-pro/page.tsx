@@ -215,10 +215,10 @@ export default function VisibilityLabProPage() {
   return (
     <div className="min-h-screen bg-black">
       <ToolPageHeader
-        osLogoSrc="/logos/DemandOS All-Caps Logo in WHITE and Red.png"
-        osLogoAlt="DemandOS"
-        toolLogoSrc="/logos/VisibilityLabSQTransparent.png"
-        toolLogoAlt="Visibility Lab"
+        osLogoSrc="/logos/VisibilityLabProSQTransparent.png"
+        osLogoAlt="Visibility Lab Pro"
+        toolLogoSrc="/logos/VisibilityLabProSQTransparent.png"
+        toolLogoAlt="Visibility Lab Pro"
       />
       {isLoading && <ProLoadingScreen />}
 

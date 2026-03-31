@@ -1,4 +1,4 @@
-// Discovery Lab prompts - Lite and Pro versions
+// Discovery Lab prompts - Free and Pro versions
 // Aligned with Lindy automation output structure
 // Voice: Tim Kilroy - irreverent, warm, direct, generous, surgically insightful
 

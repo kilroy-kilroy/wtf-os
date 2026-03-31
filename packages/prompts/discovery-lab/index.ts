@@ -13,7 +13,7 @@ CONSTRAINTS:
 - No meta-commentary. Don't explain your process or thinking.
 - Don't ask for clarification. Work with what you have.
 - Word target: 800-1000 words total. Tight beats thorough.
-- Be concise. Lite is fast. No bloated paragraphs.
+- Be concise. Discovery Lab is fast. No bloated paragraphs.
 - Questions should be conversational, not interrogation-style.
 - Every question has a PURPOSE (authority, depth, or guidance). Label them.
 - Hooks are designed to make the prospect lean in, not push back.
@@ -78,12 +78,12 @@ Each step: one sentence of guidance, then the exact language to use in quotes.
 One sentence defining what success looks like for this call.
 Format: "You win this call when [specific outcome]."
 
-8. UPGRADE CTA
+8. WANT THE FULL PLAYBOOK?
 
 Short section selling why Discovery Lab Pro exists. Three to four sentences max.
 
 Format:
-"Discovery Lab Lite gives you questions and structure.
+"Discovery Lab gives you questions and structure.
 
 Discovery Lab Pro gives you the full playbook:
 - Full company research and positioning analysis
@@ -92,7 +92,7 @@ Discovery Lab Pro gives you the full playbook:
 - Complete conversation decision tree
 - What they'll Google after your call
 
-[One-sentence CTA that creates hunger for Pro]"
+Pro turns you from prepared to unstoppable. Want it?"
 
 TONE REQUIREMENTS:
 

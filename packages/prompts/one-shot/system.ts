@@ -38,7 +38,7 @@ Return your findings as structured text with clear sections. Include EXACT QUOTE
 
     user: `Research this agency by visiting their website directly: ${agencyUrl}
 
-IMPORTANT: You MUST visit and read the actual website at ${agencyUrl}. Do not rely on search results about similarly-named organizations. Go to the site, read it, and report what you find there.
+IMPORTANT: You MUST visit and read the CURRENT LIVE version of the website at ${agencyUrl} as it appears TODAY (${new Date().toISOString().split('T')[0]}). Do not use cached or older versions of the site. Do not rely on search results about similarly-named organizations. Go to the site, read it, and report what you find there right now.
 
 Pull from the ACTUAL WEBSITE at ${agencyUrl}:
 1. EXACT HERO COPY - The main headline and subheadline on their homepage (word for word)

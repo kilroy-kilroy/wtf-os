@@ -4,6 +4,7 @@ import { createClient } from '@supabase/supabase-js'
 import Stripe from 'stripe'
 import { onProUpgrade, onSubscriptionCancelled, onGrowthOSBundlePurchased } from '@/lib/loops'
 import { addProSubscriber } from '@/lib/beehiiv'
+import { copperCloseDeal, PRO_ACV, BUNDLE_ACV } from '@/lib/copper'
 import { trackPurchaseCompleted, trackSubscriptionCancelled } from '@/lib/analytics'
 import { alertNewSubscription, alertSubscriptionCancelled } from '@/lib/slack'
 
@@ -134,6 +135,24 @@ export async function POST(request: NextRequest) {
               await addProSubscriber(session.customer_email, product).catch(err => {
                 console.error('Failed to add Beehiiv Pro subscriber:', err);
               });
+
+              // Copper CRM: close deal as won (fire-and-forget)
+              const copperProductMap: Record<string, string> = {
+                'call-lab-pro': 'Call Lab Pro',
+                'discovery-lab-pro': 'Discovery Lab Pro',
+                'visibility-lab-pro': 'Visibility Lab Pro',
+                'growth-bundle': 'Growth Bundle',
+                'growthos-bundle': 'Growth Bundle',
+              };
+              const copperProductName = copperProductMap[product] || product;
+              const copperValue = product.includes('bundle') ? BUNDLE_ACV : PRO_ACV;
+
+              copperCloseDeal({
+                email: session.customer_email!,
+                productName: copperProductName,
+                monetaryValue: copperValue,
+                note: `Purchased ${copperProductName} (${planType} plan) — Subscription: ${subscription.id}`,
+              }).catch(err => console.error('[Copper] close deal failed:', err));
             }
           }
         } catch (err) {

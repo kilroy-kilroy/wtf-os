@@ -31,6 +31,7 @@ import {
 import { onReportGenerated } from '@/lib/loops';
 import { addCallLabSubscriber } from '@/lib/beehiiv';
 import { getArchetypeForLoops } from '@/lib/growth-quadrant';
+import { copperLogReport, PRO_ACV } from '@/lib/copper';
 
 // Helper to send report generated email via Loops and add to Beehiiv
 async function sendReportEmail(
@@ -79,6 +80,15 @@ async function sendReportEmail(
       await addCallLabSubscriber(user.email, fullName || undefined).catch(err => {
         console.error('Failed to add Beehiiv subscriber:', err);
       });
+
+      // Copper CRM: log report + ensure Call Lab Pro opportunity exists (fire-and-forget)
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.timkilroy.com';
+      copperLogReport({
+        email: user.email,
+        productName: 'Call Lab Pro',
+        opportunityValue: PRO_ACV,
+        note: `Ran Call Lab ${reportType} report${prospectName ? ` — ${prospectName}` : ''}${companyName ? ` @ ${companyName}` : ''}. View: ${appUrl}/call-lab/report/${reportId}?admin=1`,
+      }).catch(err => console.error('[Copper] call lab report note failed:', err));
     }
   } catch (err) {
     console.error('Error looking up user for email notifications:', err);

@@ -196,6 +196,7 @@ RESEARCH DATA:
 ${input.researchData}
 
 Remember:
+- The LIVE WEBSITE CONTENT may include a [HERO SECTION] block -- this is the ACTUAL above-the-fold hero copy (headlines, subheadlines, supporting text). Use THIS as the current hero, not the H1 tag (which is often a generic descriptor like "Full Service Digital Marketing Agency"). If no [HERO SECTION] is labeled, infer the hero from context.
 - Quote their ACTUAL copy in the jargon sins (use what's in the research data)
 - The rewrite should sound like them at their best, not like a generic "better" version
 - The social post must be anonymized -- no agency name or founder name

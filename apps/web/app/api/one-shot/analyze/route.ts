@@ -14,6 +14,65 @@ const ALLOWED_EMAILS = ['tim@timkilroy.com', 'tk@timkilroy.com'];
 // Direct website scrape (gets CURRENT live content)
 // ============================================================================
 
+function cleanInlineTags(text: string): string {
+  return text
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&#\d+;/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function extractHeroSection(html: string): string | null {
+  // Strip noise first
+  const cleaned = html
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+    .replace(/<nav[^>]*>[\s\S]*?<\/nav>/gi, '')
+    .replace(/<header[^>]*>[\s\S]*?<\/header>/gi, '');
+
+  // Strategy: find the START of a hero container, then grab a generous chunk
+  // after it and strip tags. This avoids the nested-closing-tag regex problem.
+  const heroOpeners = [
+    /<(?:section|div)[^>]*(?:class|id)="[^"]*hero[^"]*"[^>]*>/i,
+    /<(?:section|div)[^>]*(?:class|id)="[^"]*banner[^"]*"[^>]*>/i,
+    /<(?:section|div)[^>]*(?:class|id)="[^"]*masthead[^"]*"[^>]*>/i,
+    /<(?:section|div)[^>]*(?:class|id)="[^"]*above-fold[^"]*"[^>]*>/i,
+    /<(?:section|div)[^>]*(?:class|id)="[^"]*jumbotron[^"]*"[^>]*>/i,
+  ];
+
+  for (const pattern of heroOpeners) {
+    const match = cleaned.match(pattern);
+    if (match && match.index !== undefined) {
+      // Grab ~3000 chars of HTML after the hero opener, then strip tags
+      const chunk = cleaned.slice(match.index, match.index + 3000);
+      const text = cleanInlineTags(chunk);
+      if (text.length > 20) return text.slice(0, 1000);
+    }
+  }
+
+  // Fallback: first <main> content, taking a chunk from the start
+  const mainMatch = cleaned.match(/<main[^>]*>/i);
+  if (mainMatch && mainMatch.index !== undefined) {
+    const chunk = cleaned.slice(mainMatch.index, mainMatch.index + 3000);
+    const text = cleanInlineTags(chunk);
+    if (text.length > 20) return text.slice(0, 1000);
+  }
+
+  // Last resort: grab everything between </nav> (or </header>) and the next
+  // <section> or <footer>, which is usually the hero on simple sites
+  const afterNav = html.match(/<\/(?:nav|header)>\s*([\s\S]{100,3000}?)(?=<(?:section|footer|div[^>]*class="[^"]*(?:footer|sidebar)))/i);
+  if (afterNav) {
+    const text = cleanInlineTags(afterNav[1]);
+    if (text.length > 30) return text.slice(0, 1000);
+  }
+
+  return null;
+}
+
 function stripHtml(html: string): string {
   return html
     .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
@@ -47,8 +106,18 @@ async function scrapeWebsite(url: string): Promise<string> {
     if (!response.ok) return '';
 
     const html = await response.text();
-    const text = stripHtml(html);
-    return text.slice(0, 4000);
+
+    // Extract hero section separately so Claude knows what's above-the-fold
+    const hero = extractHeroSection(html);
+    const fullText = stripHtml(html);
+
+    const parts: string[] = [];
+    if (hero) {
+      parts.push(`[HERO SECTION - above the fold copy]:\n${hero}\n`);
+    }
+    parts.push(`[FULL PAGE CONTENT]:\n${fullText.slice(0, hero ? 3000 : 4000)}`);
+
+    return parts.join('\n');
   } catch (error) {
     console.warn(`[OneShot] Basic scrape failed for ${url}:`, error);
     return '';

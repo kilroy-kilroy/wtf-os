@@ -380,6 +380,11 @@ export default async function CallReportPage({
   const { id } = await params;
   const { admin } = await searchParams;
 
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
   let finalReport: CallReport | null = null;
   let isAdmin = false;
 
@@ -416,11 +421,6 @@ export default async function CallReportPage({
 
   // Normal user flow (only if admin bypass didn't succeed)
   if (!finalReport) {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
     if (!user) {
       redirect("/login");
     }
@@ -468,10 +468,15 @@ export default async function CallReportPage({
     notFound();
   }
 
-  // Fetch linked discovery brief (if any)
+  // Fetch linked discovery brief and user's recent briefs (for retroactive linking)
   let linkedBrief: DiscoveryBrief | null = null;
+  let userBriefs: DiscoveryBrief[] = [];
+
+  // Use service role for admin, auth client for normal users
+  const briefClient = isAdmin ? (getSupabaseServerClient() as any) : supabase;
+
   if (finalReport.discovery_brief_id) {
-    const { data: briefData } = await supabase
+    const { data: briefData } = await briefClient
       .from("discovery_briefs")
       .select("id, target_company, target_contact_name, target_contact_title, version, created_at")
       .eq("id", finalReport.discovery_brief_id)
@@ -479,13 +484,15 @@ export default async function CallReportPage({
     linkedBrief = briefData as DiscoveryBrief | null;
   }
 
-  // Fetch user's recent briefs for retroactive linking
-  const { data: userBriefs } = await supabase
-    .from("discovery_briefs")
-    .select("id, target_company, target_contact_name, target_contact_title, version, created_at")
-    .eq("user_id", user.id)
-    .order("created_at", { ascending: false })
-    .limit(30);
+  if (user && !isAdmin) {
+    const { data } = await supabase
+      .from("discovery_briefs")
+      .select("id, target_company, target_contact_name, target_contact_title, version, created_at")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(30);
+    userBriefs = (data || []) as DiscoveryBrief[];
+  }
 
   const scores = [
     { label: "Opening", value: finalReport.opening_score },

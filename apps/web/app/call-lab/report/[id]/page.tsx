@@ -1,5 +1,7 @@
-import { redirect } from "next/navigation";
+import { redirect, notFound } from "next/navigation";
+import { cookies } from "next/headers";
 import { createClient } from '@/lib/supabase-auth-server';
+import { getSupabaseServerClient } from '@/lib/supabase-server';
 import { format } from "date-fns";
 import Link from "next/link";
 import { ConsolePanel, ConsoleHeading, CallLabProReport } from "@/components/console";
@@ -325,103 +327,145 @@ function ProJsonReportView({ report }: { report: ProReport }) {
   );
 }
 
+function buildReportFromCallScore(callScore: any): CallReport {
+  let fullReport: Record<string, unknown> | null = null;
+  if (callScore.markdown_response) {
+    try {
+      const parsed = JSON.parse(callScore.markdown_response);
+      if (typeof parsed === 'object' && parsed !== null) {
+        fullReport = parsed;
+      }
+    } catch {
+      fullReport = { markdown: callScore.markdown_response };
+    }
+  }
+
+  return {
+    id: callScore.id,
+    user_id: callScore.user_id || '',
+    buyer_name: null,
+    company_name: null,
+    call_type: null,
+    call_date: null,
+    duration_minutes: null,
+    overall_score: callScore.overall_score,
+    opening_score: null,
+    discovery_score: null,
+    diagnostic_score: null,
+    value_score: null,
+    objection_score: null,
+    commitment_score: null,
+    human_first_score: null,
+    trust_velocity: null,
+    agenda_control: null,
+    pattern_density: null,
+    patterns_detected: null,
+    primary_pattern: null,
+    improvement_highlight: callScore.diagnosis_summary,
+    key_moments: null,
+    full_report: fullReport,
+    tier: callScore.version || "lite",
+    created_at: callScore.created_at,
+    discovery_brief_id: null,
+  };
+}
+
 export default async function CallReportPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ admin?: string }>;
 }) {
   const { id } = await params;
-  const supabase = await createClient();
+  const { admin } = await searchParams;
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  let finalReport: CallReport | null = null;
+  let isAdmin = false;
 
-  if (!user) {
-    redirect("/login");
-  }
+  // Admin bypass: validate cookie against env var
+  if (admin === '1') {
+    const cookieStore = await cookies();
+    const adminKey = cookieStore.get('admin_api_key')?.value;
+    if (adminKey && adminKey === process.env.ADMIN_API_KEY) {
+      isAdmin = true;
+      const adminSupabase = getSupabaseServerClient();
 
-  const { data: report, error } = await supabase
-    .from("call_lab_reports")
-    .select("*")
-    .eq("id", id)
-    .eq("user_id", user.id)
-    .single<CallReport>();
+      // Try call_lab_reports first
+      const { data: report } = await (adminSupabase as any)
+        .from("call_lab_reports")
+        .select("*")
+        .eq("id", id)
+        .single();
+      if (report) finalReport = report;
 
-  // Fallback 1: the dashboard links use call_scores IDs, so look up by call_id
-  // (call_lab_reports.call_id references call_scores.id)
-  let finalReport = report;
-  if (error || !report) {
-    const { data: reportByCallId } = await supabase
-      .from("call_lab_reports")
-      .select("*")
-      .eq("call_id", id)
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .single<CallReport>();
+      // Fallback: try call_scores
+      if (!finalReport) {
+        const { data: callScore } = await (adminSupabase as any)
+          .from("call_scores")
+          .select("id, user_id, overall_score, markdown_response, version, created_at, diagnosis_summary")
+          .eq("id", id)
+          .single();
 
-    if (reportByCallId) {
-      finalReport = reportByCallId;
-    }
-  }
-
-  // Fallback 2: try call_scores table directly
-  if (!finalReport) {
-    const { data: callScore } = await supabase
-      .from("call_scores")
-      .select("id, overall_score, markdown_response, version, created_at, diagnosis_summary")
-      .eq("id", id)
-      .single();
-
-    if (callScore) {
-      // Check if markdown_response is actually JSON (Pro report stored as text)
-      let fullReport: Record<string, unknown> | null = null;
-      if (callScore.markdown_response) {
-        try {
-          const parsed = JSON.parse(callScore.markdown_response);
-          if (typeof parsed === 'object' && parsed !== null) {
-            // It's JSON - could be a Pro report wrapped in { report: ... }
-            fullReport = parsed;
-          }
-        } catch {
-          // Not JSON - treat as markdown
-          fullReport = { markdown: callScore.markdown_response };
+        if (callScore) {
+          finalReport = buildReportFromCallScore(callScore);
         }
       }
+    }
+  }
 
-      finalReport = {
-        id: callScore.id,
-        user_id: user.id,
-        buyer_name: null,
-        company_name: null,
-        call_type: null,
-        call_date: null,
-        duration_minutes: null,
-        overall_score: callScore.overall_score,
-        opening_score: null,
-        discovery_score: null,
-        diagnostic_score: null,
-        value_score: null,
-        objection_score: null,
-        commitment_score: null,
-        human_first_score: null,
-        trust_velocity: null,
-        agenda_control: null,
-        pattern_density: null,
-        patterns_detected: null,
-        primary_pattern: null,
-        improvement_highlight: callScore.diagnosis_summary,
-        key_moments: null,
-        full_report: fullReport,
-        tier: callScore.version || "lite",
-        created_at: callScore.created_at,
-      } as CallReport;
+  // Normal user flow (only if admin bypass didn't succeed)
+  if (!finalReport) {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      redirect("/login");
+    }
+
+    const { data: report, error } = await supabase
+      .from("call_lab_reports")
+      .select("*")
+      .eq("id", id)
+      .eq("user_id", user.id)
+      .single<CallReport>();
+
+    finalReport = report && !error ? report : null;
+
+    // Fallback 1: the dashboard links use call_scores IDs, so look up by call_id
+    if (!finalReport) {
+      const { data: reportByCallId } = await supabase
+        .from("call_lab_reports")
+        .select("*")
+        .eq("call_id", id)
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .single<CallReport>();
+
+      if (reportByCallId) {
+        finalReport = reportByCallId;
+      }
+    }
+
+    // Fallback 2: try call_scores table directly (RLS filters to user's own)
+    if (!finalReport) {
+      const { data: callScore } = await supabase
+        .from("call_scores")
+        .select("id, user_id, overall_score, markdown_response, version, created_at, diagnosis_summary")
+        .eq("id", id)
+        .single();
+
+      if (callScore) {
+        finalReport = buildReportFromCallScore(callScore);
+      }
     }
   }
 
   if (!finalReport) {
-    redirect("/dashboard");
+    notFound();
   }
 
   // Fetch linked discovery brief (if any)

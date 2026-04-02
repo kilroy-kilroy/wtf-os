@@ -1,5 +1,7 @@
-import { redirect } from 'next/navigation';
+import { redirect, notFound } from 'next/navigation';
+import { cookies } from 'next/headers';
 import { createClient } from '@/lib/supabase-auth-server';
+import { getSupabaseServerClient } from '@/lib/supabase-server';
 import Link from 'next/link';
 import { ConsolePanel, ConsoleHeading, ConsoleMarkdownRenderer } from '@/components/console';
 
@@ -21,33 +23,52 @@ interface DiscoveryBrief {
 
 export default async function DiscoveryReportPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ admin?: string }>;
 }) {
   const { id } = await params;
-  const supabase = await createClient();
+  const { admin } = await searchParams;
 
-  // Try to get user - reports can be viewed by owner or via direct link
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  let report: DiscoveryBrief | null = null;
 
-  // Fetch the report
-  const { data: report, error } = await supabase
-    .from('discovery_briefs')
-    .select('*')
-    .eq('id', id)
-    .single<DiscoveryBrief>();
-
-  if (error || !report) {
-    redirect('/discovery-lab');
+  // Admin bypass: validate cookie against env var
+  if (admin === '1') {
+    const cookieStore = await cookies();
+    const adminKey = cookieStore.get('admin_api_key')?.value;
+    if (adminKey && adminKey === process.env.ADMIN_API_KEY) {
+      const adminSupabase = getSupabaseServerClient();
+      const { data } = await (adminSupabase as any)
+        .from('discovery_briefs')
+        .select('*')
+        .eq('id', id)
+        .single();
+      if (data) report = data;
+    }
   }
 
-  // Check access - either owner or public access for lead magnet
-  const isOwner = user?.email === report.lead_email;
+  // Normal user flow
+  if (!report) {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-  // For now, allow public access to reports via direct link (lead magnet flow)
-  // In future, could restrict Pro reports to authenticated users only
+    const { data, error } = await supabase
+      .from('discovery_briefs')
+      .select('*')
+      .eq('id', id)
+      .single<DiscoveryBrief>();
+
+    if (!error && data) report = data;
+  }
+
+  if (!report) {
+    notFound();
+  }
+
+  // Reports are accessible by owner or via direct link (lead magnet flow)
 
   const isPro = report.version === 'pro';
   const createdDate = new Date(report.created_at).toLocaleDateString('en-US', {

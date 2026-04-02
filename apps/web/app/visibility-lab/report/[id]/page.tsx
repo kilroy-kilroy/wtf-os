@@ -1,5 +1,7 @@
-import { redirect } from 'next/navigation';
+import { notFound } from 'next/navigation';
+import { cookies } from 'next/headers';
 import { createClient } from '@/lib/supabase-auth-server';
+import { getSupabaseServerClient } from '@/lib/supabase-server';
 import Link from 'next/link';
 import { VisibilityReportClient } from './client';
 
@@ -16,25 +18,46 @@ interface VisibilityLabRecord {
 
 export default async function VisibilityReportPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ admin?: string }>;
 }) {
   const { id } = await params;
-  const supabase = await createClient();
+  const { admin } = await searchParams;
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  let report: VisibilityLabRecord | null = null;
 
-  // Fetch the report — RLS allows owner by user_id or email
-  const { data: report, error } = await supabase
-    .from('visibility_lab_reports')
-    .select('*')
-    .eq('id', id)
-    .single<VisibilityLabRecord>();
+  // Admin bypass: validate cookie against env var
+  if (admin === '1') {
+    const cookieStore = await cookies();
+    const adminKey = cookieStore.get('admin_api_key')?.value;
+    if (adminKey && adminKey === process.env.ADMIN_API_KEY) {
+      const adminSupabase = getSupabaseServerClient();
+      const { data } = await (adminSupabase as any)
+        .from('visibility_lab_reports')
+        .select('*')
+        .eq('id', id)
+        .single();
+      if (data) report = data;
+    }
+  }
 
-  if (error || !report || !report.full_report) {
-    redirect('/visibility-lab');
+  // Normal user flow
+  if (!report) {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+      .from('visibility_lab_reports')
+      .select('*')
+      .eq('id', id)
+      .single<VisibilityLabRecord>();
+
+    if (!error && data) report = data;
+  }
+
+  if (!report || !report.full_report) {
+    notFound();
   }
 
   const isPro = (report.full_report as any)?.tier === 'pro';

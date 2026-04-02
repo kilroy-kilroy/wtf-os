@@ -449,13 +449,13 @@ function AgencyView({
                         </span>
                         <span className="text-slate-600 shrink-0">{formatTimeAgo(r.createdAt)}</span>
                         {(product === 'callLabLite' || product === 'callLabPro' || product === 'callLabInstant') && (
-                          <ReportLink href={`/call-lab/report/${r.id}`}>View</ReportLink>
+                          <ReportLink href={`/call-lab/report/${r.id}?admin=1`}>View</ReportLink>
                         )}
                         {product.startsWith('discovery') && (
-                          <ReportLink href={`/discovery-lab/report/${r.id}`}>View</ReportLink>
+                          <ReportLink href={`/discovery-lab/report/${r.id}?admin=1`}>View</ReportLink>
                         )}
                         {product === 'visibilityLab' && (
-                          <ReportLink href={`/visibility-lab/report/${r.id}`}>View</ReportLink>
+                          <ReportLink href={`/visibility-lab/report/${r.id}?admin=1`}>View</ReportLink>
                         )}
                         {product === 'assessments' && (
                           <ReportLink href={`/growthos/results/${r.id}?admin=1`}>View</ReportLink>
@@ -686,10 +686,10 @@ function UserView({
         )}
         <span className="text-slate-600 shrink-0 w-20 text-right">{formatTimeAgo(r.createdAt)}</span>
         {(product === 'callLabLite' || product === 'callLabPro' || product === 'callLabInstant') && (
-          <ReportLink href={`/call-lab/report/${r.id}`}>View</ReportLink>
+          <ReportLink href={`/call-lab/report/${r.id}?admin=1`}>View</ReportLink>
         )}
-        {isDiscovery && <ReportLink href={`/discovery-lab/report/${r.id}`}>View</ReportLink>}
-        {isVisibility && <ReportLink href={`/visibility-lab/report/${r.id}`}>View</ReportLink>}
+        {isDiscovery && <ReportLink href={`/discovery-lab/report/${r.id}?admin=1`}>View</ReportLink>}
+        {isVisibility && <ReportLink href={`/visibility-lab/report/${r.id}?admin=1`}>View</ReportLink>}
         {product === 'assessments' && <ReportLink href={`/growthos/results/${r.id}?admin=1`}>View</ReportLink>}
       </div>
     );
@@ -982,7 +982,7 @@ function ProductView({
                     </td>
                     <td className="py-2 pr-4 text-slate-500 text-xs">{formatTimeAgo(r.createdAt)}</td>
                     <td className="py-2">
-                      <ReportLink href={`/call-lab/report/${r.id}`}>View</ReportLink>
+                      <ReportLink href={`/call-lab/report/${r.id}?admin=1`}>View</ReportLink>
                     </td>
                   </tr>
                 ))}
@@ -1033,7 +1033,7 @@ function ProductView({
                     </td>
                     <td className="py-2 pr-4 text-slate-500 text-xs">{formatTimeAgo(r.createdAt)}</td>
                     <td className="py-2">
-                      <ReportLink href={`/call-lab/report/${r.id}`}>View</ReportLink>
+                      <ReportLink href={`/call-lab/report/${r.id}?admin=1`}>View</ReportLink>
                     </td>
                   </tr>
                 ))}
@@ -1088,7 +1088,7 @@ function ProductView({
                     </td>
                     <td className="py-2 pr-4 text-slate-500 text-xs">{formatTimeAgo(r.createdAt)}</td>
                     <td className="py-2">
-                      <ReportLink href={`/discovery-lab/report/${r.id}`}>View</ReportLink>
+                      <ReportLink href={`/discovery-lab/report/${r.id}?admin=1`}>View</ReportLink>
                     </td>
                   </tr>
                 ))}
@@ -1142,7 +1142,7 @@ function ProductView({
                     </td>
                     <td className="py-2 pr-4 text-slate-500 text-xs">{r.agencyName || '-'}</td>
                     <td className="py-2 pr-4 text-slate-500 text-xs">{formatTimeAgo(r.createdAt)}</td>
-                    <td className="py-2"><ReportLink href={`/visibility-lab/report/${r.id}`}>View</ReportLink></td>
+                    <td className="py-2"><ReportLink href={`/visibility-lab/report/${r.id}?admin=1`}>View</ReportLink></td>
                   </tr>
                 ))}
               </tbody>

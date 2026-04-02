@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { after } from 'next/server';
+import { waitUntil } from '@vercel/functions';
 import { createServerClient } from '@repo/db/client';
 import {
   fetchOpportunity,
@@ -187,9 +187,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Return immediately — process in the background
-    // next/server after() keeps the function alive after the response is sent
+    // waitUntil keeps the Vercel function alive after the response is sent
     for (const opportunityId of ids) {
-      after(processOpportunity(opportunityId));
+      waitUntil(processOpportunity(opportunityId));
     }
 
     return NextResponse.json({ ok: true, processing: ids });

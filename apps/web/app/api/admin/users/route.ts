@@ -75,8 +75,8 @@ export async function GET(request: NextRequest) {
     // Build lookup sets/maps
     const clientUserIds = new Set(enrollments.map((e: any) => e.user_id));
     const leadEmails = new Set(instantLeads.map((l: any) => l.email));
-    const orgMap = new Map(orgs.map((o: any) => [o.id, o]));
-    const userOrgMap = new Map(assignments.map((a: any) => [a.user_id, a.agency_id]));
+    const orgMap = new Map<string, any>(orgs.map((o: any) => [o.id, o]));
+    const userOrgMap = new Map<string, string>(assignments.map((a: any) => [a.user_id, a.agency_id]));
     const activeSubUserIds = new Set(
       subscriptions.filter((s: any) => s.status === 'active').map((s: any) => s.user_id)
     );

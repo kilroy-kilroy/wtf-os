@@ -307,19 +307,23 @@ export async function PATCH(
     // Update company fields
     if (body.company) {
       const { enrollment_id, org_id, create_org, ...companyFields } = body.company;
+      console.log('[Admin Users] Company update:', { enrollment_id, org_id, create_org, companyFields });
 
       if (enrollment_id) {
-        const { data: existing } = await (supabase as any)
+        const { data: existing, error: findErr } = await (supabase as any)
           .from('client_companies')
           .select('id, company_name')
           .eq('enrollment_id', enrollment_id)
           .single();
+
+        console.log('[Admin Users] Existing company lookup:', { existing, findErr: findErr?.message });
 
         if (existing) {
           const { error: updateErr } = await (supabase as any)
             .from('client_companies')
             .update({ ...companyFields, updated_at: new Date().toISOString() })
             .eq('enrollment_id', enrollment_id);
+          console.log('[Admin Users] Update result:', { error: updateErr?.message });
           if (updateErr) console.error('[Admin Users] Update client_companies error:', updateErr);
         } else {
           // company_name is NOT NULL — ensure it's set on insert
@@ -328,9 +332,13 @@ export async function PATCH(
             company_name: companyFields.company_name || 'Unknown Company',
             ...companyFields,
           };
-          const { error: insertErr } = await (supabase as any)
+          console.log('[Admin Users] Inserting new company:', insertData);
+          const { data: inserted, error: insertErr } = await (supabase as any)
             .from('client_companies')
-            .insert(insertData);
+            .insert(insertData)
+            .select('id')
+            .single();
+          console.log('[Admin Users] Insert result:', { inserted, error: insertErr?.message });
           if (insertErr) console.error('[Admin Users] Insert client_companies error:', insertErr);
         }
       } else if (org_id) {

@@ -7,6 +7,8 @@
  * - Stopping sequences when users convert (upgrade to Pro)
  */
 
+import { getSupabaseServerClient } from '@/lib/supabase-server';
+
 const LOOPS_API_BASE = 'https://app.loops.so/api/v1';
 
 interface LoopsContact {
@@ -29,6 +31,7 @@ interface LoopsContact {
 
 interface LoopsEventPayload {
   email: string;
+  userId?: string;
   eventName: string;
   eventProperties?: Record<string, string | number | boolean>;
 }
@@ -117,6 +120,18 @@ export async function sendEvent(payload: LoopsEventPayload): Promise<{ success: 
     }
 
     console.log(`Loops event sent: ${payload.eventName} for ${payload.email}`);
+    // Log event to loops_events table for admin audit trail
+    try {
+      const supabase = getSupabaseServerClient();
+      await (supabase as any).from('loops_events').insert({
+        user_email: payload.email,
+        user_id: payload.userId || null,
+        event_name: payload.eventName,
+        event_data: payload.eventProperties || {},
+      });
+    } catch {
+      // Non-blocking — don't fail the event send if logging fails
+    }
     return { success: true };
   } catch (error) {
     console.error('Loops API error:', error);

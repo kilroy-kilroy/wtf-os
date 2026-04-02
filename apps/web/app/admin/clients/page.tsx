@@ -343,6 +343,9 @@ export default function AdminClientsPage() {
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-3xl font-anton uppercase text-[#E51B23]">Client Management</h1>
           <div className="flex gap-3">
+            <a href="/admin/users" className="text-sm border border-[#333333] px-4 py-2 text-[#999999] hover:text-white transition-colors">
+              All Users
+            </a>
             <a href="/admin/five-minute-friday" className="text-sm border border-[#333333] px-4 py-2 text-[#999999] hover:text-white transition-colors">
               5-Minute Friday
             </a>

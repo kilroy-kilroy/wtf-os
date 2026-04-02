@@ -9,6 +9,7 @@ import {
 } from '@repo/db';
 import { sendEvent } from '@/lib/loops';
 import { addCallLabSubscriber } from '@/lib/beehiiv';
+import { copperSyncLead, PRO_ACV, COPPER_STAGES } from '@/lib/copper';
 import { trackEmailCaptured, trackReportGenerated } from '@/lib/analytics';
 
 export async function POST(request: NextRequest) {
@@ -72,6 +73,16 @@ export async function POST(request: NextRequest) {
     // Generate URLs
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.timkilroy.com';
     const reportUrl = `${appUrl}/call-lab-instant/report/${reportId}`;
+
+    // Copper CRM: create lead + Call Lab Pro opportunity (fire-and-forget)
+    copperSyncLead({
+      email: email.toLowerCase().trim(),
+      name: firstName || undefined,
+      productName: 'Call Lab Pro',
+      opportunityValue: PRO_ACV,
+      stageId: COPPER_STAGES.LEAD,
+      note: `Call Lab Instant report — Score: ${report.score || 'N/A'}/10. View: ${reportUrl}`,
+    }).catch(err => console.error('[Copper] instant capture sync failed:', err));
 
     // Send event to Loops to trigger email sequence
     await sendEvent({

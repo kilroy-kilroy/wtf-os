@@ -4,6 +4,7 @@ import { buildVisibilityLabProPrompt } from '@repo/prompts';
 import { getSupabaseServerClient } from '@/lib/supabase-server';
 import { onVisibilityProReportGenerated } from '@/lib/loops';
 import { addVisibilityLabSubscriber } from '@/lib/beehiiv';
+import { copperSyncLead, PRO_ACV, COPPER_STAGES } from '@/lib/copper';
 import { getArchetypeForLoops } from '@/lib/growth-quadrant';
 import { alertReportGenerated } from '@/lib/slack';
 
@@ -116,6 +117,20 @@ export async function POST(request: NextRequest) {
       addVisibilityLabSubscriber(input.userEmail, input.userName, input.brandName).catch(err => {
         console.error('Beehiiv visibility lab pro subscriber failed:', err);
       });
+
+      // Copper CRM: create lead + Visibility Lab Pro opportunity at Discovery Call stage (fire-and-forget)
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.timkilroy.com';
+      if (reportId) {
+        copperSyncLead({
+          email: input.userEmail,
+          name: input.userName,
+          companyName: input.brandName,
+          productName: 'Visibility Lab Pro',
+          opportunityValue: PRO_ACV,
+          stageId: COPPER_STAGES.DISCOVERY_CALL,
+          note: `Ran Visibility Lab Pro — Score: ${report.kvi?.compositeScore || 'N/A'}/100. View: ${appUrl}/visibility-lab/report/${reportId}`,
+        }).catch(err => console.error('[Copper] visibility pro sync failed:', err));
+      }
 
       // Fire Loops event (fire-and-forget)
       if (reportId) {

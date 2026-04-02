@@ -20,6 +20,7 @@ import {
 } from '@repo/prompts';
 import { onDiscoveryReportGenerated } from '@/lib/loops';
 import { addDiscoveryLabSubscriber } from '@/lib/beehiiv';
+import { copperSyncLead, PRO_ACV, COPPER_STAGES } from '@/lib/copper';
 import { getArchetypeForLoops } from '@/lib/growth-quadrant';
 import { alertReportGenerated } from '@/lib/slack';
 
@@ -438,6 +439,19 @@ export async function POST(request: NextRequest) {
       requestor_name,
       requestor_company
     ).catch((err) => console.error('Beehiiv subscriber add failed:', err));
+
+    // Copper CRM: create lead + Discovery Lab Pro opportunity (fire-and-forget)
+    if (reportId) {
+      copperSyncLead({
+        email: requestor_email,
+        name: requestor_name || undefined,
+        companyName: requestor_company || undefined,
+        productName: 'Discovery Lab Pro',
+        opportunityValue: PRO_ACV,
+        stageId: COPPER_STAGES.LEAD,
+        note: `Ran Discovery Lab ${version} — Target: ${target_company}. View: ${appUrl}/discovery-lab/report/${reportId}`,
+      }).catch(err => console.error('[Copper] discovery sync failed:', err));
+    }
 
     // Return the result
     return NextResponse.json(

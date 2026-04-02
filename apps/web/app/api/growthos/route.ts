@@ -10,6 +10,7 @@ import type { IntakeData } from '@repo/utils/src/assessment/scoring';
 import type { RevelationIntakeData } from '@repo/utils/src/assessment/revelations';
 import { addAssessmentSubscriber } from '@/lib/beehiiv';
 import { onAssessmentCompleted } from '@/lib/loops';
+import { copperSyncLead, COPPER_STAGES } from '@/lib/copper';
 import { getArchetypeForLoops } from '@/lib/growth-quadrant';
 
 function getSupabase() {
@@ -327,6 +328,18 @@ export async function POST(request: NextRequest) {
     ).catch((err) => {
       console.error('[GrowthOS] Beehiiv subscription failed:', err);
     });
+
+    // Copper CRM: create lead + WTF Assessment opportunity (fire-and-forget)
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.timkilroy.com';
+    copperSyncLead({
+      email: intakeData.email,
+      name: intakeData.founderName,
+      companyName: intakeData.agencyName,
+      productName: 'WTF Assessment',
+      opportunityValue: 0,
+      stageId: COPPER_STAGES.LEAD,
+      note: `Completed WTF Assessment — Score: ${scores.overall}/5. View: ${appUrl}/growthos/results/${assessmentId}`,
+    }).catch(err => console.error('[Copper] assessment sync failed:', err));
 
     return NextResponse.json({
       success: true,

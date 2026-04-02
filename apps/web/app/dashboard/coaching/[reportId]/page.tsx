@@ -12,7 +12,7 @@ interface CoachingReportFull {
   period_start: string;
   period_end: string;
   call_ids: string[];
-  full_report: {
+  content: {
     the_one_thing?: {
       behavior: string;
       why: string;
@@ -175,7 +175,7 @@ export default async function CoachingReportPage({
     }
   };
 
-  const fullReport = report.full_report;
+  const fullReport = report.content;
 
   return (
     <div className="min-h-screen bg-black py-8 px-4 text-white">

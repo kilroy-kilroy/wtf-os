@@ -4,7 +4,7 @@
  * Fire-and-forget functions for syncing leads, opportunities, and notes.
  * All functions catch errors internally — callers never need try/catch.
  *
- * Env vars: COPPER_API_KEY, COPPER_API_EMAIL
+ * Env vars: COPPER_API, COPPER_API_EMAIL
  */
 
 const COPPER_API_BASE = 'https://api.copper.com/developer_api/v1';
@@ -28,7 +28,7 @@ export const PRO_ACV = 58800;
 export const BUNDLE_ACV = 176400; // 3 × $588
 
 function getHeaders(): Record<string, string> | null {
-  const apiKey = process.env.COPPER_API_KEY;
+  const apiKey = process.env.COPPER_API;
   const apiEmail = process.env.COPPER_API_EMAIL;
   if (!apiKey || !apiEmail) {
     console.log('[Copper] API key or email not configured, skipping');

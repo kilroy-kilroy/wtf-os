@@ -15,7 +15,7 @@ import { randomBytes } from 'crypto';
 const COPPER_API_BASE = 'https://api.copper.com/developer_api/v1';
 
 async function copperFetch(path: string, options: RequestInit = {}) {
-  const apiKey = process.env.COPPER_API_KEY;
+  const apiKey = process.env.COPPER_API_KEY || process.env.COPPER_API;
   const apiEmail = process.env.COPPER_API_EMAIL;
   if (!apiKey || !apiEmail) {
     throw new Error('Set COPPER_API_KEY and COPPER_API_EMAIL env vars');

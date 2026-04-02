@@ -8,7 +8,7 @@
 const COPPER_API_BASE = 'https://api.copper.com/developer_api/v1';
 
 function getHeaders(): Record<string, string> | null {
-  const apiKey = process.env.COPPER_API_KEY;
+  const apiKey = process.env.COPPER_API;
   const apiEmail = process.env.COPPER_API_EMAIL;
   if (!apiKey || !apiEmail) return null;
   return {

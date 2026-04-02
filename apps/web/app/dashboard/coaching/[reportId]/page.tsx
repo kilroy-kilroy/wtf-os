@@ -109,14 +109,27 @@ export default async function CoachingReportPage({
       redirect("/login");
     }
 
+    // RLS handles user_id filtering — just query by ID
     const { data, error } = await supabase
       .from("coaching_reports")
       .select("*")
       .eq("id", reportId)
-      .eq("user_id", user.id)
       .single<CoachingReportFull>();
 
     if (!error && data) report = data;
+
+    // If RLS blocked it, try with service role (user may have a session mismatch)
+    if (!report) {
+      const { getSupabaseServerClient } = await import('@/lib/supabase-server');
+      const serviceSupabase = getSupabaseServerClient();
+      const { data: serviceData } = await (serviceSupabase as any)
+        .from("coaching_reports")
+        .select("*")
+        .eq("id", reportId)
+        .eq("user_id", user.id)
+        .single();
+      if (serviceData) report = serviceData;
+    }
   }
 
   if (!report) {

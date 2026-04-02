@@ -142,7 +142,10 @@ export async function writeDiscoveryResults(
   const customFields: any[] = [];
 
   if (briefFieldId) {
-    customFields.push({ custom_field_definition_id: Number(briefFieldId), value: summary.brief });
+    const briefWithLink = reportUrl
+      ? `FULL REPORT: ${reportUrl}\n\n${summary.brief}`
+      : summary.brief;
+    customFields.push({ custom_field_definition_id: Number(briefFieldId), value: briefWithLink });
   }
   if (contactsFieldId) {
     customFields.push({ custom_field_definition_id: Number(contactsFieldId), value: summary.keyContacts });

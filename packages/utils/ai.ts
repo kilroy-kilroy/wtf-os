@@ -80,6 +80,18 @@ const MODEL_CONFIGS: Record<string, ModelConfig> = {
     maxTokens: 8192,
     temperature: 0.4,
   },
+  'discovery-agent': {
+    provider: 'anthropic',
+    model: 'claude-sonnet-4-5-20250929',
+    maxTokens: 8192,
+    temperature: 0.4,
+  },
+  'discovery-agent-summary': {
+    provider: 'openai',
+    model: 'gpt-4o-mini',
+    maxTokens: 1024,
+    temperature: 0.3,
+  },
 };
 
 export interface ModelResponse {

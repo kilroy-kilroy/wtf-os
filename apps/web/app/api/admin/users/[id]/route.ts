@@ -307,19 +307,27 @@ export async function PATCH(
       if (enrollment_id) {
         const { data: existing } = await (supabase as any)
           .from('client_companies')
-          .select('id')
+          .select('id, company_name')
           .eq('enrollment_id', enrollment_id)
           .single();
 
         if (existing) {
-          await (supabase as any)
+          const { error: updateErr } = await (supabase as any)
             .from('client_companies')
             .update({ ...companyFields, updated_at: new Date().toISOString() })
             .eq('enrollment_id', enrollment_id);
+          if (updateErr) console.error('[Admin Users] Update client_companies error:', updateErr);
         } else {
-          await (supabase as any)
+          // company_name is NOT NULL — ensure it's set on insert
+          const insertData = {
+            enrollment_id,
+            company_name: companyFields.company_name || 'Unknown Company',
+            ...companyFields,
+          };
+          const { error: insertErr } = await (supabase as any)
             .from('client_companies')
-            .insert({ enrollment_id, ...companyFields });
+            .insert(insertData);
+          if (insertErr) console.error('[Admin Users] Insert client_companies error:', insertErr);
         }
       } else if (org_id) {
         await (supabase as any)

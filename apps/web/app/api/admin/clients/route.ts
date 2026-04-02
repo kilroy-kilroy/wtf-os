@@ -90,15 +90,19 @@ export async function PATCH(request: NextRequest) {
 
     // Handle company name update
     if (enrollment_id !== undefined && company_name !== undefined) {
+      console.log('[Admin Clients] Company update:', { enrollment_id, company_name });
+
       // Check if a company record exists for this enrollment
-      const { data: existingCompany } = await supabase
+      const { data: existingCompany, error: findErr } = await (supabase as any)
         .from('client_companies')
         .select('id')
         .eq('enrollment_id', enrollment_id)
         .single();
 
+      console.log('[Admin Clients] Existing company:', { existingCompany, findErr: findErr?.message });
+
       if (existingCompany) {
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from('client_companies')
           .update({ company_name, updated_at: new Date().toISOString() })
           .eq('enrollment_id', enrollment_id);
@@ -107,7 +111,7 @@ export async function PATCH(request: NextRequest) {
           return NextResponse.json({ error: 'Database error' }, { status: 500 });
         }
       } else {
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from('client_companies')
           .insert({ enrollment_id, company_name });
         if (error) {

@@ -57,8 +57,25 @@ export type AnalyticsEventName = typeof AnalyticsEvents[keyof typeof AnalyticsEv
 // ============================================================================
 
 /**
+ * Push an event to Google Tag Manager's dataLayer.
+ * This ensures events tracked via Vercel Analytics also reach GA4.
+ */
+function pushToDataLayer(
+  eventName: string,
+  properties?: Record<string, string | number | boolean | null>
+): void {
+  if (typeof window !== 'undefined') {
+    (window as any).dataLayer = (window as any).dataLayer || [];
+    (window as any).dataLayer.push({
+      event: eventName,
+      ...properties,
+    });
+  }
+}
+
+/**
  * Track a custom event from client-side code.
- * Use this in React components and client-side handlers.
+ * Sends to both Vercel Analytics and Google Tag Manager dataLayer.
  *
  * @example
  * trackEvent('cta_clicked', { button: 'get_started', location: 'hero' });
@@ -70,9 +87,9 @@ export function trackEvent(
   try {
     vercelTrack(eventName, properties);
   } catch (error) {
-    // Silently fail in case analytics isn't available
     console.debug('[Analytics] Failed to track event:', eventName, error);
   }
+  pushToDataLayer(eventName, properties);
 }
 
 // ============================================================================

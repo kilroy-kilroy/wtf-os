@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import { trackEvent } from '@/lib/analytics';
 
 // Form section component
 function FormSection({ number, title, note, children }: {
@@ -432,6 +433,14 @@ export default function AssessmentPage() {
       clearInterval(stepInterval);
 
       if (result.success) {
+        trackEvent('assessment_completed', {
+          assessment_id: result.data.assessmentId,
+          overall_score: result.data.scores?.overall ?? null,
+          source: 'wtf_assessment',
+        });
+        trackEvent('sign_up', {
+          method: 'wtf_assessment',
+        });
         router.push(`/growthos/results/${result.data.assessmentId}`);
       } else {
         throw new Error(result.message || 'Assessment failed');

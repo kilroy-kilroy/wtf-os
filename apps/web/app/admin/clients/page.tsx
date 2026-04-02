@@ -57,6 +57,8 @@ export default function AdminClientsPage() {
   const [inviteStatus, setInviteStatus] = useState<string | null>(null);
   const [resendingId, setResendingId] = useState<string | null>(null);
   const [updatingTier, setUpdatingTier] = useState<string | null>(null);
+  const [editingCompany, setEditingCompany] = useState<string | null>(null);
+  const [companyDraft, setCompanyDraft] = useState('');
 
   // Documents state
   const [docsExpanded, setDocsExpanded] = useState<string | null>(null);
@@ -181,6 +183,35 @@ export default function AdminClientsPage() {
       alert('Failed to update tier');
     }
     setUpdatingTier(null);
+  }
+
+  async function saveCompanyName(client: ClientRow) {
+    const trimmed = companyDraft.trim();
+    setEditingCompany(null);
+    if (trimmed === (client.company_name || '')) return;
+    try {
+      const res = await fetch('/api/admin/clients', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          user_id: client.user_id,
+          enrollment_id: client.id,
+          company_name: trimmed || null,
+        }),
+      });
+      if (res.ok) {
+        setClients(prev => prev.map(c =>
+          c.id === client.id ? { ...c, company_name: trimmed || null } : c
+        ));
+      } else {
+        alert('Failed to update company name');
+      }
+    } catch {
+      alert('Failed to update company name');
+    }
   }
 
   async function toggleDocsPanel(client: ClientRow) {
@@ -396,7 +427,33 @@ export default function AdminClientsPage() {
                           {client.program_name}
                         </span>
                       </td>
-                      <td className="py-3 px-2 text-[#999999]">{client.company_name || '—'}</td>
+                      <td className="py-3 px-2">
+                        {editingCompany === client.id ? (
+                          <input
+                            autoFocus
+                            type="text"
+                            value={companyDraft}
+                            onChange={(e) => setCompanyDraft(e.target.value)}
+                            onBlur={() => saveCompanyName(client)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') saveCompanyName(client);
+                              if (e.key === 'Escape') setEditingCompany(null);
+                            }}
+                            className="w-full bg-black border border-[#00D4FF] text-white px-2 py-0.5 text-sm focus:outline-none"
+                          />
+                        ) : (
+                          <span
+                            onClick={() => {
+                              setEditingCompany(client.id);
+                              setCompanyDraft(client.company_name || '');
+                            }}
+                            className="text-[#999999] cursor-pointer hover:text-[#00D4FF] transition-colors"
+                            title="Click to edit company"
+                          >
+                            {client.company_name || '—'}
+                          </span>
+                        )}
+                      </td>
                       <td className="py-3 px-2">
                         <span className={`text-[10px] uppercase font-bold ${
                           client.onboarding_completed ? 'text-green-400' : client.status === 'active' ? 'text-[#FFDE59]' : 'text-[#666666]'

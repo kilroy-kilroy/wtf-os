@@ -80,10 +80,43 @@ export async function PATCH(request: NextRequest) {
   }
 
   try {
-    const { user_id, call_lab_tier, discovery_lab_tier } = await request.json();
+    const { user_id, call_lab_tier, discovery_lab_tier, enrollment_id, company_name } = await request.json();
 
     if (!user_id) {
       return NextResponse.json({ error: 'user_id required' }, { status: 400 });
+    }
+
+    const supabase = getSupabaseServerClient();
+
+    // Handle company name update
+    if (enrollment_id !== undefined && company_name !== undefined) {
+      // Check if a company record exists for this enrollment
+      const { data: existingCompany } = await supabase
+        .from('client_companies')
+        .select('id')
+        .eq('enrollment_id', enrollment_id)
+        .single();
+
+      if (existingCompany) {
+        const { error } = await supabase
+          .from('client_companies')
+          .update({ company_name, updated_at: new Date().toISOString() })
+          .eq('enrollment_id', enrollment_id);
+        if (error) {
+          console.error('[Admin Clients] Update company error:', error);
+          return NextResponse.json({ error: 'Database error' }, { status: 500 });
+        }
+      } else {
+        const { error } = await supabase
+          .from('client_companies')
+          .insert({ enrollment_id, company_name });
+        if (error) {
+          console.error('[Admin Clients] Insert company error:', error);
+          return NextResponse.json({ error: 'Database error' }, { status: 500 });
+        }
+      }
+
+      return NextResponse.json({ success: true });
     }
 
     const validTiers = ['free', 'pro', null];
@@ -93,8 +126,6 @@ export async function PATCH(request: NextRequest) {
     if (discovery_lab_tier !== undefined && !validTiers.includes(discovery_lab_tier)) {
       return NextResponse.json({ error: 'Invalid discovery_lab_tier value' }, { status: 400 });
     }
-
-    const supabase = getSupabaseServerClient();
 
     // Check if user has a public.users record
     const { data: existing } = await supabase

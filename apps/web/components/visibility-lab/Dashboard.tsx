@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { AnalysisReport } from '@/lib/visibility-lab/types';
-import { Download, Youtube, Mic, Users, AlertTriangle, CheckCircle, Zap, Target, Skull, Activity, Layers, ArrowRight, Save, Share2, Swords, Microscope, PenTool, X, Copy } from 'lucide-react';
+import { Download, Tv, Mic, Users, AlertTriangle, CheckCircle, Zap, Target, Skull, Activity, Layers, ArrowRight, Save, Share2, Swords, Microscope, PenTool, X, Copy } from 'lucide-react';
 import { ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, Radar, Tooltip } from 'recharts';
 
 interface Props {
@@ -443,7 +443,7 @@ export const Dashboard: React.FC<Props> = ({ data, onReset }) => {
             {/* YouTube - ACTION */}
             <div className="bg-[#1a1a1a] p-6 border-t-4 border-[#FF0000]">
               <div className="flex items-center gap-3 mb-2 text-[#FF0000]">
-                <Youtube size={32} />
+                <Tv size={32} />
                 <h4 className="text-2xl text-white font-anton">PRODUCE VIDEO</h4>
               </div>
               <p className="text-xs text-gray-400 mb-4 uppercase tracking-wider">Directive: Film & Publish Weekly</p>

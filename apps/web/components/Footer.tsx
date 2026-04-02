@@ -1,12 +1,12 @@
 import Link from 'next/link';
-import { Globe, Linkedin, Instagram, Youtube, Newspaper, Mail } from 'lucide-react';
+import { Globe, Newspaper, Mail, Tv, Camera, Users } from 'lucide-react';
 
 export function Footer() {
   const socialLinks = [
     { href: 'https://timkilroy.com', icon: Globe, label: 'Website' },
-    { href: 'https://linkedin.com/in/timkilroy', icon: Linkedin, label: 'LinkedIn' },
-    { href: 'https://instagram.com/timkilroy', icon: Instagram, label: 'Instagram' },
-    { href: 'https://youtube.com/@agencygrowthcoach', icon: Youtube, label: 'YouTube' },
+    { href: 'https://linkedin.com/in/timkilroy', icon: Users, label: 'LinkedIn' },
+    { href: 'https://instagram.com/timkilroy', icon: Camera, label: 'Instagram' },
+    { href: 'https://youtube.com/@agencygrowthcoach', icon: Tv, label: 'YouTube' },
     { href: 'https://agencyinnercircle.com', icon: Newspaper, label: 'Newsletter' },
     { href: 'https://timkilroy.com/contact', icon: Mail, label: 'Contact' },
   ];

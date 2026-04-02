@@ -866,14 +866,29 @@ function ProductView({
   const showAssessments = selectedProduct === 'all' || selectedProduct === 'assessments';
 
   const callLabReports = useMemo(() => {
-    let reports = data.reports.callLab;
+    // Merge call_lab_reports with pro/lite call_scores into one Call Lab view
+    const fromCallLab = data.reports.callLab || [];
+    const proLiteFromScores = (data.reports.callScores || [])
+      .filter((r: any) => r.version === 'pro' || r.version === 'full' || r.version === 'lite')
+      .map((r: any) => ({
+        ...r,
+        tier: (r.version === 'pro' || r.version === 'full') ? 'pro' : 'lite',
+        buyerName: r.diagnosisSummary?.substring(0, 60) || '-',
+        companyName: null,
+        callType: null,
+      }));
+    let reports = [...fromCallLab, ...proLiteFromScores];
     if (selectedProduct === 'callLabLite') reports = reports.filter((r) => r.tier !== 'pro');
     if (selectedProduct === 'callLabPro') reports = reports.filter((r) => r.tier === 'pro');
     return sortReports(applyUserFilter(reports));
-  }, [data.reports.callLab, selectedProduct, sortReports, applyUserFilter]);
+  }, [data.reports.callLab, data.reports.callScores, selectedProduct, sortReports, applyUserFilter]);
 
   const callScoreReports = useMemo(() => {
-    return sortReports(applyUserFilter(data.reports.callScores || []));
+    // Only show actual instant reports (not pro/lite which are merged into Call Lab above)
+    const instantOnly = (data.reports.callScores || []).filter(
+      (r: any) => r.version !== 'pro' && r.version !== 'full' && r.version !== 'lite'
+    );
+    return sortReports(applyUserFilter(instantOnly));
   }, [data.reports.callScores, sortReports, applyUserFilter]);
 
   const discoveryReports = useMemo(() => {

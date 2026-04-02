@@ -106,6 +106,11 @@ export async function GET(request: NextRequest) {
     const assessments = assessmentsResult.data || [];
     const visibilityReports = visibilityResult.data || [];
 
+    // Log query errors for debugging (queries fail silently with (supabase as any))
+    if (callLabResult.error) console.error('[Admin Reports] call_lab_reports query error:', callLabResult.error);
+    if (discoveryResult.error) console.error('[Admin Reports] discovery_briefs query error:', discoveryResult.error);
+    if (callScoresResult.error) console.error('[Admin Reports] call_scores query error:', callScoresResult.error);
+
     // Build lookup maps
     const userMap = new Map<string, any>();
     for (const u of users) {
@@ -164,8 +169,9 @@ export async function GET(request: NextRequest) {
       if (!r.user_id) continue;
       if (!userReportCounts.has(r.user_id)) userReportCounts.set(r.user_id, initCounts());
       const counts = userReportCounts.get(r.user_id)!;
-      if (r.version === 'pro') counts.callLabPro++;
-      else if (r.version === 'full') counts.callLabLite++;
+      // version='pro' (desktop ingest) and 'full' (analyze/call Pro path) are both Pro tier
+      if (r.version === 'pro' || r.version === 'full') counts.callLabPro++;
+      else if (r.version === 'lite') counts.callLabLite++;
       else counts.callLabInstant++;
     }
 

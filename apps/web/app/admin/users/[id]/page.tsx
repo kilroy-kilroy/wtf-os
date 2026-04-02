@@ -357,15 +357,22 @@ export default function AdminUserProfilePage() {
     if (field === 'company.revenue_range') {
       const enrollmentId = profile.enrollments[0]?.id;
       patchBody = { company: { enrollment_id: enrollmentId, revenue_range: value || null } };
+    } else if (field === 'org.company_revenue') {
+      patchBody = { company: { org_id: profile.org?.id, company_revenue: value || null } };
     }
     const ok = await patchUser(patchBody);
     if (!ok) return;
     setProfile((prev) => {
-      if (!prev || !prev.enrollments[0]) return prev;
-      const updatedEnrollments = prev.enrollments.map((e, i) =>
-        i === 0 ? { ...e, company: { ...e.company, revenue_range: value || null } as typeof e.company } : e
-      );
-      return { ...prev, enrollments: updatedEnrollments };
+      if (!prev) return prev;
+      if (field === 'company.revenue_range' && prev.enrollments[0]) {
+        const updatedEnrollments = prev.enrollments.map((e, i) =>
+          i === 0 ? { ...e, company: { ...e.company, revenue_range: value || null } as typeof e.company } : e
+        );
+        return { ...prev, enrollments: updatedEnrollments };
+      } else if (field === 'org.company_revenue' && prev.org) {
+        return { ...prev, org: { ...prev.org, company_revenue: value || null } };
+      }
+      return prev;
     });
   }
 
@@ -631,7 +638,16 @@ export default function AdminUserProfilePage() {
                     <EditableField field="org.company_size" value={org.company_size} />
                   </FieldRow>
                   <FieldRow label="Revenue">
-                    <EditableField field="org.company_revenue" value={org.company_revenue} />
+                    <select
+                      value={org.company_revenue || ''}
+                      onChange={(e) => saveCompanySelect('org.company_revenue', e.target.value)}
+                      className="bg-black border border-[#333] text-[#999] text-xs px-2 py-0.5 focus:outline-none focus:border-[#00D4FF] cursor-pointer"
+                    >
+                      <option value="">—</option>
+                      {REVENUE_RANGE_OPTIONS.map((opt) => (
+                        <option key={opt} value={opt}>{opt}</option>
+                      ))}
+                    </select>
                   </FieldRow>
                 </>
               ) : (

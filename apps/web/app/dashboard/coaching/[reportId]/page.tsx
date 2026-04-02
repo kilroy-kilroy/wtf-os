@@ -1,5 +1,7 @@
-import { redirect } from "next/navigation";
+import { redirect, notFound } from "next/navigation";
+import { cookies } from "next/headers";
 import { createClient } from '@/lib/supabase-auth-server';
+import { getSupabaseServerClient } from '@/lib/supabase-server';
 import { format } from "date-fns";
 import Link from "next/link";
 
@@ -71,29 +73,54 @@ interface CoachingReportFull {
 
 export default async function CoachingReportPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ reportId: string }>;
+  searchParams: Promise<{ admin?: string }>;
 }) {
   const { reportId } = await params;
-  const supabase = await createClient();
+  const { admin } = await searchParams;
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  let report: CoachingReportFull | null = null;
 
-  if (!user) {
-    redirect("/login");
+  // Admin bypass: validate cookie against env var
+  if (admin === '1') {
+    const cookieStore = await cookies();
+    const adminKey = cookieStore.get('admin_api_key')?.value;
+    if (adminKey && adminKey === process.env.ADMIN_API_KEY) {
+      const adminSupabase = getSupabaseServerClient();
+      const { data } = await (adminSupabase as any)
+        .from('coaching_reports')
+        .select('*')
+        .eq('id', reportId)
+        .single();
+      if (data) report = data;
+    }
   }
 
-  const { data: report, error } = await supabase
-    .from("coaching_reports")
-    .select("*")
-    .eq("id", reportId)
-    .eq("user_id", user.id)
-    .single<CoachingReportFull>();
+  // Normal user flow
+  if (!report) {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-  if (error || !report) {
-    redirect("/dashboard");
+    if (!user) {
+      redirect("/login");
+    }
+
+    const { data, error } = await supabase
+      .from("coaching_reports")
+      .select("*")
+      .eq("id", reportId)
+      .eq("user_id", user.id)
+      .single<CoachingReportFull>();
+
+    if (!error && data) report = data;
+  }
+
+  if (!report) {
+    notFound();
   }
 
   const formatPeriodLabel = (): string => {

@@ -153,10 +153,13 @@ export async function GET(
 
     for (const r of (callScoresResult.data || [])) {
       seenIds.add(r.id);
+      const tierLabel = r.version === 'pro' || r.version === 'full' ? 'Pro' : r.version === 'lite' ? 'Lite' : 'Instant';
+      const gradeLabel = r.overall_grade ? ` (${r.overall_grade})` : '';
+      const summaryLabel = r.diagnosis_summary ? ` — ${r.diagnosis_summary.substring(0, 60)}` : '';
       activity.push({
         type: 'call_lab',
         id: r.id,
-        label: r.diagnosis_summary?.substring(0, 80) || 'Call Analysis',
+        label: `Call Lab ${tierLabel}${gradeLabel}${summaryLabel}`,
         score: r.overall_score,
         version: r.version,
         date: r.created_at,
@@ -216,6 +219,7 @@ export async function GET(
         id: r.id,
         label: `${r.report_type} coaching report (${r.calls_analyzed} calls)`,
         date: r.created_at,
+        url: `/dashboard/coaching/${r.id}?admin=1`,
       });
     }
 

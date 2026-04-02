@@ -74,13 +74,13 @@ export async function GET(
       (supabase as any)
         .from('discovery_briefs')
         .select('id, target_company, contact_name, contact_title, version, created_at')
-        .eq('user_id', id)
+        .or(`user_id.eq.${id},lead_email.eq.${user.email}`)
         .order('created_at', { ascending: false })
         .limit(50),
       (supabase as any)
         .from('visibility_lab_reports')
         .select('id, brand_name, visibility_score, brand_archetype_name, created_at')
-        .eq('user_id', id)
+        .or(`user_id.eq.${id},email.eq.${user.email}`)
         .order('created_at', { ascending: false })
         .limit(50),
       (supabase as any)
@@ -302,7 +302,7 @@ export async function PATCH(
 
     // Update company fields
     if (body.company) {
-      const { enrollment_id, org_id, ...companyFields } = body.company;
+      const { enrollment_id, org_id, create_org, ...companyFields } = body.company;
 
       if (enrollment_id) {
         const { data: existing } = await (supabase as any)
@@ -326,6 +326,25 @@ export async function PATCH(
           .from('orgs')
           .update({ ...companyFields, updated_at: new Date().toISOString() })
           .eq('id', org_id);
+      } else if (create_org) {
+        // Create a new org for a user who doesn't have one
+        const { data: newOrg } = await (supabase as any)
+          .from('orgs')
+          .insert({
+            name: companyFields.name || companyFields.company_name || 'New Company',
+            personal: true,
+            mode: 'solo',
+            created_by_user_id: id,
+            ...companyFields,
+          })
+          .select('id')
+          .single();
+        if (newOrg) {
+          await (supabase as any)
+            .from('users')
+            .update({ org_id: newOrg.id, updated_at: new Date().toISOString() })
+            .eq('id', id);
+        }
       }
     }
 

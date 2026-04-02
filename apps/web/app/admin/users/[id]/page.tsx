@@ -290,6 +290,8 @@ export default function AdminUserProfilePage() {
       patchBody = { company: { org_id: profile.org?.id, company_size: trimmed || null } };
     } else if (field === 'org.company_revenue') {
       patchBody = { company: { org_id: profile.org?.id, company_revenue: trimmed || null } };
+    } else if (field === 'new_org.name') {
+      patchBody = { company: { create_org: true, name: trimmed || null } };
     }
 
     const ok = await patchUser(patchBody);
@@ -320,9 +322,21 @@ export default function AdminUserProfilePage() {
             : e
         );
         return { ...prev, enrollments: updatedEnrollments };
+      } else if (field.startsWith('company.') && prev.enrollments[0] && !prev.enrollments[0].company) {
+        // Client had no company record — create it locally
+        const subField = field.replace('company.', '');
+        const newCompany = { company_name: null, url: null, industry_niche: null, hq_location: null, founded: null, team_size: null, revenue_range: null, [subField]: trimmed || null };
+        const updatedEnrollments = prev.enrollments.map((e, i) =>
+          i === 0 ? { ...e, company: newCompany as typeof e.company } : e
+        );
+        return { ...prev, enrollments: updatedEnrollments };
       } else if (field.startsWith('org.') && prev.org) {
         const subField = field.replace('org.', '') as keyof OrgData;
         return { ...prev, org: { ...prev.org, [subField]: trimmed || null } };
+      } else if (field.startsWith('new_org.')) {
+        // Org was just created — reload to get the full org data
+        loadProfile(apiKey);
+        return prev;
       }
 
       return updated;
@@ -569,29 +583,29 @@ export default function AdminUserProfilePage() {
             <div className="bg-[#1A1A1A] border border-[#333] p-5 rounded mt-4">
               <h3 className="font-anton text-sm uppercase text-[#FFDE59] mb-3">Company</h3>
 
-              {isClient && company ? (
+              {isClient ? (
                 <>
                   <FieldRow label="Name">
-                    <EditableField field="company.company_name" value={company.company_name} />
+                    <EditableField field="company.company_name" value={company?.company_name ?? null} />
                   </FieldRow>
                   <FieldRow label="URL">
-                    <EditableField field="company.url" value={company.url} />
+                    <EditableField field="company.url" value={company?.url ?? null} />
                   </FieldRow>
                   <FieldRow label="Industry">
-                    <EditableField field="company.industry_niche" value={company.industry_niche} />
+                    <EditableField field="company.industry_niche" value={company?.industry_niche ?? null} />
                   </FieldRow>
                   <FieldRow label="HQ">
-                    <EditableField field="company.hq_location" value={company.hq_location} />
+                    <EditableField field="company.hq_location" value={company?.hq_location ?? null} />
                   </FieldRow>
                   <FieldRow label="Founded">
-                    <EditableField field="company.founded" value={company.founded} />
+                    <EditableField field="company.founded" value={company?.founded ?? null} />
                   </FieldRow>
                   <FieldRow label="Team Size">
-                    <EditableField field="company.team_size" value={company.team_size} />
+                    <EditableField field="company.team_size" value={company?.team_size ?? null} />
                   </FieldRow>
                   <FieldRow label="Revenue">
                     <select
-                      value={company.revenue_range || ''}
+                      value={company?.revenue_range || ''}
                       onChange={(e) => saveCompanySelect('company.revenue_range', e.target.value)}
                       className="bg-black border border-[#333] text-[#999] text-xs px-2 py-0.5 focus:outline-none focus:border-[#00D4FF] cursor-pointer"
                     >
@@ -621,7 +635,11 @@ export default function AdminUserProfilePage() {
                   </FieldRow>
                 </>
               ) : (
-                <p className="text-[#666] text-sm">No company</p>
+                <>
+                  <FieldRow label="Name">
+                    <EditableField field="new_org.name" value={null} />
+                  </FieldRow>
+                </>
               )}
             </div>
 

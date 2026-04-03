@@ -168,21 +168,21 @@ export async function GET(request: NextRequest) {
       visibilityLab: 0,
     });
 
+    // Build a lookup from call_lab_reports for enriching call_scores with buyer/company
+    const callLabEnrichment = new Map<string, { buyer_name: string | null; company_name: string | null }>();
     for (const r of callLabReports) {
       if (!r.user_id) continue;
-      if (!userReportCounts.has(r.user_id)) userReportCounts.set(r.user_id, initCounts());
-      const counts = userReportCounts.get(r.user_id)!;
-      if (r.version === 'pro' || r.version === 'full') counts.callLabPro++;
-      else counts.callLabLite++;
+      // Key by user_id — call_lab_reports is the legacy table with buyer/company metadata
+      // Multiple reports per user: index by created_at proximity later
+      const key = `${r.user_id}:${r.created_at}`;
+      callLabEnrichment.set(key, { buyer_name: r.buyer_name, company_name: r.company_name });
     }
 
-    // Deduplicate: call_scores that already exist in call_lab_reports shouldn't be double-counted
-    const callLabReportUserIds = new Set(callLabReports.map((r: any) => `${r.user_id}:${r.created_at}`));
+    // Count only from call_scores (canonical source with proper version labels)
     for (const r of callScores) {
       if (!r.user_id) continue;
       if (!userReportCounts.has(r.user_id)) userReportCounts.set(r.user_id, initCounts());
       const counts = userReportCounts.get(r.user_id)!;
-      // version='pro' (desktop ingest) and 'full' (analyze/call Pro path) are both Pro tier
       if (r.version === 'pro' || r.version === 'full') counts.callLabPro++;
       else if (r.version === 'lite') counts.callLabLite++;
       else counts.callLabInstant++;
@@ -322,19 +322,24 @@ export async function GET(request: NextRequest) {
         }),
 
       reports: {
-        callLab: callLabReports.map((r: any) => ({
-          id: r.id,
-          userId: r.user_id,
-          userName: getUserName(r.user_id),
-          userEmail: getUserEmail(r.user_id),
-          agencyName: getAgencyNameForUser(r.user_id),
-          buyerName: r.buyer_name,
-          companyName: r.company_name,
-          overallScore: r.overall_score,
-          tier: r.version === 'pro' || r.version === 'full' ? 'pro' : 'lite',
-          callType: null,
-          createdAt: r.created_at,
-        })),
+        callLab: callScores.map((r: any) => {
+          // Enrich with buyer/company from legacy call_lab_reports if available
+          const enrichKey = `${r.user_id}:${r.created_at}`;
+          const enrichment = callLabEnrichment.get(enrichKey);
+          return {
+            id: r.id,
+            userId: r.user_id,
+            userName: getUserName(r.user_id),
+            userEmail: getUserEmail(r.user_id),
+            agencyName: getAgencyNameForUser(r.user_id),
+            buyerName: enrichment?.buyer_name || r.diagnosis_summary?.substring(0, 80) || null,
+            companyName: enrichment?.company_name || null,
+            overallScore: r.overall_score,
+            tier: r.version === 'pro' || r.version === 'full' ? 'pro' : r.version === 'lite' ? 'lite' : 'instant',
+            callType: null,
+            createdAt: r.created_at,
+          };
+        }),
         callScores: callScores.map((r: any) => ({
           id: r.id,
           userId: r.user_id,

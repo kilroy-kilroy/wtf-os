@@ -85,7 +85,7 @@ export async function getAdminDashboardData(): Promise<AdminDashboardData> {
       .from('client_programs')
       .select('id, name, slug, has_five_minute_friday, has_call_lab_pro'),
 
-    supabase
+    (supabase as any)
       .from('users')
       .select('id, email, first_name, last_name, last_sign_in_at, created_at, call_lab_tier, discovery_lab_tier, visibility_lab_tier, subscription_tier, org_id'),
 

@@ -1361,11 +1361,10 @@ export default function AdminReportsPage() {
   const totalAgencies = explicitAgencyCount + inferredAgencyCount;
   const totalUsers = data.users.length;
   const totalCallLab = data.reports.callLab.length;
-  const totalCallScores = (data.reports.callScores || []).length;
   const totalDiscovery = data.reports.discovery.length;
   const totalAssessments = data.reports.assessments.length;
   const totalVisibility = data.reports.visibility?.length || 0;
-  const totalAllReports = totalCallLab + totalCallScores + totalDiscovery + totalAssessments + totalVisibility;
+  const totalAllReports = totalCallLab + totalDiscovery + totalAssessments + totalVisibility;
 
   const tabs: Array<{ key: TabType; label: string }> = [
     { key: 'agency', label: 'By Agency' },
@@ -1391,8 +1390,8 @@ export default function AdminReportsPage() {
             <span><span className="text-white font-medium">{totalAllReports}</span> reports</span>
             <span className="text-slate-700">|</span>
             <span style={{ color: '#E51B23' }}>{data.reports.callLab.filter((r) => r.tier === 'pro').length} Call Lab Pro</span>
-            <span style={{ color: '#00D4FF' }}>{data.reports.callLab.filter((r) => r.tier !== 'pro').length} Call Lab</span>
-            <span style={{ color: '#FFDE59' }}>{totalCallScores} Instant</span>
+            <span style={{ color: '#00D4FF' }}>{data.reports.callLab.filter((r) => r.tier === 'lite').length} Call Lab</span>
+            <span style={{ color: '#FFDE59' }}>{data.reports.callLab.filter((r) => r.tier === 'instant').length} Instant</span>
             <span style={{ color: '#E51B23' }}>{data.reports.discovery.filter((r) => r.version === 'pro').length} Disc Pro</span>
             <span style={{ color: '#00D4FF' }}>{data.reports.discovery.filter((r) => r.version !== 'pro').length} Disc</span>
             <span style={{ color: '#a855f7' }}>{totalVisibility} Visibility</span>

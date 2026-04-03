@@ -43,12 +43,23 @@ export async function GET(request: NextRequest) {
       const program = enrollment.program as any;
       const company = enrollment.company as any;
 
-      // Also fetch tier data from public.users (if record exists)
+      // Also fetch tier data and org_id from public.users (if record exists)
       const { data: publicUser } = await (supabase as any)
         .from('users')
-        .select('call_lab_tier, discovery_lab_tier')
+        .select('call_lab_tier, discovery_lab_tier, org_id')
         .eq('id', enrollment.user_id)
         .single();
+
+      // Resolve company name: prefer org name, fall back to client_companies
+      let companyName = company?.company_name || null;
+      if (!companyName && publicUser?.org_id) {
+        const { data: org } = await (supabase as any)
+          .from('orgs')
+          .select('name')
+          .eq('id', publicUser.org_id)
+          .single();
+        companyName = org?.name || null;
+      }
 
       clients.push({
         id: enrollment.id,
@@ -57,7 +68,7 @@ export async function GET(request: NextRequest) {
         full_name: userData?.user?.user_metadata?.full_name || null,
         program_name: program?.name || 'Unknown',
         program_slug: program?.slug || '',
-        company_name: company?.company_name || null,
+        company_name: companyName,
         onboarding_completed: enrollment.onboarding_completed,
         status: enrollment.status,
         enrolled_at: enrollment.enrolled_at,

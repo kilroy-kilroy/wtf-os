@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
     const supabase = getSupabaseServerClient();
 
     // Get all client enrollments with user and company data
-    const { data: enrollments } = await supabase
+    const { data: enrollments } = await (supabase as any)
       .from('client_enrollments')
       .select(`
         id,
@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
       const company = enrollment.company as any;
 
       // Also fetch tier data from public.users (if record exists)
-      const { data: publicUser } = await supabase
+      const { data: publicUser } = await (supabase as any)
         .from('users')
         .select('call_lab_tier, discovery_lab_tier')
         .eq('id', enrollment.user_id)

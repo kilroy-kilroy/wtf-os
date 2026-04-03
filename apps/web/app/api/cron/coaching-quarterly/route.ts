@@ -52,21 +52,18 @@ export async function GET(request: NextRequest) {
     // Process each user
     for (const user of users || []) {
       try {
-        // Check if user has calls in the period
-        const { data: calls, error: callsError } = await supabase
-          .from('call_lab_reports')
-          .select('id')
-          .eq('user_id', user.id)
-          .gte('created_at', periodStart)
-          .lte('created_at', periodEnd + 'T23:59:59');
+        // Check if user has calls in the period (check both tables)
+        const [labResult, scoresResult] = await Promise.all([
+          supabase.from('call_lab_reports').select('id').eq('user_id', user.id)
+            .gte('created_at', periodStart).lte('created_at', periodEnd + 'T23:59:59'),
+          supabase.from('call_scores').select('id').eq('user_id', user.id)
+            .gte('created_at', periodStart).lte('created_at', periodEnd + 'T23:59:59'),
+        ]);
 
-        if (callsError) {
-          results.errors.push(`User ${user.id}: ${callsError.message}`);
-          continue;
-        }
+        const callCount = (labResult.data?.length || 0) + (scoresResult.data?.length || 0);
 
         // Skip if not enough calls for quarterly (need at least 5)
-        if (!calls || calls.length < 5) {
+        if (callCount < 5) {
           results.skipped++;
           continue;
         }

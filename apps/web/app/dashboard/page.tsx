@@ -1004,11 +1004,19 @@ export default async function DashboardPage() {
     user.user_metadata?.first_name || user.email?.split("@")[0] || "there";
 
   // Get dashboard data from database
-  const [data, activityHistory, quadrant] = await Promise.all([
+  const [data, activityHistory, quadrant, coachingReportsResult] = await Promise.all([
     getDashboardData(supabase, user.id, user.email || ''),
     getActivityHistory(supabase, user.id, user.email || ''),
     computeGrowthQuadrant(supabase, user.id),
+    supabase
+      .from('coaching_reports')
+      .select('id, report_type, period_start, period_end, scores_aggregate, calls_analyzed, created_at')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(5),
   ]);
+
+  const coachingReports = coachingReportsResult.data || [];
 
   return (
     <div className="min-h-screen bg-black">
@@ -1180,6 +1188,44 @@ export default async function DashboardPage() {
                     Rules: No charts, no scores, interpretation not measurement
                     ============================================ */}
                 <CoachingNarrative narrative={data.coachingNarrative} />
+
+                {/* Coaching Reports Links */}
+                {coachingReports.length > 0 && (
+                  <div className="border border-[#333] rounded-lg p-4 mt-4">
+                    <h3 className="font-anton text-sm uppercase tracking-wider text-[#FFDE59] mb-3">
+                      Coaching Reports
+                    </h3>
+                    <div className="space-y-2">
+                      {coachingReports.map((cr: any) => {
+                        const typeLabel = cr.report_type === 'weekly' ? 'Weekly' : cr.report_type === 'monthly' ? 'Monthly' : 'Quarterly';
+                        const score = cr.scores_aggregate?.overall?.toFixed(1) || '—';
+                        const period = `${cr.period_start} → ${cr.period_end}`;
+                        return (
+                          <Link
+                            key={cr.id}
+                            href={`/dashboard/coaching/${cr.id}`}
+                            className="flex items-center justify-between py-2 px-3 bg-[#1A1A1A] border border-[#333] rounded hover:border-[#FFDE59] transition-colors group"
+                          >
+                            <div className="flex items-center gap-3">
+                              <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded ${
+                                cr.report_type === 'quarterly' ? 'bg-[#E51B23]/20 text-[#E51B23]' :
+                                cr.report_type === 'monthly' ? 'bg-[#FFDE59]/20 text-[#FFDE59]' :
+                                'bg-[#00D4FF]/20 text-[#00D4FF]'
+                              }`}>
+                                {typeLabel}
+                              </span>
+                              <span className="text-[#999] text-xs">{period}</span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <span className="text-white text-sm font-mono">{score}</span>
+                              <span className="text-[#666] text-xs group-hover:text-[#FFDE59]">View →</span>
+                            </div>
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
 
                 {/* ============================================
                     BLOCK 7: FOLLOW-UP INTELLIGENCE

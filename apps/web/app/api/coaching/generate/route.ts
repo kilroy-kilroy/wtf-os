@@ -60,46 +60,109 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // Fetch calls for the period
-    const { data: calls, error: callsError } = await supabase
-      .from('call_lab_reports')
-      .select('*')
-      .eq('user_id', user_id)
-      .gte('created_at', period_start)
-      .lte('created_at', period_end)
-      .order('created_at', { ascending: true });
+    // Fetch calls from both tables (call_scores has the actual data, call_lab_reports has richer Pro data)
+    const [callScoresResult, callLabResult] = await Promise.all([
+      supabase
+        .from('call_scores')
+        .select('id, user_id, overall_score, overall_grade, version, lite_scores, full_scores, framework_scores, diagnosis_summary, markdown_response, created_at')
+        .eq('user_id', user_id)
+        .gte('created_at', period_start)
+        .lte('created_at', period_end + 'T23:59:59')
+        .order('created_at', { ascending: true }),
+      supabase
+        .from('call_lab_reports')
+        .select('*')
+        .eq('user_id', user_id)
+        .gte('created_at', period_start)
+        .lte('created_at', period_end + 'T23:59:59')
+        .order('created_at', { ascending: true }),
+    ]);
 
-    if (callsError) {
-      console.error('Error fetching calls:', callsError);
-      return NextResponse.json({ error: 'Failed to fetch call data' }, { status: 500 });
+    if (callScoresResult.error) {
+      console.error('Error fetching call_scores:', callScoresResult.error);
+    }
+    if (callLabResult.error) {
+      console.error('Error fetching call_lab_reports:', callLabResult.error);
+    }
+
+    const callScores = callScoresResult.data || [];
+    const callLabReports = callLabResult.data || [];
+
+    // Merge: prefer call_lab_reports (richer data), fill in from call_scores
+    const seenIds = new Set<string>();
+    const callData: CallData[] = [];
+
+    // First, add call_lab_reports (have detailed dimension scores)
+    for (const call of callLabReports) {
+      seenIds.add(call.id);
+      callData.push({
+        date: call.call_date || call.created_at,
+        prospect: call.company_name || call.buyer_name || 'Unknown',
+        duration_minutes: call.duration_minutes || 30,
+        outcome: call.outcome || 'unknown',
+        scores: {
+          opening: call.opening_score || 5,
+          discovery: call.discovery_score || 5,
+          diagnostic: call.diagnostic_score || 5,
+          value_articulation: call.value_score || 5,
+          objection_navigation: call.objection_score || 5,
+          commitment: call.commitment_score || 5,
+          human_first: call.human_first_score || 5,
+        },
+        patterns_detected: call.patterns_detected || [],
+        key_moments: call.key_moments?.map((m: { description: string }) => m.description) || [],
+      });
+    }
+
+    // Then, add call_scores not already covered
+    for (const cs of callScores) {
+      if (seenIds.has(cs.id)) continue;
+
+      // Extract scores from full_scores JSONB (Pro) or lite_scores JSONB (Lite)
+      const fullScores = cs.full_scores as any || {};
+      const liteScores = cs.lite_scores as any || {};
+      const coreScores = fullScores.core || {};
+      const overallFallback = cs.overall_score || 5;
+
+      // Map call_scores dimensions to CallData scores
+      // full_scores.core has: control_authority, discovery_depth, diagnostic_depth, value_articulation, objection_handling, commitment_close, human_first
+      // lite_scores has: control_confidence, discovery_depth, relevance_narrative, objection_handling, next_steps_clarity
+      const scores = {
+        opening: coreScores.control_authority || liteScores.control_confidence || overallFallback,
+        discovery: coreScores.discovery_depth || liteScores.discovery_depth || overallFallback,
+        diagnostic: coreScores.diagnostic_depth || overallFallback,
+        value_articulation: coreScores.value_articulation || liteScores.relevance_narrative || overallFallback,
+        objection_navigation: coreScores.objection_handling || liteScores.objection_handling || overallFallback,
+        commitment: coreScores.commitment_close || liteScores.next_steps_clarity || overallFallback,
+        human_first: coreScores.human_first || overallFallback,
+      };
+
+      // Try to extract prospect name from markdown_response or diagnosis_summary
+      let prospect = 'Unknown';
+      if (cs.diagnosis_summary) {
+        prospect = cs.diagnosis_summary.substring(0, 50);
+      }
+
+      callData.push({
+        date: cs.created_at,
+        prospect,
+        duration_minutes: 30,
+        outcome: 'unknown',
+        scores,
+        patterns_detected: [],
+        key_moments: [],
+      });
     }
 
     // Check if we have enough data
-    if (!calls || calls.length === 0) {
+    if (callData.length === 0) {
       return NextResponse.json(
         { error: 'No calls found for the specified period' },
         { status: 400 }
       );
     }
 
-    // Transform calls to CallData format
-    const callData: CallData[] = calls.map(call => ({
-      date: call.call_date || call.created_at,
-      prospect: call.company_name || call.buyer_name || 'Unknown',
-      duration_minutes: call.duration_minutes || 30,
-      outcome: call.outcome || 'unknown',
-      scores: {
-        opening: call.opening_score || 5,
-        discovery: call.discovery_score || 5,
-        diagnostic: call.diagnostic_score || 5,
-        value_articulation: call.value_score || 5,
-        objection_navigation: call.objection_score || 5,
-        commitment: call.commitment_score || 5,
-        human_first: call.human_first_score || 5,
-      },
-      patterns_detected: call.patterns_detected || [],
-      key_moments: call.key_moments?.map((m: { description: string }) => m.description) || [],
-    }));
+    console.log(`[Coaching] Found ${callData.length} calls for ${user.email} (${callLabReports.length} from call_lab_reports, ${callScores.length} from call_scores)`);
 
     // Fetch previous reports for context (for monthly/quarterly)
     let previousReports: { type: ReportType; period: string; summary: string; one_thing?: string }[] = [];

@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
         .order('name'),
       (supabase as any)
         .from('users')
-        .select('id, email, first_name, last_name')
+        .select('id, email, first_name, last_name, org_id')
         .order('created_at', { ascending: false }),
       (supabase as any)
         .from('user_agency_assignments')
@@ -110,6 +110,19 @@ export async function GET(request: NextRequest) {
     if (callLabResult.error) console.error('[Admin Reports] call_lab_reports query error:', callLabResult.error);
     if (discoveryResult.error) console.error('[Admin Reports] discovery_briefs query error:', discoveryResult.error);
     if (callScoresResult.error) console.error('[Admin Reports] call_scores query error:', callScoresResult.error);
+
+    // Fetch orgs for users that have org_id
+    const orgIds = [...new Set(users.filter((u: any) => u.org_id).map((u: any) => u.org_id))];
+    const orgMap = new Map<string, { name: string; website: string | null }>();
+    if (orgIds.length > 0) {
+      const { data: orgs } = await (supabase as any)
+        .from('orgs')
+        .select('id, name, website')
+        .in('id', orgIds);
+      for (const o of (orgs || [])) {
+        orgMap.set(o.id, { name: o.name, website: o.website });
+      }
+    }
 
     // Build lookup maps
     const userMap = new Map<string, any>();
@@ -213,6 +226,12 @@ export async function GET(request: NextRequest) {
       // Check explicit assignment first
       const explicitAgencies = userAgencies.get(userId);
       if (explicitAgencies?.[0]?.name) return explicitAgencies[0].name;
+      // Check org name
+      const user = userMap.get(userId);
+      if (user?.org_id) {
+        const org = orgMap.get(user.org_id);
+        if (org?.name) return org.name;
+      }
       // Fall back to domain-based inference
       const email = getUserEmail(userId);
       if (email) {
@@ -233,7 +252,7 @@ export async function GET(request: NextRequest) {
       isInferred: boolean;
     }>();
 
-    // Group unassigned users by email domain
+    // Group unassigned users by email domain (or org)
     for (const u of users) {
       if (assignedUserIds.has(u.id)) continue;
       // Only include users who have reports or are otherwise active
@@ -243,9 +262,11 @@ export async function GET(request: NextRequest) {
       if (!domain) continue;
 
       if (!domainAgencies.has(domain)) {
+        // Use org name if available, otherwise infer from domain
+        const orgName = u.org_id ? orgMap.get(u.org_id)?.name : null;
         domainAgencies.set(domain, {
           id: `domain:${domain}`,
-          name: domainToAgencyName(domain),
+          name: orgName || domainToAgencyName(domain),
           domain,
           url: domain,
           users: [],
@@ -293,7 +314,9 @@ export async function GET(request: NextRequest) {
             email: u.email,
             domain,
             agencies: userAgencies.get(u.id) || [],
-            inferredAgency: domain && !userAgencies.has(u.id) ? domainToAgencyName(domain) : null,
+            inferredAgency: domain && !userAgencies.has(u.id)
+              ? (u.org_id ? (orgMap.get(u.org_id)?.name || domainToAgencyName(domain)) : domainToAgencyName(domain))
+              : null,
             reportCounts: userReportCounts.get(u.id) || initCounts(),
           };
         }),

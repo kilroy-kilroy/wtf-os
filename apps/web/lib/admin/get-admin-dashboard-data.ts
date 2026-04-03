@@ -25,6 +25,7 @@ export interface ClientCard {
   userId: string;
   name: string;
   email: string;
+  companyName: string | null;
   programName: string;
   programSlug: string;
   enrolledAt: string;
@@ -86,7 +87,7 @@ export async function getAdminDashboardData(): Promise<AdminDashboardData> {
 
     supabase
       .from('users')
-      .select('id, email, first_name, last_name, last_sign_in_at, created_at, call_lab_tier, discovery_lab_tier, visibility_lab_tier, subscription_tier'),
+      .select('id, email, first_name, last_name, last_sign_in_at, created_at, call_lab_tier, discovery_lab_tier, visibility_lab_tier, subscription_tier, org_id'),
 
     supabase
       .from('five_minute_fridays')
@@ -111,6 +112,17 @@ export async function getAdminDashboardData(): Promise<AdminDashboardData> {
   const fridays = fridaysResult.data || [];
   const recentSignups = recentSignupsResult.data || [];
   const weeklyToolRuns = weeklyToolRunsResult.data || [];
+
+  // Fetch orgs for company name resolution
+  const orgIds = [...new Set(allUsers.filter((u) => u.org_id).map((u) => u.org_id))];
+  let orgMap = new Map<string, string>();
+  if (orgIds.length > 0) {
+    const { data: orgs } = await supabase
+      .from('orgs')
+      .select('id, name')
+      .in('id', orgIds);
+    orgMap = new Map((orgs || []).map((o) => [o.id, o.name]));
+  }
 
   // Build lookup maps
   const userMap = new Map(allUsers.map((u) => [u.id, u]));
@@ -233,6 +245,7 @@ export async function getAdminDashboardData(): Promise<AdminDashboardData> {
       userId: enrollment.user_id,
       name,
       email: user?.email || '',
+      companyName: user?.org_id ? (orgMap.get(user.org_id) || null) : null,
       programName: program?.name || 'Unknown Program',
       programSlug: program?.slug || '',
       enrolledAt: enrollment.enrolled_at,

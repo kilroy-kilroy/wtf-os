@@ -47,6 +47,9 @@ export function ClientCards({ cards }: ClientCardsProps) {
             <div className="flex items-start justify-between mb-4">
               <div>
                 <h3 className="text-white font-medium">{card.name}</h3>
+                {card.companyName && (
+                  <p className="text-xs text-slate-300">{card.companyName}</p>
+                )}
                 <p className="text-xs text-slate-400">{card.programName}</p>
               </div>
               <Link

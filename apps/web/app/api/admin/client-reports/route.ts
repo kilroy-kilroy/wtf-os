@@ -71,7 +71,7 @@ export async function GET(request: NextRequest) {
         .select('user_id, agency_id, role'),
       (supabase as any)
         .from('call_lab_reports')
-        .select('id, user_id, buyer_name, company_name, overall_score, tier, call_type, created_at')
+        .select('id, user_id, buyer_name, company_name, overall_score, version, created_at')
         .order('created_at', { ascending: false })
         .limit(1000),
       (supabase as any)
@@ -81,7 +81,7 @@ export async function GET(request: NextRequest) {
         .limit(1000),
       (supabase as any)
         .from('discovery_briefs')
-        .select('id, user_id, agency_id, lead_email, lead_name, target_company, contact_name, contact_title, version, created_at')
+        .select('id, user_id, agency_id, lead_email, lead_name, target_company, target_contact_name, target_contact_title, version, created_at')
         .order('created_at', { ascending: false })
         .limit(1000),
       (supabase as any)
@@ -172,7 +172,7 @@ export async function GET(request: NextRequest) {
       if (!r.user_id) continue;
       if (!userReportCounts.has(r.user_id)) userReportCounts.set(r.user_id, initCounts());
       const counts = userReportCounts.get(r.user_id)!;
-      if (r.tier === 'pro') counts.callLabPro++;
+      if (r.version === 'pro' || r.version === 'full') counts.callLabPro++;
       else counts.callLabLite++;
     }
 
@@ -331,8 +331,8 @@ export async function GET(request: NextRequest) {
           buyerName: r.buyer_name,
           companyName: r.company_name,
           overallScore: r.overall_score,
-          tier: r.tier,
-          callType: r.call_type,
+          tier: r.version === 'pro' || r.version === 'full' ? 'pro' : 'lite',
+          callType: null,
           createdAt: r.created_at,
         })),
         callScores: callScores.map((r: any) => ({
@@ -354,8 +354,8 @@ export async function GET(request: NextRequest) {
           userEmail: r.user_id ? getUserEmail(r.user_id) : (r.lead_email || ''),
           agencyName: r.agency_id ? (agencyMap.get(r.agency_id)?.name || null) : getAgencyNameForUser(r.user_id),
           targetCompany: r.target_company,
-          contactName: r.contact_name,
-          contactTitle: r.contact_title,
+          contactName: r.target_contact_name,
+          contactTitle: r.target_contact_title,
           version: r.version,
           createdAt: r.created_at,
         })),

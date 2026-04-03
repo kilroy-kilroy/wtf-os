@@ -186,6 +186,9 @@ export default function AdminUserProfilePage() {
   // Inline edit state
   const [editingField, setEditingField] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState('');
+  const [orgSearchOpen, setOrgSearchOpen] = useState(false);
+  const [orgSearchQuery, setOrgSearchQuery] = useState('');
+  const [orgSearchResults, setOrgSearchResults] = useState<Array<{ id: string; name: string; website: string | null; primary_domain: string | null }>>([]);
 
   useEffect(() => {
     const stored = sessionStorage.getItem('admin_api_key');
@@ -350,6 +353,29 @@ export default function AdminUserProfilePage() {
       loadProfile(apiKey);
       return prev;
     });
+  }
+
+  async function searchOrgs(query: string) {
+    setOrgSearchQuery(query);
+    if (query.length < 2) { setOrgSearchResults([]); return; }
+    try {
+      const res = await fetch(`/api/admin/orgs/search?q=${encodeURIComponent(query)}`, {
+        headers: { Authorization: `Bearer ${apiKey}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setOrgSearchResults(data.orgs || []);
+      }
+    } catch { setOrgSearchResults([]); }
+  }
+
+  async function linkToOrg(orgId: string) {
+    const ok = await patchUser({ company: { org_id: orgId } });
+    if (!ok) return;
+    setOrgSearchOpen(false);
+    setOrgSearchQuery('');
+    setOrgSearchResults([]);
+    loadProfile(apiKey);
   }
 
   // ─── Reusable inline edit render ─────────────────────────────────────────────
@@ -564,7 +590,46 @@ export default function AdminUserProfilePage() {
 
             {/* Company Card */}
             <div className="bg-[#1A1A1A] border border-[#333] p-5 rounded mt-4">
-              <h3 className="font-anton text-sm uppercase text-[#FFDE59] mb-3">Company</h3>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-anton text-sm uppercase text-[#FFDE59]">Company</h3>
+                <button
+                  onClick={() => setOrgSearchOpen(!orgSearchOpen)}
+                  className="text-[9px] uppercase font-bold text-[#666] hover:text-[#00D4FF] transition-colors"
+                >
+                  {orgSearchOpen ? 'Cancel' : 'Link to org...'}
+                </button>
+              </div>
+
+              {orgSearchOpen && (
+                <div className="mb-3">
+                  <input
+                    autoFocus
+                    value={orgSearchQuery}
+                    onChange={(e) => searchOrgs(e.target.value)}
+                    placeholder="Search orgs by name..."
+                    className="bg-black border border-[#00D4FF] text-white px-2 py-1 text-xs focus:outline-none w-full mb-1"
+                  />
+                  {orgSearchResults.length > 0 && (
+                    <div className="border border-[#333] bg-[#111] max-h-32 overflow-y-auto">
+                      {orgSearchResults.map((o) => (
+                        <button
+                          key={o.id}
+                          onClick={() => linkToOrg(o.id)}
+                          className="block w-full text-left px-2 py-1.5 text-xs text-[#999] hover:text-white hover:bg-[#222] transition-colors border-b border-[#222] last:border-0"
+                        >
+                          {o.name}
+                          {o.primary_domain && (
+                            <span className="text-[#666] ml-2">@{o.primary_domain}</span>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {orgSearchQuery.length >= 2 && orgSearchResults.length === 0 && (
+                    <p className="text-[#666] text-[10px] px-1">No orgs found</p>
+                  )}
+                </div>
+              )}
 
               <FieldRow label="Name">
                 <EditableField field="org.name" value={org?.name ?? null} />

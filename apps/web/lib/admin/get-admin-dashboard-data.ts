@@ -114,7 +114,7 @@ export async function getAdminDashboardData(): Promise<AdminDashboardData> {
   const weeklyToolRuns = weeklyToolRunsResult.data || [];
 
   // Fetch orgs for company name resolution
-  const orgIds = [...new Set(allUsers.filter((u) => u.org_id).map((u) => u.org_id))];
+  const orgIds = [...new Set(allUsers.filter((u: any) => u.org_id).map((u: any) => u.org_id))];
   let orgMap = new Map<string, string>();
   if (orgIds.length > 0) {
     const { data: orgs } = await supabase
@@ -125,7 +125,7 @@ export async function getAdminDashboardData(): Promise<AdminDashboardData> {
   }
 
   // Build lookup maps
-  const userMap = new Map(allUsers.map((u) => [u.id, u]));
+  const userMap = new Map(allUsers.map((u: any) => [u.id, u]));
   const programMap = new Map(programs.map((p) => [p.id, p]));
 
   // Merge enrollments with user and program data
@@ -262,13 +262,13 @@ export async function getAdminDashboardData(): Promise<AdminDashboardData> {
 
   // Build platform pulse
   const proUsers = allUsers.filter(
-    (u) => u.call_lab_tier === 'pro' || u.discovery_lab_tier === 'pro' || u.visibility_lab_tier === 'pro'
+    (u: any) => u.call_lab_tier === 'pro' || u.discovery_lab_tier === 'pro' || u.visibility_lab_tier === 'pro'
   ).length;
   const coachingClients = enrollments.length;
   const freeUsers = allUsers.length - proUsers - coachingClients;
 
   const monthSignups = allUsers.filter(
-    (u) => new Date((u as any).created_at) >= monthAgo
+    (u: any) => new Date(u.created_at) >= monthAgo
   ).length;
 
   const callAnalyses = weeklyToolRuns.filter(

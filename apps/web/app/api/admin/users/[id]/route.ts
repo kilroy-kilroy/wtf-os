@@ -332,16 +332,8 @@ export async function PATCH(
 
       let targetOrgId: string | null = manualOrgId || currentUser?.org_id || null;
 
-      // If manually linking to a specific org
-      if (manualOrgId) {
-        targetOrgId = manualOrgId;
-      }
-      // If user already has an org, update it
-      else if (currentUser?.org_id) {
-        targetOrgId = currentUser.org_id;
-      }
-      // Try to find org by domain
-      else if (domain && !isPublicDomain) {
+      // Try to find org by domain if user has no org yet and wasn't manually linked
+      if (!targetOrgId && domain && !isPublicDomain) {
         const { data: domainOrg } = await (supabase as any)
           .from('orgs')
           .select('id')
@@ -428,7 +420,7 @@ export async function PATCH(
             .select('company_name, url, industry_niche, team_size, revenue_range')
             .in('enrollment_id', enrollmentIds)
             .limit(1)
-            .single();
+            .maybeSingle();
 
           if (clientCompany) {
             const { data: currentOrg } = await (supabase as any)

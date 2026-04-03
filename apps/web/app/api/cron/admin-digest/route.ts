@@ -14,9 +14,10 @@ export const runtime = 'nodejs';
  * Runs daily at 9am ET via Vercel Cron
  */
 export async function GET(request: NextRequest) {
-  // Verify cron auth (Vercel sends this header)
+  // Verify cron auth (skip if CRON_SECRET not configured)
+  const CRON_SECRET = process.env.CRON_SECRET;
   const authHeader = request.headers.get('authorization');
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (CRON_SECRET && authHeader !== `Bearer ${CRON_SECRET}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

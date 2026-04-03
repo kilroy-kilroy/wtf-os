@@ -13,10 +13,10 @@ import { sendEvent } from '@/lib/loops';
  */
 export async function GET(request: NextRequest) {
   try {
-    // Verify cron secret
+    // Verify cron secret (skip if not configured — Vercel crons work without it)
+    const CRON_SECRET = process.env.CRON_SECRET;
     const authHeader = request.headers.get('authorization');
-    const token = authHeader?.replace('Bearer ', '');
-    if (token !== process.env.CRON_SECRET) {
+    if (CRON_SECRET && authHeader !== `Bearer ${CRON_SECRET}`) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

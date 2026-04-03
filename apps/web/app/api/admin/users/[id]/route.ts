@@ -7,6 +7,17 @@ function verifyAuth(request: NextRequest): boolean {
   return apiKey === process.env.ADMIN_API_KEY;
 }
 
+const PUBLIC_EMAIL_DOMAINS = new Set([
+  'gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'aol.com',
+  'icloud.com', 'protonmail.com', 'hey.com', 'live.com', 'me.com',
+  'mac.com', 'msn.com', 'mail.com', 'zoho.com',
+]);
+
+function extractDomain(email: string): string | null {
+  const parts = email.split('@');
+  return parts.length === 2 ? parts[1].toLowerCase() : null;
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -304,67 +315,157 @@ export async function PATCH(
       }
     }
 
-    // Update company fields
+    // Update company → org-based flow
     if (body.company) {
-      const { enrollment_id, org_id, create_org, ...companyFields } = body.company;
-      console.log('[Admin Users] Company update:', { enrollment_id, org_id, create_org, companyFields });
+      const { enrollment_id, org_id: manualOrgId, create_org, ...companyFields } = body.company;
 
-      if (enrollment_id) {
-        const { data: existing, error: findErr } = await (supabase as any)
-          .from('client_companies')
-          .select('id, company_name')
-          .eq('enrollment_id', enrollment_id)
+      // Get the current user to check org_id and email
+      const { data: currentUser } = await (supabase as any)
+        .from('users')
+        .select('org_id, email')
+        .eq('id', id)
+        .single();
+
+      const userEmail = currentUser?.email || '';
+      const domain = extractDomain(userEmail);
+      const isPublicDomain = domain ? PUBLIC_EMAIL_DOMAINS.has(domain) : true;
+
+      let targetOrgId: string | null = manualOrgId || currentUser?.org_id || null;
+
+      // If manually linking to a specific org
+      if (manualOrgId) {
+        targetOrgId = manualOrgId;
+      }
+      // If user already has an org, update it
+      else if (currentUser?.org_id) {
+        targetOrgId = currentUser.org_id;
+      }
+      // Try to find org by domain
+      else if (domain && !isPublicDomain) {
+        const { data: domainOrg } = await (supabase as any)
+          .from('orgs')
+          .select('id')
+          .eq('primary_domain', domain)
           .single();
 
-        console.log('[Admin Users] Existing company lookup:', { existing, findErr: findErr?.message });
-
-        if (existing) {
-          const { error: updateErr } = await (supabase as any)
-            .from('client_companies')
-            .update({ ...companyFields, updated_at: new Date().toISOString() })
-            .eq('enrollment_id', enrollment_id);
-          console.log('[Admin Users] Update result:', { error: updateErr?.message });
-          if (updateErr) console.error('[Admin Users] Update client_companies error:', updateErr);
-        } else {
-          // company_name is NOT NULL — ensure it's set on insert
-          const insertData = {
-            enrollment_id,
-            company_name: companyFields.company_name || 'Unknown Company',
-            ...companyFields,
-          };
-          console.log('[Admin Users] Inserting new company:', insertData);
-          const { data: inserted, error: insertErr } = await (supabase as any)
-            .from('client_companies')
-            .insert(insertData)
-            .select('id')
-            .single();
-          console.log('[Admin Users] Insert result:', { inserted, error: insertErr?.message });
-          if (insertErr) console.error('[Admin Users] Insert client_companies error:', insertErr);
+        if (domainOrg) {
+          targetOrgId = domainOrg.id;
         }
-      } else if (org_id) {
-        await (supabase as any)
+      }
+
+      // Create org if we still don't have one
+      if (!targetOrgId) {
+        const orgInsert: Record<string, any> = {
+          name: companyFields.name || companyFields.company_name || 'New Company',
+          created_by_user_id: id,
+          personal: isPublicDomain,
+          mode: 'solo',
+        };
+        if (domain && !isPublicDomain) {
+          orgInsert.primary_domain = domain;
+        }
+        if (companyFields.website || companyFields.url) orgInsert.website = companyFields.website || companyFields.url;
+        if (companyFields.target_industry || companyFields.industry_niche) orgInsert.target_industry = companyFields.target_industry || companyFields.industry_niche;
+        if (companyFields.company_size || companyFields.team_size) orgInsert.company_size = companyFields.company_size || companyFields.team_size;
+        if (companyFields.company_revenue || companyFields.revenue_range) orgInsert.company_revenue = companyFields.company_revenue || companyFields.revenue_range;
+
+        const { data: newOrg, error: orgCreateErr } = await (supabase as any)
           .from('orgs')
-          .update({ ...companyFields, updated_at: new Date().toISOString() })
-          .eq('id', org_id);
-      } else if (create_org) {
-        // Create a new org for a user who doesn't have one
-        const { data: newOrg } = await (supabase as any)
-          .from('orgs')
-          .insert({
-            name: companyFields.name || companyFields.company_name || 'New Company',
-            personal: true,
-            mode: 'solo',
-            created_by_user_id: id,
-            ...companyFields,
-          })
+          .insert(orgInsert)
           .select('id')
           .single();
-        if (newOrg) {
-          await (supabase as any)
-            .from('users')
-            .update({ org_id: newOrg.id, updated_at: new Date().toISOString() })
-            .eq('id', id);
+
+        if (orgCreateErr) {
+          console.error('[Admin Users] Create org error:', orgCreateErr);
+        } else {
+          targetOrgId = newOrg.id;
         }
+      } else {
+        // Update existing org fields
+        const orgUpdate: Record<string, any> = { updated_at: new Date().toISOString() };
+        if (companyFields.name !== undefined || companyFields.company_name !== undefined) {
+          orgUpdate.name = companyFields.name ?? companyFields.company_name;
+        }
+        if (companyFields.website !== undefined || companyFields.url !== undefined) {
+          orgUpdate.website = companyFields.website ?? companyFields.url;
+        }
+        if (companyFields.target_industry !== undefined || companyFields.industry_niche !== undefined) {
+          orgUpdate.target_industry = companyFields.target_industry ?? companyFields.industry_niche;
+        }
+        if (companyFields.company_size !== undefined || companyFields.team_size !== undefined) {
+          orgUpdate.company_size = companyFields.company_size ?? companyFields.team_size;
+        }
+        if (companyFields.company_revenue !== undefined || companyFields.revenue_range !== undefined) {
+          orgUpdate.company_revenue = companyFields.company_revenue ?? companyFields.revenue_range;
+        }
+
+        if (Object.keys(orgUpdate).length > 1) {
+          const { error: orgUpdateErr } = await (supabase as any)
+            .from('orgs')
+            .update(orgUpdate)
+            .eq('id', targetOrgId);
+          if (orgUpdateErr) console.error('[Admin Users] Update org error:', orgUpdateErr);
+        }
+      }
+
+      // Link user to org if not already linked
+      if (targetOrgId && currentUser?.org_id !== targetOrgId) {
+        await (supabase as any)
+          .from('users')
+          .update({ org_id: targetOrgId, updated_at: new Date().toISOString() })
+          .eq('id', id);
+
+        // Merge client_companies data into org (first link only)
+        const { data: enrollments } = await (supabase as any)
+          .from('client_enrollments')
+          .select('id')
+          .eq('user_id', id);
+
+        if (enrollments?.length > 0) {
+          const enrollmentIds = enrollments.map((e: any) => e.id);
+          const { data: clientCompany } = await (supabase as any)
+            .from('client_companies')
+            .select('company_name, url, industry_niche, team_size, revenue_range')
+            .in('enrollment_id', enrollmentIds)
+            .limit(1)
+            .single();
+
+          if (clientCompany) {
+            const { data: currentOrg } = await (supabase as any)
+              .from('orgs')
+              .select('name, website, target_industry, company_size, company_revenue')
+              .eq('id', targetOrgId)
+              .single();
+
+            if (currentOrg) {
+              const mergeUpdate: Record<string, any> = {};
+              if (!currentOrg.name && clientCompany.company_name) mergeUpdate.name = clientCompany.company_name;
+              if (!currentOrg.website && clientCompany.url) mergeUpdate.website = clientCompany.url;
+              if (!currentOrg.target_industry && clientCompany.industry_niche) mergeUpdate.target_industry = clientCompany.industry_niche;
+              if (!currentOrg.company_size && clientCompany.team_size) mergeUpdate.company_size = clientCompany.team_size;
+              if (!currentOrg.company_revenue && clientCompany.revenue_range) mergeUpdate.company_revenue = clientCompany.revenue_range;
+
+              if (Object.keys(mergeUpdate).length > 0) {
+                mergeUpdate.updated_at = new Date().toISOString();
+                await (supabase as any)
+                  .from('orgs')
+                  .update(mergeUpdate)
+                  .eq('id', targetOrgId);
+              }
+            }
+          }
+        }
+      }
+
+      // Auto-link coworkers with same email domain (only for non-public domains)
+      if (targetOrgId && domain && !isPublicDomain) {
+        const domainPattern = `%@${domain}`;
+        await (supabase as any)
+          .from('users')
+          .update({ org_id: targetOrgId, updated_at: new Date().toISOString() })
+          .like('email', domainPattern)
+          .is('org_id', null)
+          .neq('id', id);
       }
     }
 

@@ -1394,7 +1394,8 @@ export default function AdminReportsPage() {
             <span style={{ color: '#FFDE59' }}>{data.reports.callLab.filter((r) => r.tier === 'instant').length} Instant</span>
             <span style={{ color: '#E51B23' }}>{data.reports.discovery.filter((r) => r.version === 'pro').length} Disc Pro</span>
             <span style={{ color: '#00D4FF' }}>{data.reports.discovery.filter((r) => r.version !== 'pro').length} Disc</span>
-            <span style={{ color: '#a855f7' }}>{totalVisibility} Visibility</span>
+            <span style={{ color: '#a855f7' }}>{data.reports.visibility?.filter((r: any) => r.version === 'pro').length || 0} Vis Pro</span>
+            <span style={{ color: '#a855f7' }}>{data.reports.visibility?.filter((r: any) => r.version !== 'pro').length || 0} Visibility</span>
             <span style={{ color: '#f59e0b' }}>{totalAssessments} Assessment</span>
           </div>
         </div>

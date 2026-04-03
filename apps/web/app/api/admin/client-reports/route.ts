@@ -92,7 +92,7 @@ export async function GET(request: NextRequest) {
         .limit(1000),
       (supabase as any)
         .from('visibility_lab_reports')
-        .select('id, user_id, email, brand_name, visibility_score, vvv_clarity_score, brand_archetype_name, created_at')
+        .select('id, user_id, email, brand_name, visibility_score, vvv_clarity_score, brand_archetype_name, version, created_at')
         .order('created_at', { ascending: false })
         .limit(1000),
     ]);
@@ -205,7 +205,9 @@ export async function GET(request: NextRequest) {
     for (const r of visibilityReports) {
       if (!r.user_id) continue;
       if (!userReportCounts.has(r.user_id)) userReportCounts.set(r.user_id, initCounts());
-      userReportCounts.get(r.user_id)!.visibilityLab++;
+      const counts = userReportCounts.get(r.user_id)!;
+      if (r.version === 'pro') counts.visibilityLabPro = (counts.visibilityLabPro || 0) + 1;
+      else counts.visibilityLab++;
     }
 
     // Helpers
@@ -385,6 +387,7 @@ export async function GET(request: NextRequest) {
           visibilityScore: r.visibility_score,
           clarityScore: r.vvv_clarity_score,
           archetypeName: r.brand_archetype_name,
+          version: r.version || 'lite',
           createdAt: r.created_at,
         })),
       },

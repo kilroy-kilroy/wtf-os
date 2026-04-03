@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
       }
 
       try {
-        const { data: savedReport, error: saveError } = await supabase
+        const { data: savedReport, error: saveError } = await (supabase as any)
           .from('visibility_lab_reports')
           .insert({
             user_id: userId,
@@ -95,6 +95,7 @@ export async function POST(request: NextRequest) {
             brand_archetype_reasoning: report.brandArchetype?.reasoning || null,
             full_report: report,
             input_data: input,
+            version: 'pro',
           })
           .select('id')
           .single();

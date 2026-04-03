@@ -294,6 +294,12 @@ export default function AdminUserProfilePage() {
     const ok = await patchUser(patchBody);
     if (!ok) return;
 
+    // If org was just created, reload to get full org data
+    if (field.startsWith('org.') && !profile.org) {
+      loadProfile(apiKey);
+      return;
+    }
+
     // Update local state
     setProfile((prev) => {
       if (!prev) return prev;
@@ -314,10 +320,6 @@ export default function AdminUserProfilePage() {
       } else if (field.startsWith('org.') && prev.org) {
         const subField = field.replace('org.', '') as keyof OrgData;
         return { ...prev, org: { ...prev.org, [subField]: trimmed || null } };
-      } else if (field.startsWith('org.') && !prev.org) {
-        // Org was just created — reload to get the full org data
-        loadProfile(apiKey);
-        return prev;
       }
 
       return updated;
@@ -344,14 +346,13 @@ export default function AdminUserProfilePage() {
     }
     const ok = await patchUser(patchBody);
     if (!ok) return;
+    if (!profile.org) {
+      loadProfile(apiKey);
+      return;
+    }
     setProfile((prev) => {
       if (!prev) return prev;
-      if (prev.org) {
-        return { ...prev, org: { ...prev.org, company_revenue: value || null } };
-      }
-      // Org was just created — reload
-      loadProfile(apiKey);
-      return prev;
+      return { ...prev, org: { ...prev.org!, company_revenue: value || null } };
     });
   }
 
@@ -456,7 +457,6 @@ export default function AdminUserProfilePage() {
   const { user, org, enrollments, activity, subscriptions, documents, same_company_users } = profile;
   const isClient = enrollments.length > 0;
   const enrollment = enrollments[0] ?? null;
-  const company = enrollment?.company ?? null;
   const fridayCount = activity.filter((a) => a.type === 'friday').length;
   const firstAssessment = activity.find((a) => a.type === 'assessment');
 
@@ -593,7 +593,10 @@ export default function AdminUserProfilePage() {
               <div className="flex items-center justify-between mb-3">
                 <h3 className="font-anton text-sm uppercase text-[#FFDE59]">Company</h3>
                 <button
-                  onClick={() => setOrgSearchOpen(!orgSearchOpen)}
+                  onClick={() => {
+                    if (orgSearchOpen) { setOrgSearchQuery(''); setOrgSearchResults([]); }
+                    setOrgSearchOpen(!orgSearchOpen);
+                  }}
                   className="text-[9px] uppercase font-bold text-[#666] hover:text-[#00D4FF] transition-colors"
                 >
                   {orgSearchOpen ? 'Cancel' : 'Link to org...'}

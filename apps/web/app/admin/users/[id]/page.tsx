@@ -262,36 +262,30 @@ export default function AdminUserProfilePage() {
     else if (field === 'email') patchBody = { email: trimmed || null };
     else if (field === 'preferences.title') patchBody = { preferences: { title: trimmed || null } };
     else if (field === 'preferences.phone') patchBody = { preferences: { phone: trimmed || null } };
-    else if (field === 'company.company_name') {
-      const enrollmentId = profile.enrollments[0]?.id;
-      patchBody = { company: { enrollment_id: enrollmentId, company_name: trimmed || null } };
-    } else if (field === 'company.url') {
-      const enrollmentId = profile.enrollments[0]?.id;
-      patchBody = { company: { enrollment_id: enrollmentId, url: trimmed || null } };
-    } else if (field === 'company.industry_niche') {
-      const enrollmentId = profile.enrollments[0]?.id;
-      patchBody = { company: { enrollment_id: enrollmentId, industry_niche: trimmed || null } };
-    } else if (field === 'company.hq_location') {
-      const enrollmentId = profile.enrollments[0]?.id;
-      patchBody = { company: { enrollment_id: enrollmentId, hq_location: trimmed || null } };
-    } else if (field === 'company.founded') {
-      const enrollmentId = profile.enrollments[0]?.id;
-      patchBody = { company: { enrollment_id: enrollmentId, founded: trimmed || null } };
-    } else if (field === 'company.team_size') {
-      const enrollmentId = profile.enrollments[0]?.id;
-      patchBody = { company: { enrollment_id: enrollmentId, team_size: trimmed || null } };
-    } else if (field === 'org.name') {
-      patchBody = { company: { org_id: profile.org?.id, name: trimmed || null } };
+    else if (field === 'org.name') {
+      if (profile.org) {
+        patchBody = { company: { org_id: profile.org.id, name: trimmed || null } };
+      } else {
+        patchBody = { company: { create_org: true, name: trimmed || null } };
+      }
     } else if (field === 'org.website') {
-      patchBody = { company: { org_id: profile.org?.id, website: trimmed || null } };
+      if (profile.org) {
+        patchBody = { company: { org_id: profile.org.id, website: trimmed || null } };
+      } else {
+        patchBody = { company: { create_org: true, website: trimmed || null } };
+      }
     } else if (field === 'org.target_industry') {
-      patchBody = { company: { org_id: profile.org?.id, target_industry: trimmed || null } };
+      if (profile.org) {
+        patchBody = { company: { org_id: profile.org.id, target_industry: trimmed || null } };
+      } else {
+        patchBody = { company: { create_org: true, target_industry: trimmed || null } };
+      }
     } else if (field === 'org.company_size') {
-      patchBody = { company: { org_id: profile.org?.id, company_size: trimmed || null } };
-    } else if (field === 'org.company_revenue') {
-      patchBody = { company: { org_id: profile.org?.id, company_revenue: trimmed || null } };
-    } else if (field === 'new_org.name') {
-      patchBody = { company: { create_org: true, name: trimmed || null } };
+      if (profile.org) {
+        patchBody = { company: { org_id: profile.org.id, company_size: trimmed || null } };
+      } else {
+        patchBody = { company: { create_org: true, company_size: trimmed || null } };
+      }
     }
 
     const ok = await patchUser(patchBody);
@@ -314,26 +308,10 @@ export default function AdminUserProfilePage() {
         updated.user.preferences = { ...prev.user.preferences, title: trimmed || undefined };
       } else if (field === 'preferences.phone') {
         updated.user.preferences = { ...prev.user.preferences, phone: trimmed || undefined };
-      } else if (field.startsWith('company.') && prev.enrollments[0]) {
-        const subField = field.replace('company.', '') as keyof typeof prev.enrollments[0]['company'];
-        const updatedEnrollments = prev.enrollments.map((e, i) =>
-          i === 0
-            ? { ...e, company: { ...e.company, [subField]: trimmed || null } as typeof e.company }
-            : e
-        );
-        return { ...prev, enrollments: updatedEnrollments };
-      } else if (field.startsWith('company.') && prev.enrollments[0] && !prev.enrollments[0].company) {
-        // Client had no company record — create it locally
-        const subField = field.replace('company.', '');
-        const newCompany = { company_name: null, url: null, industry_niche: null, hq_location: null, founded: null, team_size: null, revenue_range: null, [subField]: trimmed || null };
-        const updatedEnrollments = prev.enrollments.map((e, i) =>
-          i === 0 ? { ...e, company: newCompany as typeof e.company } : e
-        );
-        return { ...prev, enrollments: updatedEnrollments };
       } else if (field.startsWith('org.') && prev.org) {
         const subField = field.replace('org.', '') as keyof OrgData;
         return { ...prev, org: { ...prev.org, [subField]: trimmed || null } };
-      } else if (field.startsWith('new_org.')) {
+      } else if (field.startsWith('org.') && !prev.org) {
         // Org was just created — reload to get the full org data
         loadProfile(apiKey);
         return prev;
@@ -354,24 +332,22 @@ export default function AdminUserProfilePage() {
   async function saveCompanySelect(field: string, value: string) {
     if (!profile) return;
     let patchBody: Record<string, unknown> = {};
-    if (field === 'company.revenue_range') {
-      const enrollmentId = profile.enrollments[0]?.id;
-      patchBody = { company: { enrollment_id: enrollmentId, revenue_range: value || null } };
-    } else if (field === 'org.company_revenue') {
-      patchBody = { company: { org_id: profile.org?.id, company_revenue: value || null } };
+    if (field === 'org.company_revenue') {
+      if (profile.org) {
+        patchBody = { company: { org_id: profile.org.id, company_revenue: value || null } };
+      } else {
+        patchBody = { company: { create_org: true, company_revenue: value || null } };
+      }
     }
     const ok = await patchUser(patchBody);
     if (!ok) return;
     setProfile((prev) => {
       if (!prev) return prev;
-      if (field === 'company.revenue_range' && prev.enrollments[0]) {
-        const updatedEnrollments = prev.enrollments.map((e, i) =>
-          i === 0 ? { ...e, company: { ...e.company, revenue_range: value || null } as typeof e.company } : e
-        );
-        return { ...prev, enrollments: updatedEnrollments };
-      } else if (field === 'org.company_revenue' && prev.org) {
+      if (prev.org) {
         return { ...prev, org: { ...prev.org, company_revenue: value || null } };
       }
+      // Org was just created — reload
+      loadProfile(apiKey);
       return prev;
     });
   }
@@ -590,73 +566,30 @@ export default function AdminUserProfilePage() {
             <div className="bg-[#1A1A1A] border border-[#333] p-5 rounded mt-4">
               <h3 className="font-anton text-sm uppercase text-[#FFDE59] mb-3">Company</h3>
 
-              {isClient ? (
-                <>
-                  <FieldRow label="Name">
-                    <EditableField field="company.company_name" value={company?.company_name ?? null} />
-                  </FieldRow>
-                  <FieldRow label="URL">
-                    <EditableField field="company.url" value={company?.url ?? null} />
-                  </FieldRow>
-                  <FieldRow label="Industry">
-                    <EditableField field="company.industry_niche" value={company?.industry_niche ?? null} />
-                  </FieldRow>
-                  <FieldRow label="HQ">
-                    <EditableField field="company.hq_location" value={company?.hq_location ?? null} />
-                  </FieldRow>
-                  <FieldRow label="Founded">
-                    <EditableField field="company.founded" value={company?.founded ?? null} />
-                  </FieldRow>
-                  <FieldRow label="Team Size">
-                    <EditableField field="company.team_size" value={company?.team_size ?? null} />
-                  </FieldRow>
-                  <FieldRow label="Revenue">
-                    <select
-                      value={company?.revenue_range || ''}
-                      onChange={(e) => saveCompanySelect('company.revenue_range', e.target.value)}
-                      className="bg-black border border-[#333] text-[#999] text-xs px-2 py-0.5 focus:outline-none focus:border-[#00D4FF] cursor-pointer"
-                    >
-                      <option value="">—</option>
-                      {REVENUE_RANGE_OPTIONS.map((opt) => (
-                        <option key={opt} value={opt}>{opt}</option>
-                      ))}
-                    </select>
-                  </FieldRow>
-                </>
-              ) : org ? (
-                <>
-                  <FieldRow label="Name">
-                    <EditableField field="org.name" value={org.name} />
-                  </FieldRow>
-                  <FieldRow label="Website">
-                    <EditableField field="org.website" value={org.website} />
-                  </FieldRow>
-                  <FieldRow label="Industry">
-                    <EditableField field="org.target_industry" value={org.target_industry} />
-                  </FieldRow>
-                  <FieldRow label="Size">
-                    <EditableField field="org.company_size" value={org.company_size} />
-                  </FieldRow>
-                  <FieldRow label="Revenue">
-                    <select
-                      value={org.company_revenue || ''}
-                      onChange={(e) => saveCompanySelect('org.company_revenue', e.target.value)}
-                      className="bg-black border border-[#333] text-[#999] text-xs px-2 py-0.5 focus:outline-none focus:border-[#00D4FF] cursor-pointer"
-                    >
-                      <option value="">—</option>
-                      {REVENUE_RANGE_OPTIONS.map((opt) => (
-                        <option key={opt} value={opt}>{opt}</option>
-                      ))}
-                    </select>
-                  </FieldRow>
-                </>
-              ) : (
-                <>
-                  <FieldRow label="Name">
-                    <EditableField field="new_org.name" value={null} />
-                  </FieldRow>
-                </>
-              )}
+              <FieldRow label="Name">
+                <EditableField field="org.name" value={org?.name ?? null} />
+              </FieldRow>
+              <FieldRow label="Website">
+                <EditableField field="org.website" value={org?.website ?? null} />
+              </FieldRow>
+              <FieldRow label="Industry">
+                <EditableField field="org.target_industry" value={org?.target_industry ?? null} />
+              </FieldRow>
+              <FieldRow label="Size">
+                <EditableField field="org.company_size" value={org?.company_size ?? null} />
+              </FieldRow>
+              <FieldRow label="Revenue">
+                <select
+                  value={org?.company_revenue || ''}
+                  onChange={(e) => saveCompanySelect('org.company_revenue', e.target.value)}
+                  className="bg-black border border-[#333] text-[#999] text-xs px-2 py-0.5 focus:outline-none focus:border-[#00D4FF] cursor-pointer"
+                >
+                  <option value="">—</option>
+                  {REVENUE_RANGE_OPTIONS.map((opt) => (
+                    <option key={opt} value={opt}>{opt}</option>
+                  ))}
+                </select>
+              </FieldRow>
             </div>
 
             {/* Same-Company Users */}

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabase-server';
 import { onVisibilityReportGenerated, onVisibilityProReportGenerated } from '@/lib/loops';
 import { addVisibilityLabSubscriber } from '@/lib/beehiiv';
+import { copperSyncLead, PRO_ACV, COPPER_STAGES } from '@/lib/copper';
 import { getArchetypeForLoops } from '@/lib/growth-quadrant';
 
 // Admin-only: Manually (re)trigger delivery for an existing Visibility Lab report.
@@ -89,6 +90,30 @@ export async function POST(request: NextRequest) {
     // Add to Beehiiv (idempotent - Beehiiv handles existing subscribers)
     const beehiivResult = await addVisibilityLabSubscriber(email, userName, brandName);
 
+    // Sync to Copper CRM as a Visibility Lab Pro lead
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.timkilroy.com';
+    const scorePath = isPro ? 'visibility-lab-pro' : 'visibility-lab';
+    const scoreLabel = isPro ? 'Visibility Lab Pro' : 'Visibility Lab Free';
+    const scoreValue = isPro
+      ? (report.full_report?.kviScore ?? report.visibility_score ?? 0)
+      : (report.visibility_score ?? 0);
+    let copperResult: { success: boolean; error?: string } = { success: false };
+    try {
+      await copperSyncLead({
+        email,
+        name: userName,
+        companyName: brandName,
+        productName: 'Visibility Lab Pro',
+        opportunityValue: PRO_ACV,
+        stageId: COPPER_STAGES.LEAD,
+        note: `Ran ${scoreLabel} — Score: ${scoreValue}/100. View: ${appUrl}/${scorePath}/report/${report.id}`,
+      });
+      copperResult = { success: true };
+    } catch (err) {
+      console.error('[trigger-delivery] copper sync failed:', err);
+      copperResult = { success: false, error: err instanceof Error ? err.message : String(err) };
+    }
+
     return NextResponse.json({
       success: true,
       report_id: report.id,
@@ -96,6 +121,7 @@ export async function POST(request: NextRequest) {
       version: report.version || 'lite',
       loops: loopsResult,
       beehiiv: beehiivResult,
+      copper: copperResult,
     });
   } catch (error) {
     console.error('[trigger-delivery] error:', error);

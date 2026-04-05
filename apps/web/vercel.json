@@ -33,6 +33,10 @@
     {
       "path": "/api/cron/five-minute-friday",
       "schedule": "0 12 * * 5"
+    },
+    {
+      "path": "/api/cron/visibility-lab-reconcile",
+      "schedule": "0 15 * * *"
     }
   ]
 }

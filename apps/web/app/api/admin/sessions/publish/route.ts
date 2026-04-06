@@ -61,6 +61,7 @@ export async function POST(request: NextRequest) {
 
       // Insert a document for each enrollment
       const docs = [];
+      const errors = [];
       for (const enrollmentId of enrollmentIds) {
         const { data: doc, error } = await supabase
           .from('client_documents')
@@ -78,6 +79,7 @@ export async function POST(request: NextRequest) {
 
         if (error) {
           console.error(`[Sessions] Publish 1:1 error for enrollment ${enrollmentId}:`, error);
+          errors.push({ enrollmentId, error: error.message });
           continue;
         }
         docs.push(doc);
@@ -111,7 +113,14 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      return NextResponse.json({ success: true, documents: docs, count: docs.length });
+      if (docs.length === 0) {
+        return NextResponse.json(
+          { error: `Failed to publish to any enrollment`, details: errors },
+          { status: 500 }
+        );
+      }
+
+      return NextResponse.json({ success: true, documents: docs, count: docs.length, errors });
     } else if (type === 'office-hours') {
       // Resolve program slug to ID
       const { data: program } = await supabase

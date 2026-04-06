@@ -54,7 +54,9 @@ export async function generateSessionContent(
     ],
   });
 
-  const text = response.content[0].type === 'text' ? response.content[0].text : '';
+  let text = response.content[0].type === 'text' ? response.content[0].text : '';
+  // Strip markdown code fences if the model wraps the JSON
+  text = text.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
   const parsed = JSON.parse(text) as SessionAIResult;
   return parsed;
 }

@@ -69,6 +69,7 @@ export async function GET(request: NextRequest) {
         program_name: program?.name || 'Unknown',
         program_slug: program?.slug || '',
         company_name: companyName,
+        org_id: publicUser?.org_id || null,
         onboarding_completed: enrollment.onboarding_completed,
         status: enrollment.status,
         enrolled_at: enrollment.enrolled_at,

@@ -31,55 +31,87 @@ export async function POST(request: NextRequest) {
     const contentBody = JSON.stringify({ synopsis, teaching, original_filename });
 
     if (type === 'one-on-one') {
-      // Insert into client_documents
-      const { data: doc, error } = await supabase
-        .from('client_documents')
-        .insert({
-          enrollment_id: target_id,
-          title,
-          document_type: 'text',
-          category: 'session',
-          content_body: contentBody,
-          file_url: vtt_url,
-          file_name: original_filename,
-        })
-        .select()
-        .single();
+      // Resolve enrollment IDs — single enrollment or all enrollments in an org
+      let enrollmentIds: string[] = [];
 
-      if (error) {
-        console.error('[Sessions] Publish 1:1 error:', error);
-        return NextResponse.json({ error: 'Database error' }, { status: 500 });
+      if (target_id.startsWith('org:')) {
+        const orgId = target_id.replace('org:', '');
+        // Find all users in this org, then find their active enrollments
+        const { data: orgUsers } = await (supabase as any)
+          .from('users')
+          .select('id')
+          .eq('org_id', orgId);
+
+        if (orgUsers && orgUsers.length > 0) {
+          const userIds = orgUsers.map((u: any) => u.id);
+          const { data: orgEnrollments } = await supabase
+            .from('client_enrollments')
+            .select('id')
+            .in('user_id', userIds)
+            .eq('status', 'active');
+          enrollmentIds = (orgEnrollments || []).map((e) => e.id);
+        }
+
+        if (enrollmentIds.length === 0) {
+          return NextResponse.json({ error: 'No active enrollments found for this org' }, { status: 404 });
+        }
+      } else {
+        enrollmentIds = [target_id];
       }
 
-      // Notify via Slack + email
-      const { data: enrollment } = await supabase
-        .from('client_enrollments')
-        .select('user_id')
-        .eq('id', target_id)
-        .single();
+      // Insert a document for each enrollment
+      const docs = [];
+      for (const enrollmentId of enrollmentIds) {
+        const { data: doc, error } = await supabase
+          .from('client_documents')
+          .insert({
+            enrollment_id: enrollmentId,
+            title,
+            document_type: 'text',
+            category: 'session',
+            content_body: contentBody,
+            file_url: vtt_url,
+            file_name: original_filename,
+          })
+          .select()
+          .single();
 
-      if (enrollment?.user_id) {
-        const { data: authUser } = await supabase.auth.admin.getUserById(enrollment.user_id);
-        const clientEmail = authUser?.user?.email || '';
-        const clientName = authUser?.user?.user_metadata?.full_name || clientEmail || 'Client';
+        if (error) {
+          console.error(`[Sessions] Publish 1:1 error for enrollment ${enrollmentId}:`, error);
+          continue;
+        }
+        docs.push(doc);
 
-        alertDocumentShared(clientName, title);
+        // Notify via Slack + email
+        const { data: enrollment } = await supabase
+          .from('client_enrollments')
+          .select('user_id')
+          .eq('id', enrollmentId)
+          .single();
 
-        if (clientEmail) {
-          const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.timkilroy.com';
-          sendEvent({
-            email: clientEmail,
-            eventName: 'client_document_shared',
-            eventProperties: {
-              documentTitle: title,
-              documentCategory: 'session',
-              portalUrl: `${appUrl}/client/documents`,
-            },
-          }).catch(err => console.error('[Sessions] Loops event failed:', err));
+        if (enrollment?.user_id) {
+          const { data: authUser } = await supabase.auth.admin.getUserById(enrollment.user_id);
+          const clientEmail = authUser?.user?.email || '';
+          const clientName = authUser?.user?.user_metadata?.full_name || clientEmail || 'Client';
+
+          alertDocumentShared(clientName, title);
+
+          if (clientEmail) {
+            const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.timkilroy.com';
+            sendEvent({
+              email: clientEmail,
+              eventName: 'client_document_shared',
+              eventProperties: {
+                documentTitle: title,
+                documentCategory: 'session',
+                portalUrl: `${appUrl}/client/documents`,
+              },
+            }).catch(err => console.error('[Sessions] Loops event failed:', err));
+          }
         }
       }
 
-      return NextResponse.json({ success: true, document: doc });
+      return NextResponse.json({ success: true, documents: docs, count: docs.length });
     } else if (type === 'office-hours') {
       // Resolve program slug to ID
       const { data: program } = await supabase

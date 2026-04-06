@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
     // Upload raw VTT to Supabase Storage
     const supabase = getSupabaseServerClient();
     const storagePath = type === 'one-on-one'
-      ? `${targetId}/${Date.now()}-${file.name}`
+      ? `${targetId.replace('org:', 'org-')}/${Date.now()}-${file.name}`
       : `sessions/${Date.now()}-${file.name}`;
 
     const fileBuffer = Buffer.from(await file.arrayBuffer());
@@ -65,18 +65,29 @@ export async function POST(request: NextRequest) {
       .from('client-documents')
       .getPublicUrl(storagePath);
 
-    // Get client name for 1:1s (for the AI prompt)
+    // Get client/org name for 1:1s (for the AI prompt)
     let clientName: string | undefined;
     if (type === 'one-on-one') {
-      const { data: enrollment } = await supabase
-        .from('client_enrollments')
-        .select('user_id')
-        .eq('id', targetId)
-        .single();
+      if (targetId.startsWith('org:')) {
+        // Org-level session — use the org name
+        const orgId = targetId.replace('org:', '');
+        const { data: org } = await (supabase as any)
+          .from('orgs')
+          .select('name')
+          .eq('id', orgId)
+          .single();
+        clientName = org?.name || undefined;
+      } else {
+        const { data: enrollment } = await supabase
+          .from('client_enrollments')
+          .select('user_id')
+          .eq('id', targetId)
+          .single();
 
-      if (enrollment?.user_id) {
-        const { data: authUser } = await supabase.auth.admin.getUserById(enrollment.user_id);
-        clientName = authUser?.user?.user_metadata?.full_name || undefined;
+        if (enrollment?.user_id) {
+          const { data: authUser } = await supabase.auth.admin.getUserById(enrollment.user_id);
+          clientName = authUser?.user?.user_metadata?.full_name || undefined;
+        }
       }
     }
 

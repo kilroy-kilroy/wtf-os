@@ -22,6 +22,14 @@ interface Enrollment {
   user_name: string;
   user_email: string;
   program_name: string;
+  company_name: string | null;
+  org_id: string | null;
+}
+
+interface OrgGroup {
+  org_id: string;
+  company_name: string;
+  enrollments: Enrollment[];
 }
 
 interface SessionListItem {
@@ -113,6 +121,8 @@ export default function AdminSessionsPage() {
           user_name: c.full_name || c.email || 'Unknown',
           user_email: c.email || '',
           program_name: c.program_name || '',
+          company_name: c.company_name || null,
+          org_id: c.org_id || null,
         }));
         setEnrollments(enrollmentList);
       }
@@ -402,12 +412,52 @@ export default function AdminSessionsPage() {
                     onChange={(e) => setTargetId(e.target.value)}
                     className="w-full bg-black border border-[#333333] text-white px-3 py-2 focus:border-[#E51B23] focus:outline-none"
                   >
-                    <option value="">Select a client...</option>
-                    {enrollments.map(e => (
-                      <option key={e.id} value={e.id}>
-                        {e.user_name} {e.program_name ? `(${e.program_name})` : ''}
-                      </option>
-                    ))}
+                    <option value="">Select a client or agency...</option>
+                    {(() => {
+                      // Group enrollments by org
+                      const orgGroups: OrgGroup[] = [];
+                      const soloEnrollments: Enrollment[] = [];
+
+                      const orgMap = new Map<string, OrgGroup>();
+                      for (const e of enrollments) {
+                        if (e.org_id && e.company_name) {
+                          if (!orgMap.has(e.org_id)) {
+                            orgMap.set(e.org_id, { org_id: e.org_id, company_name: e.company_name, enrollments: [] });
+                          }
+                          orgMap.get(e.org_id)!.enrollments.push(e);
+                        } else {
+                          soloEnrollments.push(e);
+                        }
+                      }
+                      orgMap.forEach(g => { if (g.enrollments.length > 1) orgGroups.push(g); else soloEnrollments.push(...g.enrollments); });
+                      orgGroups.sort((a, b) => a.company_name.localeCompare(b.company_name));
+
+                      return (
+                        <>
+                          {orgGroups.map(org => (
+                            <optgroup key={org.org_id} label={`── ${org.company_name} ──`}>
+                              <option value={`org:${org.org_id}`}>
+                                ★ All {org.company_name} contacts ({org.enrollments.length})
+                              </option>
+                              {org.enrollments.map(e => (
+                                <option key={e.id} value={e.id}>
+                                  {e.user_name}
+                                </option>
+                              ))}
+                            </optgroup>
+                          ))}
+                          {soloEnrollments.length > 0 && (
+                            <optgroup label="── Individual ──">
+                              {soloEnrollments.map(e => (
+                                <option key={e.id} value={e.id}>
+                                  {e.user_name} {e.company_name ? `(${e.company_name})` : e.program_name ? `(${e.program_name})` : ''}
+                                </option>
+                              ))}
+                            </optgroup>
+                          )}
+                        </>
+                      );
+                    })()}
                   </select>
                 ) : (
                   <select

@@ -153,7 +153,39 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Database error' }, { status: 500 });
       }
 
-      return NextResponse.json({ success: true, content });
+      // Notify all clients enrolled in the target program
+      const { data: enrollments } = await supabase
+        .from('client_enrollments')
+        .select('user_id')
+        .eq('program_id', program.id)
+        .eq('status', 'active');
+
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.timkilroy.com';
+      let notifiedCount = 0;
+
+      for (const enrollment of enrollments || []) {
+        const { data: authUser } = await supabase.auth.admin.getUserById(enrollment.user_id);
+        const clientEmail = authUser?.user?.email;
+        if (!clientEmail) continue;
+
+        const clientName = authUser?.user?.user_metadata?.full_name || clientEmail;
+        alertDocumentShared(clientName, title);
+
+        sendEvent({
+          email: clientEmail,
+          eventName: 'client_document_shared',
+          eventProperties: {
+            documentTitle: title,
+            documentCategory: 'office-hours',
+            portalUrl: `${appUrl}/client/content`,
+          },
+        }).catch(err => console.error(`[Sessions] Loops event failed for ${clientEmail}:`, err));
+
+        notifiedCount++;
+      }
+
+      console.log(`[Sessions] Office hours published, notified ${notifiedCount} clients`);
+      return NextResponse.json({ success: true, content, notifiedCount });
     } else {
       return NextResponse.json({ error: 'Invalid type' }, { status: 400 });
     }

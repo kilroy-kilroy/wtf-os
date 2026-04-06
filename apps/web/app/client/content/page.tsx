@@ -11,6 +11,7 @@ const TYPE_ICONS: Record<string, string> = {
   pdf: '◼',
   text: '≡',
   link: '↗',
+  session: '◉',
 };
 
 const TYPE_LABELS: Record<string, string> = {
@@ -19,6 +20,7 @@ const TYPE_LABELS: Record<string, string> = {
   pdf: 'PDF',
   text: 'Article',
   link: 'Link',
+  session: 'Session',
 };
 
 export default function ClientContentPage() {
@@ -101,7 +103,7 @@ export default function ClientContentPage() {
                 key={item.id}
                 className="border border-[#333333] hover:border-[#E51B23] transition-colors cursor-pointer"
                 onClick={() => {
-                  if (item.content_type === 'text') {
+                  if (item.content_type === 'text' || item.content_type === 'session') {
                     setSelectedItem(item);
                   } else if (item.content_url) {
                     window.open(item.content_url, '_blank');
@@ -128,8 +130,8 @@ export default function ClientContentPage() {
           </div>
         )}
 
-        {/* Text content modal */}
-        {selectedItem && selectedItem.content_type === 'text' && (
+        {/* Text/Session content modal */}
+        {selectedItem && (selectedItem.content_type === 'text' || selectedItem.content_type === 'session') && (
           <div className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center p-6">
             <div className="max-w-3xl w-full max-h-[90vh] overflow-y-auto bg-[#1A1A1A] border border-[#333333] p-8">
               <div className="flex justify-between items-start mb-6">
@@ -139,9 +141,51 @@ export default function ClientContentPage() {
                   ✕
                 </button>
               </div>
-              <div className="prose prose-invert max-w-none text-[#cccccc] text-sm leading-relaxed whitespace-pre-wrap">
-                {selectedItem.content_body}
-              </div>
+
+              {selectedItem.content_type === 'session' && selectedItem.content_body ? (() => {
+                try {
+                  const session = JSON.parse(selectedItem.content_body);
+                  return (
+                    <div className="space-y-6">
+                      <div>
+                        <h3 className="text-[11px] tracking-[2px] text-[#FFDE59] uppercase mb-2">What We Covered</h3>
+                        <div className="text-[#cccccc] text-sm leading-relaxed whitespace-pre-wrap">
+                          {session.synopsis}
+                        </div>
+                      </div>
+                      <div>
+                        <h3 className="text-[11px] tracking-[2px] text-[#FFDE59] uppercase mb-2">Key Takeaway</h3>
+                        <div className="text-[#cccccc] text-sm leading-relaxed whitespace-pre-wrap">
+                          {session.teaching}
+                        </div>
+                      </div>
+                      {selectedItem.content_url && (
+                        <div className="pt-4 border-t border-[#333333]">
+                          <a
+                            href={selectedItem.content_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2 text-sm text-[#00D4FF] hover:underline"
+                          >
+                            Download Call Transcript
+                            <span className="text-[#666666] text-xs">(timestamped transcript)</span>
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                  );
+                } catch {
+                  return (
+                    <div className="prose prose-invert max-w-none text-[#cccccc] text-sm leading-relaxed whitespace-pre-wrap">
+                      {selectedItem.content_body}
+                    </div>
+                  );
+                }
+              })() : (
+                <div className="prose prose-invert max-w-none text-[#cccccc] text-sm leading-relaxed whitespace-pre-wrap">
+                  {selectedItem.content_body}
+                </div>
+              )}
             </div>
           </div>
         )}

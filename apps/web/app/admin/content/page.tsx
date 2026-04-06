@@ -273,6 +273,9 @@ export default function AdminContentPage() {
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-3xl font-anton uppercase text-[#E51B23]">Content Library</h1>
           <div className="flex gap-3">
+            <a href="/admin/sessions" className="text-sm border border-[#333333] px-4 py-2 text-[#999999] hover:text-white transition-colors">
+              Sessions
+            </a>
             <a href="/admin/clients" className="text-sm border border-[#333333] px-4 py-2 text-[#999999] hover:text-white transition-colors">
               Clients
             </a>

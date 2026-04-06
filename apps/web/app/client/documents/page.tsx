@@ -23,6 +23,7 @@ const CATEGORY_LABELS: Record<string, string> = {
   transcript: 'Transcript',
   plan: 'Plan',
   resource: 'Resource',
+  session: 'Session',
   other: 'Other',
 };
 
@@ -31,6 +32,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   transcript: '#00D4FF',
   plan: '#22c55e',
   resource: '#a855f7',
+  session: '#E51B23',
   other: '#666666',
 };
 
@@ -168,7 +170,7 @@ export default function ClientDocumentsPage() {
           </div>
         )}
 
-        {/* Text content modal */}
+        {/* Text/Session content modal */}
         {textModal && (
           <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-6 z-50" onClick={() => setTextModal(null)}>
             <div className="bg-[#1A1A1A] border border-[#333333] max-w-2xl w-full max-h-[80vh] overflow-y-auto p-8" onClick={e => e.stopPropagation()}>
@@ -176,9 +178,51 @@ export default function ClientDocumentsPage() {
                 <h2 className="text-xl font-anton uppercase text-[#E51B23]">{textModal.title}</h2>
                 <button onClick={() => setTextModal(null)} className="text-[#999999] hover:text-white text-xl">&times;</button>
               </div>
-              <div className="text-[#CCCCCC] text-sm whitespace-pre-wrap leading-relaxed">
-                {textModal.content_body}
-              </div>
+
+              {textModal.category === 'session' && textModal.content_body ? (() => {
+                try {
+                  const session = JSON.parse(textModal.content_body);
+                  return (
+                    <div className="space-y-6">
+                      <div>
+                        <h3 className="text-[11px] tracking-[2px] text-[#FFDE59] uppercase mb-2">What We Covered</h3>
+                        <div className="text-[#CCCCCC] text-sm whitespace-pre-wrap leading-relaxed">
+                          {session.synopsis}
+                        </div>
+                      </div>
+                      <div>
+                        <h3 className="text-[11px] tracking-[2px] text-[#FFDE59] uppercase mb-2">Key Takeaway</h3>
+                        <div className="text-[#CCCCCC] text-sm whitespace-pre-wrap leading-relaxed">
+                          {session.teaching}
+                        </div>
+                      </div>
+                      {textModal.file_url && (
+                        <div className="pt-4 border-t border-[#333333]">
+                          <a
+                            href={textModal.file_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2 text-sm text-[#00D4FF] hover:underline"
+                          >
+                            Download Call Transcript
+                            <span className="text-[#666666] text-xs">(timestamped transcript)</span>
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                  );
+                } catch {
+                  return (
+                    <div className="text-[#CCCCCC] text-sm whitespace-pre-wrap leading-relaxed">
+                      {textModal.content_body}
+                    </div>
+                  );
+                }
+              })() : (
+                <div className="text-[#CCCCCC] text-sm whitespace-pre-wrap leading-relaxed">
+                  {textModal.content_body}
+                </div>
+              )}
             </div>
           </div>
         )}

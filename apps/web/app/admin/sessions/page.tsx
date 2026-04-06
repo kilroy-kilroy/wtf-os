@@ -475,15 +475,15 @@ export default function AdminSessionsPage() {
 
               {/* File upload */}
               <div>
-                <label className="block text-[11px] tracking-[2px] text-[#666666] mb-1 uppercase">VTT File *</label>
+                <label className="block text-[11px] tracking-[2px] text-[#666666] mb-1 uppercase">Transcript File *</label>
                 <input
                   type="file"
-                  accept=".vtt"
+                  accept=".vtt,.txt"
                   onChange={(e) => setFile(e.target.files?.[0] || null)}
                   className="w-full text-[#999999] text-sm file:mr-4 file:py-2 file:px-4 file:border file:border-[#333333] file:bg-black file:text-white file:font-bold file:uppercase file:text-xs file:cursor-pointer hover:file:border-[#E51B23]"
                 />
                 {file && (
-                  <p className="text-[#666666] text-xs mt-1">Title will be: &quot;{file.name.replace(/\.vtt$/i, '')}&quot;</p>
+                  <p className="text-[#666666] text-xs mt-1">Title will be: &quot;{file.name.replace(/\.(vtt|txt)$/i, '')}&quot;</p>
                 )}
               </div>
 

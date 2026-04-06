@@ -45,5 +45,9 @@ export function parseVttContent(vttContent: string): string {
  * Strip the file extension from a filename to use as a title.
  */
 export function titleFromFilename(filename: string): string {
-  return filename.replace(/\.vtt$/i, '');
+  return filename.replace(/\.(vtt|txt)$/i, '');
+}
+
+export function isVttFile(filename: string): boolean {
+  return /\.vtt$/i.test(filename);
 }

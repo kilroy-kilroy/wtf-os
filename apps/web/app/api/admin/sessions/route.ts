@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabase-server';
-import { parseVttContent, titleFromFilename } from '@/lib/vtt';
+import { parseVttContent, titleFromFilename, isVttFile } from '@/lib/vtt';
 import { generateSessionContent } from '@/lib/session-ai';
 
 function verifyAuth(request: NextRequest): boolean {
@@ -31,9 +31,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Read the VTT file
-    const vttContent = await file.text();
-    const parsedTranscript = parseVttContent(vttContent);
+    // Read and parse the transcript file
+    const fileContent = await file.text();
+    const parsedTranscript = isVttFile(file.name)
+      ? parseVttContent(fileContent)
+      : fileContent.trim();
 
     if (!parsedTranscript.trim()) {
       return NextResponse.json(
@@ -52,7 +54,7 @@ export async function POST(request: NextRequest) {
     const { error: uploadError } = await supabase.storage
       .from('client-documents')
       .upload(storagePath, fileBuffer, {
-        contentType: 'text/vtt',
+        contentType: isVttFile(file.name) ? 'text/vtt' : 'text/plain',
         upsert: false,
       });
 

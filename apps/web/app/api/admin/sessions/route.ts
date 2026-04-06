@@ -123,7 +123,7 @@ export async function GET(request: NextRequest) {
     const { data: oneOnOnes } = await supabase
       .from('client_documents')
       .select('id, title, category, created_at, enrollment_id')
-      .eq('category', 'session')
+      .eq('category', 'transcript')
       .order('created_at', { ascending: false });
 
     // Get office hours sessions from client_content

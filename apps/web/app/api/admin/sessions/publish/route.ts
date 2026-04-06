@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
             enrollment_id: enrollmentId,
             title,
             document_type: 'text',
-            category: 'session',
+            category: 'transcript',
             content_body: contentBody,
             file_url: vtt_url,
             file_name: original_filename,

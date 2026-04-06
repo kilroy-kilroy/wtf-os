@@ -1,5 +1,48 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabase-server';
+import { alertDocumentShared } from '@/lib/slack';
+import { sendEvent } from '@/lib/loops';
+
+async function notifyEnrolledClients(
+  supabase: ReturnType<typeof getSupabaseServerClient>,
+  programIds: string[],
+  title: string,
+) {
+  if (programIds.length === 0) return 0;
+
+  const { data: enrollments } = await supabase
+    .from('client_enrollments')
+    .select('user_id')
+    .in('program_id', programIds)
+    .eq('status', 'active');
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.timkilroy.com';
+  let notifiedCount = 0;
+
+  for (const enrollment of enrollments || []) {
+    const { data: authUser } = await supabase.auth.admin.getUserById(enrollment.user_id);
+    const clientEmail = authUser?.user?.email;
+    if (!clientEmail) continue;
+
+    const clientName = authUser?.user?.user_metadata?.full_name || clientEmail;
+    alertDocumentShared(clientName, title);
+
+    sendEvent({
+      email: clientEmail,
+      eventName: 'client_document_shared',
+      eventProperties: {
+        documentTitle: title,
+        documentCategory: 'content-library',
+        portalUrl: `${appUrl}/client/content`,
+      },
+    }).catch(err => console.error(`[Content] Loops event failed for ${clientEmail}:`, err));
+
+    notifiedCount++;
+  }
+
+  console.log(`[Content] "${title}" published, notified ${notifiedCount} clients`);
+  return notifiedCount;
+}
 
 // Admin-only: Manage client content
 export async function POST(request: NextRequest) {
@@ -51,7 +94,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to create content', message: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true, content });
+    // Notify enrolled clients if published on creation
+    let notifiedCount = 0;
+    if (published && program_ids.length > 0) {
+      notifiedCount = await notifyEnrolledClients(supabase, program_ids, title);
+    }
+
+    return NextResponse.json({ success: true, content, notifiedCount });
   } catch (error) {
     console.error('Content create error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
@@ -125,6 +174,17 @@ export async function PATCH(request: NextRequest) {
       updates.published_at = updates.published ? new Date().toISOString() : null;
     }
 
+    // Check if this is a publish toggle (was unpublished, now published)
+    let wasPublished = false;
+    if (updates.published === true) {
+      const { data: existing } = await supabase
+        .from('client_content')
+        .select('published')
+        .eq('id', id)
+        .single();
+      wasPublished = existing?.published === true;
+    }
+
     const { data: content, error } = await supabase
       .from('client_content')
       .update(updates)
@@ -136,7 +196,13 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Update failed', message: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true, content });
+    // Notify enrolled clients when content is newly published
+    let notifiedCount = 0;
+    if (updates.published === true && !wasPublished && content?.program_ids?.length > 0) {
+      notifiedCount = await notifyEnrolledClients(supabase, content.program_ids, content.title);
+    }
+
+    return NextResponse.json({ success: true, content, notifiedCount });
   } catch (error) {
     console.error('Content update error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

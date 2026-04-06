@@ -254,7 +254,7 @@ export interface FiveMinuteFridaySubmission {
 // CLIENT CONTENT
 // ============================================
 
-export type ContentType = 'text' | 'video' | 'deck' | 'pdf' | 'link';
+export type ContentType = 'text' | 'video' | 'deck' | 'pdf' | 'link' | 'session';
 
 export interface ClientContent {
   id: string;

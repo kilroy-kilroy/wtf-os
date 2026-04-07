@@ -339,7 +339,7 @@ export default function WTFSalesGuidePage() {
             href="https://timkilroy.com/call-lab-pro"
             className="inline-block bg-black text-white px-12 py-5 font-anton text-lg tracking-wider hover:bg-[#333] transition-colors"
           >
-            [ GET CALL LAB PRO - $29/MO ]
+            [ GET CALL LAB PRO - $49/MO ]
           </a>
         </div>
       </section>
@@ -510,7 +510,7 @@ export default function WTFSalesGuidePage() {
             href="https://timkilroy.com/call-lab-pro"
             className="inline-block bg-black text-white px-12 py-5 font-anton text-lg tracking-wider hover:bg-[#333] transition-colors"
           >
-            [ GET CALL LAB PRO - $29/MO ]
+            [ GET CALL LAB PRO - $49/MO ]
           </a>
         </div>
       </section>

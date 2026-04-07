@@ -122,6 +122,9 @@ export default function WTFSalesGuidePage() {
             <p className="text-[#CCC] leading-relaxed">
               <strong className="text-white">Why it works:</strong> Clients choose partners who understand their context. When you articulate their problem better than they can, you have just earned the authority to solve it.
             </p>
+            <p className="text-[#666] text-sm mt-4">
+              Related: <a href="https://timkilroy.com/glossary/consultative-positioning" className="text-[#00D4FF] hover:underline">Consultative Positioning</a> &bull; <a href="https://timkilroy.com/glossary/strategic-discovery" className="text-[#00D4FF] hover:underline">Strategic Discovery</a>
+            </p>
           </div>
 
           {/* Pillar 2 */}
@@ -147,6 +150,9 @@ export default function WTFSalesGuidePage() {
             </ul>
             <p className="text-[#CCC] leading-relaxed">
               <strong className="text-white">Why it works:</strong> Generosity creates reciprocity. When you give first, buyers feel comfortable giving back. Usually with their time, attention, and honesty.
+            </p>
+            <p className="text-[#666] text-sm mt-4">
+              Related: <a href="https://timkilroy.com/glossary/empathetic-listening" className="text-[#00D4FF] hover:underline">Empathetic Listening</a> &bull; <a href="https://timkilroy.com/glossary/problem-diagnosis" className="text-[#00D4FF] hover:underline">Problem Diagnosis</a> &bull; <a href="https://timkilroy.com/glossary/value-articulation" className="text-[#00D4FF] hover:underline">Value Articulation</a>
             </p>
           </div>
 
@@ -174,6 +180,9 @@ export default function WTFSalesGuidePage() {
             </ul>
             <p className="text-[#CCC] leading-relaxed">
               <strong className="text-white">Why it works:</strong> When buyers give permission, they own the decision. They are not being sold. They are choosing to buy.
+            </p>
+            <p className="text-[#666] text-sm mt-4">
+              Related: <a href="https://timkilroy.com/glossary/confident-closing" className="text-[#00D4FF] hover:underline">Confident Closing</a> &bull; <a href="https://timkilroy.com/glossary/decision-facilitation" className="text-[#00D4FF] hover:underline">Decision Facilitation</a> &bull; <a href="https://timkilroy.com/glossary/commitment-securing" className="text-[#00D4FF] hover:underline">Commitment Securing</a>
             </p>
           </div>
         </section>
@@ -532,48 +541,56 @@ export default function WTFSalesGuidePage() {
             <h4 className="text-white font-bold text-lg mb-1">The Cultural Handshake</h4>
             <p className="text-[#666] text-xs uppercase tracking-wider mb-2">Connection</p>
             <p className="text-[#CCC]">Fast shared context and comfort that accelerates trust. You find common ground quickly and make the buyer feel like they&apos;re talking to someone who gets their world.</p>
+            <p className="mt-2"><a href="https://timkilroy.com/glossary/trust-building" className="text-[#00D4FF] text-xs hover:underline">See: Trust Building &rarr;</a></p>
           </div>
 
           <div id="peer-validation-engine" className="bg-[#111] border-l-4 border-green-500 p-5 rounded-r scroll-mt-24">
             <h4 className="text-white font-bold text-lg mb-1">The Peer Validation Engine</h4>
             <p className="text-[#666] text-xs uppercase tracking-wider mb-2">Connection</p>
             <p className="text-[#CCC]">Buyer treats you like a peer or advisor and adopts your language. They stop seeing you as a vendor and start seeing you as a thought partner.</p>
+            <p className="mt-2"><a href="https://timkilroy.com/glossary/social-proof-integration" className="text-[#00D4FF] text-xs hover:underline">See: Social Proof Integration &rarr;</a></p>
           </div>
 
           <div id="vulnerability-flip" className="bg-[#111] border-l-4 border-green-500 p-5 rounded-r scroll-mt-24">
             <h4 className="text-white font-bold text-lg mb-1">The Vulnerability Flip</h4>
             <p className="text-[#666] text-xs uppercase tracking-wider mb-2">Connection</p>
             <p className="text-[#CCC]">A personal story unlocks truth and reduces buyer shame. By sharing your own struggles first, you create safety for the buyer to be honest about theirs.</p>
+            <p className="mt-2"><a href="https://timkilroy.com/glossary/vulnerability-loop" className="text-[#00D4FF] text-xs hover:underline">See: Vulnerability Loop &rarr;</a></p>
           </div>
 
           <div id="diagnostic-reveal" className="bg-[#111] border-l-4 border-green-500 p-5 rounded-r scroll-mt-24">
             <h4 className="text-white font-bold text-lg mb-1">The Diagnostic Reveal</h4>
             <p className="text-[#666] text-xs uppercase tracking-wider mb-2">Diagnosis</p>
             <p className="text-[#CCC]">You articulate the real problem before the buyer fully says it. This demonstrates deep understanding and builds instant credibility.</p>
+            <p className="mt-2"><a href="https://timkilroy.com/glossary/problem-diagnosis" className="text-[#00D4FF] text-xs hover:underline">See: Problem Diagnosis &rarr;</a></p>
           </div>
 
           <div id="self-diagnosis-pull" className="bg-[#111] border-l-4 border-green-500 p-5 rounded-r scroll-mt-24">
             <h4 className="text-white font-bold text-lg mb-1">The Self Diagnosis Pull</h4>
             <p className="text-[#666] text-xs uppercase tracking-wider mb-2">Diagnosis</p>
             <p className="text-[#CCC]">Questions lead the buyer to discover their own truth. Instead of telling them what&apos;s wrong, you guide them to articulate it themselves - creating ownership of the problem.</p>
+            <p className="mt-2"><a href="https://timkilroy.com/glossary/strategic-discovery" className="text-[#00D4FF] text-xs hover:underline">See: Strategic Discovery &rarr;</a></p>
           </div>
 
           <div id="framework-drop" className="bg-[#111] border-l-4 border-green-500 p-5 rounded-r scroll-mt-24">
             <h4 className="text-white font-bold text-lg mb-1">The Framework Drop</h4>
             <p className="text-[#666] text-xs uppercase tracking-wider mb-2">Control</p>
             <p className="text-[#CCC]">A simple model organizes the buyer&apos;s chaos and builds authority. You give them a lens to see their situation differently, positioning yourself as the expert.</p>
+            <p className="mt-2"><a href="https://timkilroy.com/glossary/expertise-demonstration" className="text-[#00D4FF] text-xs hover:underline">See: Expertise Demonstration &rarr;</a></p>
           </div>
 
           <div id="mirror-close" className="bg-[#111] border-l-4 border-green-500 p-5 rounded-r scroll-mt-24">
             <h4 className="text-white font-bold text-lg mb-1">The Mirror Close</h4>
             <p className="text-[#666] text-xs uppercase tracking-wider mb-2">Activation</p>
             <p className="text-[#CCC]">You reflect the buyer&apos;s own desires and stakes back to them. By mirroring what they&apos;ve told you matters most, the close feels like their idea, not yours.</p>
+            <p className="mt-2"><a href="https://timkilroy.com/glossary/confident-closing" className="text-[#00D4FF] text-xs hover:underline">See: Confident Closing &rarr;</a></p>
           </div>
 
           <div id="permission-builder" className="bg-[#111] border-l-4 border-green-500 p-5 rounded-r scroll-mt-24">
             <h4 className="text-white font-bold text-lg mb-1">The Permission Builder</h4>
             <p className="text-[#666] text-xs uppercase tracking-wider mb-2">Activation</p>
             <p className="text-[#CCC]">You make the decision feel safe and pressure-free. Micro-commitments and permission-based language reduce buyer anxiety and increase conversion.</p>
+            <p className="mt-2"><a href="https://timkilroy.com/glossary/decision-facilitation" className="text-[#00D4FF] text-xs hover:underline">See: Decision Facilitation &rarr;</a></p>
           </div>
         </div>
 
@@ -600,6 +617,7 @@ export default function WTFSalesGuidePage() {
             <p className="text-[#666] text-xs uppercase tracking-wider mb-2">Diagnosis</p>
             <p className="text-[#CCC]">You teach too much and diagnose too little. The buyer gets a free education instead of a reason to hire you.</p>
             <p className="text-green-400 text-sm mt-2">Counter: <strong>The Diagnostic Reveal</strong></p>
+            <p className="mt-1"><a href="https://timkilroy.com/glossary/feature-dumping" className="text-[#00D4FF] text-xs hover:underline">See: Feature Dumping &rarr;</a></p>
           </div>
 
           <div id="advice-avalanche" className="bg-[#111] border-l-4 border-[#E51B23] p-5 rounded-r scroll-mt-24">
@@ -607,6 +625,7 @@ export default function WTFSalesGuidePage() {
             <p className="text-[#666] text-xs uppercase tracking-wider mb-2">Diagnosis</p>
             <p className="text-[#CCC]">You give away full solutions during discovery. The buyer leaves with everything they need and no reason to pay you.</p>
             <p className="text-green-400 text-sm mt-2">Counter: <strong>The Self Diagnosis Pull</strong></p>
+            <p className="mt-1"><a href="https://timkilroy.com/glossary/over-promising" className="text-[#00D4FF] text-xs hover:underline">See: Over-Promising &rarr;</a></p>
           </div>
 
           <div id="surface-scanner" className="bg-[#111] border-l-4 border-[#E51B23] p-5 rounded-r scroll-mt-24">
@@ -614,6 +633,7 @@ export default function WTFSalesGuidePage() {
             <p className="text-[#666] text-xs uppercase tracking-wider mb-2">Diagnosis</p>
             <p className="text-[#CCC]">Discovery stays shallow and never hits impact or criteria. You ask questions but never dig into the real pain.</p>
             <p className="text-green-400 text-sm mt-2">Counter: <strong>The Diagnostic Reveal</strong></p>
+            <p className="mt-1"><a href="https://timkilroy.com/glossary/weak-discovery" className="text-[#00D4FF] text-xs hover:underline">See: Weak Discovery &rarr;</a></p>
           </div>
 
           <div id="agenda-abandoner" className="bg-[#111] border-l-4 border-[#E51B23] p-5 rounded-r scroll-mt-24">
@@ -635,6 +655,7 @@ export default function WTFSalesGuidePage() {
             <p className="text-[#666] text-xs uppercase tracking-wider mb-2">Control</p>
             <p className="text-[#CCC]">Solution talk appears before discovery is complete. You prescribe before you diagnose.</p>
             <p className="text-green-400 text-sm mt-2">Counter: <strong>The Self Diagnosis Pull</strong></p>
+            <p className="mt-1"><a href="https://timkilroy.com/glossary/premature-close" className="text-[#00D4FF] text-xs hover:underline">See: Premature Close &rarr;</a></p>
           </div>
 
           <div id="soft-close-fade" className="bg-[#111] border-l-4 border-[#E51B23] p-5 rounded-r scroll-mt-24">
@@ -642,6 +663,7 @@ export default function WTFSalesGuidePage() {
             <p className="text-[#666] text-xs uppercase tracking-wider mb-2">Activation</p>
             <p className="text-[#CCC]">The close loses energy due to vague next steps. &quot;Let me know&quot; replaces a clear calendar invite.</p>
             <p className="text-green-400 text-sm mt-2">Counter: <strong>The Mirror Close</strong></p>
+            <p className="mt-1"><a href="https://timkilroy.com/glossary/passive-follow-up" className="text-[#00D4FF] text-xs hover:underline">See: Passive Follow-Up &rarr;</a></p>
           </div>
 
           <div id="over-explain-loop" className="bg-[#111] border-l-4 border-[#E51B23] p-5 rounded-r scroll-mt-24">
@@ -649,6 +671,7 @@ export default function WTFSalesGuidePage() {
             <p className="text-[#666] text-xs uppercase tracking-wider mb-2">Activation</p>
             <p className="text-[#CCC]">You try to explain your way out instead of asking or reframing. More words, less progress.</p>
             <p className="text-green-400 text-sm mt-2">Counter: <strong>The Permission Builder</strong></p>
+            <p className="mt-1"><a href="https://timkilroy.com/glossary/monologue-selling" className="text-[#00D4FF] text-xs hover:underline">See: Monologue Selling &rarr;</a></p>
           </div>
         </div>
       </section>

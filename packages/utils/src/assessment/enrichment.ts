@@ -275,7 +275,7 @@ async function bdScrapeLinkedInProfile(linkedinUrl: string | undefined): Promise
     const snapshotId = await bdTrigger(BD_DATASETS.linkedinProfile, [{ url }]);
     if (!snapshotId) return null;
 
-    const results = await bdPollAndDownload(snapshotId, 60000);
+    const results = await bdPollAndDownload(snapshotId, 40000);
     const profile = results[0];
     if (!profile) return null;
 
@@ -301,7 +301,7 @@ async function bdScrapeLinkedInCompany(linkedinUrl: string | undefined): Promise
     const snapshotId = await bdTrigger(BD_DATASETS.linkedinCompany, [{ url }]);
     if (!snapshotId) return null;
 
-    const results = await bdPollAndDownload(snapshotId, 60000);
+    const results = await bdPollAndDownload(snapshotId, 40000);
     const company = results[0];
     if (!company) return null;
 
@@ -333,7 +333,7 @@ async function bdScrapeLinkedInPosts(linkedinUrl: string | undefined): Promise<A
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ input: [{ url }] }),
-      signal: AbortSignal.timeout(90000),
+      signal: AbortSignal.timeout(45000),
     });
 
     if (!response.ok) {
@@ -346,7 +346,7 @@ async function bdScrapeLinkedInPosts(linkedinUrl: string | undefined): Promise<A
     if (response.status === 202) {
       const data = await response.json();
       if (!data.snapshot_id) return null;
-      results = await bdPollAndDownload(data.snapshot_id, 90000);
+      results = await bdPollAndDownload(data.snapshot_id, 45000);
     } else {
       results = await response.json();
       if (!Array.isArray(results)) results = [results];
@@ -1404,19 +1404,30 @@ export async function runEnrichmentPipeline(intakeData: IntakeData): Promise<Enr
   const dataTimeout = new Promise<void>(resolve => setTimeout(() => {
     result.meta.errors.push({ source: 'pipeline.data', error: 'Timeout' });
     resolve();
-  }, 90000));
+  }, 150000));
 
   await Promise.race([Promise.allSettled(dataJobs), dataTimeout]);
 
-  // Phase 2: Claude analysis (needs data from phase 1)
-  try {
-    const analysis = await Promise.race([
-      runClaudeAnalysis(intakeData, result.apify, result.exa, result.llmAwareness),
-      new Promise<null>(resolve => setTimeout(() => resolve(null), 45000))
-    ]);
-    result.analysis = analysis;
-  } catch (e: any) {
-    result.meta.errors.push({ source: 'analysis', error: e.message });
+  // Phase 2: Claude analysis (runs on whatever data is available — partial is fine)
+  const hasAnyData = result.apify.website || result.apify.founderLinkedin || result.apify.founderPosts ||
+    result.apify.companyLinkedin || result.apify.companyPosts || result.exa.icpProblems.length > 0;
+
+  if (hasAnyData) {
+    try {
+      const analysis = await Promise.race([
+        runClaudeAnalysis(intakeData, result.apify, result.exa, result.llmAwareness),
+        new Promise<null>(resolve => setTimeout(() => {
+          console.warn('[v4] Claude analysis timed out after 60s');
+          resolve(null);
+        }, 60000))
+      ]);
+      result.analysis = analysis;
+    } catch (e: any) {
+      result.meta.errors.push({ source: 'analysis', error: e.message });
+    }
+  } else {
+    console.warn('[v4] Skipping Claude analysis — no enrichment data available');
+    result.meta.errors.push({ source: 'analysis', error: 'No enrichment data available for analysis' });
   }
 
   result.meta.completedAt = new Date().toISOString();

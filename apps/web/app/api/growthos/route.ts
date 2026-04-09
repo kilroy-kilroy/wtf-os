@@ -13,6 +13,8 @@ import { onAssessmentCompleted } from '@/lib/loops';
 import { copperSyncLead, COPPER_STAGES } from '@/lib/copper';
 import { getArchetypeForLoops } from '@/lib/growth-quadrant';
 
+export const maxDuration = 300;
+
 function getSupabase() {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

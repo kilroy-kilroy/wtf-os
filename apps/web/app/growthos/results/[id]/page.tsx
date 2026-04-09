@@ -780,7 +780,7 @@ export default async function ResultsPage({
             <li>&bull; Build your 90-day action plan</li>
           </ul>
           <a
-            href="https://timkilroy.com/assessment-call?utm_source=growthos&utm_medium=results&utm_campaign=roadmap_cta"
+            href="https://timkilroy.com/assessment-call?utm_source=growthos&utm_medium=referral&utm_campaign=assessment"
             className="inline-block px-6 py-3 rounded-xl bg-[#E31B23] text-white font-bold text-sm hover:shadow-lg hover:shadow-[#E31B23]/25 transition-all"
           >
             Book Your Roadmap Call &rarr;
@@ -792,7 +792,7 @@ export default async function ResultsPage({
           <h3 className="text-lg font-bold text-white mb-4">Coaching &amp; Consulting</h3>
           <div className="space-y-3">
             <a
-              href="https://timkilroy.com/demand-os?utm_source=growthos&utm_medium=results&utm_campaign=programs"
+              href="https://timkilroy.com/demand-os?utm_source=growthos&utm_medium=referral&utm_campaign=assessment"
               target="_blank"
               rel="noopener noreferrer"
               className="block bg-slate-600/30 rounded-xl p-4 border border-slate-600/50 hover:border-[#00D4FF]/30 transition-all"
@@ -801,7 +801,7 @@ export default async function ResultsPage({
               <p className="text-xs text-slate-400">Create more visibility &amp; right-fit pipeline</p>
             </a>
             <a
-              href="https://timkilroy.com/sales-os?utm_source=growthos&utm_medium=results&utm_campaign=programs"
+              href="https://timkilroy.com/sales-os?utm_source=growthos&utm_medium=referral&utm_campaign=assessment"
               target="_blank"
               rel="noopener noreferrer"
               className="block bg-slate-600/30 rounded-xl p-4 border border-slate-600/50 hover:border-[#00D4FF]/30 transition-all"
@@ -810,7 +810,7 @@ export default async function ResultsPage({
               <p className="text-xs text-slate-400">Create a sales process that shows your agency at its best &amp; build a sales team that drives growth</p>
             </a>
             <a
-              href="https://timkilroy.com/agency-studio?utm_source=growthos&utm_medium=results&utm_campaign=programs"
+              href="https://timkilroy.com/agency-studio?utm_source=growthos&utm_medium=referral&utm_campaign=assessment"
               target="_blank"
               rel="noopener noreferrer"
               className="block bg-slate-600/30 rounded-xl p-4 border border-slate-600/50 hover:border-[#00D4FF]/30 transition-all"
@@ -826,7 +826,7 @@ export default async function ResultsPage({
           <h3 className="text-lg font-bold text-white mb-4">The Agency Inner Circle</h3>
           <div className="flex flex-col sm:flex-row gap-3">
             <a
-              href="https://agencyinnercircle.com?utm_source=growthos&utm_medium=results&utm_campaign=inner_circle"
+              href="https://agencyinnercircle.com?utm_source=growthos&utm_medium=referral&utm_campaign=assessment"
               target="_blank"
               rel="noopener noreferrer"
               className="flex-1 inline-flex items-center justify-center px-5 py-3 rounded-xl bg-slate-600/50 text-white font-semibold text-sm border border-slate-600/50 hover:border-[#00D4FF]/30 transition-all"
@@ -834,7 +834,7 @@ export default async function ResultsPage({
               View The Newsletter &rarr;
             </a>
             <a
-              href="https://join.slack.com/t/agencyinnercirclehq/shared_invite/zt-2gppz3skw-HnUIxAJ3DomuFx7~TXvSZA?utm_source=growthos&utm_medium=results&utm_campaign=inner_circle"
+              href="https://join.slack.com/t/agencyinnercirclehq/shared_invite/zt-2gppz3skw-HnUIxAJ3DomuFx7~TXvSZA?utm_source=growthos&utm_medium=referral&utm_campaign=assessment"
               target="_blank"
               rel="noopener noreferrer"
               className="flex-1 inline-flex items-center justify-center px-5 py-3 rounded-xl bg-[#00D4FF]/10 text-[#00D4FF] font-semibold text-sm border border-[#00D4FF]/30 hover:bg-[#00D4FF]/20 transition-all"

@@ -1,14 +1,21 @@
 // apps/web/app/admin/page.tsx
 import Link from 'next/link';
 import { getAdminDashboardData } from '@/lib/admin/get-admin-dashboard-data';
+import type { ClientTrajectory } from '@/lib/admin/coaching-intelligence';
 import { ActionQueue } from '@/components/admin/ActionQueue';
 import { ClientCards } from '@/components/admin/ClientCards';
 import { PlatformPulse } from '@/components/admin/PlatformPulse';
+import { CrossClientPatterns } from '@/components/admin/CrossClientPatterns';
 
 export const dynamic = 'force-dynamic';
 
 export default async function AdminDashboardPage() {
   const data = await getAdminDashboardData();
+
+  const trajectoriesObj: Record<string, ClientTrajectory> = {};
+  data.intelligence.trajectories.forEach((t, userId) => {
+    trajectoriesObj[userId] = t;
+  });
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-8 space-y-10">
@@ -20,20 +27,25 @@ export default async function AdminDashboardPage() {
         <ActionQueue items={data.actionItems} />
       </section>
 
-      {/* Zone 2: Client Cards */}
+      {/* Zone 2: Cross-Client Pattern Intelligence */}
+      <section>
+        <CrossClientPatterns intelligence={data.intelligence} />
+      </section>
+
+      {/* Zone 3: Coaching Clients — trajectory cards */}
       <section>
         <h2 className="text-sm font-medium text-slate-400 uppercase tracking-wider mb-4">
           Coaching Clients
         </h2>
-        <ClientCards cards={data.clientCards} />
+        <ClientCards cards={data.clientCards} trajectories={trajectoriesObj} />
       </section>
 
-      {/* Zone 3: Platform Pulse */}
+      {/* Zone 4: Platform Pulse */}
       <section>
         <PlatformPulse pulse={data.pulse} />
       </section>
 
-      {/* Zone 4: Admin Tools */}
+      {/* Zone 5: Admin Tools */}
       <section>
         <h2 className="text-sm font-medium text-slate-400 uppercase tracking-wider mb-4">
           Admin Tools

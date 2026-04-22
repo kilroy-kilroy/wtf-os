@@ -1,13 +1,21 @@
-import { createClient as createServiceClient } from '@supabase/supabase-js';
+import { createClient as createServiceClient, type SupabaseClient } from '@supabase/supabase-js';
 import {
   getCoachingIntelligence,
   type CoachingIntelligence,
 } from './coaching-intelligence';
 
-const supabase = createServiceClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Lazy-instantiate so `next build` config collection doesn't explode on
+// builds where env vars aren't populated until runtime.
+let _supabase: SupabaseClient | null = null;
+function supabaseClient(): SupabaseClient {
+  if (!_supabase) {
+    _supabase = createServiceClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+  }
+  return _supabase;
+}
 
 // ============================================
 // TYPES
@@ -64,6 +72,7 @@ export interface AdminDashboardData {
 // ============================================
 
 export async function getAdminDashboardData(): Promise<AdminDashboardData> {
+  const supabase = supabaseClient();
   const now = new Date();
   const weekAgo = new Date(now);
   weekAgo.setDate(weekAgo.getDate() - 7);

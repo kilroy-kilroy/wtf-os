@@ -4,6 +4,8 @@ import { countPatternsInMarkdown, topNegativePattern } from '@/lib/patterns';
 
 export type Momentum = 'accelerating' | 'steady' | 'slowing' | 'stalled' | 'pre_launch';
 
+export type ActivityKind = 'sign_in' | 'call' | 'brief' | 'friday';
+
 export interface ClientTrajectory {
   userId: string;
   email: string;
@@ -16,6 +18,9 @@ export interface ClientTrajectory {
   fridaySubmittedThisWeek: boolean;
   daysSinceLastLogin: number | null;
   daysSinceEnrollment: number;
+  // Most recent self-initiated activity across sign-in, call, brief, friday.
+  // "Never logged in" is only accurate when this is null.
+  lastActivity: { at: string; daysAgo: number; kind: ActivityKind; label: string } | null;
   momentum: Momentum;
   workingOn: { pattern: MacroPattern; frequency: number } | null;
   nextAction: { label: string; href: string } | null;
@@ -50,7 +55,9 @@ export async function getCoachingIntelligence(
     user_id: string;
     enrolled_at: string;
     email: string;
-    last_login_at: string | null;
+    // Real sign-in timestamp from auth.users — public.users.last_login_at
+    // is never populated by this codebase and must not be used here.
+    auth_last_sign_in_at: string | null;
     has_five_minute_friday: boolean;
     friday_submitted_this_week: boolean;
   }>
@@ -66,10 +73,12 @@ export async function getCoachingIntelligence(
   const userIds = enrollments.map((e) => e.user_id);
   const emails = enrollments.map((e) => e.email).filter(Boolean);
 
-  // Fetch all call_scores for these users in last 30 days.
-  // Coaching clients either own their analyses via user_id, OR have them
-  // attached via tool_runs.lead_email (lead-magnet path). Gather both.
-  const [byUserId, toolRunsByEmail] = await Promise.all([
+  // Two axes of data:
+  // 1) Scores in last 30 days — drives the sparkline and momentum math.
+  // 2) "Ever" snapshots for call / brief / friday — drives lastActivity so
+  //    that clients with real historical work don't falsely render as
+  //    "Never logged in" just because they fell outside the 30d window.
+  const [byUserId, toolRunsByEmail, briefsByUser, fridaysByUser] = await Promise.all([
     userIds.length
       ? supabase
           .from('call_scores')
@@ -85,7 +94,50 @@ export async function getCoachingIntelligence(
           .not('ingestion_item_id', 'is', null)
           .gte('created_at', start30.toISOString())
       : { data: [] as any[] },
+    userIds.length
+      ? supabase
+          .from('discovery_briefs')
+          .select('user_id, created_at')
+          .in('user_id', userIds)
+          .order('created_at', { ascending: false })
+      : { data: [] as any[] },
+    userIds.length
+      ? supabase
+          .from('five_minute_fridays')
+          .select('user_id, submitted_at')
+          .in('user_id', userIds)
+          .order('submitted_at', { ascending: false })
+      : { data: [] as any[] },
   ]);
+
+  // Also pull the most recent call_score for each user regardless of window —
+  // needed so dormant-but-has-history clients show accurate lastActivity.
+  const latestCallByUser = new Map<string, string>();
+  if (userIds.length) {
+    const { data: allCalls } = await supabase
+      .from('call_scores')
+      .select('user_id, created_at')
+      .in('user_id', userIds)
+      .order('created_at', { ascending: false });
+    for (const row of allCalls || []) {
+      if (!latestCallByUser.has(row.user_id)) {
+        latestCallByUser.set(row.user_id, row.created_at);
+      }
+    }
+  }
+
+  const latestBriefByUser = new Map<string, string>();
+  for (const row of briefsByUser.data || []) {
+    if (!latestBriefByUser.has(row.user_id)) {
+      latestBriefByUser.set(row.user_id, row.created_at);
+    }
+  }
+  const latestFridayByUser = new Map<string, string>();
+  for (const row of fridaysByUser.data || []) {
+    if (!latestFridayByUser.has(row.user_id) && row.submitted_at) {
+      latestFridayByUser.set(row.user_id, row.submitted_at);
+    }
+  }
 
   const ingestionIds = (toolRunsByEmail.data || [])
     .map((r: any) => r.ingestion_item_id)
@@ -170,23 +222,54 @@ export async function getCoachingIntelligence(
     const avgPrev = avgOf(scoresPrev14);
     const trend = avgLast != null && avgPrev != null ? Math.round((avgLast - avgPrev) * 10) / 10 : null;
 
-    const daysSinceLogin = enrollment.last_login_at
-      ? Math.floor((now.getTime() - new Date(enrollment.last_login_at).getTime()) / (1000 * 60 * 60 * 24))
+    const daysSinceLogin = enrollment.auth_last_sign_in_at
+      ? Math.floor((now.getTime() - new Date(enrollment.auth_last_sign_in_at).getTime()) / (1000 * 60 * 60 * 24))
       : null;
     const daysSinceEnrollment = Math.floor(
       (now.getTime() - new Date(enrollment.enrolled_at).getTime()) / (1000 * 60 * 60 * 24)
     );
 
-    // Momentum classification.
-    // Signals considered: login recency, call cadence trend, enrollment age.
-    let momentum: Momentum;
-    const neverLoggedIn = daysSinceLogin === null;
-    const neverAnalyzed = scores.length === 0;
+    // Composite lastActivity across sign-in, most-recent call, most-recent
+    // brief, most-recent Friday. Whichever is most recent wins the label.
+    const activitySignals: Array<{ at: string; kind: ActivityKind; label: string }> = [];
+    if (enrollment.auth_last_sign_in_at) {
+      activitySignals.push({ at: enrollment.auth_last_sign_in_at, kind: 'sign_in', label: 'Logged in' });
+    }
+    const latestCallAt = latestCallByUser.get(enrollment.user_id);
+    if (latestCallAt) {
+      activitySignals.push({ at: latestCallAt, kind: 'call', label: 'Call analyzed' });
+    }
+    const latestBriefAt = latestBriefByUser.get(enrollment.user_id);
+    if (latestBriefAt) {
+      activitySignals.push({ at: latestBriefAt, kind: 'brief', label: 'Discovery brief' });
+    }
+    const latestFridayAt = latestFridayByUser.get(enrollment.user_id);
+    if (latestFridayAt) {
+      activitySignals.push({ at: latestFridayAt, kind: 'friday', label: 'Friday submitted' });
+    }
+    activitySignals.sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
+    const latestActivity = activitySignals[0];
+    const lastActivity = latestActivity
+      ? {
+          at: latestActivity.at,
+          kind: latestActivity.kind,
+          label: latestActivity.label,
+          daysAgo: Math.floor((now.getTime() - new Date(latestActivity.at).getTime()) / (1000 * 60 * 60 * 24)),
+        }
+      : null;
 
-    if (neverLoggedIn && neverAnalyzed) {
-      // Invited but never activated — distinguish recent invites from dormant.
+    // Momentum classification.
+    // Signals considered: any real activity recency, call cadence trend,
+    // enrollment age. "Never activated" means no sign-in AND no historical
+    // artifacts of any kind.
+    let momentum: Momentum;
+    const neverActivated = !lastActivity;
+    const daysSinceAnyActivity = lastActivity ? lastActivity.daysAgo : null;
+
+    if (neverActivated) {
+      // Invited but never used the product — distinguish fresh from dormant.
       momentum = daysSinceEnrollment <= 14 ? 'pre_launch' : 'stalled';
-    } else if (daysSinceLogin !== null && daysSinceLogin >= 14 && scoresLast14.length === 0) {
+    } else if (daysSinceAnyActivity !== null && daysSinceAnyActivity >= 14 && scoresLast14.length === 0) {
       momentum = 'stalled';
     } else if (
       scoresLast14.length > 0 &&
@@ -228,10 +311,10 @@ export async function getCoachingIntelligence(
     let nextAction: { label: string; href: string } | null = null;
     if (enrollment.friday_submitted_this_week) {
       nextAction = { label: 'Respond to Friday', href: '/admin/five-minute-friday' };
-    } else if (neverLoggedIn && daysSinceEnrollment > 14) {
+    } else if (neverActivated && daysSinceEnrollment > 14) {
       nextAction = { label: 'Resend invite — never activated', href: `/admin/clients` };
     } else if (momentum === 'stalled') {
-      const silenceDays = daysSinceLogin ?? daysSinceEnrollment;
+      const silenceDays = daysSinceAnyActivity ?? daysSinceEnrollment;
       nextAction = { label: `Re-engage — silent ${silenceDays}d`, href: `/admin/impersonate/${enrollment.user_id}` };
     } else if (scoresLast14.length === 0 && daysSinceEnrollment <= 14) {
       nextAction = { label: 'Welcome / first analysis', href: `/admin/impersonate/${enrollment.user_id}` };
@@ -252,6 +335,7 @@ export async function getCoachingIntelligence(
       fridaySubmittedThisWeek: enrollment.friday_submitted_this_week,
       daysSinceLastLogin: daysSinceLogin,
       daysSinceEnrollment,
+      lastActivity,
       momentum,
       workingOn,
       nextAction,

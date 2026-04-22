@@ -36,6 +36,23 @@ function lastActivityLabel(daysSince: number | null): string {
   return `${daysSince}d ago`;
 }
 
+function lastActivityText(
+  activity: { daysAgo: number; label: string } | null | undefined,
+  daysSinceEnrollment: number
+): { text: string; tone: string } {
+  if (!activity) {
+    return { text: `No activity in ${daysSinceEnrollment}d`, tone: 'text-[#E51B23]' };
+  }
+  const { daysAgo, label } = activity;
+  const when = daysAgo === 0 ? 'today' : daysAgo === 1 ? 'yesterday' : `${daysAgo}d ago`;
+  const tone =
+    daysAgo <= 3 ? 'text-green-300' :
+    daysAgo <= 14 ? 'text-slate-300' :
+    daysAgo <= 30 ? 'text-yellow-300' :
+    'text-[#E51B23]';
+  return { text: `${label} · ${when}`, tone };
+}
+
 function Sparkline({ values }: { values: (number | null)[] }) {
   if (values.length === 0) return null;
   const numericValues = values.filter((v): v is number => v != null);
@@ -169,22 +186,31 @@ function ClientCardItem({
         </div>
       )}
 
-      <div className="space-y-1.5 text-sm text-slate-300">
-        <div className="flex justify-between">
-          <span className="text-slate-500">Last login</span>
-          <span className={trajectory?.daysSinceLastLogin != null && trajectory.daysSinceLastLogin >= 7 ? 'text-yellow-400' : ''}>
-            {lastActivityLabel(trajectory?.daysSinceLastLogin ?? null)}
-          </span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-slate-500">5-Minute Friday</span>
-          <span className={fridayConfig.color}>{fridayConfig.label}</span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-slate-500">Enrolled</span>
-          <span>{formatEnrolled(card.enrolledAt)}</span>
-        </div>
-      </div>
+      {(() => {
+        const activityDisplay = lastActivityText(trajectory?.lastActivity ?? null, trajectory?.daysSinceEnrollment ?? 0);
+        return (
+          <div className="space-y-1.5 text-sm text-slate-300">
+            <div className="flex justify-between">
+              <span className="text-slate-500">Last activity</span>
+              <span className={activityDisplay.tone}>{activityDisplay.text}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-500">Last login</span>
+              <span className={trajectory?.daysSinceLastLogin != null && trajectory.daysSinceLastLogin >= 7 ? 'text-yellow-400' : ''}>
+                {lastActivityLabel(trajectory?.daysSinceLastLogin ?? null)}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-500">5-Minute Friday</span>
+              <span className={fridayConfig.color}>{fridayConfig.label}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-500">Enrolled</span>
+              <span>{formatEnrolled(card.enrolledAt)}</span>
+            </div>
+          </div>
+        );
+      })()}
 
       <div className="mt-4 pt-3 border-t border-slate-700/50 flex items-center justify-between gap-3">
         {trajectory?.nextAction ? (

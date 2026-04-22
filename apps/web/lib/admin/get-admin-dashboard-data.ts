@@ -149,6 +149,19 @@ export async function getAdminDashboardData(): Promise<AdminDashboardData> {
     client_programs: programMap.get(e.program_id) || null,
   }));
 
+  // Real last-sign-in lives on auth.users, not public.users.last_login_at
+  // (which is never populated). PostgREST can't see the auth schema, so we
+  // use the admin API. Cost: one call per enrolled client — negligible.
+  const authLookups = await Promise.all(
+    enrollments.map((e) =>
+      supabase.auth.admin
+        .getUserById(e.user_id)
+        .then((res) => [e.user_id, res.data?.user?.last_sign_in_at ?? null] as const)
+        .catch(() => [e.user_id, null] as const)
+    )
+  );
+  const authSignInByUser = new Map<string, string | null>(authLookups);
+
   // Unresponded Friday submissions
   const fridayIds = fridays.map((f) => f.id);
   let respondedFridayIds = new Set<string>();
@@ -184,23 +197,24 @@ export async function getAdminDashboardData(): Promise<AdminDashboardData> {
     }
   }
 
-  // Action: Clients inactive for 7+ days
+  // Action: Clients inactive for 7+ days (by real auth sign-in)
   for (const enrollment of enrollments) {
     const user = enrollment.users as any;
-    if (!user?.last_login_at) continue;
+    const signedInAt = authSignInByUser.get(enrollment.user_id);
+    if (!signedInAt) continue;
     const daysSince = Math.floor(
-      (now.getTime() - new Date(user.last_login_at).getTime()) / (1000 * 60 * 60 * 24)
+      (now.getTime() - new Date(signedInAt).getTime()) / (1000 * 60 * 60 * 24)
     );
     if (daysSince >= 7) {
-      const name = [user.first_name, user.last_name].filter(Boolean).join(' ') || user.email;
+      const name = [user?.first_name, user?.last_name].filter(Boolean).join(' ') || user?.email;
       actionItems.push({
         id: `inactive-${enrollment.id}`,
         type: 'client_inactive',
         priority: daysSince >= 14 ? 2 : 3,
         clientName: name,
-        clientEmail: user.email,
+        clientEmail: user?.email || '',
         description: `No login for ${daysSince} days`,
-        timestamp: user.last_login_at,
+        timestamp: signedInAt,
         actionUrl: `/admin/clients`,
         actionLabel: 'View Profile',
       });
@@ -251,8 +265,9 @@ export async function getAdminDashboardData(): Promise<AdminDashboardData> {
       }
     }
 
-    const daysSinceLastLogin = user?.last_login_at
-      ? Math.floor((now.getTime() - new Date(user.last_login_at).getTime()) / (1000 * 60 * 60 * 24))
+    const authSignedIn = authSignInByUser.get(enrollment.user_id);
+    const daysSinceLastLogin = authSignedIn
+      ? Math.floor((now.getTime() - new Date(authSignedIn).getTime()) / (1000 * 60 * 60 * 24))
       : null;
 
     return {
@@ -263,8 +278,8 @@ export async function getAdminDashboardData(): Promise<AdminDashboardData> {
       programName: program?.name || 'Unknown Program',
       programSlug: program?.slug || '',
       enrolledAt: enrollment.enrolled_at,
-      lastActivity: user?.last_login_at
-        ? { description: 'Last login', timestamp: user.last_login_at }
+      lastActivity: authSignedIn
+        ? { description: 'Last login', timestamp: authSignedIn }
         : null,
       fridayStatus,
       fridayId: submission?.id || null,
@@ -303,9 +318,9 @@ export async function getAdminDashboardData(): Promise<AdminDashboardData> {
     discoveryReportsThisWeek: discoveryReports,
   };
 
-  // Build intelligence input: one enrollment row with the fields the
-  // trajectory builder needs. Friday-for-this-week was already computed above.
+  // Intelligence input reuses authSignInByUser populated earlier.
   const fridaySubmittedByUser = new Set(fridays.map((f) => f.user_id));
+
   const intelligenceInput = enrollments
     .map((e) => {
       const user = e.users as any;
@@ -315,7 +330,7 @@ export async function getAdminDashboardData(): Promise<AdminDashboardData> {
         user_id: e.user_id,
         enrolled_at: e.enrolled_at,
         email: user.email || '',
-        last_login_at: user.last_login_at || null,
+        auth_last_sign_in_at: authSignInByUser.get(e.user_id) ?? null,
         has_five_minute_friday: program?.has_five_minute_friday || false,
         friday_submitted_this_week: fridaySubmittedByUser.has(e.user_id),
       };

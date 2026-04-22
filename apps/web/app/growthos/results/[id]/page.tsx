@@ -488,9 +488,20 @@ export default async function ResultsPage({
       })()}
 
       {/* ===== 7. AI DISCOVERABILITY ===== */}
-      {enrichment?.llmAwareness?.summary && (() => {
+      {enrichment?.llmAwareness && (() => {
         const llm = enrichment.llmAwareness;
-        const aiScore = llm.summary.score;
+        const summary = llm.summary || {};
+        const aiScore = summary.score ?? 0;
+        const providers = ['claude', 'chatgpt', 'perplexity'] as const;
+        const checkedCount = summary.totalChecked ?? providers.filter(p => llm[p]?.available).length;
+        const queryCount = summary.queriesUsed?.length ?? 0;
+        const anyFounderMention = providers.some(p => llm[p]?.founderMentioned);
+        const zeroStateHeadline = anyFounderMention
+          ? 'Founder name surfaces. Agency doesn’t.'
+          : 'Not cited as an agency recommendation.';
+        const zeroStateBody = checkedCount > 0
+          ? `We ran ${queryCount || 3} ICP-style queries across ${checkedCount} LLM${checkedCount === 1 ? '' : 's'} (Claude, ChatGPT, Perplexity) — the kind of questions your buyers actually type. ${anyFounderMention ? 'You come up as a person, but the agency isn’t returned as a recommended option.' : 'You weren’t returned as a recommended option in any of them.'} That’s a specific, fixable gap — not a missing signal.`
+          : 'AI awareness check ran but no provider responses were recorded. Re-run the enrichment step to populate this panel.';
         return (
           <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 mb-6">
             <div className="flex items-center justify-between mb-4">
@@ -499,16 +510,16 @@ export default async function ResultsPage({
             </div>
             {aiScore === 0 ? (
               <div className="mb-4">
-                <p className="text-sm text-[#E31B23] font-medium mb-2">You don&apos;t exist to AI.</p>
-                <p className="text-sm text-slate-400">We asked Claude, ChatGPT, and Perplexity the kinds of questions your ICP would actually type &mdash; real problems, real revenue numbers, asking for specific help. You weren&apos;t mentioned. Not once.</p>
+                <p className="text-sm text-[#E31B23] font-medium mb-2">{zeroStateHeadline}</p>
+                <p className="text-sm text-slate-400">{zeroStateBody}</p>
               </div>
             ) : aiScore < 50 ? (
               <p className="text-sm text-slate-400 mb-4">
-                We ran 3 queries across Claude, ChatGPT, and Perplexity. You appeared in {llm.summary.agencyMentionedIn} of {llm.summary.totalChecked} LLMs. AI is becoming how buyers discover agencies. If you&apos;re not in the training data, you&apos;re invisible to a growing chunk of your market.
+                We ran 3 queries across Claude, ChatGPT, and Perplexity. You appeared in {summary.agencyMentionedIn} of {summary.totalChecked} LLMs. AI is becoming how buyers discover agencies. If you&apos;re not in the training data, you&apos;re invisible to a growing chunk of your market.
               </p>
             ) : (
               <p className="text-sm text-slate-400 mb-4">
-                The robots know who you are. You showed up in {llm.summary.agencyMentionedIn} of {llm.summary.totalChecked} LLMs when we asked about agencies for your ICP. That&apos;s a competitive moat. Protect it.
+                The robots know who you are. You showed up in {summary.agencyMentionedIn} of {summary.totalChecked} LLMs when we asked about agencies for your ICP. That&apos;s a competitive moat. Protect it.
               </p>
             )}
             <div className="grid grid-cols-3 gap-4 mb-4">
@@ -538,33 +549,33 @@ export default async function ResultsPage({
             <div className="h-2 bg-slate-700 rounded-full overflow-hidden mb-4">
               <div className="h-full rounded-full" style={{ width: `${aiScore}%`, backgroundColor: aiScore >= 50 ? '#00D4FF' : '#E31B23' }} />
             </div>
-            {llm.summary.topCompetitors?.length > 0 && aiScore > 0 && (
+            {summary.topCompetitors?.length > 0 && aiScore > 0 && (
               <div>
                 <p className="text-xs text-slate-500 font-bold uppercase mb-2">Competitors LLMs Recommend Instead</p>
                 <div className="flex flex-wrap gap-2">
-                  {llm.summary.topCompetitors.map((name: string, i: number) => (
+                  {summary.topCompetitors.map((name: string, i: number) => (
                     <span key={i} className="px-3 py-1 rounded-full bg-red-500/10 text-red-400 text-xs border border-red-500/20">{name}</span>
                   ))}
                 </div>
               </div>
             )}
-            {aiScore === 0 && (
+            {aiScore === 0 && checkedCount > 0 && (
               <div className="mt-4 bg-slate-700/30 rounded-xl p-4">
                 <p className="text-xs text-slate-500 font-bold uppercase mb-2">What Buyers Are Asking AI Right Now</p>
-                {llm.summary.queriesUsed?.length > 0 && (
+                {summary.queriesUsed?.length > 0 && (
                   <div className="mb-3 space-y-1">
-                    {llm.summary.queriesUsed.map((q: string, i: number) => (
+                    {summary.queriesUsed.map((q: string, i: number) => (
                       <p key={i} className="text-sm text-white bg-slate-600/30 rounded-lg px-3 py-2 italic">&ldquo;{q}&rdquo;</p>
                     ))}
                   </div>
                 )}
-                <p className="text-sm text-slate-400 mb-2">We asked Claude, ChatGPT, and Perplexity these exact questions. You weren&apos;t mentioned. Not once.</p>
+                <p className="text-sm text-slate-400 mb-2">These are the exact queries we ran. The providers returned other agencies, not yours.</p>
                 <ul className="space-y-1 text-sm text-slate-400">
                   <li>&bull; AI is increasingly how people research purchases</li>
                   <li>&bull; Your competitors ARE showing up</li>
                   <li>&bull; This gap will widen, not shrink</li>
                 </ul>
-                <p className="text-sm text-[#00D4FF] mt-3 font-medium">The fix: become the answer. Your ICP is asking questions like {llm.summary.queriesUsed?.[0] ? `"${llm.summary.queriesUsed[0]}"` : 'these'} right now. You need content that answers those exact questions &mdash; not thought leadership, not brand awareness. Specific, tactical answers to specific problems. That&apos;s how you get cited.</p>
+                <p className="text-sm text-[#00D4FF] mt-3 font-medium">The fix: become the answer. Your ICP is asking questions like {summary.queriesUsed?.[0] ? `"${summary.queriesUsed[0]}"` : 'these'} right now. You need content that answers those exact questions &mdash; not thought leadership, not brand awareness. Specific, tactical answers to specific problems. That&apos;s how you get cited.</p>
               </div>
             )}
           </div>

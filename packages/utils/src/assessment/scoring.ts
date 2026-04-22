@@ -750,7 +750,48 @@ function detectRealityChecks(data: IntakeData, zones: WTFZones): RealityCheck[] 
     });
   }
 
+  // Check 6: Run-rate vs. stated annual (detects declining founders claiming flat/growth)
+  const statedAnnual = revenue;
+  const monthlyAnnualized = (data.lastMonthRevenue || 0) * 12;
+  const currentClientCount = data.currentClients || data.clientCount || 0;
+  const derivedFromClients = (data.avgClientValue || 0) * currentClientCount * 12;
+
+  if (statedAnnual > 0 && monthlyAnnualized > 0) {
+    const delta = (monthlyAnnualized - statedAnnual) / statedAnnual;
+    if (Math.abs(delta) >= 0.2) {
+      const direction = delta < 0 ? 'below' : 'above';
+      const magnitude = Math.round(Math.abs(delta) * 100);
+      checks.push({
+        id: 'run-rate-vs-annual',
+        type: 'alert',
+        title: 'THE MATH DOESN’T MATH',
+        body: `Last month was ${formatMoney(data.lastMonthRevenue || 0)} — that annualizes to ${formatMoney(monthlyAnnualized)}, ${magnitude}% ${direction} the ${formatMoney(statedAnnual)} you reported for the year.\n\nWhich number is the real one? If last month is the honest signal, you're ${delta < 0 ? 'trending down' : 'accelerating'} — that changes the plan.`,
+      });
+    }
+  }
+
+  // Check 7: Clients × value × 12 vs. stated annual (independent triangulation)
+  if (statedAnnual > 0 && derivedFromClients > 0 && !(data.lastMonthRevenue && data.currentClients)) {
+    const delta = (derivedFromClients - statedAnnual) / statedAnnual;
+    if (Math.abs(delta) >= 0.2) {
+      const direction = delta < 0 ? 'below' : 'above';
+      const magnitude = Math.round(Math.abs(delta) * 100);
+      checks.push({
+        id: 'client-math-vs-annual',
+        type: 'alert',
+        title: 'CLIENT MATH DOESN’T MATH',
+        body: `${currentClientCount} clients × ${formatMoney(data.avgClientValue || 0)}/mo × 12 = ${formatMoney(derivedFromClients)}, ${magnitude}% ${direction} the ${formatMoney(statedAnnual)} you reported for the year.\n\nSomething in the stack is off — client count, average value, or the annual figure. Worth reconciling before we plan.`,
+      });
+    }
+  }
+
   return checks;
+}
+
+function formatMoney(n: number): string {
+  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `$${Math.round(n / 1_000)}k`;
+  return `$${Math.round(n)}`;
 }
 
 // ============================================

@@ -1,0 +1,34 @@
+name: Fetch assessment answers
+
+on:
+  workflow_dispatch:
+    inputs:
+      assessment_id:
+        description: Assessment UUID to fetch
+        required: true
+        default: c80fc5a7-215a-4c3e-a901-872af01014bd
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - run: npm install --no-save @supabase/supabase-js@2
+
+      - name: Run fetch script
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          {
+            echo '## Assessment answers'
+            echo ''
+            echo '```json'
+            node scripts/fetch-assessment-answers.mjs "${{ inputs.assessment_id }}"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

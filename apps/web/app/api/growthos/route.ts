@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { waitUntil } from '@vercel/functions';
 import { createClient } from '@supabase/supabase-js';
 import { createClient as createAuthClient } from '@/lib/supabase-auth-server';
 import { calculateAssessment } from '@repo/utils/src/assessment/scoring';
@@ -308,40 +309,47 @@ export async function POST(request: NextRequest) {
       console.error('Failed to compute archetype for assessment Loops:', err);
     }
 
-    // Trigger Loops email sequence (fire-and-forget)
-    onAssessmentCompleted(
-      intakeData.email,
-      nameParts[0] || '',
-      intakeData.agencyName,
-      assessmentId,
-      scores.overall,
-      quadrant.archetype,
-      quadrant.executionScore,
-      quadrant.positioningScore
-    ).catch((err) => {
-      console.error('[GrowthOS] Loops assessment email trigger failed:', err);
-    });
-
-    // Add to Agency Inner Circle newsletter list (fire-and-forget)
-    addAssessmentSubscriber(
-      intakeData.email,
-      intakeData.founderName,
-      intakeData.agencyName
-    ).catch((err) => {
-      console.error('[GrowthOS] Beehiiv subscription failed:', err);
-    });
-
-    // Copper CRM: create lead + WTF Assessment opportunity (fire-and-forget)
+    // Post-response integrations — wrapped in waitUntil so Vercel keeps the
+    // function alive until they finish. Without waitUntil, the serverless
+    // container can be suspended after NextResponse.json returns, which
+    // silently dropped Loops/Beehiiv/Copper calls for every assessment.
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.timkilroy.com';
-    copperSyncLead({
-      email: intakeData.email,
-      name: intakeData.founderName,
-      companyName: intakeData.agencyName,
-      productName: 'WTF Assessment',
-      opportunityValue: 0,
-      stageId: COPPER_STAGES.LEAD,
-      note: `Completed WTF Assessment — Score: ${scores.overall}/5. View: ${appUrl}/growthos/results/${assessmentId}`,
-    }).catch(err => console.error('[Copper] assessment sync failed:', err));
+    waitUntil(
+      onAssessmentCompleted(
+        intakeData.email,
+        nameParts[0] || '',
+        intakeData.agencyName,
+        assessmentId,
+        scores.overall,
+        quadrant.archetype,
+        quadrant.executionScore,
+        quadrant.positioningScore
+      ).catch((err) => {
+        console.error('[GrowthOS] Loops assessment email trigger failed:', err);
+      })
+    );
+
+    waitUntil(
+      addAssessmentSubscriber(
+        intakeData.email,
+        intakeData.founderName,
+        intakeData.agencyName
+      ).catch((err) => {
+        console.error('[GrowthOS] Beehiiv subscription failed:', err);
+      })
+    );
+
+    waitUntil(
+      copperSyncLead({
+        email: intakeData.email,
+        name: intakeData.founderName,
+        companyName: intakeData.agencyName,
+        productName: 'WTF Assessment',
+        opportunityValue: 0,
+        stageId: COPPER_STAGES.LEAD,
+        note: `Completed WTF Assessment — Score: ${scores.overall}/5. View: ${appUrl}/growthos/results/${assessmentId}`,
+      }).catch(err => console.error('[Copper] assessment sync failed:', err))
+    );
 
     return NextResponse.json({
       success: true,

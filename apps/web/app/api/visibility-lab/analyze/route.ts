@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { waitUntil } from '@vercel/functions';
 import { AnalysisInput, AnalysisReport } from '@/lib/visibility-lab/types';
 import { getSupabaseServerClient } from '@/lib/supabase-server';
 import { onVisibilityReportGenerated } from '@/lib/loops';
@@ -202,26 +203,29 @@ export async function POST(request: NextRequest) {
         alertReportGenerated(input.userName, 'visibility-free', input.brandName);
       }
 
-      // Add to Beehiiv newsletter (fire-and-forget)
-      addVisibilityLabSubscriber(input.userEmail, input.userName, input.brandName).catch(err => {
-        console.error('Beehiiv visibility lab subscriber failed:', err);
-      });
+      // Post-response integrations — waitUntil keeps the function alive on
+      // Vercel so these complete after the response is sent.
+      waitUntil(
+        addVisibilityLabSubscriber(input.userEmail, input.userName, input.brandName).catch(err => {
+          console.error('Beehiiv visibility lab subscriber failed:', err);
+        })
+      );
 
-      // Copper CRM: create lead + Visibility Lab Pro opportunity (fire-and-forget)
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.timkilroy.com';
       if (reportId) {
-        copperSyncLead({
-          email: input.userEmail,
-          name: input.userName,
-          companyName: input.brandName,
-          productName: 'Visibility Lab Pro',
-          opportunityValue: PRO_ACV,
-          stageId: COPPER_STAGES.LEAD,
-          note: `Ran Visibility Lab Free — Score: ${report.visibilityScore}/100. View: ${appUrl}/visibility-lab/report/${reportId}`,
-        }).catch(err => console.error('[Copper] visibility free sync failed:', err));
+        waitUntil(
+          copperSyncLead({
+            email: input.userEmail,
+            name: input.userName,
+            companyName: input.brandName,
+            productName: 'Visibility Lab Pro',
+            opportunityValue: PRO_ACV,
+            stageId: COPPER_STAGES.LEAD,
+            note: `Ran Visibility Lab Free — Score: ${report.visibilityScore}/100. View: ${appUrl}/visibility-lab/report/${reportId}`,
+          }).catch(err => console.error('[Copper] visibility free sync failed:', err))
+        );
       }
 
-      // Fire Loops event (fire-and-forget)
       if (reportId) {
         let archetype = '';
         let executionScore = 0;
@@ -243,17 +247,19 @@ export async function POST(request: NextRequest) {
           console.error('Failed to compute archetype for Visibility Loops:', err);
         }
 
-        onVisibilityReportGenerated(
-          input.userEmail,
-          reportId,
-          report.visibilityScore,
-          report.brandName,
-          archetype,
-          executionScore,
-          positioningScore
-        ).catch(err => {
-          console.error('Failed to send Visibility Lab Loops event:', err);
-        });
+        waitUntil(
+          onVisibilityReportGenerated(
+            input.userEmail,
+            reportId,
+            report.visibilityScore,
+            report.brandName,
+            archetype,
+            executionScore,
+            positioningScore
+          ).catch(err => {
+            console.error('Failed to send Visibility Lab Loops event:', err);
+          })
+        );
       }
 
       return NextResponse.json({ ...report, reportId });

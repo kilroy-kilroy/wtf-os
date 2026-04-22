@@ -1,6 +1,7 @@
 export const maxDuration = 300; // 5 minutes - Pro analysis with 16K tokens + fallback
 
 import { NextRequest, NextResponse } from 'next/server';
+import { waitUntil } from '@vercel/functions';
 import { createServerClient } from '@repo/db/client';
 import {
   getIngestionItem,
@@ -255,14 +256,17 @@ export async function POST(request: NextRequest) {
           tokens_used: usage,
         });
 
-        // Send report email via Loops (non-blocking)
-        sendReportEmail(
-          supabase,
-          ingestionItem.user_id,
-          callScore.id,
-          version === 'pro' ? 'pro' : 'lite',
-          metadata.prospect_name,
-          metadata.prospect_company
+        // Send report email via Loops — waitUntil keeps the function alive
+        // on Vercel so the Loops/Beehiiv/Copper calls complete post-response.
+        waitUntil(
+          sendReportEmail(
+            supabase,
+            ingestionItem.user_id,
+            callScore.id,
+            version === 'pro' ? 'pro' : 'lite',
+            metadata.prospect_name,
+            metadata.prospect_company
+          )
         );
 
         // Return markdown response
@@ -393,14 +397,15 @@ ${ingestionItem.raw_content}`;
             tokens_used: usage,
           });
 
-          // Send report email via Loops (non-blocking)
-          sendReportEmail(
-            supabase,
-            ingestionItem.user_id,
-            callScore.id,
-            'pro',
-            prospect_name || metadata.prospect_name,
-            prospect_company || metadata.prospect_company
+          waitUntil(
+            sendReportEmail(
+              supabase,
+              ingestionItem.user_id,
+              callScore.id,
+              'pro',
+              prospect_name || metadata.prospect_name,
+              prospect_company || metadata.prospect_company
+            )
           );
 
           // Return Pro JSON result
@@ -576,14 +581,15 @@ ${ingestionItem.raw_content}`;
           tokens_used: usage,
         });
 
-        // Send report email via Loops (non-blocking)
-        sendReportEmail(
-          supabase,
-          ingestionItem.user_id,
-          callScore.id,
-          'lite',
-          metadata.prospect_name,
-          metadata.prospect_company
+        waitUntil(
+          sendReportEmail(
+            supabase,
+            ingestionItem.user_id,
+            callScore.id,
+            'lite',
+            metadata.prospect_name,
+            metadata.prospect_company
+          )
         );
 
         // Return results

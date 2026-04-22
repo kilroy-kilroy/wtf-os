@@ -1,6 +1,7 @@
 export const maxDuration = 300; // 5 minutes - research chain (240s) + Claude analysis
 
 import { NextRequest, NextResponse } from 'next/server';
+import { waitUntil } from '@vercel/functions';
 import { createServerClient } from '@repo/db/client';
 import {
   runModel,
@@ -418,39 +419,44 @@ export async function POST(request: NextRequest) {
         console.error('Loops event failed:', loopsResult.error);
       }
     } else {
-      // Fire-and-forget for lite version
-      onDiscoveryReportGenerated(
-        requestor_email,
-        version as 'lite' | 'pro',
-        target_company,
-        target_contact_name,
-        target_contact_title,
-        reportId,
-        reportUrl,
-        quadrant.archetype,
-        quadrant.executionScore,
-        quadrant.positioningScore
-      ).catch((err) => console.error('Loops event failed:', err));
+      // Post-response work for lite — waitUntil keeps the function alive on
+      // Vercel so the Loops delivery completes after the response is sent.
+      waitUntil(
+        onDiscoveryReportGenerated(
+          requestor_email,
+          version as 'lite' | 'pro',
+          target_company,
+          target_contact_name,
+          target_contact_title,
+          reportId,
+          reportUrl,
+          quadrant.archetype,
+          quadrant.executionScore,
+          quadrant.positioningScore
+        ).catch((err) => console.error('Loops event failed:', err))
+      );
     }
 
-    // Add to Beehiiv newsletter (fire-and-forget)
-    addDiscoveryLabSubscriber(
-      requestor_email,
-      requestor_name,
-      requestor_company
-    ).catch((err) => console.error('Beehiiv subscriber add failed:', err));
+    waitUntil(
+      addDiscoveryLabSubscriber(
+        requestor_email,
+        requestor_name,
+        requestor_company
+      ).catch((err) => console.error('Beehiiv subscriber add failed:', err))
+    );
 
-    // Copper CRM: create lead + Discovery Lab Pro opportunity (fire-and-forget)
     if (reportId) {
-      copperSyncLead({
-        email: requestor_email,
-        name: requestor_name || undefined,
-        companyName: requestor_company || undefined,
-        productName: 'Discovery Lab Pro',
-        opportunityValue: PRO_ACV,
-        stageId: COPPER_STAGES.LEAD,
-        note: `Ran Discovery Lab ${version} — Target: ${target_company}. View: ${appUrl}/discovery-lab/report/${reportId}`,
-      }).catch(err => console.error('[Copper] discovery sync failed:', err));
+      waitUntil(
+        copperSyncLead({
+          email: requestor_email,
+          name: requestor_name || undefined,
+          companyName: requestor_company || undefined,
+          productName: 'Discovery Lab Pro',
+          opportunityValue: PRO_ACV,
+          stageId: COPPER_STAGES.LEAD,
+          note: `Ran Discovery Lab ${version} — Target: ${target_company}. View: ${appUrl}/discovery-lab/report/${reportId}`,
+        }).catch(err => console.error('[Copper] discovery sync failed:', err))
+      );
     }
 
     // Return the result

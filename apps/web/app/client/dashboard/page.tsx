@@ -43,7 +43,7 @@ export default function ClientDashboardPage() {
       const demandosProgram = Array.isArray(enrollment.program)
         ? enrollment.program[0]
         : enrollment.program;
-      if ((demandosProgram as any)?.has_demandos_intake) {
+      if (demandosProgram?.has_demandos_intake) {
         const { data: intake } = await supabase
           .from('demandos_intake')
           .select('submitted_at, answers')
@@ -96,13 +96,12 @@ export default function ClientDashboardPage() {
         .order('created_at', { ascending: false })
         .limit(3);
 
-      const program = enrollment.program as any;
       setData({
         enrollment: enrollment as any,
         company,
-        hasFiveMinuteFriday: program?.has_five_minute_friday || false,
-        hasCallLabPro: enrollment.leads_sales_calls || program?.has_call_lab_pro || false,
-        pendingFriday: !existingFriday && program?.has_five_minute_friday,
+        hasFiveMinuteFriday: demandosProgram?.has_five_minute_friday || false,
+        hasCallLabPro: enrollment.leads_sales_calls || demandosProgram?.has_call_lab_pro || false,
+        pendingFriday: !existingFriday && demandosProgram?.has_five_minute_friday,
         hasRoadmap: (roadmapCheck?.length || 0) > 0,
         recentDocs: recentDocs || [],
       });

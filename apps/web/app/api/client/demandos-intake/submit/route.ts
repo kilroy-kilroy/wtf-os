@@ -41,7 +41,7 @@ export async function POST() {
   const answers = (intake?.answers ?? {}) as Record<string, unknown>;
   const missing = requiredKeys().filter((k) => {
     const v = answers[k];
-    return v === undefined || v === null || v === '';
+    return v === undefined || v === null || v === '' || (Array.isArray(v) && v.length === 0);
   });
   if (missing.length > 0) {
     return NextResponse.json(

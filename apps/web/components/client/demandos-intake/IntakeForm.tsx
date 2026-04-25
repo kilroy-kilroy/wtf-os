@@ -48,8 +48,11 @@ export default function IntakeForm({
     }
   }
 
-  function onDocumentsChange(next: ExistingDoc[]) {
-    setDocuments(next);
+  function onDocumentsChange(category: string, next: ExistingDoc[]) {
+    setDocuments((prev) => [
+      ...prev.filter((d) => d.category !== category),
+      ...next,
+    ]);
   }
 
   async function handleSubmit() {
@@ -108,7 +111,9 @@ export default function IntakeForm({
                 onBlur={() => persistBlur(q.key)}
                 readOnly={readOnly || submitted}
                 documents={q.uploadCategory ? docsForCategory(q.uploadCategory) : undefined}
-                onDocumentsChange={q.type === 'upload' ? onDocumentsChange : undefined}
+                onDocumentsChange={q.type === 'upload' && q.uploadCategory
+                  ? (next) => onDocumentsChange(q.uploadCategory!, next)
+                  : undefined}
               />
             ))}
           </div>

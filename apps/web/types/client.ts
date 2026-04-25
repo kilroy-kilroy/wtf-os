@@ -21,6 +21,7 @@ export interface ClientProgram {
   description: string | null;
   has_five_minute_friday: boolean;
   has_call_lab_pro: boolean;
+  has_demandos_intake: boolean;
   active: boolean;
 }
 

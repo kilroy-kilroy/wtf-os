@@ -37,8 +37,21 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(`${origin}${next}`);
   }
 
-  // Default: route based on onboarding status (matches the prior client-page logic).
+  // Active client enrollments take precedence — send them to the client portal,
+  // not the legacy product-discovery onboarding.
   const admin = getSupabaseServerClient();
+  const { data: enrollment } = await admin
+    .from('client_enrollments')
+    .select('id')
+    .eq('user_id', exchanged.user.id)
+    .eq('status', 'active')
+    .maybeSingle();
+
+  if (enrollment) {
+    return NextResponse.redirect(`${origin}/client/dashboard`);
+  }
+
+  // No enrollment: fall back to onboarding-vs-labs based on profile state.
   const { data: userData } = await admin
     .from('users')
     .select('onboarding_completed')

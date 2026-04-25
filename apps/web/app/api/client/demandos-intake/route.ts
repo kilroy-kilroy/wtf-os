@@ -35,10 +35,13 @@ export async function GET() {
   }
   const { enrollmentId, admin } = resolved;
 
-  // Upsert an empty intake row if missing.
-  await admin
+  // Upsert an empty intake row if missing. The trigger sets updated_at automatically.
+  const { error: upsertError } = await admin
     .from('demandos_intake')
     .upsert({ enrollment_id: enrollmentId }, { onConflict: 'enrollment_id', ignoreDuplicates: true });
+  if (upsertError) {
+    return NextResponse.json({ error: upsertError.message }, { status: 500 });
+  }
 
   const { data: intake } = await admin
     .from('demandos_intake')
@@ -73,19 +76,12 @@ export async function POST(request: NextRequest) {
   }
   const { key, value } = body as { key: string; value: unknown };
 
-  // Read current, merge, write.
-  const { data: current } = await admin
-    .from('demandos_intake')
-    .select('answers')
-    .eq('enrollment_id', enrollmentId)
-    .single();
-
-  const merged = { ...(current?.answers ?? {}), [key]: value };
-
-  const { error } = await admin
-    .from('demandos_intake')
-    .update({ answers: merged })
-    .eq('enrollment_id', enrollmentId);
+  // Atomic JSONB merge via RPC. Avoids the read-merge-write race on concurrent autosaves.
+  const { error } = await admin.rpc('merge_demandos_intake_answer', {
+    p_enrollment_id: enrollmentId,
+    p_key: key,
+    p_value: value as never, // RPC parameter is JSONB; the JS client serializes any JSON-safe value.
+  });
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });

@@ -70,6 +70,8 @@ export const QUESTIONS: ReadonlyArray<Question> = [
   { key: 'pipeline_biggest_pain', section: 'pipeline', type: 'long-text', required: true, label: 'Biggest pipeline pain in one sentence' },
   { key: 'pipeline_crm_export', section: 'pipeline', type: 'upload', label: 'Upload CRM export or pipeline report (last 90 days)', uploadCategory: 'demandos-intake:pipeline-crm-export' },
   { key: 'pipeline_dashboard_screenshots', section: 'pipeline', type: 'upload', label: 'Upload dashboard screenshots or metrics docs', uploadCategory: 'demandos-intake:pipeline-dashboards' },
+  { key: 'pipeline_pnl_ytd_paste', section: 'pipeline', type: 'long-text', label: 'Year-to-date profit & loss', help: 'Paste your YTD P&L here (top-line numbers, totals by category — whatever you have). If a doc is easier, use the upload below instead.' },
+  { key: 'pipeline_pnl_ytd_upload', section: 'pipeline', type: 'upload', label: 'Or upload your YTD P&L', help: 'PDF, spreadsheet, screenshot — whatever format you export it in.', uploadCategory: 'demandos-intake:pnl-ytd' },
 
   // content
   { key: 'content_positioning', section: 'content', type: 'long-text', required: true, label: 'Current positioning / tagline in your own words' },

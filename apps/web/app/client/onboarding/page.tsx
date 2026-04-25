@@ -21,13 +21,21 @@ export default function ClientOnboardingPage() {
 
       const { data: enrollment } = await supabase
         .from('client_enrollments')
-        .select('id, onboarding_completed')
+        .select('id, onboarding_completed, program_id, client_programs:program_id ( has_demandos_intake )')
         .eq('user_id', user.id)
         .eq('status', 'active')
         .single();
 
       if (!enrollment) {
         router.push('/client/login');
+        return;
+      }
+
+      const program = Array.isArray(enrollment.client_programs)
+        ? enrollment.client_programs[0]
+        : enrollment.client_programs;
+      if (program?.has_demandos_intake) {
+        router.push('/client/demandos-intake');
         return;
       }
 

@@ -68,8 +68,8 @@ export const QUESTIONS: ReadonlyArray<Question> = [
   { key: 'pipeline_monthly_lead_volume', section: 'pipeline', type: 'short-text', label: 'Approx. monthly lead / MQL volume' },
   { key: 'pipeline_win_rate', section: 'pipeline', type: 'short-text', label: 'Approx. win rate (%)' },
   { key: 'pipeline_biggest_pain', section: 'pipeline', type: 'long-text', required: true, label: 'Biggest pipeline pain in one sentence' },
-  { key: 'pipeline_crm_export', section: 'pipeline', type: 'upload', label: 'Upload CRM export or pipeline report (last 90 days)', uploadCategory: 'demandos-intake:pipeline-export' },
-  { key: 'pipeline_dashboard_screenshots', section: 'pipeline', type: 'upload', label: 'Upload dashboard screenshots or metrics docs', uploadCategory: 'demandos-intake:pipeline-export' },
+  { key: 'pipeline_crm_export', section: 'pipeline', type: 'upload', label: 'Upload CRM export or pipeline report (last 90 days)', uploadCategory: 'demandos-intake:pipeline-crm-export' },
+  { key: 'pipeline_dashboard_screenshots', section: 'pipeline', type: 'upload', label: 'Upload dashboard screenshots or metrics docs', uploadCategory: 'demandos-intake:pipeline-dashboards' },
 
   // content
   { key: 'content_positioning', section: 'content', type: 'long-text', required: true, label: 'Current positioning / tagline in your own words' },

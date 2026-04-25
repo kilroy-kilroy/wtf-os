@@ -1,7 +1,7 @@
 // apps/web/components/client/demandos-intake/IntakeForm.tsx
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { SECTIONS, QUESTIONS, requiredKeys, questionsBySection } from '@/lib/demandos-intake/questions';
 import QuestionField from './QuestionField';
 import SectionNav from './SectionNav';
@@ -23,16 +23,21 @@ export default function IntakeForm({
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState<boolean>(submittedAt !== null);
 
+  // Shadow ref kept synchronous-with-state so persistBlur always reads the
+  // latest value, even when called in the same event tick as saveOne.
+  const answersRef = useRef<Record<string, unknown>>(initialAnswers);
+
   const questionsInSection = useMemo(() => questionsBySection(activeSection), [activeSection]);
 
-  async function saveOne(key: string, value: unknown) {
+  function saveOne(key: string, value: unknown) {
     if (readOnly || submitted) return;
-    setAnswers((prev) => ({ ...prev, [key]: value }));
+    answersRef.current = { ...answersRef.current, [key]: value };
+    setAnswers(answersRef.current);
   }
 
   async function persistBlur(key: string) {
     if (readOnly || submitted) return;
-    const value = answers[key];
+    const value = answersRef.current[key];
     const res = await fetch('/api/client/demandos-intake', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -49,7 +54,7 @@ export default function IntakeForm({
 
   async function handleSubmit() {
     const missing = requiredKeys().filter((k) => {
-      const v = answers[k];
+      const v = answersRef.current[k];
       return v === undefined || v === null || v === '' || (Array.isArray(v) && v.length === 0);
     });
     if (missing.length > 0) {

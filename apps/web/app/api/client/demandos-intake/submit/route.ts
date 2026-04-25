@@ -30,9 +30,13 @@ export async function POST() {
 
   const { data: intake } = await admin
     .from('demandos_intake')
-    .select('answers')
+    .select('answers, submitted_at')
     .eq('enrollment_id', enrollment.id)
     .single();
+
+  if (intake?.submitted_at) {
+    return NextResponse.json({ success: true });
+  }
 
   const answers = (intake?.answers ?? {}) as Record<string, unknown>;
   const missing = requiredKeys().filter((k) => {
@@ -54,7 +58,7 @@ export async function POST() {
   if (updateErr) return NextResponse.json({ error: updateErr.message }, { status: 500 });
 
   const companyName = typeof answers.company_name === 'string' ? answers.company_name : '';
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://app.wtf-os.com';
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://app.timkilroy.com';
   const reviewUrl = `${baseUrl}/admin/demandos-intake/${enrollment.id}`;
 
   await onDemandosIntakeSubmitted(

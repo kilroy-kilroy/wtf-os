@@ -20,6 +20,7 @@ interface DashboardData {
 export default function ClientDashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [demandosIntakeStatus, setDemandosIntakeStatus] = useState<'none' | 'in-progress' | 'submitted' | null>(null);
   const router = useRouter();
   const supabase = createClient();
 
@@ -38,6 +39,26 @@ export default function ClientDashboardPage() {
 
       if (!enrollment) { router.push('/client/login'); return; }
       if (!enrollment.onboarding_completed) { router.push('/client/onboarding'); return; }
+
+      const demandosProgram = Array.isArray(enrollment.program)
+        ? enrollment.program[0]
+        : enrollment.program;
+      if ((demandosProgram as any)?.has_demandos_intake) {
+        const { data: intake } = await supabase
+          .from('demandos_intake')
+          .select('submitted_at, answers')
+          .eq('enrollment_id', enrollment.id)
+          .maybeSingle();
+        if (intake?.submitted_at) {
+          setDemandosIntakeStatus('submitted');
+        } else if (intake && intake.answers && Object.keys(intake.answers).length > 0) {
+          setDemandosIntakeStatus('in-progress');
+        } else {
+          setDemandosIntakeStatus('none');
+        }
+      } else {
+        setDemandosIntakeStatus('submitted'); // hides the card for non-DemandOS programs
+      }
 
       // Get company info
       const { data: company } = await supabase
@@ -158,6 +179,24 @@ export default function ClientDashboardPage() {
             {data.enrollment.program?.name} &middot; {data.company?.industry_niche || 'Client Portal'}
           </p>
         </div>
+
+        {/* DemandOS Intake CTA */}
+        {(demandosIntakeStatus === 'none' || demandosIntakeStatus === 'in-progress') && (
+          <a
+            href="/client/demandos-intake"
+            className="block bg-[#E51B23] text-white px-6 py-4 mb-6 hover:bg-red-700 transition-colors"
+          >
+            <div className="text-xs uppercase tracking-wider opacity-80">
+              {demandosIntakeStatus === 'in-progress' ? 'Continue' : 'Required'}
+            </div>
+            <div className="text-lg font-bold">
+              {demandosIntakeStatus === 'in-progress' ? 'Finish your Demand OS intake' : 'Complete your Demand OS intake'}
+            </div>
+            <div className="text-sm opacity-80 mt-1">
+              ~20 minutes. Your answers help me prepare for our kickoff.
+            </div>
+          </a>
+        )}
 
         {/* 5-Minute Friday Alert */}
         {data.pendingFriday && (

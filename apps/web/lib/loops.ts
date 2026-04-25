@@ -657,3 +657,25 @@ export async function onFiveMinuteFridayResponse(
     },
   });
 }
+
+/**
+ * Fire when a DemandOS client submits their intake form.
+ */
+export async function onDemandosIntakeSubmitted(
+  email: string,
+  companyName: string,
+  programName: string,
+  enrollmentId: string,
+  reviewUrl: string
+): Promise<{ success: boolean; error?: string }> {
+  return sendEvent({
+    email,
+    eventName: 'demandos_intake_submitted',
+    eventProperties: {
+      companyName: companyName || '',
+      programName: programName || '',
+      enrollmentId,
+      reviewUrl,
+    },
+  });
+}

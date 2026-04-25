@@ -75,6 +75,9 @@ export async function POST(request: NextRequest) {
     if (!storagePath.startsWith(`${enrollmentId}/`)) {
       return NextResponse.json({ error: 'storagePath does not belong to your enrollment' }, { status: 403 });
     }
+    if (typeof sizeBytes === 'number' && sizeBytes > MAX_SIZE_BYTES) {
+      return NextResponse.json({ error: `File exceeds ${MAX_SIZE_BYTES} bytes` }, { status: 400 });
+    }
 
     const { data: inserted, error } = await admin
       .from('client_documents')
@@ -123,7 +126,15 @@ export async function DELETE(request: NextRequest) {
   }
 
   if (doc.storage_path) {
-    await admin.storage.from(BUCKET).remove([doc.storage_path]);
+    const { error: storageError } = await admin.storage.from(BUCKET).remove([doc.storage_path]);
+    if (storageError) {
+      console.error('[client/documents DELETE] storage removal failed', {
+        path: doc.storage_path,
+        error: storageError.message,
+      });
+      // Continue to delete the DB row per v1 policy. A reconciliation job will
+      // sweep orphaned storage objects later if this becomes material.
+    }
   }
   const { error } = await admin.from('client_documents').delete().eq('id', id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

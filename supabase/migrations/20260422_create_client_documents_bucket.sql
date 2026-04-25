@@ -1,8 +1,8 @@
 -- supabase/migrations/20260422_create_client_documents_bucket.sql
 
-INSERT INTO storage.buckets (id, name, public)
-VALUES ('client-documents', 'client-documents', false)
-ON CONFLICT (id) DO NOTHING;
+INSERT INTO storage.buckets (id, name, public, file_size_limit)
+VALUES ('client-documents', 'client-documents', false, 20971520)
+ON CONFLICT (id) DO UPDATE SET file_size_limit = EXCLUDED.file_size_limit;
 
 CREATE POLICY "Users can read own client documents"
   ON storage.objects FOR SELECT

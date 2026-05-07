@@ -1,11 +1,49 @@
 'use client';
 
 import { useState } from 'react';
+import { z } from 'zod';
 
 type FlowStep = 'landing' | 'intake' | 'questions' | 'preview';
 
+const intakeSchema = z.object({
+  name: z.string().min(1, 'Required'),
+  email: z.string().email('Valid email required'),
+  company_name: z.string().min(1, 'Required'),
+  website_url: z.string().url('Must be a valid URL (include https://)'),
+  linkedin_url: z.string().url('Must be a valid LinkedIn URL').refine(
+    (v) => v.includes('linkedin.com'),
+    'Must be a LinkedIn URL'
+  ),
+  service_description: z.string().min(10, 'A sentence or two — what do you sell?'),
+  customer_description: z.string().min(10, 'A sentence or two — who do you sell to?'),
+  revenue_band: z.enum(['<$1M', '$1M-$3M', '$3M-$5M', '$5M-$10M', '$10M+']),
+  affordability_answer: z.enum(['yes', 'no', 'not_sure']),
+  newsletter_opt_in: z.boolean(),
+});
+
+type IntakeData = z.infer<typeof intakeSchema>;
+
 export default function BizDevAssessmentPage() {
   const [step, setStep] = useState<FlowStep>('landing');
+  const [intakeData, setIntakeData] = useState<Partial<IntakeData>>({
+    newsletter_opt_in: false,
+  });
+  const [intakeErrors, setIntakeErrors] = useState<Record<string, string>>({});
+
+  function handleIntakeSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const result = intakeSchema.safeParse(intakeData);
+    if (!result.success) {
+      const errors: Record<string, string> = {};
+      for (const issue of result.error.issues) {
+        errors[issue.path[0] as string] = issue.message;
+      }
+      setIntakeErrors(errors);
+      return;
+    }
+    setIntakeErrors({});
+    setStep('questions');
+  }
 
   if (step === 'landing') {
     return (
@@ -30,6 +68,122 @@ export default function BizDevAssessmentPage() {
             Start the Assessment →
           </button>
         </section>
+      </main>
+    );
+  }
+
+  if (step === 'intake') {
+    return (
+      <main className="min-h-screen bg-background text-foreground">
+        <form onSubmit={handleIntakeSubmit} className="mx-auto max-w-2xl px-6 py-12 space-y-6">
+          <h2 className="text-3xl font-bold">Tell me about your agency</h2>
+          <p className="text-muted-foreground">
+            I'll analyze your website + LinkedIn alongside your answers.
+            Three minutes, then 10 quick questions.
+          </p>
+
+          {[
+            { key: 'name', label: 'Your name', type: 'text' },
+            { key: 'email', label: 'Email', type: 'email' },
+            { key: 'company_name', label: 'Agency name', type: 'text' },
+            { key: 'website_url', label: 'Agency website (https://)', type: 'url' },
+            { key: 'linkedin_url', label: 'Your LinkedIn profile URL', type: 'url' },
+          ].map(({ key, label, type }) => (
+            <div key={key}>
+              <label className="block text-sm font-medium mb-1">{label}</label>
+              <input
+                type={type}
+                value={(intakeData as Record<string, string>)[key] ?? ''}
+                onChange={(e) => setIntakeData(d => ({ ...d, [key]: e.target.value }))}
+                className="w-full rounded border border-border bg-background px-3 py-2"
+                required
+              />
+              {intakeErrors[key] && <p className="text-sm text-red-500 mt-1">{intakeErrors[key]}</p>}
+            </div>
+          ))}
+
+          <div>
+            <label className="block text-sm font-medium mb-1">What do you sell? (1–2 sentences)</label>
+            <textarea
+              value={intakeData.service_description ?? ''}
+              onChange={(e) => setIntakeData(d => ({ ...d, service_description: e.target.value }))}
+              rows={3}
+              className="w-full rounded border border-border bg-background px-3 py-2"
+              required
+            />
+            {intakeErrors.service_description && <p className="text-sm text-red-500 mt-1">{intakeErrors.service_description}</p>}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Who do you sell to? (1–2 sentences)</label>
+            <textarea
+              value={intakeData.customer_description ?? ''}
+              onChange={(e) => setIntakeData(d => ({ ...d, customer_description: e.target.value }))}
+              rows={3}
+              className="w-full rounded border border-border bg-background px-3 py-2"
+              required
+            />
+            {intakeErrors.customer_description && <p className="text-sm text-red-500 mt-1">{intakeErrors.customer_description}</p>}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Annual revenue band</label>
+            <select
+              value={intakeData.revenue_band ?? ''}
+              onChange={(e) => setIntakeData(d => ({ ...d, revenue_band: e.target.value as IntakeData['revenue_band'] }))}
+              className="w-full rounded border border-border bg-background px-3 py-2"
+              required
+            >
+              <option value="" disabled>Pick one</option>
+              <option value="<$1M">Less than $1M</option>
+              <option value="$1M-$3M">$1M – $3M</option>
+              <option value="$3M-$5M">$3M – $5M</option>
+              <option value="$5M-$10M">$5M – $10M</option>
+              <option value="$10M+">$10M+</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              Could you fund $60K base salary for 4–6 months without expecting any return?
+            </label>
+            <div className="space-y-1">
+              {[
+                { v: 'yes', l: 'Yes — I have the runway and I get the math.' },
+                { v: 'no', l: 'No — that would put real strain on the business.' },
+                { v: 'not_sure', l: "I'd have to model it." },
+              ].map(({ v, l }) => (
+                <label key={v} className="flex items-start gap-2">
+                  <input
+                    type="radio"
+                    name="affordability"
+                    value={v}
+                    checked={intakeData.affordability_answer === v}
+                    onChange={() => setIntakeData(d => ({ ...d, affordability_answer: v as IntakeData['affordability_answer'] }))}
+                    required
+                  />
+                  <span>{l}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={intakeData.newsletter_opt_in ?? false}
+              onChange={(e) => setIntakeData(d => ({ ...d, newsletter_opt_in: e.target.checked }))}
+            />
+            <span className="text-sm">Get Tim's newsletter — agency growth, no fluff.</span>
+          </label>
+
+          <button
+            type="submit"
+            className="rounded-full bg-foreground text-background px-8 py-3 font-semibold hover:opacity-90"
+          >
+            Continue to questions →
+          </button>
+        </form>
       </main>
     );
   }

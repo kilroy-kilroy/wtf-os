@@ -14,9 +14,12 @@ import {
   retryWithBackoff,
   type AssessmentAnswers,
 } from '@repo/utils';
-import { alertBrightDataAuthExpired } from '@/lib/slack';
+import { alertBrightDataAuthExpired, alertBizDevReportGenerated } from '@/lib/slack';
 import { BIZ_DEV_SYSTEM_PROMPT, buildBizDevUserPrompt } from '@repo/prompts';
-import { resolveOrCreateUserByEmail } from '@/lib/biz-dev-auth';
+import { resolveOrCreateUserByEmail, generateMagicLink } from '@/lib/biz-dev-auth';
+import { onBizDevReportGenerated } from '@/lib/loops';
+import { addBizDevAssessmentSubscriber } from '@/lib/beehiiv';
+import { copperSyncBizDevLead } from '@/lib/copper';
 
 const intakeSchema = z.object({
   name: z.string().min(1),
@@ -213,5 +216,76 @@ async function processAssessment(
     })
     .eq('id', id);
 
-  // Side-effects integration is Task 19 (next phase)
+  // 4. Side-effects: email, newsletter, CRM, Slack
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://timkilroy.com';
+  const reportPath = `/wtf-biz-dev-assessment/report/${id}`;
+
+  let magicLinkUrl: string;
+  try {
+    magicLinkUrl = await generateMagicLink(intake.email, `${siteUrl}${reportPath}`);
+  } catch (err) {
+    console.error('[biz-dev] magic link generation failed:', err);
+    // Without a magic link the user can't access their report — still fire the
+    // other integrations but skip the email
+    magicLinkUrl = '';
+  }
+
+  const dimEntries = Object.entries(score.dimensions) as Array<[string, number]>;
+  dimEntries.sort((a, b) => a[1] - b[1]);
+  const dimLabels: Record<string, string> = {
+    lead_flow: 'Lead Flow',
+    sales_process: 'Sales Process',
+    icp_offer: 'ICP & Offer Clarity',
+    founder_readiness: 'Founder Readiness',
+    proof_enablement: 'Proof & Enablement',
+  };
+  const stageDisplayLabels: Record<string, string> = {
+    all_founder_no_system: 'All Founder, No System',
+    half_built_engine: 'Half-Built Engine',
+    engine_online_hire_ready: 'Engine Online, Hire-Ready',
+  };
+  const top_3_gaps = dimEntries.slice(0, 3).map(([d]) => dimLabels[d] ?? d);
+  const stageDisplay = stageDisplayLabels[score.stage] ?? score.stage;
+
+  await Promise.allSettled([
+    magicLinkUrl
+      ? onBizDevReportGenerated({
+          email: intake.email,
+          name: intake.name,
+          verdict: score.verdict,
+          stage: stageDisplay,
+          composite: score.composite,
+          cta_tier: score.cta_tier,
+          dominant_trap: score.dominant_trap,
+          top_3_gaps,
+          magic_link_url: magicLinkUrl,
+        })
+      : Promise.resolve(),
+
+    intake.newsletter_opt_in
+      ? addBizDevAssessmentSubscriber(intake.email, intake.name)
+      : Promise.resolve(),
+
+    copperSyncBizDevLead({
+      name: intake.name,
+      email: intake.email,
+      company_name: intake.company_name,
+      website_url: intake.website_url,
+      linkedin_url: intake.linkedin_url,
+      cta_tier: score.cta_tier,
+      stage: stageDisplay,
+      composite: score.composite,
+      verdict: score.verdict,
+    }),
+  ]);
+
+  alertBizDevReportGenerated(
+    intake.name,
+    intake.email,
+    intake.company_name,
+    score.verdict,
+    stageDisplay,
+    score.composite,
+    score.cta_tier
+  );
 }

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { z } from 'zod';
+import { BIZ_DEV_QUESTIONS, type AssessmentAnswers, type QuestionId } from '@repo/utils';
 
 type FlowStep = 'landing' | 'intake' | 'questions' | 'preview';
 
@@ -29,6 +30,31 @@ export default function BizDevAssessmentPage() {
     newsletter_opt_in: false,
   });
   const [intakeErrors, setIntakeErrors] = useState<Record<string, string>>({});
+  const [currentQ, setCurrentQ] = useState(0);
+  const [answers, setAnswers] = useState<Partial<AssessmentAnswers>>({});
+  const [submitting, setSubmitting] = useState(false);
+  const [previewResult, setPreviewResult] = useState<null | {
+    verdict: string;
+    stage: string;
+    composite: number;
+    topGaps: string[];
+  }>(null);
+
+  function handleAnswer(qId: QuestionId, choiceId: 'a' | 'b' | 'c' | 'd') {
+    const next = { ...answers, [qId]: choiceId };
+    setAnswers(next);
+    if (currentQ < BIZ_DEV_QUESTIONS.length - 1) {
+      setCurrentQ(currentQ + 1);
+    } else {
+      submitAssessment(next as AssessmentAnswers);
+    }
+  }
+
+  async function submitAssessment(_finalAnswers: AssessmentAnswers) {
+    // Stubbed; filled in Task 9
+    setSubmitting(true);
+    setStep('preview');
+  }
 
   function handleIntakeSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -184,6 +210,51 @@ export default function BizDevAssessmentPage() {
             Continue to questions →
           </button>
         </form>
+      </main>
+    );
+  }
+
+  if (step === 'questions') {
+    const q = BIZ_DEV_QUESTIONS[currentQ];
+    const total = BIZ_DEV_QUESTIONS.length;
+    const progress = ((currentQ) / total) * 100;
+
+    return (
+      <main className="min-h-screen bg-background text-foreground">
+        <div className="mx-auto max-w-2xl px-6 py-12">
+          <div className="mb-8">
+            <div className="flex justify-between text-xs text-muted-foreground mb-2">
+              <span>Question {currentQ + 1} of {total}</span>
+              <span>{Math.round(progress)}%</span>
+            </div>
+            <div className="h-1 bg-border rounded">
+              <div className="h-1 bg-accent rounded transition-all" style={{ width: `${progress}%` }} />
+            </div>
+          </div>
+
+          <h2 className="text-2xl font-semibold mb-8">{q.prompt}</h2>
+
+          <div className="space-y-3">
+            {q.choices.map((c) => (
+              <button
+                key={c.id}
+                onClick={() => handleAnswer(q.id, c.id as 'a'|'b'|'c'|'d')}
+                className="block w-full text-left rounded border border-border bg-card hover:border-accent hover:bg-accent/5 px-5 py-4 transition"
+              >
+                {c.text}
+              </button>
+            ))}
+          </div>
+
+          {currentQ > 0 && (
+            <button
+              onClick={() => setCurrentQ(currentQ - 1)}
+              className="mt-8 text-sm text-muted-foreground hover:text-foreground"
+            >
+              ← Back
+            </button>
+          )}
+        </div>
       </main>
     );
   }

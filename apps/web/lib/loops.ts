@@ -679,3 +679,44 @@ export async function onDemandosIntakeSubmitted(
     },
   });
 }
+
+// ============================================
+// BIZ DEV ASSESSMENT EVENTS
+// ============================================
+
+export interface BizDevReportPayload {
+  email: string;
+  name: string;
+  verdict: 'ready' | 'almost';
+  stage: string;          // display name, e.g., "Half-Built Engine"
+  composite: number;
+  cta_tier: 'studio' | 'growth';
+  dominant_trap: 'personality' | 'indispensability' | 'more_founder' | null;
+  top_3_gaps: string[];
+  magic_link_url: string;
+}
+
+/**
+ * Fire when a Biz Dev Assessment report is generated
+ * Triggers email with magic-link access to report
+ */
+export async function onBizDevReportGenerated(
+  payload: BizDevReportPayload
+): Promise<{ success: boolean; error?: string }> {
+  return sendEvent({
+    email: payload.email,
+    eventName: 'bizDevReportGenerated',
+    eventProperties: {
+      name: payload.name,
+      verdict: payload.verdict,
+      stage: payload.stage,
+      composite: String(payload.composite),
+      cta_tier: payload.cta_tier,
+      dominant_trap: payload.dominant_trap ?? '',
+      top_gap_1: payload.top_3_gaps[0] ?? '',
+      top_gap_2: payload.top_3_gaps[1] ?? '',
+      top_gap_3: payload.top_3_gaps[2] ?? '',
+      magic_link_url: payload.magic_link_url,
+    },
+  });
+}

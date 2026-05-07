@@ -41,7 +41,7 @@ Every verdict ends with Tim's services. The assessment is a diagnostic lead magn
 - A/B testing infrastructure (ship one strong variant; iterate after data)
 - Public/social shareable scorecards (reports are confidential; see §10)
 - Multi-language support
-- Self-serve PDF download (email is the delivery channel; PDF is a future option)
+- "Quick Win this week" engagement device (deliberately rejected after reviewing Karl Loudon's reference assessment — adds report length without serving the verdict)
 
 ## 4. Target User
 
@@ -126,7 +126,7 @@ apps/web/lib/
 │                              ↓                                    │
 ├──────────────────────────────────────────────────────────────────┤
 │ Step 4: Preview Verdict (instant, on-screen, NOT auth-gated)      │
-│  • "You're Almost" or "You're Ready"                              │
+│  • "You're at the <Stage Display Name> stage."                    │
 │  • Composite score (X/100)                                        │
 │  • Top 1–2 dimensional gaps as teasers                            │
 │  • "Your full personalized report is being prepared. Check your   │
@@ -139,6 +139,8 @@ apps/web/lib/
 │  User clicks → Supabase session created for that email →          │
 │  redirected to /wtf-biz-dev-assessment/report/[id].               │
 │  Server component validates session + ownership.                  │
+│  Report includes a "Download PDF" button (renders the same        │
+│  content for offline/forwardable use).                            │
 │  Returning users with active session: link goes straight to       │
 │  report. Without session: re-request magic link.                  │
 └──────────────────────────────────────────────────────────────────┘
@@ -226,19 +228,33 @@ type Dimension = 'lead_flow' | 'sales_process' | 'icp_offer'
               | 'founder_readiness' | 'proof_enablement';
 type Trap = 'personality' | 'indispensability' | 'more_founder';
 
+type Stage = 'all_founder_no_system' | 'half_built_engine' | 'engine_online_hire_ready';
+
 interface ScoreResult {
   dimensions: Record<Dimension, number>;     // 0-100, normalized from 0-8 raw (2 questions × max 4)
   composite: number;                          // weighted average, 0-100
   verdict: 'ready' | 'almost';
+  stage: Stage;                               // named label for the verdict (replaces bare "Almost"/"Ready")
   hard_gate_failures: Array<'lead_flow' | 'founder_readiness'>;
   dominant_trap: Trap | null;
   cta_tier: 'studio' | 'growth';
 }
 ```
 
+**Stage rule** (drives the named verdict label, the YOU-ARE-HERE marker, and the Sprint Plan template):
+
+| Stage | Threshold | Verdict |
+|---|---|---|
+| `all_founder_no_system` ("All Founder, No System") | composite < 40 OR `hard_gate_failures.length >= 2` | `almost` |
+| `half_built_engine` ("Half-Built Engine") | composite 40–69 AND `hard_gate_failures.length <= 1` | `almost` |
+| `engine_online_hire_ready` ("Engine Online, Hire-Ready") | composite >= 70 AND `hard_gate_failures.length === 0` | `ready` |
+
+Stage display names are first-pass — subject to copywriter pass before launch (see §15 #11).
+
 **Verdict rule:**
 - `'ready'` iff `composite >= 70` AND `hard_gate_failures.length === 0`
 - otherwise `'almost'`
+- (Equivalent: `verdict === 'ready'` iff `stage === 'engine_online_hire_ready'`)
 
 **CTA tier rule:**
 - `'growth'` iff `verdict === 'ready'`
@@ -392,6 +408,9 @@ create table biz_dev_assessments (
   dimensions             jsonb not null,
   composite_score        int not null,
   verdict                text not null check (verdict in ('ready','almost')),
+  stage                  text not null check (stage in (
+    'all_founder_no_system','half_built_engine','engine_online_hire_ready'
+  )),
   hard_gate_failures     jsonb,
   dominant_trap          text check (dominant_trap in ('personality','indispensability','more_founder')),
   cta_tier               text not null check (cta_tier in ('studio','growth')),
@@ -446,13 +465,19 @@ This means a leaked report URL is useless to anyone except the magic-link-authen
 
 ### Report Markdown Structure
 
-The Claude synthesis returns markdown shaped like this:
+The Claude synthesis returns markdown shaped as follows. The renderer at `/wtf-biz-dev-assessment/report/[id]` parses + styles each section, with the **Stage Progression Visual** rendered as a dedicated React component (not raw markdown — see note below).
 
 ```markdown
-# The Verdict: <Ready | Almost>
-<one-sentence summary in SalesOS voice>
+<!-- The Stage Progression Visual is NOT in the AI markdown.
+     It's rendered by the React component using ScoreResult.stage,
+     mirroring the pattern in Karl Loudon's "Founder-Led Sales Test"
+     (see Image 1 reference): three numbered stages with the user's
+     current stage highlighted ("YOU ARE HERE") and visual progress bar. -->
 
-> Composite: <X>/100  |  Hard-gate fails: <list>  |  Trap: <name or "—">
+# You're at the <Stage Display Name> stage.
+<one-sentence summary of what that means, in SalesOS voice>
+
+> Composite: <X>/100  |  Hard-gate fails: <list or "none">  |  Trap: <name or "—">
 
 ## The Truth You Need to Hear
 <2–3 paragraphs that quote their answer to Q7 verbatim and connect it
@@ -474,21 +499,53 @@ to the 55%-of-first-hires-fail benchmark. Truth-bomb section.>
 <2 paragraphs naming the pattern, with their own answers as evidence.
 Section omitted entirely if dominant_trap === null.>
 
-## What You Need to Build (Before the Hire Sticks)
-<Personalized checklist. Items match their lowest dimensions.
-For Almost: long, specific list (5–10 items).
-For Ready: tight list (2–4 items, framed as "the install" before day 1).>
+## Your 3-Sprint Plan to Get Ready
+<Three sprints, one month each. Sprint contents are personalized by AI
+based on which dimensions scored low and the user's stage.
+
+For Almost (Studio path):
+  Sprint 1 — Extract: ICP + offer architecture + discovery flow
+  Sprint 2 — Document: sales process + narrative & framing models
+  Sprint 3 — Install: pipeline infra + readiness for the hire
+
+For Ready (Growth path):
+  Sprint 1 — Hire: role scorecard + JD + screening + comp plan
+  Sprint 2 — Onboard: ramp plan + coaching cadence + deal review
+  Sprint 3 — Optimize: performance review + pipeline tuning
+
+Each sprint contains 3-4 specific deliverables tied to the user's actual gaps,
+not generic templates. AI writes specific items based on research artifacts.>
 
 ## What's Next
 <CTA copy: Studio booking link if cta_tier === 'studio',
 Growth booking link if cta_tier === 'growth'. Different copy per tier.>
+
+## A Note from Tim
+<Personal close in first-person SalesOS voice, ~3 short paragraphs.
+Slightly different copy for Studio vs. Growth tier.
+Closes with signature image: "— Tim Kilroy, SalesOS".
+The signature image asset lives at /public/tim-signature.png (or similar).>
 ```
+
+### Stage Progression Visual Component
+
+A new React component `<StageProgress stage={stage} />` rendered above the markdown content. Reference: Karl Loudon's "Founder-Led Sales Test" (Image 1). Shows three numbered stages connected by a progress line; the user's current stage is highlighted with "YOU ARE HERE" caption. Stage labels:
+
+1. **All Founder, No System**
+2. **Half-Built Engine**
+3. **Engine Online, Hire-Ready**
+
+Stages 1–2 land the user in `cta_tier === 'studio'`; stage 3 lands them in `'growth'`.
+
+### PDF Export
+
+The report page includes a "Download PDF" button. Implementation reuses existing `packages/utils/pdf` infrastructure (mirrors how `discovery-lab` and other Pro labs generate PDFs). The PDF is generated on demand from the same markdown + Stage Progress component, styled for print.
 
 ## 11. Integrations (mirror `discovery-lab` patterns)
 
 | System | Purpose | New code |
 |---|---|---|
-| **Loops** | "Report ready" email with magic-link URL | New `onBizDevReportGenerated` in `apps/web/lib/loops.ts`. Template fields: `name`, `verdict`, `top_3_gaps`, `dominant_trap`, `magic_link_url`, `cta_tier` (drives CTA copy). |
+| **Loops** | "Report ready" email with magic-link URL | New `onBizDevReportGenerated` in `apps/web/lib/loops.ts`. Template fields: `name`, `verdict`, `stage` (named label), `top_3_gaps`, `dominant_trap`, `magic_link_url`, `cta_tier` (drives CTA copy). |
 | **Beehiiv** | Optional newsletter subscribe | New `addBizDevAssessmentSubscriber` in `apps/web/lib/beehiiv.ts` (gated by `newsletter_opt_in === true`). |
 | **Copper** | Create CRM lead with tier-appropriate ACV | New constants `BIZ_DEV_STUDIO_ACV` / `BIZ_DEV_GROWTH_ACV` and stage mapping in `apps/web/lib/copper.ts`. |
 | **Slack** | Alert Tim on every report generated + on BrightData auth failures | New `alertBizDevReportGenerated` in `apps/web/lib/slack.ts`. Reuse existing `alertBrightDataAuthExpired`. |
@@ -539,21 +596,26 @@ All side-effect calls run via `waitUntil` (existing `@vercel/functions` pattern 
 8. **Existing `/wtf-assessment-example`** is 928 lines, single self-contained component. We should mirror its split (or further-split into smaller components if 928 is unmanageable). Decide during implementation, not at design time.
 9. **Magic-link OTP expiry**: Supabase default is 1 hour. For a "report ready" email a user might open later that day, raise to 24 h via the Supabase Auth dashboard. Document this as a deployment prerequisite.
 10. **Single-email constraint**: the spec assumes Loops is the only email channel. If `supabase.auth.admin.generateLink` is unreachable from the runtime (e.g., service role key not available in this route), fallback would be `signInWithOtp` — but that triggers Supabase's email. Verify service role key is wired in `apps/web/lib` before implementation.
+11. **Stage display names** ("All Founder, No System" / "Half-Built Engine" / "Engine Online, Hire-Ready") are first-pass — should go through a copywriter pass alongside Q1–Q10 wording. They're load-bearing brand elements (named verdict + stage progression visual + sprint plan headers all depend on them).
+12. **Tim's signature image asset**: the personal close section embeds a signature image. Need to either (a) source/create a signature image at `/public/tim-signature.png`, or (b) substitute a styled hand-written font as a placeholder for v1.
+13. **Sprint Plan personalization quality**: the AI is asked to produce 3 sprints × 3–4 deliverables each, tied to the user's specific gaps and research artifacts. We should QA the first 10–20 generated reports manually to confirm the AI doesn't fall back to generic templates. If it does, we may need few-shot examples in the prompt.
+14. **Reference assessments reviewed**: Karl Loudon's "Founder-Led Sales Test" and "Commercial Scorecard" at saleswithsoul.ai/scorecard were reviewed during the design phase. Stage Progress visual + Sprint Plan format are adapted from those references; "Quick Win" device, public sharing, and consultant-friendly tone were deliberately rejected (different brand positioning).
 
 ## 16. Implementation Plan Handoff
 
 Once this spec is approved, the next step is to invoke `superpowers:writing-plans` to produce a step-by-step implementation plan. The plan should sequence:
 
-1. **Foundations**: question/scoring/trap utilities (testable in isolation, no IO)
-2. **Database**: migration + RLS policies + types
-3. **Client flow**: landing → intake → questions → preview verdict
-4. **API route**: validation → persistence → research orchestration → AI synthesis → side-effects
-5. **Auth + Magic link**: Supabase user creation, magic-link send, callback handler
-6. **Report renderer**: server component + section components, ownership check
-7. **Integrations**: Loops, Beehiiv, Copper, Slack
-8. **Polish**: empty/loading/error states, mobile, copy refinement
-9. **Testing**: units, integration, auth flow, snapshot
-10. **Launch checklist**: env vars, Slack webhook, Loops template, Copper field mapping, BrightData dataset IDs verified
+1. **Foundations**: question/scoring/stage/trap utilities (testable in isolation, no IO). Includes the new stage-classification function.
+2. **Database**: migration + RLS policies + types. New `stage` column on `biz_dev_assessments`.
+3. **Client flow**: landing → intake → questions → preview verdict (with stage display name).
+4. **API route**: validation → persistence → research orchestration → AI synthesis → side-effects.
+5. **Auth + Magic link**: Supabase user resolution (`generateLink`), Loops email send, callback handler.
+6. **Report renderer**: server component + section components + **`<StageProgress />` visual component** + ownership check.
+7. **PDF export**: report markdown → styled PDF using existing `packages/utils/pdf` patterns; "Download PDF" button on report page.
+8. **Integrations**: Loops, Beehiiv, Copper, Slack.
+9. **Polish**: empty/loading/error states, mobile, signature image asset, copy refinement on stage names + Q1–Q10.
+10. **Testing**: units (scoring + stage classification), integration (API), auth flow (magic-link end-to-end), snapshot (renderer).
+11. **Launch checklist**: env vars, Slack webhook, Loops template, Copper field mapping, BrightData dataset IDs verified, Supabase OTP expiry raised to 24h.
 
 ---
 

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { z } from 'zod';
-import { BIZ_DEV_QUESTIONS, type AssessmentAnswers, type QuestionId } from '@repo/utils';
+import { BIZ_DEV_QUESTIONS, scoreBizDevAssessment, type AssessmentAnswers, type QuestionId } from '@repo/utils';
 
 type FlowStep = 'landing' | 'intake' | 'questions' | 'preview';
 
@@ -40,6 +40,20 @@ export default function BizDevAssessmentPage() {
     topGaps: string[];
   }>(null);
 
+  const STAGE_LABELS = {
+    all_founder_no_system: 'All Founder, No System',
+    half_built_engine: 'Half-Built Engine',
+    engine_online_hire_ready: 'Engine Online, Hire-Ready',
+  } as const;
+
+  const DIMENSION_LABELS = {
+    lead_flow: 'Lead Flow',
+    sales_process: 'Sales Process',
+    icp_offer: 'ICP & Offer Clarity',
+    founder_readiness: 'Founder Readiness',
+    proof_enablement: 'Proof & Enablement',
+  } as const;
+
   function handleAnswer(qId: QuestionId, choiceId: 'a' | 'b' | 'c' | 'd') {
     const next = { ...answers, [qId]: choiceId };
     setAnswers(next);
@@ -50,10 +64,41 @@ export default function BizDevAssessmentPage() {
     }
   }
 
-  async function submitAssessment(_finalAnswers: AssessmentAnswers) {
-    // Stubbed; filled in Task 9
+  async function submitAssessment(finalAnswers: AssessmentAnswers) {
     setSubmitting(true);
     setStep('preview');
+
+    const preview = scoreBizDevAssessment(finalAnswers);
+    const stageDisplay = STAGE_LABELS[preview.stage];
+
+    const dimEntries = Object.entries(preview.dimensions) as Array<[string, number]>;
+    dimEntries.sort((a, b) => a[1] - b[1]);
+    const topGaps = dimEntries.slice(0, 2).map(([d]) => DIMENSION_LABELS[d as keyof typeof DIMENSION_LABELS]);
+
+    setPreviewResult({
+      verdict: preview.verdict,
+      stage: stageDisplay,
+      composite: preview.composite,
+      topGaps,
+    });
+
+    try {
+      const resp = await fetch('/api/analyze/biz-dev', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          intake: intakeData,
+          answers: finalAnswers,
+        }),
+      });
+      if (!resp.ok) {
+        console.warn('Background processing failed:', await resp.text());
+      }
+    } catch (err) {
+      console.warn('Background processing error:', err);
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   function handleIntakeSubmit(e: React.FormEvent) {
@@ -259,5 +304,43 @@ export default function BizDevAssessmentPage() {
     );
   }
 
-  return <main className="p-12">Step: {step}</main>;
+  if (step === 'preview') {
+    if (!previewResult) {
+      return <main className="p-12">Computing your verdict...</main>;
+    }
+
+    return (
+      <main className="min-h-screen bg-background text-foreground">
+        <div className="mx-auto max-w-2xl px-6 py-16 text-center">
+          <p className="text-sm uppercase tracking-wider text-accent mb-2">Your stage</p>
+          <h1 className="text-4xl md:text-5xl font-bold mb-4">
+            You're at the <span className="text-accent">{previewResult.stage}</span> stage.
+          </h1>
+          <p className="text-xl text-muted-foreground mb-8">
+            Composite readiness: {previewResult.composite}/100
+          </p>
+
+          <div className="bg-card border border-border rounded-lg p-6 mb-8 text-left">
+            <h2 className="font-semibold mb-3">Your two biggest gaps right now:</h2>
+            <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+              {previewResult.topGaps.map(g => <li key={g}>{g}</li>)}
+            </ul>
+          </div>
+
+          <div className="bg-accent/5 border border-accent/20 rounded-lg p-6 text-left">
+            <p className="font-semibold mb-2">📨 Your full personalized report is being prepared.</p>
+            <p className="text-muted-foreground text-sm">
+              I'm analyzing your website and LinkedIn alongside your answers to find the specific gaps you need to fix. Check your inbox in ~5 minutes for the secure link to your full report.
+            </p>
+          </div>
+
+          {submitting && (
+            <p className="text-sm text-muted-foreground mt-6">Processing... feel free to close this tab.</p>
+          )}
+        </div>
+      </main>
+    );
+  }
+
+  return null;
 }

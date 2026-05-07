@@ -230,6 +230,27 @@ export async function addVisibilityLabSubscriber(
 }
 
 /**
+ * Add subscriber from Biz Dev Assessment completion
+ * Tags them for the biz-dev-assessment list
+ */
+export async function addBizDevAssessmentSubscriber(
+  email: string,
+  name?: string
+): Promise<{ success: boolean; id?: string; error?: string }> {
+  const [firstName, ...lastNameParts] = (name || '').split(' ');
+  const lastName = lastNameParts.join(' ');
+
+  return addSubscriber({
+    email,
+    first_name: firstName || undefined,
+    last_name: lastName || undefined,
+    utm_source: 'wtf-biz-dev-assessment',
+    utm_medium: 'opt-in',
+    referring_site: 'wtf-biz-dev-assessment',
+  });
+}
+
+/**
  * Add subscriber from Stripe checkout (Pro upgrade)
  */
 export async function addProSubscriber(

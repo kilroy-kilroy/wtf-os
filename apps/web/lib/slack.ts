@@ -140,3 +140,31 @@ export function alertDocumentShared(clientName: string, docTitle: string): void 
     color: 'success',
   }).catch(err => console.error('[Slack] Document alert failed:', err));
 }
+
+export function alertBizDevReportGenerated(
+  name: string,
+  email: string,
+  company: string,
+  verdict: 'ready' | 'almost',
+  stage: string,
+  composite: number,
+  cta_tier: 'studio' | 'growth'
+): void {
+  const verdictEmoji = verdict === 'ready' ? ':white_check_mark:' : ':large_yellow_circle:';
+  const text =
+    `${verdictEmoji} *Biz Dev Assessment* — ${name} (${email})\n` +
+    `Agency: ${company}\n` +
+    `Stage: *${stage}* (${composite}/100, ${verdict})\n` +
+    `Routes to: SalesOS *${cta_tier}*`;
+
+  sendSlackAlert({ text, color: 'info' }).catch(err =>
+    console.error('[Slack] Biz dev report alert failed:', err)
+  );
+}
+
+export function alertBrightDataAuthExpired(detail: string): void {
+  sendSlackAlert({
+    text: `:rotating_light: *BrightData token expired or invalid* — Discovery Lab Pro LinkedIn/SERP sources are failing.\nDetail: \`${detail}\`\nUpdate \`BRIGHT_DATA_API\` in Vercel.`,
+    color: 'danger',
+  }).catch(err => console.error('[Slack] BrightData auth alert failed:', err));
+}

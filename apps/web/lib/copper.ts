@@ -213,6 +213,50 @@ export async function copperSyncLead(params: {
   }
 }
 
+// Biz-dev assessment leads (placeholder ACVs — confirm with Tim before launch)
+export const BIZ_DEV_STUDIO_ACV = 18000;
+export const BIZ_DEV_GROWTH_ACV = 36000;
+
+export interface BizDevLeadInput {
+  name: string;
+  email: string;
+  company_name: string;
+  website_url: string;
+  linkedin_url: string;
+  cta_tier: 'studio' | 'growth';
+  stage: string;
+  composite: number;
+  verdict: 'ready' | 'almost';
+}
+
+/**
+ * Sync a Biz Dev Assessment lead to Copper.
+ * Fire-and-forget — catches all errors internally.
+ */
+export async function copperSyncBizDevLead(lead: BizDevLeadInput): Promise<void> {
+  const acv = lead.cta_tier === 'growth' ? BIZ_DEV_GROWTH_ACV : BIZ_DEV_STUDIO_ACV;
+  const productName = `Biz Dev Assessment — SalesOS ${lead.cta_tier === 'growth' ? 'Growth' : 'Studio'}`;
+  const note = [
+    `Biz Dev Assessment completed`,
+    `Stage: ${lead.stage}`,
+    `Composite: ${lead.composite}/100`,
+    `Verdict: ${lead.verdict}`,
+    `CTA Tier: ${lead.cta_tier}`,
+    `Website: ${lead.website_url}`,
+    `LinkedIn: ${lead.linkedin_url}`,
+  ].join('\n');
+
+  return copperSyncLead({
+    email: lead.email,
+    name: lead.name,
+    companyName: lead.company_name,
+    productName,
+    opportunityValue: acv,
+    stageId: COPPER_STAGES.LEAD,
+    note,
+  });
+}
+
 /**
  * Close a deal in Copper: find person → find/create opportunity → mark Closed-Won → add note.
  * Fire-and-forget — catches all errors internally.

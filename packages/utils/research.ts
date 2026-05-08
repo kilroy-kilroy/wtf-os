@@ -1128,6 +1128,18 @@ const BD_DISCOVERY_DATASETS = {
   googleSerp: 'gd_l1vijqt9jfj7olije8',
 };
 
+export const BRIGHTDATA_AUTH_FAILED_PREFIX = 'BRIGHTDATA_AUTH_FAILED';
+
+function throwIfBrightDataAuthFailed(status: number, source: string): void {
+  if (status === 401 || status === 403) {
+    throw new Error(`${BRIGHTDATA_AUTH_FAILED_PREFIX}:${status} (${source})`);
+  }
+}
+
+function isBrightDataAuthError(error: unknown): boolean {
+  return error instanceof Error && error.message.startsWith(BRIGHTDATA_AUTH_FAILED_PREFIX);
+}
+
 /**
  * Compose an AbortSignal from a timeout + optional parent signal.
  * Works on Node 18+ (unlike AbortSignal.any which requires Node 20.3+).
@@ -1166,6 +1178,8 @@ async function bdDiscoveryTrigger(datasetId: string, input: any[]): Promise<stri
       signal: AbortSignal.timeout(15000),
     });
 
+    throwIfBrightDataAuthFailed(response.status, `trigger ${datasetId}`);
+
     if (!response.ok) {
       // Retry with wrapped format
       const response2 = await fetch(`${BRIGHT_DATA_BASE}/trigger?dataset_id=${datasetId}&format=json&uncompressed_webhook=true`, {
@@ -1178,6 +1192,7 @@ async function bdDiscoveryTrigger(datasetId: string, input: any[]): Promise<stri
         signal: AbortSignal.timeout(15000),
       });
 
+      throwIfBrightDataAuthFailed(response2.status, `trigger ${datasetId} (retry)`);
       if (!response2.ok) return null;
       const data2 = await response2.json();
       return data2.snapshot_id || null;
@@ -1186,6 +1201,7 @@ async function bdDiscoveryTrigger(datasetId: string, input: any[]): Promise<stri
     const data = await response.json();
     return data.snapshot_id || null;
   } catch (error: any) {
+    if (isBrightDataAuthError(error)) throw error;
     console.error(`[BrightData:Discovery] Trigger error for ${datasetId}:`, error.message);
     return null;
   }
@@ -1209,12 +1225,15 @@ async function bdDiscoveryPoll(snapshotId: string, maxWaitMs: number = 60000, ab
         signal: composedSignal(15000, abortSignal),
       });
 
+      throwIfBrightDataAuthFailed(response.status, `poll ${snapshotId}`);
+
       if (response.status === 200) {
         const data = await response.json();
         return Array.isArray(data) ? data : [data];
       }
       // 202 = still running, keep polling
     } catch (e: any) {
+      if (isBrightDataAuthError(e)) throw e;
       if (abortSignal?.aborted) return [];
       // Continue polling on network errors
     }
@@ -1260,6 +1279,8 @@ export async function researchLinkedInProfile(linkedinUrl: string, abortSignal?:
       body: JSON.stringify({ input: [{ url }] }),
       signal: fetchSignal,
     });
+
+    throwIfBrightDataAuthFailed(response.status, 'scrape linkedin-profile');
 
     let results: any[];
     if (response.status === 202) {
@@ -1352,6 +1373,7 @@ export async function researchLinkedInProfile(linkedinUrl: string, abortSignal?:
       raw_data: JSON.stringify(profile, null, 2),
     };
   } catch (error: any) {
+    if (isBrightDataAuthError(error)) throw error;
     console.error('[Discovery:v2] LinkedIn profile scrape failed:', error.message);
     return null;
   }
@@ -1392,6 +1414,8 @@ export async function researchLinkedInPosts(linkedinUrl: string, abortSignal?: A
       body: JSON.stringify({ input: [{ url }] }),
       signal: fetchSignal,
     });
+
+    throwIfBrightDataAuthFailed(response.status, 'scrape linkedin-posts');
 
     let results: any[];
     if (response.status === 202) {
@@ -1458,6 +1482,7 @@ export async function researchLinkedInPosts(linkedinUrl: string, abortSignal?: A
       raw_data: JSON.stringify(source.slice(0, 5), null, 2),
     };
   } catch (error: any) {
+    if (isBrightDataAuthError(error)) throw error;
     console.error('[Discovery:v2] LinkedIn posts scrape failed:', error.message);
     return null;
   }
@@ -1507,6 +1532,8 @@ export async function researchGoogleSerp(
         signal: fetchSignal,
       });
 
+      throwIfBrightDataAuthFailed(response.status, 'scrape google-serp');
+
       if (!response.ok) return null;
 
       let results: any[];
@@ -1525,6 +1552,7 @@ export async function researchGoogleSerp(
     const results = await bdDiscoveryPoll(snapshotId, 120000, abortSignal);
     return parseSerpResults(results, keywords, targetDomain);
   } catch (error: any) {
+    if (isBrightDataAuthError(error)) throw error;
     console.error('[Discovery:v2] Google SERP search failed:', error.message);
     return null;
   }

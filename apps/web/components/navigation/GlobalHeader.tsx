@@ -22,6 +22,7 @@ export function GlobalHeader({ userName, userEmail }: GlobalHeaderProps) {
     { label: 'Discovery Lab', href: '/discovery-lab', description: 'Research prospects' },
     { label: 'Visibility Lab', href: '/visibility-lab', description: 'Track visibility' },
     { label: 'WTF Assessment', href: '/wtf-assessment', description: 'Sales assessment' },
+    { label: 'BD Hire Readiness', href: '/wtf-biz-dev-assessment', description: 'Are you ready to hire a BD resource?' },
   ];
 
   const proTools = [

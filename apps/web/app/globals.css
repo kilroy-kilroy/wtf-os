@@ -24,6 +24,16 @@
     --input: 214.3 31.8% 91.4%;
     --ring: 222.2 84% 4.9%;
     --radius: 0.5rem;
+
+    /* SalesOS brand tokens — warm rust, used sparingly for the things Tim wants you to look at. */
+    --brand: 11 54% 50%;
+    --brand-foreground: 0 0% 100%;
+    --brand-ink: 11 60% 28%;
+
+    /* Scorecard color bands for the dimension rows in the report. */
+    --score-fail: 0 70% 50%;
+    --score-warn: 35 92% 52%;
+    --score-pass: 145 55% 38%;
   }
 
   .dark {
@@ -46,6 +56,12 @@
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
     --ring: 212.7 26.8% 83.9%;
+    --brand: 14 70% 56%;
+    --brand-foreground: 0 0% 100%;
+    --brand-ink: 14 60% 78%;
+    --score-fail: 0 70% 60%;
+    --score-warn: 35 92% 60%;
+    --score-pass: 145 50% 50%;
   }
 }
 

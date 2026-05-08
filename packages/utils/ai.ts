@@ -92,7 +92,21 @@ const MODEL_CONFIGS: Record<string, ModelConfig> = {
     maxTokens: 1024,
     temperature: 0.3,
   },
+  'biz-dev-assessment-v1': {
+    provider: 'anthropic',
+    model: 'claude-sonnet-4-5-20250929',
+    maxTokens: 8192,
+    temperature: 0.4,
+  },
 };
+
+function assertModelConfig(toolName: string, config: ModelConfig | undefined): asserts config is ModelConfig {
+  if (!config?.provider || !config.model) {
+    throw new Error(
+      `[runModel] No MODEL_CONFIGS entry for tool '${toolName}'. Add one in packages/utils/ai.ts.`,
+    );
+  }
+}
 
 export interface ModelResponse {
   content: string;
@@ -112,7 +126,9 @@ export async function runModel(
   userPrompt: string,
   options?: Partial<ModelConfig>
 ): Promise<ModelResponse> {
-  const config = { ...MODEL_CONFIGS[toolName], ...options };
+  const baseConfig = MODEL_CONFIGS[toolName];
+  const config = { ...baseConfig, ...options } as ModelConfig | undefined;
+  assertModelConfig(toolName, config);
 
   if (config.provider === 'anthropic') {
     return runAnthropic(config, systemPrompt, userPrompt);

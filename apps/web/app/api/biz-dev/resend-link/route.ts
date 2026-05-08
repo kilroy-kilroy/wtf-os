@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://timkilroy.com';
     // Mint a fresh single-use 24h access token; resets the expiry window.
     const accessToken = await mintAccessToken(assessmentId);
-    const reportLinkUrl = `${siteUrl}/wtf-biz-dev-assessment/report/${assessmentId}?access_token=${accessToken}`;
+    const reportLinkUrl = `${siteUrl}/api/biz-dev/auth/${assessmentId}?access_token=${accessToken}`;
 
     const dimEntries = Object.entries(row.dimensions as Record<string, number>);
     dimEntries.sort((a, b) => a[1] - b[1]);

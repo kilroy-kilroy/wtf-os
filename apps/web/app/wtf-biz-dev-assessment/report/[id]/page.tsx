@@ -1,51 +1,21 @@
 import { redirect } from 'next/navigation';
 import { createClient as createAuthClient } from '@/lib/supabase-auth-server';
 import { createServerClient } from '@repo/db/client';
-import { consumeAccessToken, generateOtpForUser } from '@/lib/biz-dev-auth';
 import { ReportContent } from './ReportContent';
 import { StageProgress } from './StageProgress';
 
 interface PageProps {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ access_token?: string }>;
 }
 
-export default async function BizDevReportPage({ params, searchParams }: PageProps) {
+export default async function BizDevReportPage({ params }: PageProps) {
   const { id } = await params;
-  const { access_token } = await searchParams;
 
+  // Magic-link exchange happens in /api/biz-dev/auth/[id] before reaching
+  // this page. By the time we get here, the visitor must already have a
+  // Supabase session — otherwise we send them to request a fresh link.
   const auth = await createAuthClient();
-  let { data: { user } } = await auth.auth.getUser();
-
-  // If a single-use access_token is present in the URL and the visitor isn't
-  // logged in (or is logged in as someone else), exchange the token for a
-  // Supabase session.
-  if (access_token) {
-    const consumed = await consumeAccessToken(id, access_token);
-    if (consumed && (!user || user.id !== consumed.userId)) {
-      try {
-        const { token_hash } = await generateOtpForUser(consumed.email);
-        const { data: verified, error: verifyError } = await auth.auth.verifyOtp({
-          token_hash,
-          type: 'magiclink',
-        });
-        if (!verifyError && verified.user) {
-          // Session cookies are now set on the response. Redirect to the clean
-          // URL (no token in URL) so the link can't be re-shared.
-          redirect(`/wtf-biz-dev-assessment/report/${id}`);
-        }
-      } catch (err) {
-        // Fall through to the request-link flow below.
-        console.error('[biz-dev:report] token exchange failed:', err);
-      }
-    } else if (!consumed) {
-      // Token invalid/expired/used — strip it from the URL and let normal
-      // auth checks run; user can request a fresh link if needed.
-      redirect(`/wtf-biz-dev-assessment/report/${id}`);
-    }
-    // Re-read user after potential session mint above.
-    ({ data: { user } } = await auth.auth.getUser());
-  }
+  const { data: { user } } = await auth.auth.getUser();
 
   if (!user) {
     redirect(`/wtf-biz-dev-assessment/report/${id}/request-link`);
@@ -71,6 +41,17 @@ export default async function BizDevReportPage({ params, searchParams }: PagePro
 
   if (assessment.user_id !== user.id) {
     redirect(`/wtf-biz-dev-assessment/report/${id}/request-link`);
+  }
+
+  if (assessment.report_status === 'failed') {
+    return (
+      <main className="min-h-screen p-12 max-w-2xl mx-auto">
+        <h1 className="text-2xl font-bold mb-4">Something went wrong generating your report</h1>
+        <p className="text-muted-foreground mb-6">
+          The synthesis step failed. Your answers and research are saved — we just need to retry the AI step. Email tim@timkilroy.com and I&apos;ll get this regenerated for you.
+        </p>
+      </main>
+    );
   }
 
   if (assessment.report_status !== 'completed' || !assessment.report_markdown) {

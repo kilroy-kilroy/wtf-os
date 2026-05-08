@@ -224,11 +224,11 @@ async function processAssessment(
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://timkilroy.com';
 
   // Mint our own 24h single-use access token (sidesteps Supabase's 1h OTP cap).
-  // The report page consumes the token and exchanges it for a session.
+  // The /api/biz-dev/auth route consumes the token and mints a session.
   let reportLinkUrl: string;
   try {
     const accessToken = await mintAccessToken(id);
-    reportLinkUrl = `${siteUrl}/wtf-biz-dev-assessment/report/${id}?access_token=${accessToken}`;
+    reportLinkUrl = `${siteUrl}/api/biz-dev/auth/${id}?access_token=${accessToken}`;
   } catch (err) {
     console.error('[biz-dev] access token mint failed:', err);
     // Fall back to a no-op so the rest of the pipeline still runs.

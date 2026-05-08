@@ -11,7 +11,7 @@ interface Lab {
   tier: 'Free' | 'Pro';
   icon: string;
   color: string;
-  product: 'call-lab' | 'discovery-lab' | 'visibility-lab' | 'wtf-assessment';
+  product: 'call-lab' | 'discovery-lab' | 'visibility-lab' | 'wtf-assessment' | 'wtf-biz-dev-assessment';
 }
 
 const allLabs: Lab[] = [
@@ -86,6 +86,15 @@ const allLabs: Lab[] = [
     icon: '📊',
     color: '#E51B23',
     product: 'wtf-assessment',
+  },
+  {
+    name: 'BD Hire Readiness Assessment',
+    description: 'Are you ready to hire a BD resource? 5-minute diagnostic.',
+    href: '/wtf-biz-dev-assessment',
+    tier: 'Free',
+    icon: '💼',
+    color: '#E51B23',
+    product: 'wtf-biz-dev-assessment',
   },
 ];
 

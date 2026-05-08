@@ -80,8 +80,8 @@ function ScoreSummary({ dimensions, composite }: { dimensions: Record<string, nu
   );
 }
 
-/** Detect headings like "Lead Flow — 25/100" and render as a scorecard row. */
-const DIMENSION_HEADING_RE = /^(.+?)\s+[—–-]\s+(\d+)\s*\/\s*100\s*$/;
+/** Detect headings like "Lead Flow: 25/100" (or with em-dash from older reports) and render as a scorecard row. */
+const DIMENSION_HEADING_RE = /^(.+?)\s*[:—–-]\s*(\d+)\s*\/\s*100\s*$/;
 
 function ScorecardHeading({ text }: { text: string }) {
   const match = text.match(DIMENSION_HEADING_RE);
@@ -149,6 +149,7 @@ export function ReportContent({ markdown, ctaTier, assessmentId, dimensions, com
       <article className="prose prose-lg max-w-none">
         <ReactMarkdown
           remarkPlugins={[remarkGfm]}
+          remarkRehypeOptions={{ footnoteLabel: 'Sources', footnoteLabelTagName: 'h2', footnoteBackLabel: 'Back to citation' }}
           components={{
             h3: ({ children }: ComponentPropsWithoutRef<'h3'>) => (
               <ScorecardHeading text={flattenChildrenToText(children)} />
@@ -184,9 +185,9 @@ export function ReportContent({ markdown, ctaTier, assessmentId, dimensions, com
       <div className="mt-12 pt-8 border-t border-border">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="/tim-signature.png"
+          src="/logos/Tim.svg"
           alt="Tim Kilroy signature"
-          className="h-14 mb-2"
+          className="h-16 mb-3"
         />
         <p className="font-poppins text-sm text-muted-foreground">
           <span className="font-anton uppercase tracking-wide text-foreground text-base">Tim Kilroy</span> · SalesOS

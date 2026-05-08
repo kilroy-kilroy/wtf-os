@@ -15,8 +15,8 @@ const intakeSchema = z.object({
     (v) => v.includes('linkedin.com'),
     'Must be a LinkedIn URL'
   ),
-  service_description: z.string().min(10, 'A sentence or two — what do you sell?'),
-  customer_description: z.string().min(10, 'A sentence or two — who do you sell to?'),
+  service_description: z.string().min(10, 'A sentence or two. What do you sell?'),
+  customer_description: z.string().min(10, 'A sentence or two. Who do you sell to?'),
   revenue_band: z.enum(['<$1M', '$1M-$3M', '$3M-$5M', '$5M-$10M', '$10M+']),
   affordability_answer: z.enum(['yes', 'no', 'not_sure']),
   newsletter_opt_in: z.boolean(),
@@ -141,10 +141,10 @@ export default function BizDevAssessmentPage() {
             <span className="text-brand">creates deals.</span>
           </h1>
           <p className="font-poppins text-xl md:text-2xl text-foreground/80 mb-3 max-w-2xl leading-snug">
-            They don&apos;t. They <em className="not-italic font-semibold text-foreground">follow up</em> leads.
+            They do not create deals. They <em className="not-italic font-semibold text-foreground">follow up</em> leads.
           </p>
           <p className="font-poppins text-base md:text-lg text-muted-foreground mb-10 max-w-2xl">
-            Are you ready to feed one? Take the 5-minute diagnostic. We&apos;ll analyze your website, your LinkedIn, and your answers — then tell you straight whether you&apos;re ready to hire, what you&apos;ll need to fix first, and how to actually make the hire stick.
+            Are you ready to feed one? Take the 5-minute diagnostic. We will analyze your website, your LinkedIn, and your answers. Then we will tell you straight whether you are ready to hire, what you need to fix first, and how to actually make the hire stick.
           </p>
           <button
             onClick={() => setStep('intake')}
@@ -156,9 +156,9 @@ export default function BizDevAssessmentPage() {
 
           <ul className="mt-16 grid gap-6 md:grid-cols-3 border-t-2 border-foreground pt-8 max-w-3xl">
             {[
-              ['10 questions', 'About your sales engine, ICP, and how the founder shows up.'],
-              ['Live research', "We pull your website + LinkedIn while you fill out the form."],
-              ['Brutally honest', "No diplomatic vagueness. You'll know what's broken."],
+              ['10 questions', 'We ask about your sales engine, your ICP, and how the founder shows up.'],
+              ['Live research', "We pull your website and LinkedIn while you fill out the form."],
+              ['Brutally honest', "There is no diplomatic vagueness. You will know what is broken."],
             ].map(([title, desc]) => (
               <li key={title}>
                 <p className="font-anton uppercase text-foreground text-lg leading-tight">{title}</p>
@@ -180,7 +180,7 @@ export default function BizDevAssessmentPage() {
             Tell me about your agency.
           </h2>
           <p className="font-poppins text-base md:text-lg text-muted-foreground mb-12 max-w-xl">
-            I&apos;ll analyze your website + LinkedIn alongside your answers. Three minutes here, then 10 quick questions.
+            I will analyze your website and LinkedIn alongside your answers. This takes three minutes here, then 10 quick questions.
           </p>
 
           <div className="space-y-8">
@@ -206,7 +206,7 @@ export default function BizDevAssessmentPage() {
             ))}
 
             <div>
-              <label className={labelClass}>What do you sell? (1–2 sentences)</label>
+              <label className={labelClass}>What do you sell? (1 or 2 sentences)</label>
               <textarea
                 value={intakeData.service_description ?? ''}
                 onChange={(e) => setIntakeData(d => ({ ...d, service_description: e.target.value }))}
@@ -218,7 +218,7 @@ export default function BizDevAssessmentPage() {
             </div>
 
             <div>
-              <label className={labelClass}>Who do you sell to? (1–2 sentences)</label>
+              <label className={labelClass}>Who do you sell to? (1 or 2 sentences)</label>
               <textarea
                 value={intakeData.customer_description ?? ''}
                 onChange={(e) => setIntakeData(d => ({ ...d, customer_description: e.target.value }))}
@@ -239,22 +239,25 @@ export default function BizDevAssessmentPage() {
               >
                 <option value="" disabled>Pick one</option>
                 <option value="<$1M">Less than $1M</option>
-                <option value="$1M-$3M">$1M – $3M</option>
-                <option value="$3M-$5M">$3M – $5M</option>
-                <option value="$5M-$10M">$5M – $10M</option>
+                <option value="$1M-$3M">$1M to $3M</option>
+                <option value="$3M-$5M">$3M to $5M</option>
+                <option value="$5M-$10M">$5M to $10M</option>
                 <option value="$10M+">$10M+</option>
               </select>
             </div>
 
             <fieldset>
               <legend className={labelClass}>
-                Could you fund $60K base salary for 4–6 months without expecting any return?
+                Can you afford to fund 4 to 6 months of a full-time business development resource without any return?
               </legend>
-              <div className="mt-3 space-y-2">
+              <p className="font-poppins text-sm text-muted-foreground mt-2 mb-3 max-w-prose">
+                For example, you should expect a sales hire on a USD $75K base salary to draw $25,000 to $38,000 in salary before they are able to close deals on their own.
+              </p>
+              <div className="space-y-2">
                 {[
-                  { v: 'yes', l: 'Yes — I have the runway and I get the math.' },
-                  { v: 'no', l: 'No — that would put real strain on the business.' },
-                  { v: 'not_sure', l: "I'd have to model it." },
+                  { v: 'yes', l: 'Yes. I have the runway and I get the math.' },
+                  { v: 'no', l: 'No. That would put real strain on the business.' },
+                  { v: 'not_sure', l: "I would have to model it." },
                 ].map(({ v, l }) => {
                   const selected = intakeData.affordability_answer === v;
                   return (
@@ -288,7 +291,7 @@ export default function BizDevAssessmentPage() {
                 onChange={(e) => setIntakeData(d => ({ ...d, newsletter_opt_in: e.target.checked }))}
                 className="mt-1 accent-brand"
               />
-              <span className="font-poppins text-sm text-muted-foreground">Get Tim&apos;s newsletter — agency growth, no fluff.</span>
+              <span className="font-poppins text-sm text-muted-foreground">Get Tim&apos;s newsletter for agency growth without the fluff.</span>
             </label>
 
             <button
@@ -392,7 +395,7 @@ export default function BizDevAssessmentPage() {
           </div>
 
           <div className="border-2 border-foreground p-6 md:p-8 mb-8">
-            <p className="font-poppins text-xs uppercase tracking-[0.2em] text-brand mb-3">Your two biggest gaps</p>
+            <p className="font-poppins text-xs uppercase tracking-[0.2em] text-brand mb-3">These are your two biggest gaps</p>
             <ul className="space-y-2">
               {previewResult.topGaps.map((g, i) => (
                 <li key={g} className="flex items-baseline gap-3">
@@ -404,18 +407,18 @@ export default function BizDevAssessmentPage() {
           </div>
 
           <div className="bg-foreground text-background p-6 md:p-8">
-            <p className="font-poppins text-xs uppercase tracking-[0.25em] text-brand mb-3">Inbox incoming</p>
+            <p className="font-poppins text-xs uppercase tracking-[0.25em] text-brand mb-3">Your email is coming</p>
             <p className="font-anton uppercase tracking-tight text-2xl md:text-3xl leading-tight mb-3">
               Your full personalized report is being prepared.
             </p>
             <p className="font-poppins text-sm md:text-base text-background/70">
-              I&apos;m analyzing your website and LinkedIn alongside your answers to find the specific gaps you need to fix. Check your inbox in ~5 minutes for the secure link to your full report.
+              I am analyzing your website and LinkedIn alongside your answers to find the specific gaps you need to fix. Check your inbox in about 5 minutes for the secure link to your full report.
             </p>
           </div>
 
           {submitting && (
             <p className="font-poppins text-xs uppercase tracking-[0.2em] text-muted-foreground mt-8">
-              Processing… feel free to close this tab.
+              We are still processing. Feel free to close this tab.
             </p>
           )}
         </div>

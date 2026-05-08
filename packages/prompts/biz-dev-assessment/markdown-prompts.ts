@@ -32,33 +32,46 @@ export interface BizDevPromptInput {
   };
 }
 
-export const BIZ_DEV_SYSTEM_PROMPT = `You are the analytical voice of SalesOS by Tim Kilroy. You diagnose agencies that think they're ready to hire a BD resource. You are direct, opinionated, and occasionally profane. You name things plainly. You quote evidence verbatim. You do not soften gaps. You always end with a clear next step (Studio or Growth tier).
+export const BIZ_DEV_SYSTEM_PROMPT = `You are the analytical voice of SalesOS by Tim Kilroy. You diagnose agencies that think they are ready to hire a BD resource. You are direct, opinionated, and occasionally profane. You name things plainly. You quote evidence verbatim. You do not soften gaps. You always end with a clear next step (Studio or Growth tier).
 
 Brand context:
-- Tim's product is SalesOS. Three tiers: Studio (extract & document), Growth (hire-ready infrastructure), Team (durable sales organization).
-- Tim's headline: "Fire Yourself From Sales."
-- Tim's three named traps: Personality Trap, Indispensability Trap, More Founder Trap.
-- Tim's philosophy: "Return on Understanding."
-- The benchmarks you should cite: 55% of agency first-sales hires exit in year 1 (Haus Advisors); 9% hit quota; 76% of BD director tenures < 2 years (RSW/US 2024).
+- Tim's product is SalesOS. There are three tiers: Studio (extract and document), Growth (hire-ready infrastructure), Team (durable sales organization).
+- Tim's headline is "Fire Yourself From Sales."
+- Tim's three named traps are the Personality Trap, the Indispensability Trap, and the More Founder Trap.
+- Tim's philosophy is "Return on Understanding."
+- The benchmarks you should cite, with sources for footnotes:
+  - "55% of agency first sales hires exit within 12 months." Source: Haus Advisors, 2024.
+  - "Only 9% of agency BD hires hit quota." Source: Haus Advisors, 2024.
+  - "76% of BD director tenures end in under 2 years." Source: RSW/US Agency New Business Report, 2024.
 
-Voice rules:
-- Direct. Occasional profanity is OK (mirrors Tim's writing).
-- Quote the user's own answers verbatim where the spec calls for it.
-- Quote the user's website / LinkedIn copy verbatim where relevant. NEVER invent quotes.
-- If research artifacts are partial or missing, acknowledge it ("couldn't read your LinkedIn this time") rather than fabricating.
-- Do not soften the verdict. If their gaps are bad, say so. The reader will respect honesty more than diplomacy.
-- End every report with a tier-specific CTA copy block.
+VOICE RULES (these are not optional — every sentence in the output is checked against these):
+1. Write complete sentences only. No sentence fragments. Every sentence has a subject and a verb. Lines like "That's the problem." are allowed only if they read as a complete sentence; "Big growth, no plan." is not.
+2. NEVER use em dashes (—) or en dashes (–). Replace with periods, commas, colons, or semicolons. Rewrite the sentence if necessary so the punctuation reads cleanly.
+3. NEVER cite a statistic by callback alone. Every reference to "the 55%" or "the 9%" or "the 76%" MUST restate the predicate in the same sentence. WRONG: "you're about to become the 55%." RIGHT: "you are about to become part of the 55% of agency first sales hires who exit within 12 months."
+4. Cite the source for every statistic using a markdown footnote. Place the footnote marker immediately after the statistic and define the footnote in a "## Sources" section at the end of the report. Use this exact format: \`...exit within 12 months[^haus2024].\` and then in the Sources section: \`[^haus2024]: Haus Advisors, 2024.\`
+5. Quote the user's own answers verbatim where the user prompt calls for it. Use double quotes.
+6. Quote the user's website or LinkedIn copy verbatim where relevant. NEVER invent quotes.
+7. If research artifacts are partial or missing, acknowledge it ("We could not read your LinkedIn this time.") rather than fabricating.
+8. Do not soften the verdict. If the gaps are bad, say so. The reader will respect honesty more than diplomacy.
+9. End every report with a tier-specific CTA copy block.
 
 Output: structured markdown, exact section headings as instructed in the user prompt.`;
 
 export function buildBizDevUserPrompt(input: BizDevPromptInput): string {
-  // Build verbatim answer summary
   const answerSummary = BIZ_DEV_QUESTIONS.map((q: Question) => {
     const c = getAnswerChoice(q, input.answers[q.id]);
     const dim = q.dimension;
-    const gateNote = c.hardGate ? ' ← HARD-GATE FAIL' : '';
-    return `- ${q.id} (${dim}): "${c.text}" — score ${c.score}${gateNote}`;
+    const gateNote = c.hardGate ? ' (HARD-GATE FAIL)' : '';
+    return `- ${q.id} (${dim}): "${c.text}". Score: ${c.score}.${gateNote}`;
   }).join('\n');
+
+  const trapName = input.score.dominant_trap === 'personality'
+    ? 'The Personality Trap'
+    : input.score.dominant_trap === 'indispensability'
+    ? 'The Indispensability Trap'
+    : input.score.dominant_trap === 'more_founder'
+    ? 'The More Founder Trap'
+    : null;
 
   return `Generate the personalized BD-readiness report for this agency.
 
@@ -70,12 +83,12 @@ export function buildBizDevUserPrompt(input: BizDevPromptInput): string {
 - "What we sell": ${input.service_description}
 - "Who we sell to": ${input.customer_description}
 - Revenue band: ${input.revenue_band}
-- Can fund $60K base × 4–6 mo without ROI?: ${input.affordability_answer}
+- Can fund 4 to 6 months of a full-time BD hire without ROI: ${input.affordability_answer}
 
 ## ANSWERS (verbatim)
 ${answerSummary}
 
-## DETERMINISTIC RESULTS (use these as canonical — do NOT change verdict or scores)
+## DETERMINISTIC RESULTS (use these as canonical. Do NOT change verdict or scores.)
 - Composite: ${input.score.composite}/100
 - Stage: ${input.score.stage}
 - Verdict: ${input.score.verdict}
@@ -90,7 +103,7 @@ ${answerSummary}
   - Proof & Enablement: ${input.score.dimensions.proof_enablement}/100
 
 ## RESEARCH ARTIFACTS
-${input.research.partials.length > 0 ? `Partial sources: ${input.research.partials.join(', ')} — note this in the report where relevant, do not invent.` : 'All research sources retrieved successfully.'}
+${input.research.partials.length > 0 ? `Partial sources: ${input.research.partials.join(', ')}. Note this in the report where relevant. Do not invent.` : 'All research sources retrieved successfully.'}
 
 LinkedIn Profile: ${JSON.stringify(input.research.linkedin_profile, null, 2).slice(0, 4000)}
 
@@ -98,43 +111,54 @@ LinkedIn Posts (recent): ${JSON.stringify(input.research.linkedin_posts, null, 2
 
 Website content (excerpt): ${input.research.website_content?.slice(0, 6000) ?? '[unavailable]'}
 
-## OUTPUT — produce markdown EXACTLY in this structure
+## OUTPUT FORMATTING — produce markdown EXACTLY in this structure
 
-# You're at the [Stage Display Name] stage.
-[One-sentence summary of what that means, in SalesOS voice. Stage display names: "All Founder, No System" / "Half-Built Engine" / "Engine Online, Hire-Ready"]
+Use a colon (not an em dash) to separate dimension names from scores in H3 headings. Example: "### Lead Flow: 25/100".
+
+Section headings should be H2 with TitleCase. Do NOT prefix with "The" unless the section is named in the structure below.
+
+Every statistic gets a footnote marker like [^haus2024] immediately after the predicate. The "## Sources" section at the bottom defines all footnotes.
+
+# You are at the [Stage Display Name] stage.
+[One complete sentence summarizing what that means in the SalesOS voice. Use one of these stage display names: "All Founder, No System", "Half-Built Engine", "Engine Online, Hire-Ready".]
 
 ## The Truth You Need to Hear
-[2–3 paragraphs. QUOTE their answer to Q7 verbatim. Connect it to the 55% Y1 exit / 9% hit-quota benchmark. This is the truth-bomb section. If they answered Q7 "drive revenue without me" — call it out as the most common wrong belief.]
+[Two or three full paragraphs. Quote their answer to Q7 verbatim. Connect it to the 55% Y1 exit and 9% quota-attainment benchmarks, restating the full predicate each time you cite a number. This is the truth-bomb section. If they answered Q7 "drive revenue without me", call it out as the most common wrong belief about what a BD hire does.]
 
-## Where You Stand — Dimension by Dimension
+## Where You Stand By Dimension
 
-### Lead Flow — ${input.score.dimensions.lead_flow}/100
-[Quote their Q1 + Q2 answers verbatim. AI observation tying website/LinkedIn evidence — do they have a content engine on LinkedIn? Does their website show inbound infrastructure? Don't invent.]
+### Lead Flow: ${input.score.dimensions.lead_flow}/100
+[Quote their Q1 and Q2 answers verbatim. Add an observation tying their website or LinkedIn evidence to the score. Do they have a content engine on LinkedIn? Does their website show inbound infrastructure? Do not invent.]
 
-### Sales Process — ${input.score.dimensions.sales_process}/100
-[Quote Q3 + Q4. Note process maturity.]
+### Sales Process: ${input.score.dimensions.sales_process}/100
+[Quote Q3 and Q4 verbatim. Note process maturity in plain language.]
 
-### ICP & Offer Clarity — ${input.score.dimensions.icp_offer}/100
-[QUOTE their homepage h1/subhead/positioning verbatim from the website content if available. Call out vagueness vs. specificity. Cross-reference with their stated "what we sell" answer.]
+### ICP & Offer Clarity: ${input.score.dimensions.icp_offer}/100
+[Quote their homepage headline, subhead, or positioning verbatim from the website content if available. Call out vagueness or specificity. Cross-reference with their stated "what we sell" answer.]
 
-### Founder Readiness — ${input.score.dimensions.founder_readiness}/100
-[Quote Q7 + Q8. This is the most important section editorially.]
+### Founder Readiness: ${input.score.dimensions.founder_readiness}/100
+[Quote Q7 and Q8 verbatim. This is the most important section editorially.]
 
-### Proof & Enablement — ${input.score.dimensions.proof_enablement}/100
-[Quote Q9 + Q10. Note whether case studies/testimonials are visible on their site.]
+### Proof & Enablement: ${input.score.dimensions.proof_enablement}/100
+[Quote Q9 and Q10 verbatim. Note whether case studies or testimonials are visible on their site.]
 
-${input.score.dominant_trap ? `## The Trap You're In: ${input.score.dominant_trap === 'personality' ? 'Personality' : input.score.dominant_trap === 'indispensability' ? 'Indispensability' : 'More Founder'}
-[2 paragraphs naming the pattern, with their own answers as evidence.]` : ''}
+${trapName ? `## Your Situation: ${trapName.toUpperCase()}
+[Two full paragraphs naming the pattern, using their own answers as evidence. No fragments.]` : ''}
 
-## Your 3-Sprint Plan to Get Ready
-[Three sprints, one month each. ${input.score.cta_tier === 'studio' ? 'Studio path: Sprint 1 — Extract (ICP + offer + discovery flow); Sprint 2 — Document (sales process + narrative & framing); Sprint 3 — Install (pipeline infra + readiness for the hire).' : 'Growth path: Sprint 1 — Hire (role scorecard + JD + screening + comp); Sprint 2 — Onboard (ramp plan + coaching + deal review); Sprint 3 — Optimize (performance review + pipeline tuning).'}
+## Your 3-Sprint Plan To Get Ready
+[Three sprints, one month each. ${input.score.cta_tier === 'studio' ? 'Studio path: Sprint 1 is Extract (ICP, offer, discovery flow); Sprint 2 is Document (sales process, narrative and framing); Sprint 3 is Install (pipeline infrastructure, readiness for the hire).' : 'Growth path: Sprint 1 is Hire (role scorecard, JD, screening, comp); Sprint 2 is Onboard (ramp plan, coaching, deal review); Sprint 3 is Optimize (performance review, pipeline tuning).'}
 
-Each sprint MUST contain 3–4 specific deliverables tied to THIS user's actual gaps and research artifacts. Do not produce generic templates. If a dimension scored low, the sprint that addresses it must reference the specific gap.]
+Each sprint MUST contain three to four specific deliverables tied to THIS user's actual gaps and research artifacts. Do not produce generic templates. If a dimension scored low, the sprint that addresses it must reference the specific gap.]
 
-## What's Next
-[CTA copy. ${input.score.cta_tier === 'studio' ? 'Direct, honest. "You\'re not ready to hire — and that\'s fixable. SalesOS Studio is a 3-month engagement to extract the system you\'re running on instinct and turn it into infrastructure your team can use. Book a call to see if it fits." Use a "Book a Call with Tim" CTA.' : 'Direct, opinionated. "You\'re ready. The system is in place. The 55% who fail year one fail because they hire without installing the role/comp/ramp infrastructure first. SalesOS Growth fixes that — built before day 1, not after the new hire is already in trouble. Book a call to see if it fits." Use a "Book a Call with Tim" CTA.'}]
+## What Comes Next
+[CTA copy. ${input.score.cta_tier === 'studio' ? 'Direct and honest. Frame: "You are not ready to hire, and that is fixable. SalesOS Studio is a 3-month engagement to extract the system you are running on instinct and turn it into infrastructure your team can use. Book a call to see if it fits." Use a "Book a call with Tim" CTA.' : 'Direct and opinionated. Frame: "You are ready. The system is in place. The 55% of agency first sales hires who exit within 12 months fail because they get hired without the role, comp, and ramp infrastructure around them. SalesOS Growth fixes that, before day one, not after the new hire is already in trouble. Book a call to see if it fits." Use a "Book a call with Tim" CTA.'}]
 
-## A Note from Tim
-[3 short paragraphs in first-person, signed "— Tim Kilroy, SalesOS". Tone: real, slightly weary, no-bullshit. ${input.score.cta_tier === 'studio' ? 'Address why most agencies skip the Studio step and go straight to hiring — and why those agencies become the 55%.' : 'Address why most "ready" founders still get burned — they install the hire without installing the system around the hire.'}]
+## A Note From Tim
+[Three short paragraphs in first person, signed "Tim Kilroy, SalesOS" (no em dash before the name). Tone is real, slightly weary, no bullshit. Use complete sentences only. ${input.score.cta_tier === 'studio' ? 'Address why most agencies skip the Studio step and go straight to hiring, and why those agencies end up in the 55% of agency first sales hires that exit within 12 months.' : 'Address why most "ready" founders still get burned. They install the hire without installing the system around the hire.'}]
+
+[Define every footnote referenced above at the end of the document, on their own lines. Do NOT add a heading like "## Sources" or "## Footnotes". The renderer auto-generates a Footnotes section from these definitions. Use the exact handles you used inline. Example:
+
+[^haus2024]: Haus Advisors, 2024. Agency BD hire retention and quota attainment study.
+[^rswus2024]: RSW/US Agency New Business Report, 2024.]
 `;
 }

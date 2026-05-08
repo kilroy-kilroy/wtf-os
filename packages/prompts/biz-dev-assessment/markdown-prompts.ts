@@ -55,6 +55,7 @@ VOICE RULES (these are not optional. Every sentence in the output is checked aga
 8. If research artifacts are partial or missing, acknowledge it ("We couldn't read your LinkedIn this time.") rather than fabricating.
 9. Don't soften the verdict. If the gaps are bad, say so. The reader will respect honesty more than diplomacy.
 10. End every report with a tier-specific CTA copy block, then the signature image, then footnote definitions.
+11. Do NOT mention specific pricing or dollar amounts for SalesOS Studio, SalesOS Growth, or SalesOS Team anywhere in the report. Pricing is not set publicly. Refer to engagements by their character (3-month engagement, hire-readiness infrastructure, durable sales organization) but never by price. The CTA is "book a call to see if it fits", not "starts at $X".
 
 Output: structured markdown, exact section headings as instructed in the user prompt.`;
 

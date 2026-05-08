@@ -90,8 +90,8 @@ export async function POST(request: NextRequest) {
               plan_type: session.metadata?.priceType || 'solo',
               product: session.metadata?.product || 'discovery-lab-pro',
               status: subscription.status,
-              current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
-              current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+              current_period_start: new Date(subscription.items.data[0].current_period_start * 1000).toISOString(),
+              current_period_end: new Date(subscription.items.data[0].current_period_end * 1000).toISOString(),
               updated_at: new Date().toISOString(),
             }, {
               onConflict: 'stripe_subscription_id'
@@ -172,11 +172,12 @@ export async function POST(request: NextRequest) {
       })
 
       try {
-        const currentPeriodStart = subscription.current_period_start
-          ? new Date(subscription.current_period_start * 1000).toISOString()
+        const item = subscription.items.data[0]
+        const currentPeriodStart = item?.current_period_start
+          ? new Date(item.current_period_start * 1000).toISOString()
           : null
-        const currentPeriodEnd = subscription.current_period_end
-          ? new Date(subscription.current_period_end * 1000).toISOString()
+        const currentPeriodEnd = item?.current_period_end
+          ? new Date(item.current_period_end * 1000).toISOString()
           : null
         const canceledAt = subscription.canceled_at
           ? new Date(subscription.canceled_at * 1000).toISOString()

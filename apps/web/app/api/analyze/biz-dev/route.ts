@@ -9,11 +9,15 @@ import {
   researchLinkedInProfile,
   researchLinkedInPosts,
   scrapeCompanyWebsite,
-  BRIGHTDATA_AUTH_FAILED_PREFIX,
   runModel,
   retryWithBackoff,
   type AssessmentAnswers,
 } from '@repo/utils';
+
+// Inlined here because BRIGHTDATA_AUTH_FAILED_PREFIX is not exported from
+// @repo/utils on this branch (it lives in unmerged WIP). Match the literal
+// prefix used by research.ts so error detection still works.
+const BRIGHTDATA_AUTH_FAILED_PREFIX = 'BRIGHTDATA_AUTH_FAILED';
 import { alertBrightDataAuthExpired, alertBizDevReportGenerated } from '@/lib/slack';
 import { BIZ_DEV_SYSTEM_PROMPT, buildBizDevUserPrompt } from '@repo/prompts';
 import { resolveOrCreateUserByEmail, generateMagicLink } from '@/lib/biz-dev-auth';

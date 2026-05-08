@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createServerClient } from '@repo/db/client';
-import { generateMagicLink } from '@/lib/biz-dev-auth';
+import { mintAccessToken } from '@/lib/biz-dev-auth';
 import { onBizDevReportGenerated } from '@/lib/loops';
 
 const schema = z.object({
@@ -29,7 +29,9 @@ export async function POST(request: NextRequest) {
     }
 
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://timkilroy.com';
-    const magicLinkUrl = await generateMagicLink(email, `${siteUrl}/wtf-biz-dev-assessment/report/${assessmentId}`);
+    // Mint a fresh single-use 24h access token; resets the expiry window.
+    const accessToken = await mintAccessToken(assessmentId);
+    const reportLinkUrl = `${siteUrl}/wtf-biz-dev-assessment/report/${assessmentId}?access_token=${accessToken}`;
 
     const dimEntries = Object.entries(row.dimensions as Record<string, number>);
     dimEntries.sort((a, b) => a[1] - b[1]);
@@ -53,7 +55,7 @@ export async function POST(request: NextRequest) {
       cta_tier: row.cta_tier,
       dominant_trap: row.dominant_trap,
       top_3_gaps: dimEntries.slice(0, 3).map(([d]) => dimLabels[d] ?? d),
-      magic_link_url: magicLinkUrl,
+      magic_link_url: reportLinkUrl,
     });
 
     return NextResponse.json({ ok: true });

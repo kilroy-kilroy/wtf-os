@@ -20,7 +20,7 @@ import {
 const BRIGHTDATA_AUTH_FAILED_PREFIX = 'BRIGHTDATA_AUTH_FAILED';
 import { alertBrightDataAuthExpired, alertBizDevReportGenerated } from '@/lib/slack';
 import { BIZ_DEV_SYSTEM_PROMPT, buildBizDevUserPrompt } from '@repo/prompts';
-import { resolveOrCreateUserByEmail, generateMagicLink } from '@/lib/biz-dev-auth';
+import { resolveOrCreateUserByEmail, mintAccessToken } from '@/lib/biz-dev-auth';
 import { onBizDevReportGenerated } from '@/lib/loops';
 import { addBizDevAssessmentSubscriber } from '@/lib/beehiiv';
 import { copperSyncBizDevLead } from '@/lib/copper';
@@ -222,16 +222,17 @@ async function processAssessment(
 
   // 4. Side-effects: email, newsletter, CRM, Slack
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://timkilroy.com';
-  const reportPath = `/wtf-biz-dev-assessment/report/${id}`;
 
-  let magicLinkUrl: string;
+  // Mint our own 24h single-use access token (sidesteps Supabase's 1h OTP cap).
+  // The report page consumes the token and exchanges it for a session.
+  let reportLinkUrl: string;
   try {
-    magicLinkUrl = await generateMagicLink(intake.email, `${siteUrl}${reportPath}`);
+    const accessToken = await mintAccessToken(id);
+    reportLinkUrl = `${siteUrl}/wtf-biz-dev-assessment/report/${id}?access_token=${accessToken}`;
   } catch (err) {
-    console.error('[biz-dev] magic link generation failed:', err);
-    // Without a magic link the user can't access their report — still fire the
-    // other integrations but skip the email
-    magicLinkUrl = '';
+    console.error('[biz-dev] access token mint failed:', err);
+    // Fall back to a no-op so the rest of the pipeline still runs.
+    reportLinkUrl = '';
   }
 
   const dimEntries = Object.entries(score.dimensions) as Array<[string, number]>;
@@ -252,7 +253,7 @@ async function processAssessment(
   const stageDisplay = stageDisplayLabels[score.stage] ?? score.stage;
 
   await Promise.allSettled([
-    magicLinkUrl
+    reportLinkUrl
       ? onBizDevReportGenerated({
           email: intake.email,
           name: intake.name,
@@ -262,7 +263,7 @@ async function processAssessment(
           cta_tier: score.cta_tier,
           dominant_trap: score.dominant_trap,
           top_3_gaps,
-          magic_link_url: magicLinkUrl,
+          magic_link_url: reportLinkUrl,
         })
       : Promise.resolve(),
 

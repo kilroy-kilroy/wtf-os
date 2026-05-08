@@ -1,18 +1,51 @@
 import { redirect } from 'next/navigation';
 import { createClient as createAuthClient } from '@/lib/supabase-auth-server';
 import { createServerClient } from '@repo/db/client';
+import { consumeAccessToken, generateOtpForUser } from '@/lib/biz-dev-auth';
 import { ReportContent } from './ReportContent';
 import { StageProgress } from './StageProgress';
 
 interface PageProps {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ access_token?: string }>;
 }
 
-export default async function BizDevReportPage({ params }: PageProps) {
+export default async function BizDevReportPage({ params, searchParams }: PageProps) {
   const { id } = await params;
+  const { access_token } = await searchParams;
 
   const auth = await createAuthClient();
-  const { data: { user } } = await auth.auth.getUser();
+  let { data: { user } } = await auth.auth.getUser();
+
+  // If a single-use access_token is present in the URL and the visitor isn't
+  // logged in (or is logged in as someone else), exchange the token for a
+  // Supabase session.
+  if (access_token) {
+    const consumed = await consumeAccessToken(id, access_token);
+    if (consumed && (!user || user.id !== consumed.userId)) {
+      try {
+        const { token_hash } = await generateOtpForUser(consumed.email);
+        const { data: verified, error: verifyError } = await auth.auth.verifyOtp({
+          token_hash,
+          type: 'magiclink',
+        });
+        if (!verifyError && verified.user) {
+          // Session cookies are now set on the response. Redirect to the clean
+          // URL (no token in URL) so the link can't be re-shared.
+          redirect(`/wtf-biz-dev-assessment/report/${id}`);
+        }
+      } catch (err) {
+        // Fall through to the request-link flow below.
+        console.error('[biz-dev:report] token exchange failed:', err);
+      }
+    } else if (!consumed) {
+      // Token invalid/expired/used — strip it from the URL and let normal
+      // auth checks run; user can request a fresh link if needed.
+      redirect(`/wtf-biz-dev-assessment/report/${id}`);
+    }
+    // Re-read user after potential session mint above.
+    ({ data: { user } } = await auth.auth.getUser());
+  }
 
   if (!user) {
     redirect(`/wtf-biz-dev-assessment/report/${id}/request-link`);

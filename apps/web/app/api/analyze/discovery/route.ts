@@ -9,6 +9,7 @@ import {
   enrichContactWithInstantly,
   fetchCompanyNews,
   runV2DiscoveryResearch,
+  BRIGHTDATA_AUTH_FAILED_PREFIX,
   type V2ResearchResult,
 } from '@repo/utils';
 import {
@@ -23,7 +24,7 @@ import { onDiscoveryReportGenerated } from '@/lib/loops';
 import { addDiscoveryLabSubscriber } from '@/lib/beehiiv';
 import { copperSyncLead, PRO_ACV, COPPER_STAGES } from '@/lib/copper';
 import { getArchetypeForLoops } from '@/lib/growth-quadrant';
-import { alertReportGenerated } from '@/lib/slack';
+import { alertReportGenerated, alertBrightDataAuthExpired } from '@/lib/slack';
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
@@ -119,6 +120,11 @@ export async function POST(request: NextRequest) {
         discoveredLinkedInUrl: v2Research.discovered_linkedin_url,
         errors: v2Research.errors,
       });
+
+      const brightDataAuthError = v2Research.errors.find(e => e.includes(BRIGHTDATA_AUTH_FAILED_PREFIX));
+      if (brightDataAuthError) {
+        alertBrightDataAuthExpired(brightDataAuthError);
+      }
     } else {
       // Lite: lightweight enrichment
       console.log('Fetching enriched data for:', { target_company, domain, target_contact_name });
@@ -362,6 +368,21 @@ export async function POST(request: NextRequest) {
           tokens: usage,
           duration_ms: duration,
           competitors: competitors || null,
+          v2_research_debug: v2Research
+            ? {
+                errors: v2Research.errors,
+                has_perplexity: !!v2Research.perplexity,
+                has_company_deep_dive: !!v2Research.company_deep_dive,
+                has_competitor_research: !!v2Research.competitor_research,
+                has_linkedin_profile: !!v2Research.linkedin_profile,
+                has_linkedin_posts: !!v2Research.linkedin_posts,
+                has_google_serp: !!v2Research.google_serp,
+                has_website_tech: !!v2Research.website_tech,
+                has_apollo_contact: !!v2Research.apollo_contact,
+                discovered_linkedin_url: v2Research.discovered_linkedin_url,
+                brightdata_auth_failed: v2Research.errors.some(e => e.includes(BRIGHTDATA_AUTH_FAILED_PREFIX)),
+              }
+            : null,
         },
       })
       .select('id')

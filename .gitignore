@@ -41,6 +41,7 @@ next-env.d.ts
 
 # Supabase CLI scratch
 supabase/.temp/
+apps/web/supabase/.temp/
 
 # Skill workspace artifacts
 .superpowers/

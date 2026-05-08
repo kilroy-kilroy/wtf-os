@@ -52,7 +52,7 @@ interface EnrollmentData {
 }
 
 interface ActivityItem {
-  type: 'call_lab' | 'discovery' | 'visibility' | 'assessment' | 'coaching' | 'friday' | 'loops_event';
+  type: 'call_lab' | 'discovery' | 'visibility' | 'assessment' | 'biz_dev' | 'coaching' | 'friday' | 'loops_event';
   id: string;
   label: string;
   score?: number;
@@ -104,6 +104,7 @@ const TYPE_COLORS: Record<string, string> = {
   discovery: '#00D4FF',
   visibility: '#a855f7',
   assessment: '#f59e0b',
+  biz_dev: '#c45a3b',
   coaching: '#FFDE59',
   friday: '#22c55e',
   loops_event: '#666',
@@ -114,6 +115,7 @@ const TYPE_LABELS: Record<string, string> = {
   discovery: 'Discovery',
   visibility: 'Visibility',
   assessment: 'Assessment',
+  biz_dev: 'BD Readiness',
   coaching: 'Coaching',
   friday: 'Friday',
   loops_event: 'Email',

@@ -45,36 +45,50 @@ export default async function BizDevReportPage({ params }: PageProps) {
 
   if (assessment.report_status === 'failed') {
     return (
-      <main className="min-h-screen p-12 max-w-2xl mx-auto">
-        <h1 className="text-2xl font-bold mb-4">Something went wrong generating your report</h1>
-        <p className="text-muted-foreground mb-6">
-          The synthesis step failed. Your answers and research are saved — we just need to retry the AI step. Email tim@timkilroy.com and I&apos;ll get this regenerated for you.
-        </p>
+      <main className="min-h-screen bg-background text-foreground">
+        <div className="mx-auto max-w-2xl px-6 py-24">
+          <p className="font-poppins text-xs uppercase tracking-[0.25em] text-brand mb-4">Synthesis failed</p>
+          <h1 className="font-anton uppercase tracking-tight text-5xl md:text-6xl leading-none mb-6">
+            Something went sideways generating your report.
+          </h1>
+          <p className="font-poppins text-lg text-muted-foreground mb-6">
+            Your answers and research are saved — we just need to retry the AI step. Email{' '}
+            <a href="mailto:tim@timkilroy.com" className="text-brand underline underline-offset-4">tim@timkilroy.com</a>{' '}
+            and I&apos;ll get this regenerated for you.
+          </p>
+        </div>
       </main>
     );
   }
 
   if (assessment.report_status !== 'completed' || !assessment.report_markdown) {
     return (
-      <main className="min-h-screen p-12 max-w-2xl mx-auto">
-        <h1 className="text-2xl font-bold mb-4">Your report is being prepared</h1>
-        <p className="text-muted-foreground mb-6">
-          We&apos;re analyzing your website and LinkedIn alongside your answers. This usually takes 2–5 minutes. Refresh this page in a moment.
-        </p>
-        {/* eslint-disable-next-line @next/next/no-head-element */}
-        <meta httpEquiv="refresh" content="5" />
+      <main className="min-h-screen bg-background text-foreground">
+        <div className="mx-auto max-w-2xl px-6 py-24">
+          <p className="font-poppins text-xs uppercase tracking-[0.25em] text-brand mb-4">Cooking</p>
+          <h1 className="font-anton uppercase tracking-tight text-5xl md:text-6xl leading-none mb-6">
+            Your report is being prepared.
+          </h1>
+          <p className="font-poppins text-lg text-muted-foreground mb-6">
+            We&apos;re analyzing your website and LinkedIn alongside your answers. This usually takes 2–5 minutes. Refresh this page in a moment.
+          </p>
+          {/* eslint-disable-next-line @next/next/no-head-element */}
+          <meta httpEquiv="refresh" content="5" />
+        </div>
       </main>
     );
   }
 
   return (
     <main className="min-h-screen bg-background text-foreground">
-      <div className="mx-auto max-w-3xl px-6 py-12">
+      <div className="mx-auto max-w-3xl px-6 py-16 md:py-24">
         <StageProgress stage={assessment.stage as 'all_founder_no_system' | 'half_built_engine' | 'engine_online_hire_ready'} />
         <ReportContent
           markdown={assessment.report_markdown}
           ctaTier={assessment.cta_tier as 'studio' | 'growth'}
           assessmentId={id}
+          dimensions={assessment.dimensions ?? {}}
+          compositeScore={assessment.composite_score ?? 0}
         />
       </div>
     </main>

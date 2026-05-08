@@ -1,47 +1,60 @@
 type Stage = 'all_founder_no_system' | 'half_built_engine' | 'engine_online_hire_ready';
 
-const STAGES: Array<{ id: Stage; label: string; index: number }> = [
-  { id: 'all_founder_no_system',    label: 'All Founder, No System',      index: 1 },
-  { id: 'half_built_engine',         label: 'Half-Built Engine',           index: 2 },
-  { id: 'engine_online_hire_ready', label: 'Engine Online, Hire-Ready',   index: 3 },
+const STAGES: Array<{ id: Stage; label: string; index: number; tagline: string }> = [
+  { id: 'all_founder_no_system',    label: 'All Founder, No System',    index: 1, tagline: "You're the system. That's the problem." },
+  { id: 'half_built_engine',         label: 'Half-Built Engine',          index: 2, tagline: "Pieces exist. Nothing compounds yet." },
+  { id: 'engine_online_hire_ready', label: 'Engine Online, Hire-Ready',  index: 3, tagline: "Documented, repeatable, transferable." },
 ];
 
 export function StageProgress({ stage }: { stage: Stage }) {
-  const currentIndex = STAGES.find(s => s.id === stage)?.index ?? 1;
+  const current = STAGES.find(s => s.id === stage) ?? STAGES[0];
 
   return (
-    <div className="mb-12 p-6 border border-border rounded-lg bg-card">
-      <p className="text-xs uppercase tracking-wider text-muted-foreground mb-4 text-center">
-        Your current stage
+    <header className="mb-16">
+      <p className="font-poppins text-xs uppercase tracking-[0.25em] text-muted-foreground mb-3">
+        You are at stage {current.index} of 3
       </p>
-      <div className="flex items-center justify-between gap-2 relative">
-        <div className="absolute left-8 right-8 top-5 h-0.5 bg-border -z-0" />
+      <h1 className="font-anton uppercase leading-[0.95] tracking-tight text-foreground text-[clamp(2.5rem,7vw,5rem)] mb-3">
+        {current.label}
+      </h1>
+      <p className="font-poppins text-lg md:text-xl text-brand-ink italic max-w-2xl">
+        &ldquo;{current.tagline}&rdquo;
+      </p>
+
+      <ol className="mt-10 grid grid-cols-3 gap-0 border-t-2 border-foreground" aria-label="Stage progress">
         {STAGES.map((s) => {
           const isActive = s.id === stage;
-          const isPast = s.index < currentIndex;
+          const isPast = s.index < current.index;
           return (
-            <div key={s.id} className="flex flex-col items-center flex-1 relative z-10">
-              <div className={[
-                'h-10 w-10 rounded-full flex items-center justify-center font-bold text-sm border-2',
-                isActive ? 'bg-accent text-accent-foreground border-accent ring-4 ring-accent/20'
-                : isPast ? 'bg-foreground text-background border-foreground'
-                : 'bg-background text-muted-foreground border-border',
-              ].join(' ')}>
-                {s.index}
+            <li
+              key={s.id}
+              className={[
+                'pt-4 pr-4 relative',
+                isActive ? 'border-t-[6px] border-brand -mt-[2px]' : '',
+              ].join(' ')}
+            >
+              <div className="flex items-baseline gap-3">
+                <span
+                  className={[
+                    'font-anton text-2xl tabular-nums',
+                    isActive ? 'text-brand' : isPast ? 'text-foreground' : 'text-muted-foreground',
+                  ].join(' ')}
+                >
+                  0{s.index}
+                </span>
+                <span
+                  className={[
+                    'font-poppins text-xs uppercase tracking-wider leading-tight',
+                    isActive ? 'text-foreground font-semibold' : 'text-muted-foreground',
+                  ].join(' ')}
+                >
+                  {s.label}
+                </span>
               </div>
-              <p className={[
-                'mt-2 text-xs text-center max-w-28',
-                isActive ? 'font-bold text-foreground' : 'text-muted-foreground',
-              ].join(' ')}>
-                {s.label}
-              </p>
-              {isActive && (
-                <p className="mt-1 text-xs text-accent font-semibold">YOU ARE HERE</p>
-              )}
-            </div>
+            </li>
           );
         })}
-      </div>
-    </div>
+      </ol>
+    </header>
   );
 }

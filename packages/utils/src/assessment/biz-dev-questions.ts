@@ -51,7 +51,7 @@ export const BIZ_DEV_QUESTIONS: Question[] = [
       { id: 'a', text: "Inbound from content/SEO/marketing we've built", score: 4 },
       { id: 'b', text: "Referrals from clients and my network", score: 2 },
       { id: 'c', text: "I personally hunt through outbound, podcasts, and events I show up at", score: 1 },
-      { id: 'd', text: "Whatever shows up that week. It is not consistent.", score: 0, hardGate: true },
+      { id: 'd', text: "Whatever shows up that week. It's not consistent.", score: 0, hardGate: true },
     ],
   },
   {
@@ -63,7 +63,7 @@ export const BIZ_DEV_QUESTIONS: Question[] = [
       { id: 'a', text: "20+", score: 4 },
       { id: 'b', text: "10 to 20", score: 3 },
       { id: 'c', text: "4 to 10", score: 2 },
-      { id: 'd', text: "0 to 3, or I would have to count last month to know.", score: 0, hardGate: true },
+      { id: 'd', text: "0 to 3, or I'd have to count last month to know.", score: 0, hardGate: true },
     ],
   },
 
@@ -75,9 +75,9 @@ export const BIZ_DEV_QUESTIONS: Question[] = [
     prompt: "If I shadowed your last 5 closed deals, would I see one sales process, or five?",
     choices: [
       { id: 'a', text: "Five different ones. Every deal is custom.", score: 0 },
-      { id: 'b', text: "Mostly the same shape, but it is all in my head.", score: 1, traps: ['personality'] },
+      { id: 'b', text: "Mostly the same shape, but it's all in my head.", score: 1, traps: ['personality'] },
       { id: 'c', text: "Same shape, sort of documented.", score: 3 },
-      { id: 'd', text: "It is documented, repeatable, and my team uses it.", score: 4 },
+      { id: 'd', text: "It's documented, repeatable, and my team uses it.", score: 4 },
     ],
   },
   {
@@ -89,7 +89,7 @@ export const BIZ_DEV_QUESTIONS: Question[] = [
       { id: 'a', text: "Me talking, walking through what we do.", score: 1, traps: ['personality'] },
       { id: 'b', text: "Asking great questions and listening.", score: 4 },
       { id: 'c', text: "A loose mix that depends on the prospect.", score: 2 },
-      { id: 'd', text: "I have not done one in months. Clients come pre-warmed.", score: 3 },
+      { id: 'd', text: "I haven't done one in months. Clients come pre-warmed.", score: 3 },
     ],
   },
 
@@ -127,8 +127,8 @@ export const BIZ_DEV_QUESTIONS: Question[] = [
     prompt: "Be honest. What do you actually believe a great BD hire will do for you?",
     choices: [
       { id: 'a', text: "Find prospects, build pipeline, and close deals so they drive revenue without me.", score: 0, hardGate: true, traps: ['indispensability', 'more_founder'] },
-      { id: 'b', text: "Follow up on leads I generate, manage conversations I cannot get to, and free up my time.", score: 4 },
-      { id: 'c', text: "I do not fully know. I just know I cannot keep doing this myself.", score: 1, traps: ['more_founder'] },
+      { id: 'b', text: "Follow up on leads I generate, manage conversations I can't get to, and free up my time.", score: 4 },
+      { id: 'c', text: "I don't fully know. I just know I can't keep doing this myself.", score: 1, traps: ['more_founder'] },
       { id: 'd', text: "Replace me in sales entirely so I can run the agency.", score: 1, traps: ['indispensability'] },
     ],
   },
@@ -136,12 +136,12 @@ export const BIZ_DEV_QUESTIONS: Question[] = [
     id: 'q8',
     dimension: 'founder_readiness',
     isHardGateQuestion: true,
-    prompt: "Once they are hired, how much of your week will you spend coaching, strategizing with, and unblocking them for the first 6 months?",
+    prompt: "Once they're hired, how much of your week will you spend coaching, strategizing with, and unblocking them for the first 6 months?",
     choices: [
-      { id: 'a', text: "5+ hours per week. I get that this will not work without me.", score: 4 },
+      { id: 'a', text: "5+ hours per week. I get this won't work without me.", score: 4 },
       { id: 'b', text: "1 to 2 hours. They should mostly be self-sufficient.", score: 1, traps: ['indispensability'] },
-      { id: 'c', text: "I am hiring them so I can stop doing this.", score: 0, hardGate: true, traps: ['more_founder'] },
-      { id: 'd', text: "Honestly, I have not thought about it.", score: 0, hardGate: true },
+      { id: 'c', text: "I'm hiring them so I can stop doing this.", score: 0, hardGate: true, traps: ['more_founder'] },
+      { id: 'd', text: "Honestly, I haven't thought about it.", score: 0, hardGate: true },
     ],
   },
 
@@ -153,7 +153,7 @@ export const BIZ_DEV_QUESTIONS: Question[] = [
     prompt: "If a new BD person needs to make the case to a prospect today, what's ready to put in their hands?",
     choices: [
       { id: 'a', text: "Pitch deck, 5+ written case studies, 3+ named references, a stocked story bank.", score: 4 },
-      { id: 'b', text: "Rough deck, 1 to 2 case studies, references I would need to ask permission for.", score: 2 },
+      { id: 'b', text: "Rough deck, 1 to 2 case studies, references I'd need to ask permission for.", score: 2 },
       { id: 'c', text: "A website with logos. Otherwise I tell stories from memory.", score: 1, traps: ['indispensability'] },
       { id: 'd', text: "Nothing organized. I improvise every call.", score: 0, traps: ['personality', 'indispensability'] },
     ],
@@ -162,7 +162,7 @@ export const BIZ_DEV_QUESTIONS: Question[] = [
     id: 'q10',
     dimension: 'proof_enablement',
     isHardGateQuestion: false,
-    prompt: "If a prospect asked your new BD hire 'what's it like to work with you?', what would they actually say?",
+    prompt: "If a prospect asked your new BD hire \"what's it like to work with you?\", what would they actually say?",
     choices: [
       { id: 'a', text: "Quote a customer, share specific outcomes, point to a documented promise.", score: 4 },
       { id: 'b', text: "Tell a story they've heard me tell.", score: 3 },

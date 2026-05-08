@@ -12,8 +12,7 @@ interface Props {
   compositeScore: number;
 }
 
-const STUDIO_BOOKING_URL = process.env.NEXT_PUBLIC_STUDIO_BOOKING_URL ?? 'https://timkilroy.com/book/studio';
-const GROWTH_BOOKING_URL = process.env.NEXT_PUBLIC_GROWTH_BOOKING_URL ?? 'https://timkilroy.com/book/growth';
+const BD_ASSESSMENT_BOOKING_URL = process.env.NEXT_PUBLIC_BD_ASSESSMENT_BOOKING_URL ?? 'https://timkilroy.com/bd-assessment-call';
 
 const DIMENSION_LABELS: Record<string, string> = {
   lead_flow: 'Lead Flow',
@@ -130,8 +129,8 @@ function flattenChildrenToText(children: React.ReactNode): string {
 }
 
 export function ReportContent({ markdown, ctaTier, assessmentId, dimensions, compositeScore }: Props) {
-  const bookingUrl = ctaTier === 'growth' ? GROWTH_BOOKING_URL : STUDIO_BOOKING_URL;
   const tierLabel = ctaTier === 'growth' ? 'Growth' : 'Studio';
+  const bookingUrl = BD_ASSESSMENT_BOOKING_URL;
 
   return (
     <>
@@ -181,18 +180,6 @@ export function ReportContent({ markdown, ctaTier, assessmentId, dimensions, com
           <span aria-hidden>→</span>
         </a>
       </aside>
-
-      <div className="mt-12 pt-8 border-t border-border">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="/logos/Tim.svg"
-          alt="Tim Kilroy signature"
-          className="h-16 mb-3"
-        />
-        <p className="font-poppins text-sm text-muted-foreground">
-          <span className="font-anton uppercase tracking-wide text-foreground text-base">Tim Kilroy</span> · SalesOS
-        </p>
-      </div>
     </>
   );
 }

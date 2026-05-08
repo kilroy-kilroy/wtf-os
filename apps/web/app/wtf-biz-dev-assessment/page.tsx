@@ -141,10 +141,10 @@ export default function BizDevAssessmentPage() {
             <span className="text-brand">creates deals.</span>
           </h1>
           <p className="font-poppins text-xl md:text-2xl text-foreground/80 mb-3 max-w-2xl leading-snug">
-            They do not create deals. They <em className="not-italic font-semibold text-foreground">follow up</em> leads.
+            They don&apos;t create deals. They <em className="not-italic font-semibold text-foreground">follow up</em> leads.
           </p>
           <p className="font-poppins text-base md:text-lg text-muted-foreground mb-10 max-w-2xl">
-            Are you ready to feed one? Take the 5-minute diagnostic. We will analyze your website, your LinkedIn, and your answers. Then we will tell you straight whether you are ready to hire, what you need to fix first, and how to actually make the hire stick.
+            Are you ready to feed one? Take the 5-minute diagnostic. We&apos;ll analyze your website, your LinkedIn, and your answers. Then we&apos;ll tell you straight whether you&apos;re ready to hire, what you need to fix first, and how to actually make the hire stick.
           </p>
           <button
             onClick={() => setStep('intake')}
@@ -158,7 +158,7 @@ export default function BizDevAssessmentPage() {
             {[
               ['10 questions', 'We ask about your sales engine, your ICP, and how the founder shows up.'],
               ['Live research', "We pull your website and LinkedIn while you fill out the form."],
-              ['Brutally honest', "There is no diplomatic vagueness. You will know what is broken."],
+              ['Brutally honest', "There's no diplomatic vagueness. You'll know what's broken."],
             ].map(([title, desc]) => (
               <li key={title}>
                 <p className="font-anton uppercase text-foreground text-lg leading-tight">{title}</p>
@@ -180,7 +180,7 @@ export default function BizDevAssessmentPage() {
             Tell me about your agency.
           </h2>
           <p className="font-poppins text-base md:text-lg text-muted-foreground mb-12 max-w-xl">
-            I will analyze your website and LinkedIn alongside your answers. This takes three minutes here, then 10 quick questions.
+            I&apos;ll analyze your website and LinkedIn alongside your answers. Three minutes here, then 10 quick questions.
           </p>
 
           <div className="space-y-8">
@@ -255,9 +255,9 @@ export default function BizDevAssessmentPage() {
               </p>
               <div className="space-y-2">
                 {[
-                  { v: 'yes', l: 'Yes. I have the runway and I get the math.' },
-                  { v: 'no', l: 'No. That would put real strain on the business.' },
-                  { v: 'not_sure', l: "I would have to model it." },
+                  { v: 'yes', l: "Yes. I've got the runway and I get the math." },
+                  { v: 'no', l: "No. That would put real strain on the business." },
+                  { v: 'not_sure', l: "I'd have to model it." },
                 ].map(({ v, l }) => {
                   const selected = intakeData.affordability_answer === v;
                   return (
@@ -412,13 +412,13 @@ export default function BizDevAssessmentPage() {
               Your full personalized report is being prepared.
             </p>
             <p className="font-poppins text-sm md:text-base text-background/70">
-              I am analyzing your website and LinkedIn alongside your answers to find the specific gaps you need to fix. Check your inbox in about 5 minutes for the secure link to your full report.
+              I&apos;m analyzing your website and LinkedIn alongside your answers to find the specific gaps you need to fix. Check your inbox in about 5 minutes for the secure link to your full report.
             </p>
           </div>
 
           {submitting && (
             <p className="font-poppins text-xs uppercase tracking-[0.2em] text-muted-foreground mt-8">
-              We are still processing. Feel free to close this tab.
+              We&apos;re still processing. Feel free to close this tab.
             </p>
           )}
         </div>

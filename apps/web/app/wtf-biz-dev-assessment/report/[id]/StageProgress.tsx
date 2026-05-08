@@ -1,7 +1,7 @@
 type Stage = 'all_founder_no_system' | 'half_built_engine' | 'engine_online_hire_ready';
 
 const STAGES: Array<{ id: Stage; label: string; index: number; tagline: string }> = [
-  { id: 'all_founder_no_system',    label: 'All Founder, No System',    index: 1, tagline: "You are the sales system, and that is the problem." },
+  { id: 'all_founder_no_system',    label: 'All Founder, No System',    index: 1, tagline: "You're the sales system, and that's the problem." },
   { id: 'half_built_engine',         label: 'Half-Built Engine',          index: 2, tagline: "Some pieces exist, but nothing compounds yet." },
   { id: 'engine_online_hire_ready', label: 'Engine Online, Hire-Ready',  index: 3, tagline: "Your system is documented, repeatable, and ready for a hire." },
 ];

@@ -54,7 +54,7 @@ export default async function BizDevReportPage({ params }: PageProps) {
           <p className="font-poppins text-lg text-muted-foreground mb-6">
             Your answers and research are saved. We just need to retry the AI step. Email{' '}
             <a href="mailto:tim@timkilroy.com" className="text-brand underline underline-offset-4">tim@timkilroy.com</a>{' '}
-            and I will get this regenerated for you.
+            and I&apos;ll get this regenerated for you.
           </p>
         </div>
       </main>
@@ -70,7 +70,7 @@ export default async function BizDevReportPage({ params }: PageProps) {
             Your report is being prepared.
           </h1>
           <p className="font-poppins text-lg text-muted-foreground mb-6">
-            We are analyzing your website and LinkedIn alongside your answers. This usually takes 2 to 5 minutes. Refresh this page in a moment.
+            We&apos;re analyzing your website and LinkedIn alongside your answers. This usually takes 2 to 5 minutes. Refresh this page in a moment.
           </p>
           {/* eslint-disable-next-line @next/next/no-head-element */}
           <meta httpEquiv="refresh" content="5" />

@@ -160,6 +160,14 @@ const config = {
               borderLeftWidth: "3px",
               paddingLeft: "1.25rem",
             },
+            // Inline images in the body (currently used for the signature SVG
+            // emitted at the close of "A Note From Tim").
+            img: {
+              height: "4rem",
+              width: "auto",
+              marginTop: "0.5rem",
+              marginBottom: "0.5rem",
+            },
             "ul > li::marker": { color: "hsl(var(--brand))" },
             "ol > li::marker": { color: "hsl(var(--brand))" },
             a: {

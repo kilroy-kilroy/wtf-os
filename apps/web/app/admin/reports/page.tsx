@@ -31,6 +31,7 @@ interface UserData {
     discoveryPro: number;
     assessments: number;
     visibilityLab: number;
+    bizDev: number;
   };
 }
 
@@ -99,6 +100,23 @@ interface VisibilityReport {
   createdAt: string;
 }
 
+interface BizDevReport {
+  id: string;
+  userId: string | null;
+  userName: string;
+  userEmail: string;
+  agencyName: string | null;
+  companyName: string | null;
+  compositeScore: number | null;
+  verdict: string | null;
+  stage: string | null;
+  ctaTier: string | null;
+  dominantTrap: string | null;
+  reportStatus: string | null;
+  researchStatus: string | null;
+  createdAt: string;
+}
+
 interface ReportsData {
   agencies: AgencyData[];
   inferredAgencies?: AgencyData[];
@@ -109,11 +127,12 @@ interface ReportsData {
     discovery: DiscoveryReport[];
     assessments: AssessmentReport[];
     visibility: VisibilityReport[];
+    bizDev: BizDevReport[];
   };
 }
 
 type TabType = 'agency' | 'user' | 'product';
-type ProductFilter = 'all' | 'callLabLite' | 'callLabPro' | 'callLabInstant' | 'discoveryLite' | 'discoveryPro' | 'assessments' | 'visibilityLab';
+type ProductFilter = 'all' | 'callLabLite' | 'callLabPro' | 'callLabInstant' | 'discoveryLite' | 'discoveryPro' | 'assessments' | 'visibilityLab' | 'bizDev';
 
 const PRODUCT_LABELS: Record<string, string> = {
   callLabInstant: 'Call Lab Instant',
@@ -123,6 +142,7 @@ const PRODUCT_LABELS: Record<string, string> = {
   discoveryPro: 'Discovery Lab Pro',
   assessments: 'WTF Assessment',
   visibilityLab: 'Visibility Lab',
+  bizDev: 'BD Hire Readiness',
 };
 
 const PRODUCT_COLORS: Record<string, string> = {
@@ -133,6 +153,7 @@ const PRODUCT_COLORS: Record<string, string> = {
   discoveryPro: '#E51B23',
   assessments: '#f59e0b',
   visibilityLab: '#a855f7',
+  bizDev: '#c45a3b',
 };
 
 // ============================================
@@ -165,7 +186,7 @@ function scoreColor(score: number | null, max: number = 10): string {
 }
 
 function totalReports(counts: UserData['reportCounts']): number {
-  return counts.callLabLite + counts.callLabPro + (counts.callLabInstant || 0) + counts.discoveryLite + counts.discoveryPro + counts.assessments + (counts.visibilityLab || 0);
+  return counts.callLabLite + counts.callLabPro + (counts.callLabInstant || 0) + counts.discoveryLite + counts.discoveryPro + counts.assessments + (counts.visibilityLab || 0) + (counts.bizDev || 0);
 }
 
 // ============================================
@@ -329,7 +350,7 @@ function AgencyView({
       const usersWithCounts = agency.users.map((u) => ({
         ...u,
         reportCounts: userCountsMap.get(u.id) || {
-          callLabLite: 0, callLabPro: 0, callLabInstant: 0, discoveryLite: 0, discoveryPro: 0, assessments: 0, visibilityLab: 0,
+          callLabLite: 0, callLabPro: 0, callLabInstant: 0, discoveryLite: 0, discoveryPro: 0, assessments: 0, visibilityLab: 0, bizDev: 0,
         },
       }));
       const agencyReportCount = usersWithCounts.reduce((sum, u) => sum + totalReports(u.reportCounts), 0);
@@ -377,6 +398,7 @@ function AgencyView({
     if (product === 'discoveryPro') return data.reports.discovery.filter((r) => r.userId === userId && r.version === 'pro');
     if (product === 'assessments') return data.reports.assessments.filter((r) => r.userId === userId);
     if (product === 'visibilityLab') return data.reports.visibility.filter((r) => r.userId === userId);
+    if (product === 'bizDev') return (data.reports.bizDev || []).filter((r) => r.userId === userId);
     return [];
   };
 
@@ -459,6 +481,9 @@ function AgencyView({
                         )}
                         {product === 'assessments' && (
                           <ReportLink href={`/growthos/results/${r.id}?admin=1`}>View</ReportLink>
+                        )}
+                        {product === 'bizDev' && (
+                          <ReportLink href={`/wtf-biz-dev-assessment/report/${r.id}?admin=1`}>View</ReportLink>
                         )}
                       </div>
                     ))}
@@ -654,6 +679,7 @@ function UserView({
       discoveryPro: data.reports.discovery.filter((r) => r.userId === userId && r.version === 'pro'),
       assessments: data.reports.assessments.filter((r) => r.userId === userId),
       visibilityLab: data.reports.visibility.filter((r) => r.userId === userId),
+      bizDev: (data.reports.bizDev || []).filter((r) => r.userId === userId),
     };
   };
 
@@ -691,6 +717,7 @@ function UserView({
         {isDiscovery && <ReportLink href={`/discovery-lab/report/${r.id}?admin=1`}>View</ReportLink>}
         {isVisibility && <ReportLink href={`/visibility-lab/report/${r.id}?admin=1`}>View</ReportLink>}
         {product === 'assessments' && <ReportLink href={`/growthos/results/${r.id}?admin=1`}>View</ReportLink>}
+        {product === 'bizDev' && <ReportLink href={`/wtf-biz-dev-assessment/report/${r.id}?admin=1`}>View</ReportLink>}
       </div>
     );
   };
@@ -857,6 +884,7 @@ function ProductView({
     { key: 'discoveryLite', label: 'Discovery Lab' },
     { key: 'visibilityLab', label: 'Visibility Lab' },
     { key: 'assessments', label: 'WTF Assessment' },
+    { key: 'bizDev', label: 'BD Hire Readiness' },
   ];
 
   const showCallLab = selectedProduct === 'all' || selectedProduct === 'callLabLite' || selectedProduct === 'callLabPro';
@@ -864,6 +892,7 @@ function ProductView({
   const showDiscovery = selectedProduct === 'all' || selectedProduct === 'discoveryLite' || selectedProduct === 'discoveryPro';
   const showVisibility = selectedProduct === 'all' || selectedProduct === 'visibilityLab';
   const showAssessments = selectedProduct === 'all' || selectedProduct === 'assessments';
+  const showBizDev = selectedProduct === 'all' || selectedProduct === 'bizDev';
 
   const callLabReports = useMemo(() => {
     // Merge call_lab_reports with pro/lite call_scores into one Call Lab view
@@ -905,6 +934,10 @@ function ProductView({
   const visibilityReports = useMemo(() => {
     return sortReports(applyUserFilter(data.reports.visibility));
   }, [data.reports.visibility, sortReports, applyUserFilter]);
+
+  const bizDevReports = useMemo(() => {
+    return sortReports(applyUserFilter(data.reports.bizDev || []));
+  }, [data.reports.bizDev, sortReports, applyUserFilter]);
 
   return (
     <div>
@@ -1202,6 +1235,69 @@ function ProductView({
         </div>
       )}
 
+      {/* BD Hire Readiness table */}
+      {showBizDev && bizDevReports.length > 0 && (
+        <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4 mb-4">
+          <h3 className="text-sm font-bold text-white mb-3">
+            BD Hire Readiness
+            <span className="text-slate-500 font-normal ml-2">({bizDevReports.length})</span>
+          </h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-600/50">
+                  <SortHeader field="compositeScore">Score</SortHeader>
+                  <th className="text-left text-xs text-slate-500 pb-2 pr-4 font-medium">Verdict</th>
+                  <th className="text-left text-xs text-slate-500 pb-2 pr-4 font-medium">Stage</th>
+                  <th className="text-left text-xs text-slate-500 pb-2 pr-4 font-medium">CTA</th>
+                  <th className="text-left text-xs text-slate-500 pb-2 pr-4 font-medium">Status</th>
+                  <SortHeader field="companyName">Agency</SortHeader>
+                  <SortHeader field="userName">User</SortHeader>
+                  <SortHeader field="createdAt">Date</SortHeader>
+                  <th className="text-left text-xs text-slate-500 pb-2 font-medium"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {bizDevReports.map((r: any) => {
+                  const verdictColor = r.verdict === 'ready' ? '#22c55e' : '#f59e0b';
+                  const statusColor = r.reportStatus === 'completed' ? '#22c55e' : r.reportStatus === 'failed' ? '#ef4444' : '#94a3b8';
+                  return (
+                    <tr key={r.id} className="border-b border-slate-700/30">
+                      <td className="py-2 pr-4">
+                        <span className="font-mono text-xs" style={{ color: scoreColor(r.compositeScore, 100) }}>
+                          {formatScore(r.compositeScore, 100)}
+                        </span>
+                      </td>
+                      <td className="py-2 pr-4">
+                        <span className="text-[10px] font-medium uppercase px-1.5 py-0.5 rounded" style={{ color: verdictColor, backgroundColor: `${verdictColor}20` }}>
+                          {r.verdict || '-'}
+                        </span>
+                      </td>
+                      <td className="py-2 pr-4 text-slate-300 text-xs">{r.stage?.replace(/_/g, ' ') || '-'}</td>
+                      <td className="py-2 pr-4 text-slate-300 text-xs uppercase">{r.ctaTier || '-'}</td>
+                      <td className="py-2 pr-4">
+                        <span className="text-[10px] font-medium uppercase" style={{ color: statusColor }}>
+                          {r.reportStatus || 'pending'}
+                        </span>
+                      </td>
+                      <td className="py-2 pr-4 text-white text-xs font-medium">{r.companyName || r.agencyName || '-'}</td>
+                      <td className="py-2 pr-4 text-xs">
+                        <span className="text-white">{r.userName}</span>
+                        <span className="text-slate-600 ml-1 text-[10px]">{r.userEmail}</span>
+                      </td>
+                      <td className="py-2 pr-4 text-slate-500 text-xs">{formatTimeAgo(r.createdAt)}</td>
+                      <td className="py-2">
+                        <ReportLink href={`/wtf-biz-dev-assessment/report/${r.id}?admin=1`}>View</ReportLink>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
       {/* Empty states */}
       {showCallLab && callLabReports.length === 0 && selectedProduct !== 'all' && (
         <EmptyState message="No Call Lab reports found" />
@@ -1214,6 +1310,9 @@ function ProductView({
       )}
       {showAssessments && assessmentReports.length === 0 && selectedProduct !== 'all' && (
         <EmptyState message="No assessments found" />
+      )}
+      {showBizDev && bizDevReports.length === 0 && selectedProduct !== 'all' && (
+        <EmptyState message="No BD readiness reports found" />
       )}
     </div>
   );
@@ -1364,7 +1463,8 @@ export default function AdminReportsPage() {
   const totalDiscovery = data.reports.discovery.length;
   const totalAssessments = data.reports.assessments.length;
   const totalVisibility = data.reports.visibility?.length || 0;
-  const totalAllReports = totalCallLab + totalDiscovery + totalAssessments + totalVisibility;
+  const totalBizDev = data.reports.bizDev?.length || 0;
+  const totalAllReports = totalCallLab + totalDiscovery + totalAssessments + totalVisibility + totalBizDev;
 
   const tabs: Array<{ key: TabType; label: string }> = [
     { key: 'agency', label: 'By Agency' },
@@ -1397,6 +1497,7 @@ export default function AdminReportsPage() {
             <span style={{ color: '#a855f7' }}>{data.reports.visibility?.filter((r: any) => r.version === 'pro').length || 0} Vis Pro</span>
             <span style={{ color: '#a855f7' }}>{data.reports.visibility?.filter((r: any) => r.version !== 'pro').length || 0} Visibility</span>
             <span style={{ color: '#f59e0b' }}>{totalAssessments} Assessment</span>
+            <span style={{ color: '#c45a3b' }}>{totalBizDev} BD Readiness</span>
           </div>
         </div>
         <div className="flex gap-2">

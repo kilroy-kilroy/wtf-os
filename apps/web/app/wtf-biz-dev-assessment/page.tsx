@@ -19,7 +19,6 @@ const intakeSchema = z.object({
   customer_description: z.string().min(10, 'A sentence or two. Who do you sell to?'),
   revenue_band: z.enum(['<$1M', '$1M-$3M', '$3M-$5M', '$5M-$10M', '$10M+']),
   affordability_answer: z.enum(['yes', 'no', 'not_sure']),
-  newsletter_opt_in: z.boolean(),
 });
 
 type IntakeData = z.infer<typeof intakeSchema>;
@@ -46,9 +45,7 @@ const labelClass = 'block font-poppins text-xs uppercase tracking-[0.2em] text-f
 
 export default function BizDevAssessmentPage() {
   const [step, setStep] = useState<FlowStep>('landing');
-  const [intakeData, setIntakeData] = useState<Partial<IntakeData>>({
-    newsletter_opt_in: false,
-  });
+  const [intakeData, setIntakeData] = useState<Partial<IntakeData>>({});
   const [intakeErrors, setIntakeErrors] = useState<Record<string, string>>({});
   const [currentQ, setCurrentQ] = useState(0);
   const [answers, setAnswers] = useState<Partial<AssessmentAnswers>>({});
@@ -283,16 +280,6 @@ export default function BizDevAssessmentPage() {
                 })}
               </div>
             </fieldset>
-
-            <label className="flex items-start gap-3 cursor-pointer pt-2">
-              <input
-                type="checkbox"
-                checked={intakeData.newsletter_opt_in ?? false}
-                onChange={(e) => setIntakeData(d => ({ ...d, newsletter_opt_in: e.target.checked }))}
-                className="mt-1 accent-brand"
-              />
-              <span className="font-poppins text-sm text-muted-foreground">Get Tim&apos;s newsletter for agency growth without the fluff.</span>
-            </label>
 
             <button
               type="submit"

@@ -57,6 +57,7 @@ export async function GET(request: NextRequest) {
       discoveryResult,
       assessmentsResult,
       visibilityResult,
+      bizDevResult,
     ] = await Promise.all([
       (supabase as any)
         .from('agencies')
@@ -95,6 +96,11 @@ export async function GET(request: NextRequest) {
         .select('id, user_id, email, brand_name, visibility_score, vvv_clarity_score, brand_archetype_name, version, created_at')
         .order('created_at', { ascending: false })
         .limit(1000),
+      (supabase as any)
+        .from('biz_dev_assessments')
+        .select('id, user_id, email, name, company_name, composite_score, verdict, stage, cta_tier, dominant_trap, report_status, research_status, created_at')
+        .order('created_at', { ascending: false })
+        .limit(1000),
     ]);
 
     const agencies = agenciesResult.data || [];
@@ -105,6 +111,7 @@ export async function GET(request: NextRequest) {
     const discoveryBriefs = discoveryResult.data || [];
     const assessments = assessmentsResult.data || [];
     const visibilityReports = visibilityResult.data || [];
+    const bizDevAssessments = bizDevResult.data || [];
 
     // Log query errors for debugging (queries fail silently with (supabase as any))
     if (callLabResult.error) console.error('[Admin Reports] call_lab_reports query error:', callLabResult.error);
@@ -166,6 +173,7 @@ export async function GET(request: NextRequest) {
       discoveryPro: 0,
       assessments: 0,
       visibilityLab: 0,
+      bizDev: 0,
     });
 
     // Build a lookup from call_lab_reports for enriching call_scores with buyer/company
@@ -208,6 +216,12 @@ export async function GET(request: NextRequest) {
       const counts = userReportCounts.get(r.user_id)!;
       if (r.version === 'pro') counts.visibilityLabPro = (counts.visibilityLabPro || 0) + 1;
       else counts.visibilityLab++;
+    }
+
+    for (const r of bizDevAssessments) {
+      if (!r.user_id) continue;
+      if (!userReportCounts.has(r.user_id)) userReportCounts.set(r.user_id, initCounts());
+      userReportCounts.get(r.user_id)!.bizDev++;
     }
 
     // Helpers
@@ -388,6 +402,22 @@ export async function GET(request: NextRequest) {
           clarityScore: r.vvv_clarity_score,
           archetypeName: r.brand_archetype_name,
           version: r.version || 'lite',
+          createdAt: r.created_at,
+        })),
+        bizDev: bizDevAssessments.map((r: any) => ({
+          id: r.id,
+          userId: r.user_id,
+          userName: r.user_id ? getUserName(r.user_id) : (r.name || r.email || 'Unknown'),
+          userEmail: r.user_id ? getUserEmail(r.user_id) : (r.email || ''),
+          agencyName: r.company_name || getAgencyNameForUser(r.user_id),
+          companyName: r.company_name,
+          compositeScore: r.composite_score,
+          verdict: r.verdict,
+          stage: r.stage,
+          ctaTier: r.cta_tier,
+          dominantTrap: r.dominant_trap,
+          reportStatus: r.report_status,
+          researchStatus: r.research_status,
           createdAt: r.created_at,
         })),
       },

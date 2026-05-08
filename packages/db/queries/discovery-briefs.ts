@@ -1,9 +1,12 @@
 import type { SupabaseClient } from '../client';
-import type { Database, Json } from '../types';
+import type { Json } from '../types';
 
-type DiscoveryBriefRow = Database['public']['Tables']['discovery_briefs']['Row'];
-type DiscoveryBriefInsert = Database['public']['Tables']['discovery_briefs']['Insert'];
-type DiscoveryBriefUpdate = Database['public']['Tables']['discovery_briefs']['Update'];
+// discovery_briefs is not yet in the generated Database type; queries below
+// already use `(supabase as any)` for the same reason. Regenerate types via
+// `supabase gen types typescript` once the table is added to the schema.
+type DiscoveryBriefRow = any;
+type DiscoveryBriefInsert = any;
+type DiscoveryBriefUpdate = any;
 
 export interface CreateDiscoveryBriefParams {
   user_id?: string;

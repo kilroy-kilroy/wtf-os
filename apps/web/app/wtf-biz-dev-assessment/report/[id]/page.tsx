@@ -19,11 +19,11 @@ export default async function BizDevReportPage({ params }: PageProps) {
   }
 
   const svc = createServerClient();
-  const { data: assessment, error } = await svc
+  const { data: assessment, error } = await (svc as any)
     .from('biz_dev_assessments')
     .select('*')
     .eq('id', id)
-    .single();
+    .single() as { data: Record<string, any> | null; error: unknown };
 
   if (error || !assessment) {
     return (

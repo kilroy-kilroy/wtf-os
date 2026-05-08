@@ -17,11 +17,11 @@ export async function POST(request: NextRequest) {
     const { email, assessmentId } = parsed.data;
 
     const svc = createServerClient();
-    const { data: row } = await svc
+    const { data: row } = await (svc as any)
       .from('biz_dev_assessments')
       .select('email, name, verdict, stage, composite_score, cta_tier, dominant_trap, dimensions')
       .eq('id', assessmentId)
-      .single();
+      .single() as { data: Record<string, any> | null };
 
     // Always return success to avoid confirming whether email matches
     if (!row || row.email.toLowerCase() !== email.toLowerCase()) {

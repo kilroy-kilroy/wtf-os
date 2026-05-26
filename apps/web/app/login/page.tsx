@@ -197,6 +197,9 @@ function LoginContent() {
 
       {/* Content */}
       <div className="relative z-10 w-full max-w-md px-5">
+        <h1 className="sr-only">
+          {mode === 'login' ? 'Log in to TriOS' : mode === 'signup' ? 'Create your TriOS account' : 'Reset your TriOS password'}
+        </h1>
         {/* Header */}
         <div className="text-center mb-10">
           <Image

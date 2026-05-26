@@ -154,6 +154,7 @@ export default function VisibilityLabPage() {
         toolLogoSrc="/logos/VisibilityLabSQTransparent.png"
         toolLogoAlt="Visibility Lab"
       />
+      <h1 className="sr-only">Visibility Lab — Free Brand Visibility Diagnostic</h1>
       {isLoading && <LoadingScreen />}
 
       {!report ? (

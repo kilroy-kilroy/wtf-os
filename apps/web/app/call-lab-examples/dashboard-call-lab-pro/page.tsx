@@ -187,6 +187,7 @@ One adjustment: Before any call ends, state a specific next step with a date. No
 export default function ExampleDashboardPage() {
   return (
     <div className="min-h-screen bg-black">
+      <h1 className="sr-only">Call Lab Pro Dashboard — Sample Sales Call Analytics</h1>
       {/* Header */}
       <header className="border-b border-[#333] px-4 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">

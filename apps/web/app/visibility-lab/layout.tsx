@@ -1,14 +1,14 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Discovery Lab App | Instant Prospect Research & Sales Call Prep',
-  description: 'Log in to Discovery Lab to generate deep prospect insights, company overviews, pain points, and smart discovery questions in 60 seconds so you walk into sales calls ready, not guessing.',
+  title: 'Visibility Lab App | AI Brand Visibility & Demand Analyzer',
+  description: 'Use Visibility Lab to analyze where your brand shows up across channels, audiences and competitors — surface visibility gaps and demand opportunities you are missing.',
   // This is the live tool, not a marketing page. Keep it out of organic search so it
   // doesn't cannibalize the landing page on timkilroy.com, which is the SEO asset.
   robots: { index: false, follow: true },
 };
 
-export default function DiscoveryLabLayout({
+export default function VisibilityLabLayout({
   children,
 }: {
   children: React.ReactNode;

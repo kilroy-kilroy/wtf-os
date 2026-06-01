@@ -13,30 +13,17 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
 
     // Core tools
-    {
-      url: `${baseUrl}/call-lab`,
-      lastModified: new Date(),
-      changeFrequency: 'weekly',
-      priority: 0.9,
-    },
+    // Note: /call-lab (the live tool) is intentionally omitted. It's noindex'd so it
+    // doesn't compete with the marketing landing page at timkilroy.com/call-lab.
     {
       url: `${baseUrl}/call-lab-instant`,
       lastModified: new Date(),
       changeFrequency: 'weekly',
       priority: 0.9,
     },
-    {
-      url: `${baseUrl}/discovery-lab`,
-      lastModified: new Date(),
-      changeFrequency: 'weekly',
-      priority: 0.9,
-    },
-    {
-      url: `${baseUrl}/visibility-lab`,
-      lastModified: new Date(),
-      changeFrequency: 'weekly',
-      priority: 0.9,
-    },
+    // Note: /discovery-lab and /visibility-lab (the live tools) are intentionally
+    // omitted — they're noindex'd so they don't compete with their marketing landing
+    // pages on timkilroy.com.
     {
       url: `${baseUrl}/growthos`,
       lastModified: new Date(),
@@ -51,23 +38,14 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
 
     // Pro / upgrade pages
-    {
-      url: `${baseUrl}/call-lab-pro`,
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.8,
-    },
+    // Note: /call-lab-pro (redirects to the marketing page) and /discovery-lab-pro
+    // (live tool) are intentionally omitted — both are noindex'd so the marketing
+    // landing pages on timkilroy.com stay the single SEO destination.
     {
       url: `${baseUrl}/call-lab/pro`,
       lastModified: new Date(),
       changeFrequency: 'monthly',
       priority: 0.7,
-    },
-    {
-      url: `${baseUrl}/discovery-lab-pro`,
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.8,
     },
     {
       url: `${baseUrl}/upgrade`,

@@ -1121,11 +1121,15 @@ function formatExperience(experience: any[]): string {
 
 const BRIGHT_DATA_API = process.env.BRIGHT_DATA_API;
 const BRIGHT_DATA_BASE = 'https://api.brightdata.com/datasets/v3';
+// SERP is a separate BrightData product (SERP API) that needs a dedicated zone,
+// not a datasets/v3 collector. Set BRIGHT_DATA_SERP_ZONE to the SERP zone name.
+const BRIGHT_DATA_SERP_ZONE = process.env.BRIGHT_DATA_SERP_ZONE;
 
 const BD_DISCOVERY_DATASETS = {
   linkedinProfile: 'gd_l1viktl72bvl7bjuj0',
   linkedinPosts: 'gd_lyy3tktm25m4avu764',
-  googleSerp: 'gd_l1vijqt9jfj7olije8',
+  // NOTE: SERP is not a datasets/v3 collector — it uses the SERP API + a zone
+  // (see researchGoogleSerp / BRIGHT_DATA_SERP_ZONE). The old gd_… id 404s.
 };
 
 export const BRIGHTDATA_AUTH_FAILED_PREFIX = 'BRIGHTDATA_AUTH_FAILED';
@@ -1164,11 +1168,25 @@ function composedSignal(timeoutMs: number, parentSignal?: AbortSignal): AbortSig
   return controller.signal;
 }
 
-async function bdDiscoveryTrigger(datasetId: string, input: any[]): Promise<string | null> {
+async function bdDiscoveryTrigger(
+  datasetId: string,
+  input: any[],
+  extraParams?: Record<string, string>
+): Promise<string | null> {
   if (!BRIGHT_DATA_API) return null;
 
+  // Build query string — extraParams allows discovery mode
+  // (e.g. type=discover_new&discover_by=profile_url) on top of the defaults.
+  const qs = new URLSearchParams({
+    dataset_id: datasetId,
+    format: 'json',
+    uncompressed_webhook: 'true',
+    ...extraParams,
+  }).toString();
+  const triggerUrl = `${BRIGHT_DATA_BASE}/trigger?${qs}`;
+
   try {
-    const response = await fetch(`${BRIGHT_DATA_BASE}/trigger?dataset_id=${datasetId}&format=json&uncompressed_webhook=true`, {
+    const response = await fetch(triggerUrl, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${BRIGHT_DATA_API}`,
@@ -1181,8 +1199,10 @@ async function bdDiscoveryTrigger(datasetId: string, input: any[]): Promise<stri
     throwIfBrightDataAuthFailed(response.status, `trigger ${datasetId}`);
 
     if (!response.ok) {
+      const body = await response.text().catch(() => '');
+      console.warn(`[BrightData:Discovery] Trigger ${datasetId} → ${response.status}: ${body.slice(0, 300)} — retrying with wrapped input`);
       // Retry with wrapped format
-      const response2 = await fetch(`${BRIGHT_DATA_BASE}/trigger?dataset_id=${datasetId}&format=json&uncompressed_webhook=true`, {
+      const response2 = await fetch(triggerUrl, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${BRIGHT_DATA_API}`,
@@ -1193,7 +1213,11 @@ async function bdDiscoveryTrigger(datasetId: string, input: any[]): Promise<stri
       });
 
       throwIfBrightDataAuthFailed(response2.status, `trigger ${datasetId} (retry)`);
-      if (!response2.ok) return null;
+      if (!response2.ok) {
+        const body2 = await response2.text().catch(() => '');
+        console.error(`[BrightData:Discovery] Trigger ${datasetId} failed → ${response2.status}: ${body2.slice(0, 300)}`);
+        return null;
+      }
       const data2 = await response2.json();
       return data2.snapshot_id || null;
     }
@@ -1402,33 +1426,24 @@ export async function researchLinkedInPosts(linkedinUrl: string, abortSignal?: A
 
   try {
     const url = linkedinUrl.trim().replace(/\/$/, '');
-    console.log(`[Discovery:v2] Scraping LinkedIn posts: ${url}`);
+    console.log(`[Discovery:v2] Discovering LinkedIn posts by profile: ${url}`);
 
-    const fetchSignal = composedSignal(120000, abortSignal);
-    const response = await fetch(`${BRIGHT_DATA_BASE}/scrape?dataset_id=${BD_DISCOVERY_DATASETS.linkedinPosts}&format=json&include_errors=true`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${BRIGHT_DATA_API}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ input: [{ url }] }),
-      signal: fetchSignal,
-    });
-
-    throwIfBrightDataAuthFailed(response.status, 'scrape linkedin-posts');
-
-    let results: any[];
-    if (response.status === 202) {
-      const data = await response.json();
-      if (!data.snapshot_id) return null;
-      results = await bdDiscoveryPoll(data.snapshot_id, 120000, abortSignal);
-    } else if (response.ok) {
-      results = await response.json();
-      if (!Array.isArray(results)) results = [results];
-    } else {
+    // The LinkedIn Posts dataset rejects profile URLs on the collect endpoint —
+    // collect mode expects individual post URLs (/pulse, /posts, /feed/update),
+    // so a profile URL 400s ("Value should match pattern ...pulse|posts...").
+    // To get a person's posts from their profile URL we must use discovery mode,
+    // which is async-only: trigger, then poll the snapshot.
+    const snapshotId = await bdDiscoveryTrigger(
+      BD_DISCOVERY_DATASETS.linkedinPosts,
+      [{ url }],
+      { type: 'discover_new', discover_by: 'profile_url' }
+    );
+    if (!snapshotId) {
+      console.warn('[Discovery:v2] LinkedIn posts discovery returned no snapshot_id for:', url);
       return null;
     }
 
+    const results = await bdDiscoveryPoll(snapshotId, 120000, abortSignal);
     if (!results.length) return null;
 
     // Filter to profile owner's posts
@@ -1507,50 +1522,65 @@ export async function researchGoogleSerp(
   abortSignal?: AbortSignal
 ): Promise<GoogleSerpResult | null> {
   if (!BRIGHT_DATA_API || !keywords.length) return null;
+  if (!BRIGHT_DATA_SERP_ZONE) {
+    console.warn('[Discovery:v2] BRIGHT_DATA_SERP_ZONE not set — SERP skipped. Create a SERP API zone in BrightData and set BRIGHT_DATA_SERP_ZONE.');
+    return null;
+  }
 
   try {
-    console.log(`[Discovery:v2] SERP search for ${keywords.length} keywords, target: ${targetDomain}`);
+    console.log(`[Discovery:v2] SERP API for ${keywords.length} keywords, target: ${targetDomain}`);
 
-    const input = keywords.map(keyword => ({
-      keyword,
-      url: `https://www.google.com/search?q=${encodeURIComponent(keyword)}`,
-      country: 'us',
-      language: 'en',
-    }));
+    // SERP is the SERP API product (Direct API /request + a SERP zone), NOT a
+    // datasets/v3 collector. We request one Google search per keyword with
+    // brd_json=1 so BrightData returns parsed JSON (organic results, ranks).
+    const perKeyword = await Promise.all(
+      keywords.map(async (keyword) => {
+        try {
+          const googleUrl = `https://www.google.com/search?q=${encodeURIComponent(keyword)}&brd_json=1`;
+          const response = await fetch('https://api.brightdata.com/request', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${BRIGHT_DATA_API}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ zone: BRIGHT_DATA_SERP_ZONE, url: googleUrl, format: 'raw' }),
+            signal: composedSignal(30000, abortSignal),
+          });
 
-    const snapshotId = await bdDiscoveryTrigger(BD_DISCOVERY_DATASETS.googleSerp, input);
-    if (!snapshotId) {
-      // Try synchronous /scrape endpoint
-      const fetchSignal = composedSignal(120000, abortSignal);
-      const response = await fetch(`${BRIGHT_DATA_BASE}/scrape?dataset_id=${BD_DISCOVERY_DATASETS.googleSerp}&format=json&include_errors=true`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${BRIGHT_DATA_API}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ input }),
-        signal: fetchSignal,
-      });
+          throwIfBrightDataAuthFailed(response.status, 'serp-api request');
+          if (!response.ok) {
+            const body = await response.text().catch(() => '');
+            console.error(`[Discovery:v2] SERP API → ${response.status} for "${keyword}": ${body.slice(0, 300)}`);
+            return { keyword, parsed: null as any };
+          }
 
-      throwIfBrightDataAuthFailed(response.status, 'scrape google-serp');
+          // brd_json=1 returns JSON, but the Direct API wraps it as a string in
+          // some configs — handle both.
+          const raw = await response.text();
+          let parsed: any;
+          try {
+            parsed = JSON.parse(raw);
+            if (typeof parsed === 'string') parsed = JSON.parse(parsed);
+          } catch {
+            console.error(`[Discovery:v2] SERP API returned non-JSON for "${keyword}"`);
+            return { keyword, parsed: null as any };
+          }
+          return { keyword, parsed };
+        } catch (e: any) {
+          if (isBrightDataAuthError(e)) throw e;
+          console.error(`[Discovery:v2] SERP API failed for "${keyword}":`, e.message);
+          return { keyword, parsed: null as any };
+        }
+      })
+    );
 
-      if (!response.ok) return null;
+    if (!perKeyword.some(p => p.parsed)) return null;
 
-      let results: any[];
-      if (response.status === 202) {
-        const data = await response.json();
-        if (!data.snapshot_id) return null;
-        results = await bdDiscoveryPoll(data.snapshot_id, 120000, abortSignal);
-      } else {
-        results = await response.json();
-        if (!Array.isArray(results)) results = [results];
-      }
-
-      return parseSerpResults(results, keywords, targetDomain);
-    }
-
-    const results = await bdDiscoveryPoll(snapshotId, 120000, abortSignal);
-    return parseSerpResults(results, keywords, targetDomain);
+    // Index-align with `keywords` so parseSerpResults can match by position.
+    const normalized = perKeyword.map(p =>
+      p.parsed ? { keyword: p.keyword, ...p.parsed } : { keyword: p.keyword }
+    );
+    return parseSerpResults(normalized, keywords, targetDomain);
   } catch (error: any) {
     if (isBrightDataAuthError(error)) throw error;
     console.error('[Discovery:v2] Google SERP search failed:', error.message);

@@ -179,12 +179,26 @@ const BD_DATASETS = {
   chatgpt: 'gd_m7aof0k82r803d5bjm',
 };
 
-async function bdTrigger(datasetId: string, input: any[]): Promise<string | null> {
+async function bdTrigger(
+  datasetId: string,
+  input: any[],
+  extraParams?: Record<string, string>
+): Promise<string | null> {
   if (!BRIGHT_DATA_API) return null;
 
+  // extraParams enables discovery mode (type=discover_new&discover_by=profile_url)
+  // on top of the defaults.
+  const qs = new URLSearchParams({
+    dataset_id: datasetId,
+    format: 'json',
+    uncompressed_webhook: 'true',
+    ...extraParams,
+  }).toString();
+  const triggerUrl = `${BRIGHT_DATA_BASE}/trigger?${qs}`;
+
   try {
-    // Try trigger endpoint with bare array first, fall back to scrape endpoint
-    const response = await fetch(`${BRIGHT_DATA_BASE}/trigger?dataset_id=${datasetId}&format=json&uncompressed_webhook=true`, {
+    // Try trigger endpoint with bare array first, fall back to wrapped format
+    const response = await fetch(triggerUrl, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${BRIGHT_DATA_API}`,
@@ -199,7 +213,7 @@ async function bdTrigger(datasetId: string, input: any[]): Promise<string | null
       console.error(`[BrightData] Trigger (bare array) failed for ${datasetId}: ${response.status} - ${body}`);
 
       // Retry with {"input": [...]} wrapper format
-      const response2 = await fetch(`${BRIGHT_DATA_BASE}/trigger?dataset_id=${datasetId}&format=json&uncompressed_webhook=true`, {
+      const response2 = await fetch(triggerUrl, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${BRIGHT_DATA_API}`,
@@ -322,36 +336,23 @@ async function bdScrapeLinkedInPosts(linkedinUrl: string | undefined): Promise<A
   if (!BRIGHT_DATA_API || !linkedinUrl) return null;
 
   try {
-    // Use synchronous /scrape endpoint with "discover by profile url" mode
+    // The posts dataset rejects profile URLs in collect mode (it wants individual
+    // post URLs). Discovery-by-profile-url is the correct mode and is async-only,
+    // so trigger then poll the snapshot.
     const url = linkedinUrl.trim().replace(/\/$/, '');
-    console.log(`[BrightData] Scraping LinkedIn posts (discover by profile): ${url}`);
+    console.log(`[BrightData] Discovering LinkedIn posts by profile: ${url}`);
 
-    const response = await fetch(`${BRIGHT_DATA_BASE}/scrape?dataset_id=${BD_DATASETS.linkedinPosts}&format=json&include_errors=true`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${BRIGHT_DATA_API}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ input: [{ url }] }),
-      signal: AbortSignal.timeout(45000),
-    });
-
-    if (!response.ok) {
-      const body = await response.text().catch(() => '');
-      console.error(`[BrightData] LinkedIn posts scrape failed: ${response.status} - ${body}`);
+    const snapshotId = await bdTrigger(
+      BD_DATASETS.linkedinPosts,
+      [{ url }],
+      { type: 'discover_new', discover_by: 'profile_url' }
+    );
+    if (!snapshotId) {
+      console.warn(`[BrightData] LinkedIn posts discovery returned no snapshot_id for: ${url}`);
       return null;
     }
 
-    let results: any[];
-    if (response.status === 202) {
-      const data = await response.json();
-      if (!data.snapshot_id) return null;
-      results = await bdPollAndDownload(data.snapshot_id, 45000);
-    } else {
-      results = await response.json();
-      if (!Array.isArray(results)) results = [results];
-    }
-
+    const results = await bdPollAndDownload(snapshotId, 120000);
     if (!results.length) return null;
     console.log(`[BrightData] LinkedIn posts: got ${results.length} results`);
 

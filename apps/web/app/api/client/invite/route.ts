@@ -59,7 +59,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to create invite', message: error.message }, { status: 500 });
     }
 
-    // Create user without password — they'll use magic links
+    // Create user without password — they'll use magic links.
+    // If the email already has an account, createUser returns an error with
+    // user: null. That's expected for re-invites; we handle it below.
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email: email.toLowerCase(),
       email_confirm: true,
@@ -69,30 +71,14 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    if (authError) {
-      // User might already exist - that's OK
-      if (!authError.message?.includes('already been registered')) {
-        console.error('User creation error:', authError);
-      }
+    const alreadyRegistered = authError?.message?.includes('already been registered');
+    if (authError && !alreadyRegistered) {
+      console.error('User creation error:', authError);
     }
 
-    // If user was created, create enrollment
-    if (authData?.user) {
-      await supabase.from('client_enrollments').insert({
-        user_id: authData.user.id,
-        program_id: program.id,
-        role,
-        onboarding_completed: false,
-      });
-
-      // Mark invite as accepted (since we pre-created the account)
-      await supabase
-        .from('client_invites')
-        .update({ status: 'accepted', accepted_at: new Date().toISOString() })
-        .eq('id', invite.id);
-    }
-
-    // Generate magic link and send via Loops
+    // Generate magic link. generateLink returns the user object for BOTH a
+    // freshly-created user and a pre-existing one, so it's our reliable source
+    // for the user id when createUser returned user: null.
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.timkilroy.com';
     const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
       type: 'magiclink',
@@ -106,15 +92,58 @@ export async function POST(request: NextRequest) {
       console.error('Failed to generate magic link:', linkError);
     }
 
+    // Resolve the user id whether they were just created or already existed.
+    const userId = authData?.user?.id || linkData?.user?.id;
+
+    if (!userId) {
+      return NextResponse.json(
+        {
+          error: 'Failed to provision client account',
+          message: authError?.message || linkError?.message || 'Could not resolve user',
+        },
+        { status: 500 }
+      );
+    }
+
+    // Create enrollment (idempotent — a pre-existing user may already be enrolled).
+    const { data: existingEnrollment } = await supabase
+      .from('client_enrollments')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('program_id', program.id)
+      .maybeSingle();
+
+    if (!existingEnrollment) {
+      const { error: enrollError } = await supabase.from('client_enrollments').insert({
+        user_id: userId,
+        program_id: program.id,
+        role,
+        onboarding_completed: false,
+      });
+      if (enrollError) {
+        return NextResponse.json(
+          { error: 'Failed to enroll client', message: enrollError.message },
+          { status: 500 }
+        );
+      }
+    }
+
+    // Mark invite as accepted (we pre-created/linked the account).
+    await supabase
+      .from('client_invites')
+      .update({ status: 'accepted', accepted_at: new Date().toISOString() })
+      .eq('id', invite.id);
+
     const magicLink = linkData?.properties?.action_link || `${appUrl}/client/login`;
     const firstName = (full_name || '').split(' ')[0] || '';
 
-    await onClientInvited(email, firstName, program.name, magicLink);
+    await onClientInvited(email.toLowerCase(), firstName, program.name, magicLink);
 
     return NextResponse.json({
       success: true,
       invite_id: invite.id,
       user_created: !!authData?.user,
+      already_existed: !!alreadyRegistered,
     });
   } catch (error) {
     console.error('Invite error:', error);

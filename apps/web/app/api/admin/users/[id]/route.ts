@@ -54,6 +54,7 @@ export async function GET(
       discoveryResult,
       visibilityResult,
       assessmentsResult,
+      bizDevResult,
       coachingResult,
       fridaysResult,
       loopsEventsResult,
@@ -101,6 +102,12 @@ export async function GET(
         .eq('status', 'completed')
         .order('created_at', { ascending: false })
         .limit(10),
+      (supabase as any)
+        .from('biz_dev_assessments')
+        .select('id, company_name, composite_score, verdict, stage, cta_tier, report_status, created_at')
+        .or(`user_id.eq.${id},email.eq.${user.email}`)
+        .order('created_at', { ascending: false })
+        .limit(20),
       (supabase as any)
         .from('coaching_reports')
         .select('id, report_type, period_start, period_end, calls_analyzed, created_at')
@@ -221,6 +228,22 @@ export async function GET(
         score: r.overall_score,
         date: r.created_at,
         url: `/growthos/results/${r.id}?admin=1`,
+      });
+    }
+
+    for (const r of (bizDevResult.data || [])) {
+      const verdictLabel = r.verdict === 'ready' ? 'Ready' : r.verdict === 'almost' ? 'Almost' : '';
+      const stageLabel = r.stage ? r.stage.replace(/_/g, ' ') : '';
+      const statusSuffix = r.report_status === 'failed' ? ' (synthesis failed)' : r.report_status !== 'completed' ? ` (${r.report_status})` : '';
+      const detail = [r.company_name, verdictLabel, stageLabel].filter(Boolean).join(' / ');
+      activity.push({
+        type: 'biz_dev',
+        id: r.id,
+        label: `BD Readiness${detail ? ` — ${detail}` : ''}${statusSuffix}`,
+        score: r.composite_score,
+        version: r.cta_tier,
+        date: r.created_at,
+        url: `/wtf-biz-dev-assessment/report/${r.id}?admin=1`,
       });
     }
 

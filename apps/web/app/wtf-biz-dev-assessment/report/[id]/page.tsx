@@ -6,10 +6,12 @@ import { StageProgress } from './StageProgress';
 
 interface PageProps {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ admin?: string }>;
 }
 
-export default async function BizDevReportPage({ params }: PageProps) {
+export default async function BizDevReportPage({ params, searchParams }: PageProps) {
   const { id } = await params;
+  const { admin } = await searchParams;
 
   // Magic-link exchange happens in /api/biz-dev/auth/[id] before reaching
   // this page. By the time we get here, the visitor must already have a
@@ -22,6 +24,19 @@ export default async function BizDevReportPage({ params }: PageProps) {
   }
 
   const svc = createServerClient();
+
+  // ?admin=1 lets a signed-in admin view any report without owning it. Same
+  // convention used by call-lab/discovery/visibility report pages.
+  let isAdmin = false;
+  if (admin === '1') {
+    const { data: viewer } = await (svc as any)
+      .from('users')
+      .select('is_admin')
+      .eq('id', user.id)
+      .single();
+    isAdmin = Boolean(viewer?.is_admin);
+  }
+
   const { data: assessment, error } = await (svc as any)
     .from('biz_dev_assessments')
     .select('*')
@@ -39,7 +54,7 @@ export default async function BizDevReportPage({ params }: PageProps) {
     );
   }
 
-  if (assessment.user_id !== user.id) {
+  if (!isAdmin && assessment.user_id !== user.id) {
     redirect(`/wtf-biz-dev-assessment/report/${id}/request-link`);
   }
 

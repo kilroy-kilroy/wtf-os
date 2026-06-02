@@ -35,7 +35,10 @@ const intakeSchema = z.object({
   customer_description: z.string().min(10),
   revenue_band: z.enum(['<$1M', '$1M-$3M', '$3M-$5M', '$5M-$10M', '$10M+']),
   affordability_answer: z.enum(['yes', 'no', 'not_sure']),
-  newsletter_opt_in: z.boolean(),
+  // Optional for backward compat with older clients; ignored by the API.
+  // Every assessment-taker is now subscribed to the Agency Inner Circle
+  // newsletter unconditionally (Beehiiv reactivate_existing handles repeats).
+  newsletter_opt_in: z.boolean().optional(),
 });
 
 const answersSchema = z.object({
@@ -85,7 +88,7 @@ export async function POST(request: NextRequest) {
         customer_description: intake.customer_description,
         revenue_band: intake.revenue_band,
         affordability_answer: intake.affordability_answer,
-        newsletter_opt_in: intake.newsletter_opt_in,
+        newsletter_opt_in: true,
         answers,
         dimensions: score.dimensions,
         composite_score: score.composite,
@@ -267,9 +270,9 @@ async function processAssessment(
         })
       : Promise.resolve(),
 
-    intake.newsletter_opt_in
-      ? addBizDevAssessmentSubscriber(intake.email, intake.name)
-      : Promise.resolve(),
+    // Subscribe every assessment-taker. Beehiiv's reactivate_existing flag
+    // makes this idempotent for emails already on the list.
+    addBizDevAssessmentSubscriber(intake.email, intake.name),
 
     copperSyncBizDevLead({
       name: intake.name,

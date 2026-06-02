@@ -51,8 +51,13 @@ export async function createOrUpdateContact(contact: LoopsContact): Promise<{ su
   }
 
   try {
-    const response = await fetch(`${LOOPS_API_BASE}/contacts/create`, {
-      method: 'POST',
+    // Use the update endpoint (PUT) — it upserts: creates the contact if the
+    // email is new, updates it if it already exists. The /contacts/create
+    // endpoint returns 409 "Email is already in your audience" for existing
+    // contacts, which silently broke re-invites of anyone already in Loops
+    // (e.g. someone who took an assessment before being invited as a client).
+    const response = await fetch(`${LOOPS_API_BASE}/contacts/update`, {
+      method: 'PUT',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',

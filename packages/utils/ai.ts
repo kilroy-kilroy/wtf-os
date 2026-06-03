@@ -3,7 +3,7 @@ import OpenAI from 'openai';
 
 export type ModelProvider = 'anthropic' | 'openai';
 export type ModelId =
-  | 'claude-sonnet-4-5-20250929'
+  | 'claude-sonnet-4-6'
   | 'claude-3-5-sonnet-20241022'
   | 'claude-3-5-sonnet-20240620'
   | 'claude-3-opus-20240229'
@@ -21,68 +21,68 @@ export interface ModelConfig {
 const MODEL_CONFIGS: Record<string, ModelConfig> = {
   'call-lab-lite': {
     provider: 'anthropic',
-    model: 'claude-sonnet-4-5-20250929',
+    model: 'claude-sonnet-4-6',
     maxTokens: 4096,
     temperature: 0.3,
   },
   'call-lab-full': {
     provider: 'anthropic',
-    model: 'claude-sonnet-4-5-20250929',
+    model: 'claude-sonnet-4-6',
     maxTokens: 8192,
     temperature: 0.3,
   },
   'call-lab-pro': {
     provider: 'anthropic',
-    model: 'claude-sonnet-4-5-20250929',
+    model: 'claude-sonnet-4-6',
     maxTokens: 16384,
     temperature: 0.3,
   },
   'discovery-lab-lite': {
     provider: 'anthropic',
-    model: 'claude-sonnet-4-5-20250929',
+    model: 'claude-sonnet-4-6',
     maxTokens: 4096,
     temperature: 0.4,
   },
   'discovery-lab-pro': {
     provider: 'anthropic',
-    model: 'claude-sonnet-4-5-20250929',
+    model: 'claude-sonnet-4-6',
     maxTokens: 8192,
     temperature: 0.4,
   },
   // Content Engine tools
   'content-engine-calibrate': {
     provider: 'anthropic',
-    model: 'claude-sonnet-4-5-20250929',
+    model: 'claude-sonnet-4-6',
     maxTokens: 4096,
     temperature: 0.4,
   },
   'content-engine-categorize': {
     provider: 'anthropic',
-    model: 'claude-sonnet-4-5-20250929',
+    model: 'claude-sonnet-4-6',
     maxTokens: 2048,
     temperature: 0.2,
   },
   'content-engine-repurpose': {
     provider: 'anthropic',
-    model: 'claude-sonnet-4-5-20250929',
+    model: 'claude-sonnet-4-6',
     maxTokens: 4096,
     temperature: 0.6,
   },
   'content-engine-moment-detection': {
     provider: 'anthropic',
-    model: 'claude-sonnet-4-5-20250929',
+    model: 'claude-sonnet-4-6',
     maxTokens: 8192,
     temperature: 0.3,
   },
   'one-shot': {
     provider: 'anthropic',
-    model: 'claude-sonnet-4-5-20250929',
+    model: 'claude-sonnet-4-6',
     maxTokens: 8192,
     temperature: 0.4,
   },
   'discovery-agent': {
     provider: 'anthropic',
-    model: 'claude-sonnet-4-5-20250929',
+    model: 'claude-sonnet-4-6',
     maxTokens: 8192,
     temperature: 0.4,
   },
@@ -94,7 +94,7 @@ const MODEL_CONFIGS: Record<string, ModelConfig> = {
   },
   'biz-dev-assessment-v1': {
     provider: 'anthropic',
-    model: 'claude-sonnet-4-5-20250929',
+    model: 'claude-sonnet-4-6',
     maxTokens: 8192,
     temperature: 0.4,
   },
@@ -117,8 +117,31 @@ export interface ModelResponse {
 }
 
 /**
- * Run an AI model with the given prompts
- * Abstracts away provider-specific details
+ * Strip lone (unpaired) UTF-16 surrogates so the string can be JSON-encoded
+ * into a request body the model APIs will accept.
+ *
+ * Scraped content (emoji-heavy LinkedIn posts, raw BrightData output) can carry
+ * unpaired surrogates — directly, or because a fixed-length `substring`/`slice`
+ * bisected an emoji's surrogate pair. Such strings are legal in memory but
+ * illegal in JSON (RFC 8259), so Anthropic/OpenAI reject the request with
+ * "The request body is not valid JSON: no low surrogate in string". Sanitizing
+ * here, at the single API boundary, guards every caller against every source.
+ */
+export function ensureWellFormed(input: string): string {
+  // ES2024 String.prototype.toWellFormed replaces lone surrogates with U+FFFD.
+  if (typeof (input as { toWellFormed?: () => string }).toWellFormed === 'function') {
+    return (input as unknown as { toWellFormed: () => string }).toWellFormed();
+  }
+  // Fallback for older runtimes: drop any unpaired high or low surrogate.
+  return input.replace(
+    /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g,
+    '�'
+  );
+}
+
+/**
+ * Run an AI model with the given prompts.
+ * Abstracts away provider-specific details.
  */
 export async function runModel(
   toolName: string,
@@ -130,10 +153,14 @@ export async function runModel(
   const config = { ...baseConfig, ...options } as ModelConfig | undefined;
   assertModelConfig(toolName, config);
 
+  // Guard against malformed Unicode in scraped prompt content reaching the API.
+  const safeSystemPrompt = ensureWellFormed(systemPrompt);
+  const safeUserPrompt = ensureWellFormed(userPrompt);
+
   if (config.provider === 'anthropic') {
-    return runAnthropic(config, systemPrompt, userPrompt);
+    return runAnthropic(config, safeSystemPrompt, safeUserPrompt);
   } else {
-    return runOpenAI(config, systemPrompt, userPrompt);
+    return runOpenAI(config, safeSystemPrompt, safeUserPrompt);
   }
 }
 

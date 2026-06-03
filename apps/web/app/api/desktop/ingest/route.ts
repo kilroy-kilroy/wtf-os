@@ -177,7 +177,7 @@ export async function POST(request: NextRequest) {
       }, 2);
 
       markdownResponse = response.content;
-      modelUsed = 'claude-sonnet-4-5-20250929';
+      modelUsed = 'claude-sonnet-4-6';
       usage = response.usage;
     } catch (error) {
       console.error('Claude analysis failed, trying GPT-4o:', error);

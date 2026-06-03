@@ -85,7 +85,7 @@ export async function runDiscoveryAgent(input: DiscoveryAgentInput): Promise<Dis
   const userPrompt = DISCOVERY_LAB_PRO_USER(promptParams);
 
   // Run AI analysis
-  let modelUsed = 'claude-sonnet-4-5-20250929';
+  let modelUsed = 'claude-sonnet-4-6';
   let tokens: { input: number; output: number };
   let markdownResponse: string;
 

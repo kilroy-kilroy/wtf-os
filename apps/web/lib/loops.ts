@@ -568,7 +568,7 @@ export async function onClientInvited(
   programName: string,
   magicLink: string
 ): Promise<{ success: boolean; error?: string }> {
-  await createOrUpdateContact({
+  const contactResult = await createOrUpdateContact({
     email,
     firstName,
     source: 'client_invite',
@@ -577,6 +577,12 @@ export async function onClientInvited(
     enrolledProgram: programName,
     clientLoginUrl: magicLink,
   });
+
+  // The event email relies on the contact existing in Loops, so a failed upsert
+  // means the welcome email won't send — report it rather than masking it.
+  if (!contactResult.success) {
+    return { success: false, error: `Loops contact upsert failed: ${contactResult.error}` };
+  }
 
   return sendEvent({
     email,

@@ -83,9 +83,6 @@ export async function POST(request: NextRequest) {
     const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
       type: 'magiclink',
       email: email.toLowerCase(),
-      options: {
-        redirectTo: `${appUrl}/client/onboarding`,
-      },
     });
 
     if (linkError) {
@@ -134,16 +131,27 @@ export async function POST(request: NextRequest) {
       .update({ status: 'accepted', accepted_at: new Date().toISOString() })
       .eq('id', invite.id);
 
-    const magicLink = linkData?.properties?.action_link || `${appUrl}/client/login`;
+    // Build a self-hosted confirmation link that carries the token_hash to our
+    // /auth/confirm route (verifyOtp server-side). This avoids the legacy
+    // implicit-hash flow and the Supabase redirect allow-list entirely.
+    const tokenHash = linkData?.properties?.hashed_token;
+    const magicLink = tokenHash
+      ? `${appUrl}/auth/confirm?token_hash=${tokenHash}&type=magiclink&next=${encodeURIComponent('/client/onboarding')}`
+      : `${appUrl}/client/login`;
     const firstName = (full_name || '').split(' ')[0] || '';
 
-    await onClientInvited(email.toLowerCase(), firstName, program.name, magicLink);
+    // Surface email-send failures instead of swallowing them — a successful
+    // invite that never emails the client is the bug that started all this.
+    const emailResult = await onClientInvited(email.toLowerCase(), firstName, program.name, magicLink);
 
     return NextResponse.json({
       success: true,
       invite_id: invite.id,
       user_created: !!authData?.user,
       already_existed: !!alreadyRegistered,
+      magic_link_generated: !!tokenHash,
+      email_sent: emailResult.success,
+      email_error: emailResult.success ? undefined : emailResult.error,
     });
   } catch (error) {
     console.error('Invite error:', error);

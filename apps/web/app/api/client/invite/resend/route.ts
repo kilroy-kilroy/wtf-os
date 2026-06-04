@@ -39,27 +39,32 @@ export async function POST(request: NextRequest) {
     }
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.timkilroy.com';
-    const redirectTo = enrollment.onboarding_completed
-      ? `${appUrl}/client/dashboard`
-      : `${appUrl}/client/onboarding`;
+    const next = enrollment.onboarding_completed ? '/client/dashboard' : '/client/onboarding';
 
     const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
       type: 'magiclink',
       email: user.email!,
-      options: { redirectTo },
     });
 
-    if (linkError) {
+    if (linkError || !linkData?.properties?.hashed_token) {
       return NextResponse.json({ error: 'Failed to generate magic link' }, { status: 500 });
     }
 
-    const magicLink = linkData?.properties?.action_link || `${appUrl}/client/login`;
+    // Self-hosted confirmation link (verifyOtp via /auth/confirm) — see invite/route.ts.
+    const magicLink = `${appUrl}/auth/confirm?token_hash=${linkData.properties.hashed_token}&type=magiclink&next=${encodeURIComponent(next)}`;
 
     // Re-trigger Loops event
     const program = enrollment.program as any;
     const firstName = user.user_metadata?.full_name?.split(' ')[0] || '';
 
-    await onClientInvited(user.email!, firstName, program?.name || 'Unknown Program', magicLink);
+    const emailResult = await onClientInvited(user.email!, firstName, program?.name || 'Unknown Program', magicLink);
+
+    if (!emailResult.success) {
+      return NextResponse.json(
+        { error: 'Magic link generated but the email failed to send', message: emailResult.error },
+        { status: 502 }
+      );
+    }
 
     return NextResponse.json({
       success: true,

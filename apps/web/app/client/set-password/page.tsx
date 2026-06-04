@@ -43,7 +43,8 @@ export default function SetPasswordPage() {
         <div className="border border-slate-700/50 rounded-lg p-8">
           <h1 className="text-xl font-bold text-white mb-2">Set Your Password</h1>
           <p className="text-slate-400 text-sm mb-6">
-            Create a password so you can log in anytime at app.timkilroy.com
+            Create a password so you can always log in at app.timkilroy.com — even
+            if an email link doesn&apos;t reach you.
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -91,15 +92,6 @@ export default function SetPasswordPage() {
               {loading ? 'Setting password...' : 'Set Password'}
             </button>
           </form>
-
-          <div className="mt-4 text-center">
-            <a
-              href="/client/dashboard"
-              className="text-sm text-slate-500 hover:text-slate-300 transition-colors"
-            >
-              Skip for now — I'll set it later in Settings
-            </a>
-          </div>
         </div>
       </div>
     </div>

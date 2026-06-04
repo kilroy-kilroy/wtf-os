@@ -33,6 +33,12 @@ function ClientLoginContent() {
   // Check for invite token in URL
   const inviteToken = searchParams.get('invite');
 
+  // Surface errors passed by /auth/confirm (e.g. expired or already-used link).
+  useEffect(() => {
+    const errParam = searchParams.get('error');
+    if (errParam) setError(errParam);
+  }, [searchParams]);
+
   // Check for auth tokens in URL hash (recovery flow)
   useEffect(() => {
     const handleAuthTokens = async () => {

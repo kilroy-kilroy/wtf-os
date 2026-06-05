@@ -647,13 +647,19 @@ async function getDashboardData(
   // ============================================
   // DISCOVERY LAB DATA
   // ============================================
+  // NOTE: Unlike the call metrics above, Discovery Lab brief counts are
+  // intentionally all-time (no 30-day window). The empty-state copy in
+  // DiscoveryLabActivity ("No discovery briefs yet / Create First Brief")
+  // asserts lifetime usage, so a 30-day filter here made the card claim a
+  // user had never run a brief whenever their briefs were >30 days old.
+  // The limit is set high so briefs.length stays an accurate total (it also
+  // backs liteBriefs/proBriefs/companiesResearched, so it must not be capped low).
   const { data: discoveryBriefs } = await (supabase as any)
     .from("discovery_briefs")
     .select("id, target_company, target_contact_name, target_contact_title, version, created_at")
     .eq("user_id", userId)
-    .gte("created_at", thirtyDaysAgo.toISOString())
     .order("created_at", { ascending: false })
-    .limit(10);
+    .limit(1000);
 
   const briefs = (discoveryBriefs || []) as Array<{
     id: string;

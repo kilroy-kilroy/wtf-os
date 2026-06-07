@@ -52,8 +52,10 @@ export async function middleware(request: NextRequest) {
   // (ERR_TOO_MANY_REDIRECTS).
   const isAuthPage = AUTH_PAGES.some((page) => pathname.startsWith(page));
 
-  // Redirect authenticated users away from login pages
-  if (user && isAuthPage) {
+  // Redirect authenticated users away from login pages. /client/activate is
+  // exempt: a signed-in client may still be completing a password reset there,
+  // and the activate route validates its token independently of the session.
+  if (user && isAuthPage && !pathname.startsWith('/client/activate')) {
     if (pathname.startsWith('/client/login')) {
       return NextResponse.redirect(new URL('/client/dashboard', request.url));
     }

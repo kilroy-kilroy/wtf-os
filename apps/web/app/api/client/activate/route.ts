@@ -54,7 +54,8 @@ export async function POST(request: NextRequest) {
         .eq('invite_token', token)
         .maybeSingle();
 
-      if (!invite || invite.status !== 'pending' || new Date(invite.expires_at) < new Date()) {
+      const inviteExpired = invite?.expires_at ? new Date(invite.expires_at) < new Date() : false;
+      if (!invite || invite.status !== 'pending' || inviteExpired) {
         return NextResponse.json(
           { error: 'This invite link is invalid, already used, or expired. Please reset your password instead.' },
           { status: 400 }

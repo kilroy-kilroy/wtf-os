@@ -43,8 +43,14 @@ export async function middleware(request: NextRequest) {
 
   const pathname = request.nextUrl.pathname;
 
+  // Auth pages (e.g. /client/login) live UNDER a protected prefix (/client), so
+  // they must be exempted from the unauthenticated protected-route redirect
+  // below — otherwise /client/login redirects to itself forever
+  // (ERR_TOO_MANY_REDIRECTS).
+  const isAuthPage = AUTH_PAGES.some((page) => pathname.startsWith(page));
+
   // Redirect authenticated users away from login pages
-  if (user && AUTH_PAGES.some((page) => pathname.startsWith(page))) {
+  if (user && isAuthPage) {
     if (pathname.startsWith('/client/login')) {
       return NextResponse.redirect(new URL('/client/dashboard', request.url));
     }
@@ -52,7 +58,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // Redirect unauthenticated users away from protected routes
-  if (!user && PROTECTED_PREFIXES.some((prefix) => pathname.startsWith(prefix))) {
+  if (!user && !isAuthPage && PROTECTED_PREFIXES.some((prefix) => pathname.startsWith(prefix))) {
     if (pathname.startsWith('/client')) {
       return NextResponse.redirect(new URL('/client/login', request.url));
     }

@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
     // Look up enrollment with user and program info
     const { data: enrollment } = await supabase
       .from('client_enrollments')
-      .select('id, user_id, onboarding_completed, program:client_programs(name, slug)')
+      .select('id, user_id, program_id, onboarding_completed, program:client_programs(name, slug)')
       .eq('id', enrollment_id)
       .single();
 
@@ -41,17 +41,41 @@ export async function POST(request: NextRequest) {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.timkilroy.com';
     const next = enrollment.onboarding_completed ? '/client/dashboard' : '/client/onboarding';
 
-    const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
-      type: 'magiclink',
-      email: user.email!,
-    });
+    // Refresh (or create) the long-lived invite token rather than a 1h Supabase
+    // OTP — see invite/route.ts and /auth/client-invite for the rationale.
+    const newExpiry = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+    const email = user.email!.toLowerCase();
 
-    if (linkError || !linkData?.properties?.hashed_token) {
-      return NextResponse.json({ error: 'Failed to generate magic link' }, { status: 500 });
+    let { data: inviteRow } = await supabase
+      .from('client_invites')
+      .select('id, invite_token')
+      .eq('email', email)
+      .eq('program_id', enrollment.program_id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (inviteRow) {
+      await supabase
+        .from('client_invites')
+        .update({ expires_at: newExpiry, status: 'pending', accepted_at: null })
+        .eq('id', inviteRow.id);
+    } else {
+      const { data: created, error: createErr } = await supabase
+        .from('client_invites')
+        .insert({ email, program_id: enrollment.program_id, expires_at: newExpiry })
+        .select('id, invite_token')
+        .single();
+      if (createErr || !created) {
+        return NextResponse.json(
+          { error: 'Failed to create invite token', message: createErr?.message },
+          { status: 500 }
+        );
+      }
+      inviteRow = created;
     }
 
-    // Self-hosted confirmation link (verifyOtp via /auth/confirm) — see invite/route.ts.
-    const magicLink = `${appUrl}/auth/confirm?token_hash=${linkData.properties.hashed_token}&type=magiclink&next=${encodeURIComponent(next)}`;
+    const magicLink = `${appUrl}/auth/client-invite?token=${inviteRow.invite_token}&next=${encodeURIComponent(next)}`;
 
     // Re-trigger Loops event
     const program = enrollment.program as any;

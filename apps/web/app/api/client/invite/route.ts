@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabase-server';
 import { onClientInvited } from '@/lib/loops';
+import { findAuthUserByEmail } from '@/lib/auth-admin';
 
 // Admin-only: Create a client invite and send onboarding email
 export async function POST(request: NextRequest) {
@@ -18,6 +19,7 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = getSupabaseServerClient();
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.timkilroy.com';
 
     // Look up program
     const { data: program } = await supabase
@@ -59,9 +61,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to create invite', message: error.message }, { status: 500 });
     }
 
-    // Create user without password — they'll use magic links.
-    // If the email already has an account, createUser returns an error with
-    // user: null. That's expected for re-invites; we handle it below.
+    // Create the auth user without a password — they set one via /client/activate.
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email: email.toLowerCase(),
       email_confirm: true,
@@ -76,28 +76,13 @@ export async function POST(request: NextRequest) {
       console.error('User creation error:', authError);
     }
 
-    // Generate magic link. generateLink returns the user object for BOTH a
-    // freshly-created user and a pre-existing one, so it's our reliable source
-    // for the user id when createUser returned user: null.
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.timkilroy.com';
-    const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
-      type: 'magiclink',
-      email: email.toLowerCase(),
-    });
-
-    if (linkError) {
-      console.error('Failed to generate magic link:', linkError);
-    }
-
-    // Resolve the user id whether they were just created or already existed.
-    const userId = authData?.user?.id || linkData?.user?.id;
+    // Resolve the user id whether brand-new or pre-existing (re-invite).
+    const userId =
+      authData?.user?.id || (await findAuthUserByEmail(email.toLowerCase()))?.id;
 
     if (!userId) {
       return NextResponse.json(
-        {
-          error: 'Failed to provision client account',
-          message: authError?.message || linkError?.message || 'Could not resolve user',
-        },
+        { error: 'Failed to provision client account', message: authError?.message || 'Could not resolve user' },
         { status: 500 }
       );
     }
@@ -125,31 +110,24 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Mark invite as accepted (we pre-created/linked the account).
-    await supabase
-      .from('client_invites')
-      .update({ status: 'accepted', accepted_at: new Date().toISOString() })
-      .eq('id', invite.id);
+    // NOTE: invite stays `pending` until the client activates (sets a password).
+    // The token must remain valid; /api/client/activate flips it to `accepted`.
 
-    // Build a self-hosted confirmation link that carries the token_hash to our
-    // /auth/confirm route (verifyOtp server-side). This avoids the legacy
-    // implicit-hash flow and the Supabase redirect allow-list entirely.
-    const tokenHash = linkData?.properties?.hashed_token;
-    const magicLink = tokenHash
-      ? `${appUrl}/auth/confirm?token_hash=${tokenHash}&type=magiclink&next=${encodeURIComponent('/client/onboarding')}`
-      : `${appUrl}/client/login`;
+    const activationUrl = `${appUrl}/client/activate?token=${invite.invite_token}`;
     const firstName = (full_name || '').split(' ')[0] || '';
 
-    // Surface email-send failures instead of swallowing them — a successful
-    // invite that never emails the client is the bug that started all this.
-    const emailResult = await onClientInvited(email.toLowerCase(), firstName, program.name, magicLink);
+    const emailResult = await onClientInvited(
+      email.toLowerCase(),
+      firstName,
+      program.name,
+      activationUrl
+    );
 
     return NextResponse.json({
       success: true,
       invite_id: invite.id,
       user_created: !!authData?.user,
       already_existed: !!alreadyRegistered,
-      magic_link_generated: !!tokenHash,
       email_sent: emailResult.success,
       email_error: emailResult.success ? undefined : emailResult.error,
     });

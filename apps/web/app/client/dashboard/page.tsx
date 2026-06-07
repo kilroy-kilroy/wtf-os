@@ -37,7 +37,9 @@ export default function ClientDashboardPage() {
         .eq('status', 'active')
         .single();
 
-      if (!enrollment) { router.push('/client/login'); return; }
+      // Authenticated but no active enrollment. Send to login WITH an error so
+      // middleware doesn't bounce them back here (that would loop forever).
+      if (!enrollment) { router.push('/client/login?error=' + encodeURIComponent('No active program found for your account. Please contact your program administrator.')); return; }
       if (!enrollment.onboarding_completed) { router.push('/client/onboarding'); return; }
 
       const demandosProgram = Array.isArray(enrollment.program)

@@ -131,13 +131,12 @@ export async function POST(request: NextRequest) {
       .update({ status: 'accepted', accepted_at: new Date().toISOString() })
       .eq('id', invite.id);
 
-    // Build a self-hosted confirmation link that carries the token_hash to our
-    // /auth/confirm route (verifyOtp server-side). This avoids the legacy
-    // implicit-hash flow and the Supabase redirect allow-list entirely.
-    const tokenHash = linkData?.properties?.hashed_token;
-    const magicLink = tokenHash
-      ? `${appUrl}/auth/confirm?token_hash=${tokenHash}&type=magiclink&next=${encodeURIComponent('/client/onboarding')}`
-      : `${appUrl}/client/login`;
+    // Build the onboarding link around our own long-lived `invite_token`
+    // (30-day expiry, validated in /auth/client-invite) rather than the raw
+    // Supabase OTP. Supabase OTPs expire in ~1h and are single-use, so a client
+    // clicking later — or an email scanner pre-fetching the link — produced the
+    // `otp_expired` failures. The fresh OTP is minted on click instead.
+    const magicLink = `${appUrl}/auth/client-invite?token=${invite.invite_token}&next=${encodeURIComponent('/client/onboarding')}`;
     const firstName = (full_name || '').split(' ')[0] || '';
 
     // Surface email-send failures instead of swallowing them — a successful
@@ -149,7 +148,7 @@ export async function POST(request: NextRequest) {
       invite_id: invite.id,
       user_created: !!authData?.user,
       already_existed: !!alreadyRegistered,
-      magic_link_generated: !!tokenHash,
+      magic_link_generated: !!invite.invite_token,
       email_sent: emailResult.success,
       email_error: emailResult.success ? undefined : emailResult.error,
     });

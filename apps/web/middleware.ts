@@ -43,8 +43,18 @@ export async function middleware(request: NextRequest) {
 
   const pathname = request.nextUrl.pathname;
 
-  // Redirect authenticated users away from login pages
-  if (user && AUTH_PAGES.some((page) => pathname.startsWith(page))) {
+  // Redirect authenticated users away from login pages.
+  //
+  // EXCEPT when the login page was reached with an `?error` — e.g. an
+  // authenticated user with no active client enrollment was bounced back here
+  // by /client/dashboard or /client/onboarding. Redirecting them to the
+  // dashboard (which sends them straight back) is an infinite redirect loop
+  // (ERR_TOO_MANY_REDIRECTS). Let them stay so the login page can show why.
+  if (
+    user &&
+    !request.nextUrl.searchParams.has('error') &&
+    AUTH_PAGES.some((page) => pathname.startsWith(page))
+  ) {
     if (pathname.startsWith('/client/login')) {
       return NextResponse.redirect(new URL('/client/dashboard', request.url));
     }

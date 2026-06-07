@@ -42,13 +42,14 @@ export async function GET(request: NextRequest) {
   const admin = getSupabaseServerClient();
   const { data: enrollment } = await admin
     .from('client_enrollments')
-    .select('id')
+    .select('id, onboarding_completed')
     .eq('user_id', exchanged.user.id)
     .eq('status', 'active')
     .maybeSingle();
 
   if (enrollment) {
-    return NextResponse.redirect(`${origin}/client/dashboard`);
+    const dest = enrollment.onboarding_completed ? '/client/dashboard' : '/client/onboarding';
+    return NextResponse.redirect(`${origin}${dest}`);
   }
 
   // No enrollment: fall back to onboarding-vs-labs based on profile state.

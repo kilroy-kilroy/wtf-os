@@ -5,7 +5,10 @@ import { NextResponse, type NextRequest } from 'next/server';
 const PROTECTED_PREFIXES = ['/dashboard', '/client', '/admin', '/settings'];
 
 // Routes that authenticated users should be redirected away from
-const AUTH_PAGES = ['/login', '/client/login'];
+// Pages that must be reachable WITHOUT a session even though they sit under a
+// protected prefix (/client). Listed here so the unauthenticated protected-route
+// redirect skips them (see isAuthPage usage below).
+const AUTH_PAGES = ['/login', '/client/login', '/client/activate'];
 
 // Routes that require admin access
 const ADMIN_PREFIX = '/admin';

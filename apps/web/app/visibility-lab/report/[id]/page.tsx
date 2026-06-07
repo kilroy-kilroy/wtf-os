@@ -60,7 +60,10 @@ export default async function VisibilityReportPage({
     notFound();
   }
 
-  const isPro = (report.full_report as any)?.tier === 'pro';
+  // Pro is recorded in the `version` column at save time; `full_report.tier` is
+  // never set, so the legacy check rendered paid Pro reports as lite. Prefer the
+  // column, keeping the old check as a fallback for any legacy rows.
+  const isPro = (report as any).version === 'pro' || (report.full_report as any)?.tier === 'pro';
   const createdDate = new Date(report.created_at).toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'long',

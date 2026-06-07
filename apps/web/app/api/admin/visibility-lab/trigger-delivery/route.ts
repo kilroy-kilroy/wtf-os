@@ -92,7 +92,9 @@ export async function POST(request: NextRequest) {
 
     // Sync to Copper CRM as a Visibility Lab Pro lead
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.timkilroy.com';
-    const scorePath = isPro ? 'visibility-lab-pro' : 'visibility-lab';
+    // Both tiers render at /visibility-lab/report/[id]; there is no
+    // /visibility-lab-pro report route (linking there 404s).
+    const reportPath = 'visibility-lab';
     const scoreLabel = isPro ? 'Visibility Lab Pro' : 'Visibility Lab Free';
     const scoreValue = isPro
       ? (report.full_report?.kviScore ?? report.visibility_score ?? 0)
@@ -106,7 +108,7 @@ export async function POST(request: NextRequest) {
         productName: 'Visibility Lab Pro',
         opportunityValue: PRO_ACV,
         stageId: COPPER_STAGES.LEAD,
-        note: `Ran ${scoreLabel} — Score: ${scoreValue}/100. View: ${appUrl}/${scorePath}/report/${report.id}`,
+        note: `Ran ${scoreLabel} — Score: ${scoreValue}/100. View: ${appUrl}/${reportPath}/report/${report.id}`,
       });
       copperResult = { success: true };
     } catch (err) {

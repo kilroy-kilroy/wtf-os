@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabase-server';
-import { onVisibilityReportGenerated } from '@/lib/loops';
+import { onVisibilityReportGenerated, onVisibilityProReportGenerated } from '@/lib/loops';
 import { getArchetypeForLoops } from '@/lib/growth-quadrant';
 
 /**
@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
   // Get recent visibility reports that have an email
   const { data: reports, error: reportsErr } = await (supabase as any)
     .from('visibility_lab_reports')
-    .select('id, email, user_id, brand_name, visibility_score, created_at')
+    .select('id, email, user_id, brand_name, visibility_score, version, full_report, created_at')
     .gte('created_at', sevenDaysAgo)
     .not('email', 'is', null);
 
@@ -42,12 +42,13 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ checked: 0, resent: 0 });
   }
 
-  // Get matching loops_events for these emails
+  // Get matching loops_events for these emails — check BOTH the lite and pro
+  // delivery events, so a delivered Pro report isn't treated as missing.
   const emails = [...new Set(reports.map((r: any) => r.email))];
   const { data: events } = await (supabase as any)
     .from('loops_events')
     .select('user_email, event_data')
-    .eq('event_name', 'visibility_report_generated')
+    .in('event_name', ['visibility_report_generated', 'visibility_pro_report_generated'])
     .in('user_email', emails);
 
   // Build a set of delivered report IDs from the event_data
@@ -76,15 +77,29 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const result = await onVisibilityReportGenerated(
-      report.email,
-      report.id,
-      report.visibility_score || 0,
-      report.brand_name || '',
-      archetype,
-      executionScore,
-      positioningScore
-    );
+    // Re-fire the correct event for the report's tier — a Pro report must not
+    // be re-sent as a lite email with a lite URL/score.
+    const result = report.version === 'pro'
+      ? await onVisibilityProReportGenerated(
+          report.email,
+          report.id,
+          report.full_report?.kviScore ?? report.visibility_score ?? 0,
+          report.brand_name || report.full_report?.brandName || '',
+          report.full_report?.diagnosis?.severity || '',
+          report.full_report?.brandArchetype?.name || '',
+          archetype,
+          executionScore,
+          positioningScore
+        )
+      : await onVisibilityReportGenerated(
+          report.email,
+          report.id,
+          report.visibility_score || 0,
+          report.brand_name || '',
+          archetype,
+          executionScore,
+          positioningScore
+        );
     resent.push({
       id: report.id,
       email: report.email,

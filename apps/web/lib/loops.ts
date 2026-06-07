@@ -488,7 +488,10 @@ export async function onVisibilityProReportGenerated(
   positioningScore?: number
 ): Promise<{ success: boolean; error?: string }> {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.timkilroy.com';
-  const reportUrl = `${appUrl}/visibility-lab-pro/report/${reportId}`;
+  // Pro and lite reports both render at the shared /visibility-lab/report/[id]
+  // page (it switches on the stored `version`). There is no /visibility-lab-pro
+  // report route — linking there is a hard 404.
+  const reportUrl = `${appUrl}/visibility-lab/report/${reportId}`;
 
   return sendEvent({
     email,

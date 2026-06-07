@@ -559,15 +559,17 @@ export async function onCoachingReportReady(
 // ============================================
 
 /**
- * Fire when a client is invited to a program
- * Sends welcome email with magic link login
+ * Fire when a client is invited to a program.
+ * Sends an email whose CTA links to /client/activate to create a password.
  */
 export async function onClientInvited(
   email: string,
   firstName: string,
   programName: string,
-  magicLink: string
+  activationUrl: string
 ): Promise<{ success: boolean; error?: string }> {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.timkilroy.com';
+
   const contactResult = await createOrUpdateContact({
     email,
     firstName,
@@ -575,11 +577,9 @@ export async function onClientInvited(
     subscribed: true,
     userGroup: 'client',
     enrolledProgram: programName,
-    clientLoginUrl: magicLink,
+    clientLoginUrl: `${appUrl}/client/login`, // stable portal URL, not a one-time link
   });
 
-  // The event email relies on the contact existing in Loops, so a failed upsert
-  // means the welcome email won't send — report it rather than masking it.
   if (!contactResult.success) {
     return { success: false, error: `Loops contact upsert failed: ${contactResult.error}` };
   }
@@ -590,7 +590,28 @@ export async function onClientInvited(
     eventProperties: {
       firstName: firstName || '',
       programName,
-      loginUrl: magicLink,
+      activationUrl,
+    },
+  });
+}
+
+/**
+ * Fire when a client requests a password reset.
+ * Sends an email whose CTA links to /client/activate?reset=<token>.
+ */
+export async function onClientPasswordReset(
+  email: string,
+  firstName: string,
+  resetUrl: string,
+  expiresInMinutes = 60
+): Promise<{ success: boolean; error?: string }> {
+  return sendEvent({
+    email,
+    eventName: 'client_password_reset',
+    eventProperties: {
+      firstName: firstName || 'there',
+      resetUrl,
+      expiresInMinutes,
     },
   });
 }

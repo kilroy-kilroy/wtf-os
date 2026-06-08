@@ -32,6 +32,13 @@ function LoginContent() {
   // Read `next` param so we can route back after login
   const nextPath = searchParams.get('next');
 
+  // Prefill email/mode from query params (e.g. links from lead tools).
+  useEffect(() => {
+    const emailParam = searchParams.get('email');
+    if (emailParam) setEmail(emailParam);
+    if (searchParams.get('mode') === 'signup') setMode('signup');
+  }, [searchParams]);
+
   // Check for auth tokens in URL hash (recovery, signup confirmation, magic link)
   useEffect(() => {
     const handleAuthTokens = async () => {

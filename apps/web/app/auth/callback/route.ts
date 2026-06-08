@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase-auth-server';
 import { getSupabaseServerClient } from '@/lib/supabase-server';
+import { claimReportsByEmail } from '@/lib/claim-reports';
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
@@ -30,6 +31,16 @@ export async function GET(request: NextRequest) {
   if (exchangeError || !exchanged?.user) {
     const msg = exchangeError?.message || 'exchange_failed';
     return NextResponse.redirect(`${origin}/login?error=${encodeURIComponent(msg)}`);
+  }
+
+  // Claim any anonymous lead reports sharing this user's verified email.
+  // Non-blocking: a claim failure must never break sign-in.
+  try {
+    if (exchanged.user.email) {
+      await claimReportsByEmail(exchanged.user.email, exchanged.user.id);
+    }
+  } catch (e) {
+    console.error('[auth/callback] report claim failed (non-blocking):', e);
   }
 
   // If the caller specified a `next` destination (must be an internal path), honor it.

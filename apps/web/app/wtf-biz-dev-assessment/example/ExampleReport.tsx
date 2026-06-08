@@ -3,8 +3,7 @@
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
-const STUDIO_BOOKING_URL =
-  process.env.NEXT_PUBLIC_STUDIO_BOOKING_URL ?? 'https://timkilroy.com/book/studio';
+const STUDIO_BOOKING_URL = 'https://zcal.co/timkilroy/bd-ready';
 
 interface Props {
   markdown: string;

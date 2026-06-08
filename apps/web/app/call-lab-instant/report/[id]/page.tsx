@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
+import ReportEngagementFooter from '@/components/ReportEngagementFooter';
 
 interface WtfScores {
   radicalRelevance: number;
@@ -352,6 +353,13 @@ export default function ReportPage() {
             Analyze Your Full Call →
           </a>
         </div>
+
+        <ReportEngagementFooter
+          currentTool="call-lab-instant"
+          email={null}
+          reportId={reportId}
+          reportUrl={`/call-lab-instant/report/${reportId}`}
+        />
       </main>
 
       {/* Footer */}

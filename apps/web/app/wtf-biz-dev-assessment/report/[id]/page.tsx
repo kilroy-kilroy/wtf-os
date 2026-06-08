@@ -3,6 +3,7 @@ import { createClient as createAuthClient } from '@/lib/supabase-auth-server';
 import { createServerClient } from '@repo/db/client';
 import { ReportContent } from './ReportContent';
 import { StageProgress } from './StageProgress';
+import ReportEngagementFooter from '@/components/ReportEngagementFooter';
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -104,6 +105,12 @@ export default async function BizDevReportPage({ params, searchParams }: PagePro
           assessmentId={id}
           dimensions={assessment.dimensions ?? {}}
           compositeScore={assessment.composite_score ?? 0}
+        />
+        <ReportEngagementFooter
+          currentTool="biz-dev"
+          email={assessment.email ?? null}
+          reportId={id}
+          reportUrl={`/wtf-biz-dev-assessment/report/${id}`}
         />
       </div>
     </main>

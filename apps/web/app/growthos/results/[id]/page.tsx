@@ -4,6 +4,7 @@ import { redirect, notFound } from 'next/navigation';
 import { cookies } from 'next/headers';
 import Link from 'next/link';
 import { FollowUpQuestionsSection, LTVSection } from './FollowUpSection';
+import ReportEngagementFooter from '@/components/ReportEngagementFooter';
 
 function ScoreBar({ score, label, narrative, color }: {
   score: number; label: string; narrative: string; color: string;
@@ -860,6 +861,13 @@ export default async function ResultsPage({
           Back to Dashboard
         </Link>
       </div>
+
+      <ReportEngagementFooter
+        currentTool="growthos"
+        email={intake?.email ?? null}
+        reportId={id}
+        reportUrl={`/growthos/results/${id}`}
+      />
     </div>
   );
 }

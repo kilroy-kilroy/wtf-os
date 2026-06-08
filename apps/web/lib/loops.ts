@@ -755,3 +755,19 @@ export async function onBizDevReportGenerated(
     },
   });
 }
+
+/**
+ * Fire when a lead reopens a generated report (re-engagement signal).
+ */
+export async function onReportRevisited(
+  email: string,
+  tool: string,
+  reportId: string,
+  reportUrl: string
+): Promise<{ success: boolean; error?: string }> {
+  return sendEvent({
+    email,
+    eventName: 'report_revisited',
+    eventProperties: { tool, reportId, reportUrl },
+  });
+}

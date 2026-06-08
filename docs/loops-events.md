@@ -68,6 +68,7 @@ All fields are strings unless marked `(number)`. 🆕 = added/changed 2026-06-07
 | `upgraded_to_pro` | `planType`, `product` |
 | `growthos_bundle_purchased` | `planType`, `product`, `includedProducts` |
 | `subscription_cancelled` | *(no fields)* |
+| `report_revisited` | `tool`, `reportId`, `reportUrl` |
 
 ---
 

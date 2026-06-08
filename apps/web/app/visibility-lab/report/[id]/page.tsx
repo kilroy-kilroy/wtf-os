@@ -1,9 +1,9 @@
 import { notFound } from 'next/navigation';
 import { cookies } from 'next/headers';
-import { createClient } from '@/lib/supabase-auth-server';
 import { getSupabaseServerClient } from '@/lib/supabase-server';
 import Link from 'next/link';
 import { VisibilityReportClient } from './client';
+import ReportEngagementFooter from '@/components/ReportEngagementFooter';
 
 interface VisibilityLabRecord {
   id: string;
@@ -43,17 +43,17 @@ export default async function VisibilityReportPage({
     }
   }
 
-  // Normal user flow
+  // Normal flow: read by link=key (the UUID is the access token). This is a
+  // public lead-magnet report; service-role read bypasses owner-only RLS so a
+  // logged-out lead can open their report.
   if (!report) {
-    const supabase = await createClient();
-
-    const { data, error } = await supabase
+    const supabase = getSupabaseServerClient();
+    const { data } = await (supabase as any)
       .from('visibility_lab_reports')
       .select('*')
       .eq('id', id)
-      .single<VisibilityLabRecord>();
-
-    if (!error && data) report = data;
+      .single();
+    if (data) report = data as VisibilityLabRecord;
   }
 
   if (!report || !report.full_report) {
@@ -110,6 +110,13 @@ export default async function VisibilityReportPage({
         <VisibilityReportClient
           report={report.full_report}
           isPro={isPro}
+        />
+
+        <ReportEngagementFooter
+          currentTool="visibility"
+          email={(report as any).email ?? null}
+          reportId={id}
+          reportUrl={`/visibility-lab/report/${id}`}
         />
       </div>
     </div>

@@ -40,6 +40,7 @@ export async function GET(request: NextRequest) {
         scenario_type: report.scenario_type,
         created_at: report.created_at,
         view_count: report.view_count,
+        email: (report as { email?: string | null }).email ?? null,
       },
     });
   } catch (error) {

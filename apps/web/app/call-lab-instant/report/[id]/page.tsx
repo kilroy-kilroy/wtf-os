@@ -41,6 +41,7 @@ interface ReportData {
   scenario_type?: string;
   created_at: string;
   view_count: number;
+  email?: string | null;
 }
 
 export default function ReportPage() {
@@ -356,7 +357,7 @@ export default function ReportPage() {
 
         <ReportEngagementFooter
           currentTool="call-lab-instant"
-          email={null}
+          email={report.email ?? null}
           reportId={reportId}
           reportUrl={`/call-lab-instant/report/${reportId}`}
         />

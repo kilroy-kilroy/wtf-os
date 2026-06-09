@@ -690,7 +690,7 @@ export default function AdminClientsPage() {
                                     </div>
                                     <div className="flex gap-2">
                                       {doc.document_type === 'file' && doc.file_url && (
-                                        <a href={doc.file_url} target="_blank" rel="noopener noreferrer"
+                                        <a href={`/api/client/documents/${doc.id}/file`} target="_blank" rel="noopener noreferrer"
                                           className="text-[10px] uppercase font-bold border border-[#333333] px-2 py-1 text-[#999999] hover:text-white hover:border-white transition-colors">
                                           View
                                         </a>

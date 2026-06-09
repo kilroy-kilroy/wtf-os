@@ -84,7 +84,8 @@ export default function ClientDocumentsPage() {
     } else if (doc.document_type === 'link' && doc.external_url) {
       window.open(doc.external_url, '_blank');
     } else if (doc.document_type === 'file' && doc.file_url) {
-      window.open(doc.file_url, '_blank');
+      // Permanent, login-gated link — resolves to a short-lived signed URL server-side.
+      window.open(`/api/client/documents/${doc.id}/file`, '_blank');
     }
   }
 
@@ -199,7 +200,7 @@ export default function ClientDocumentsPage() {
                       {textModal.file_url && (
                         <div className="pt-4 border-t border-[#333333]">
                           <a
-                            href={textModal.file_url}
+                            href={`/api/client/documents/${textModal.id}/file`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="inline-flex items-center gap-2 text-sm text-[#00D4FF] hover:underline"

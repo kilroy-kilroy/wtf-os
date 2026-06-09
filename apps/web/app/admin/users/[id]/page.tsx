@@ -777,7 +777,7 @@ export default function AdminUserProfilePage() {
                           </div>
                           {(doc.file_url || doc.external_url) && (
                             <a
-                              href={doc.file_url || doc.external_url || '#'}
+                              href={doc.file_url ? `/api/client/documents/${doc.id}/file` : (doc.external_url || '#')}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="text-[10px] uppercase font-bold border border-[#333] px-2 py-0.5 text-[#999] hover:text-[#00D4FF] hover:border-[#00D4FF] transition-colors shrink-0"

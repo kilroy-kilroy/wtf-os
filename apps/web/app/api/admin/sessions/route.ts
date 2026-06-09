@@ -63,9 +63,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'File upload failed' }, { status: 500 });
     }
 
+    // Stable reference stored on the published document (bucket is private, so this
+    // public-format URL only resolves through the gated /api/client/documents/[id]/file
+    // route — see app/api/client/documents/[id]/file/route.ts).
     const { data: urlData } = supabase.storage
       .from('client-documents')
       .getPublicUrl(storagePath);
+
+    // Ephemeral signed URL so the admin can preview the raw transcript before
+    // publishing, while the draft has no document id to route through the gateway.
+    const { data: previewData } = await supabase.storage
+      .from('client-documents')
+      .createSignedUrl(storagePath, 60 * 60); // 1 hour — outlives a normal edit session
 
     // Get client/org name for 1:1s (for the AI prompt)
     let clientName: string | undefined;
@@ -103,6 +112,7 @@ export async function POST(request: NextRequest) {
       synopsis: aiResult.synopsis,
       teaching: aiResult.teaching,
       vtt_url: urlData.publicUrl,
+      vtt_preview_url: previewData?.signedUrl ?? urlData.publicUrl,
       original_filename: file.name,
       parsed_transcript: parsedTranscript,
     });

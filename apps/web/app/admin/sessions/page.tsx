@@ -46,6 +46,7 @@ interface DraftSession {
   synopsis: string;
   teaching: string;
   vtt_url: string;
+  vtt_preview_url: string;
   original_filename: string;
   parsed_transcript: string;
   type: SessionType;
@@ -163,6 +164,7 @@ export default function AdminSessionsPage() {
         synopsis: data.synopsis,
         teaching: data.teaching,
         vtt_url: data.vtt_url,
+        vtt_preview_url: data.vtt_preview_url ?? data.vtt_url,
         original_filename: data.original_filename,
         parsed_transcript: data.parsed_transcript,
         type: sessionType,
@@ -336,7 +338,7 @@ export default function AdminSessionsPage() {
             {/* VTT download preview */}
             <div className="bg-[#1A1A1A] border border-[#333333] p-4">
               <p className="text-[#999999] text-sm">
-                Call transcript: <a href={draft.vtt_url} target="_blank" className="text-[#00D4FF] hover:underline">{draft.original_filename}</a>
+                Call transcript: <a href={draft.vtt_preview_url} target="_blank" className="text-[#00D4FF] hover:underline">{draft.original_filename}</a>
               </p>
             </div>
 

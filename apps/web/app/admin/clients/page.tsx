@@ -57,6 +57,7 @@ export default function AdminClientsPage() {
   const [inviteStatus, setInviteStatus] = useState<string | null>(null);
   const [resendingId, setResendingId] = useState<string | null>(null);
   const [updatingTier, setUpdatingTier] = useState<string | null>(null);
+  const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
   const [editingCompany, setEditingCompany] = useState<string | null>(null);
   const [companyDraft, setCompanyDraft] = useState('');
 
@@ -183,6 +184,37 @@ export default function AdminClientsPage() {
       alert('Failed to update tier');
     }
     setUpdatingTier(null);
+  }
+
+  async function updateClientStatus(client: ClientRow, newStatus: string) {
+    const verb = newStatus === 'paused' ? 'Pause' : 'Resume';
+    if (!confirm(
+      newStatus === 'paused'
+        ? `Pause ${client.full_name || client.email}? They will lose portal access and stop receiving cadence emails. Their data is preserved and you can resume anytime.`
+        : `Resume ${client.full_name || client.email}? Portal access and cadence emails will be restored.`
+    )) return;
+    setUpdatingStatus(client.id);
+    try {
+      const res = await fetch('/api/admin/clients', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({ user_id: client.user_id, enrollment_id: client.id, status: newStatus }),
+      });
+      if (res.ok) {
+        setClients(prev => prev.map(c =>
+          c.id === client.id ? { ...c, status: newStatus } : c
+        ));
+      } else {
+        const err = await res.json();
+        alert(`Error: ${err.error || `${verb} failed`}`);
+      }
+    } catch (err) {
+      alert(`Failed to ${verb.toLowerCase()} client`);
+    }
+    setUpdatingStatus(null);
   }
 
   async function saveCompanyName(client: ClientRow) {
@@ -458,11 +490,19 @@ export default function AdminClientsPage() {
                         )}
                       </td>
                       <td className="py-3 px-2">
-                        <span className={`text-[10px] uppercase font-bold ${
-                          client.onboarding_completed ? 'text-green-400' : client.status === 'active' ? 'text-[#FFDE59]' : 'text-[#666666]'
-                        }`}>
-                          {client.onboarding_completed ? 'Active' : 'Pending Onboarding'}
-                        </span>
+                        {client.status !== 'active' ? (
+                          <span className={`text-[10px] uppercase font-bold ${
+                            client.status === 'paused' ? 'text-[#FF8A00]' : 'text-[#666666]'
+                          }`}>
+                            {client.status}
+                          </span>
+                        ) : (
+                          <span className={`text-[10px] uppercase font-bold ${
+                            client.onboarding_completed ? 'text-green-400' : 'text-[#FFDE59]'
+                          }`}>
+                            {client.onboarding_completed ? 'Active' : 'Pending Onboarding'}
+                          </span>
+                        )}
                       </td>
                       <td className="py-3 px-2">
                         <div className="flex justify-center gap-1">
@@ -543,6 +583,23 @@ export default function AdminClientsPage() {
                           >
                             {resendingId === client.id ? '...' : 'Resend'}
                           </button>
+                          {client.status === 'paused' ? (
+                            <button
+                              onClick={() => updateClientStatus(client, 'active')}
+                              disabled={updatingStatus === client.id}
+                              className="text-[10px] uppercase font-bold border border-[#333333] px-2 py-1 text-[#999999] hover:text-green-400 hover:border-green-400 transition-colors disabled:opacity-50"
+                            >
+                              {updatingStatus === client.id ? '...' : 'Resume'}
+                            </button>
+                          ) : client.status === 'active' ? (
+                            <button
+                              onClick={() => updateClientStatus(client, 'paused')}
+                              disabled={updatingStatus === client.id}
+                              className="text-[10px] uppercase font-bold border border-[#333333] px-2 py-1 text-[#999999] hover:text-[#FF8A00] hover:border-[#FF8A00] transition-colors disabled:opacity-50"
+                            >
+                              {updatingStatus === client.id ? '...' : 'Pause'}
+                            </button>
+                          ) : null}
                         </div>
                       </td>
                     </tr>

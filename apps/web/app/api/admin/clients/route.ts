@@ -92,13 +92,38 @@ export async function PATCH(request: NextRequest) {
   }
 
   try {
-    const { user_id, call_lab_tier, discovery_lab_tier, enrollment_id, company_name } = await request.json();
+    const { user_id, call_lab_tier, discovery_lab_tier, enrollment_id, company_name, status } = await request.json();
 
     if (!user_id) {
       return NextResponse.json({ error: 'user_id required' }, { status: 400 });
     }
 
     const supabase = getSupabaseServerClient();
+
+    // Handle enrollment status update (pause / resume / complete / cancel).
+    // Every client route and cron gates on status === 'active', so flipping to
+    // 'paused' freezes portal access and stops cadence emails while preserving data.
+    if (status !== undefined) {
+      const validStatuses = ['active', 'paused', 'completed', 'cancelled'];
+      if (!validStatuses.includes(status)) {
+        return NextResponse.json({ error: 'Invalid status value' }, { status: 400 });
+      }
+
+      const query = (supabase as any)
+        .from('client_enrollments')
+        .update({ status });
+      // Prefer the specific enrollment when provided; otherwise update by user.
+      const { error } = enrollment_id
+        ? await query.eq('id', enrollment_id)
+        : await query.eq('user_id', user_id);
+
+      if (error) {
+        console.error('[Admin Clients] Update status error:', error);
+        return NextResponse.json({ error: 'Database error' }, { status: 500 });
+      }
+
+      return NextResponse.json({ success: true });
+    }
 
     // Handle company name update
     if (enrollment_id !== undefined && company_name !== undefined) {

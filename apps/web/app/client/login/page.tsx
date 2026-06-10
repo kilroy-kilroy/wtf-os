@@ -6,6 +6,9 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import type { Metadata } from 'next';
 
+const PAUSED_MESSAGE =
+  "Your program is paused right now, so the portal is on hold. Whenever you're ready to pick back up, email tim@timkilroy.com and we'll switch it right back on.";
+
 export default function ClientLoginPage() {
   return (
     <Suspense fallback={
@@ -23,6 +26,7 @@ function ClientLoginContent() {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [mode, setMode] = useState<'login' | 'forgot'>('login');
   const [resetSent, setResetSent] = useState(false);
 
@@ -40,8 +44,11 @@ function ClientLoginContent() {
   }, [searchParams]);
 
   useEffect(() => {
-    if (searchParams.get('notice') === 'password_set') {
+    const noticeParam = searchParams.get('notice');
+    if (noticeParam === 'password_set') {
       setError('Your password has been set. Please sign in.');
+    } else if (noticeParam === 'paused') {
+      setNotice(PAUSED_MESSAGE);
     }
   }, [searchParams]);
 
@@ -79,6 +86,7 @@ function ClientLoginContent() {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
+    setNotice(null);
 
     try {
       if (mode === 'forgot') {
@@ -99,22 +107,28 @@ function ClientLoginContent() {
         if (error) throw error;
 
         if (authData.user) {
-          // Check if user has a client enrollment
-          const { data: enrollment } = await supabase
+          // Read ALL enrollments (no status filter) so we can tell "paused"
+          // apart from "no program" and show the right message for each.
+          const { data: enrollments } = await supabase
             .from('client_enrollments')
-            .select('id, onboarding_completed, program_id')
-            .eq('user_id', authData.user.id)
-            .eq('status', 'active')
-            .single();
+            .select('id, onboarding_completed, program_id, status')
+            .eq('user_id', authData.user.id);
 
-          if (enrollment) {
-            if (!enrollment.onboarding_completed) {
-              router.push('/client/onboarding');
-            } else {
-              router.push('/client/dashboard');
-            }
+          const active = enrollments?.find((e) => e.status === 'active');
+          const paused = enrollments?.find((e) => e.status === 'paused');
+
+          if (active) {
+            router.push(active.onboarding_completed ? '/client/dashboard' : '/client/onboarding');
+          } else if (paused) {
+            // Authenticated but on hold — surface a warm message and end the
+            // session so there's no half-logged-in state lingering.
+            await supabase.auth.signOut();
+            setError(null);
+            setNotice(PAUSED_MESSAGE);
+            setIsLoading(false);
+            return;
           } else {
-            // No enrollment - check if there's an invite
+            // No active or paused enrollment (none, completed, or cancelled).
             setError('No active program found. Please contact your program administrator.');
           }
         }
@@ -195,6 +209,12 @@ function ClientLoginContent() {
                   className="w-full bg-black border border-[#333333] text-white px-4 py-3 text-base focus:border-[#E51B23] focus:outline-none transition-colors"
                   placeholder="••••••••"
                 />
+              </div>
+            )}
+
+            {notice && (
+              <div className="text-sm text-[#FFDE59] bg-[#FFDE59]/5 border border-[#FFDE59]/30 px-4 py-3 leading-relaxed">
+                {notice}
               </div>
             )}
 

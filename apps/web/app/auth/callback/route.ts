@@ -63,6 +63,19 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(`${origin}${dest}`);
   }
 
+  // No active enrollment — but if this user is a paused client, send them to a
+  // graceful paused notice rather than the legacy labs/onboarding fallback.
+  const { data: pausedEnrollment } = await admin
+    .from('client_enrollments')
+    .select('id')
+    .eq('user_id', exchanged.user.id)
+    .eq('status', 'paused')
+    .maybeSingle();
+
+  if (pausedEnrollment) {
+    return NextResponse.redirect(`${origin}/client/login?notice=paused`);
+  }
+
   // No enrollment: fall back to onboarding-vs-labs based on profile state.
   const { data: userData } = await admin
     .from('users')

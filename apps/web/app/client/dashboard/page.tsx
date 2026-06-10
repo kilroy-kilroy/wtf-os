@@ -37,7 +37,23 @@ export default function ClientDashboardPage() {
         .eq('status', 'active')
         .single();
 
-      if (!enrollment) { router.push('/client/login'); return; }
+      if (!enrollment) {
+        // No active enrollment. If they were paused mid-session, sign out and
+        // send them to the graceful paused notice instead of a bare login.
+        const { data: paused } = await supabase
+          .from('client_enrollments')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('status', 'paused')
+          .maybeSingle();
+        if (paused) {
+          await supabase.auth.signOut();
+          router.push('/client/login?notice=paused');
+        } else {
+          router.push('/client/login');
+        }
+        return;
+      }
       if (!enrollment.onboarding_completed) { router.push('/client/onboarding'); return; }
 
       const demandosProgram = Array.isArray(enrollment.program)

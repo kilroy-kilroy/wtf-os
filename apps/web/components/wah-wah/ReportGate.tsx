@@ -56,6 +56,7 @@ export default function ReportGate({
   flagCount: number;
   initialResult?: WahWahResult | null;
 }) {
+  const [firstName, setFirstName] = useState("");
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -69,7 +70,7 @@ export default function ReportGate({
       const res = await fetch("/api/wah-wah/report", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ id: analysisId, email }),
+        body: JSON.stringify({ id: analysisId, email, firstName }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? "Something broke");
@@ -95,20 +96,29 @@ export default function ReportGate({
           trying to say underneath it, and one line of what your homepage could say
           instead. The price is your email.
         </p>
-        <div className="flex w-full max-w-md flex-col gap-3 sm:flex-row">
-          <div className="flex-1">
-            <ConsoleInput
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail((e.target as HTMLInputElement).value)}
-              placeholder="you@youragency.com"
-              aria-label="Your email"
-            />
+        <div className="flex w-full max-w-md flex-col gap-3">
+          <ConsoleInput
+            type="text"
+            value={firstName}
+            onChange={(e) => setFirstName((e.target as HTMLInputElement).value)}
+            placeholder="First name (optional)"
+            aria-label="First name (optional)"
+          />
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <div className="flex-1">
+              <ConsoleInput
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail((e.target as HTMLInputElement).value)}
+                placeholder="you@youragency.com"
+                aria-label="Your email"
+              />
+            </div>
+            <ConsoleButton type="submit" disabled={busy} className="whitespace-nowrap">
+              {busy ? "PULLING THE REPORT…" : "SHOW ME THE DAMAGE"}
+            </ConsoleButton>
           </div>
-          <ConsoleButton type="submit" disabled={busy} className="whitespace-nowrap">
-            {busy ? "PULLING THE REPORT…" : "SHOW ME THE DAMAGE"}
-          </ConsoleButton>
         </div>
         {error && <p className="font-poppins text-sm text-[#E51B23]">{error}</p>}
         <p className="font-poppins text-xs text-[#808080]">

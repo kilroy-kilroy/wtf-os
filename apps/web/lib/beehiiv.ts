@@ -235,10 +235,12 @@ export async function addVisibilityLabSubscriber(
  */
 export async function addWahWahSubscriber(
   email: string,
-  hostname?: string
+  hostname?: string,
+  firstName?: string
 ): Promise<{ success: boolean; id?: string; error?: string }> {
   return addSubscriber({
     email,
+    first_name: firstName || undefined,
     utm_source: 'wah-wah-detector',
     utm_medium: 'lead-magnet',
     custom_fields: hostname

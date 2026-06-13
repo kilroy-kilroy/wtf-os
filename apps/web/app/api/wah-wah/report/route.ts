@@ -16,11 +16,13 @@ function hostnameOf(url: string): string {
 }
 
 export async function POST(req: Request): Promise<Response> {
-  let id: string, email: string;
+  let id: string, email: string, firstName: string;
   try {
     const body = await req.json();
     id = String(body.id ?? "");
     email = String(body.email ?? "").trim().toLowerCase();
+    // Optional gate field — captured when freely given, never required.
+    firstName = String(body.firstName ?? "").trim().slice(0, 80);
     if (!id || !EMAIL_RE.test(email)) throw new Error("bad input");
   } catch {
     return Response.json({ error: "Enter a real email address" }, { status: 400 });
@@ -46,7 +48,7 @@ export async function POST(req: Request): Promise<Response> {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://app.timkilroy.com";
 
   waitUntil(
-    addWahWahSubscriber(email, hostname).catch((err) =>
+    addWahWahSubscriber(email, hostname, firstName || undefined).catch((err) =>
       console.error("[wah-wah] beehiiv subscribe failed:", err)
     )
   );
@@ -54,6 +56,7 @@ export async function POST(req: Request): Promise<Response> {
   waitUntil(
     copperSyncLead({
       email,
+      name: firstName || undefined,
       companyName: hostname,
       productName: "Wah-Wah Detector",
       opportunityValue: 0,
@@ -62,10 +65,10 @@ export async function POST(req: Request): Promise<Response> {
     }).catch((err) => console.error("[wah-wah] copper sync failed:", err))
   );
 
-  alertReportGenerated(email, "wah-wah", hostname);
+  alertReportGenerated(firstName ? `${firstName} (${email})` : email, "wah-wah", hostname);
 
   waitUntil(
-    onWahWahReportGenerated(email, id, score, hostname).catch((err) =>
+    onWahWahReportGenerated(email, id, score, hostname, firstName || undefined).catch((err) =>
       console.error("[wah-wah] loops event failed:", err)
     )
   );

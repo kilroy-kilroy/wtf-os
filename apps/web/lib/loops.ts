@@ -520,10 +520,23 @@ export async function onWahWahReportGenerated(
   email: string,
   reportId: string,
   wahWahScore: number,
-  hostname: string
+  hostname: string,
+  firstName?: string
 ): Promise<{ success: boolean; error?: string }> {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.timkilroy.com';
   const reportUrl = `${appUrl}/wah-wah/r/${reportId}`;
+
+  // Set firstName on the Loops contact when supplied (optional gate field) so
+  // the whole nurture sequence can personalize, not just the triggered email.
+  if (firstName) {
+    await createOrUpdateContact({
+      email,
+      firstName,
+      source: 'wah_wah_detector',
+      subscribed: true,
+      userGroup: 'wah_wah_free',
+    });
+  }
 
   return sendEvent({
     email,
@@ -533,6 +546,7 @@ export async function onWahWahReportGenerated(
       reportUrl,
       wahWahScore,
       hostname,
+      firstName: firstName || '',
     },
   });
 }

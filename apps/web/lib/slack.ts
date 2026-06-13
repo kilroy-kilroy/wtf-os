@@ -93,6 +93,7 @@ export function alertReportGenerated(
     'visibility-pro': 'Visibility Lab Pro',
     'call-lab-lite': 'Call Lab',
     'call-lab-pro': 'Call Lab Pro',
+    'wah-wah': 'Wah-Wah Detector',
   };
   const label = productLabels[product] || product;
 

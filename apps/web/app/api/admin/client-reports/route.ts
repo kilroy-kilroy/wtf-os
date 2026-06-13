@@ -58,6 +58,7 @@ export async function GET(request: NextRequest) {
       assessmentsResult,
       visibilityResult,
       bizDevResult,
+      wahWahResult,
     ] = await Promise.all([
       (supabase as any)
         .from('agencies')
@@ -101,6 +102,11 @@ export async function GET(request: NextRequest) {
         .select('id, user_id, email, name, company_name, composite_score, verdict, stage, cta_tier, dominant_trap, report_status, research_status, created_at')
         .order('created_at', { ascending: false })
         .limit(1000),
+      (supabase as any)
+        .from('wah_wah_reports')
+        .select('id, user_id, email, url, score, created_at')
+        .order('created_at', { ascending: false })
+        .limit(1000),
     ]);
 
     const agencies = agenciesResult.data || [];
@@ -112,6 +118,7 @@ export async function GET(request: NextRequest) {
     const assessments = assessmentsResult.data || [];
     const visibilityReports = visibilityResult.data || [];
     const bizDevAssessments = bizDevResult.data || [];
+    const wahWahReports = wahWahResult.data || [];
 
     // Log query errors for debugging (queries fail silently with (supabase as any))
     if (callLabResult.error) console.error('[Admin Reports] call_lab_reports query error:', callLabResult.error);
@@ -420,6 +427,21 @@ export async function GET(request: NextRequest) {
           researchStatus: r.research_status,
           createdAt: r.created_at,
         })),
+        wahWah: wahWahReports.map((r: any) => {
+          let hostname = r.url;
+          try { hostname = new URL(r.url).hostname; } catch { /* keep raw url */ }
+          return {
+            id: r.id,
+            userId: r.user_id,
+            userName: r.user_id ? getUserName(r.user_id) : (r.email || 'Anonymous'),
+            userEmail: r.user_id ? getUserEmail(r.user_id) : (r.email || ''),
+            agencyName: getAgencyNameForUser(r.user_id),
+            hostname,
+            url: r.url,
+            score: r.score,
+            createdAt: r.created_at,
+          };
+        }),
       },
     };
 

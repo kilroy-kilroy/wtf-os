@@ -10,3 +10,4 @@ export * from './visibility-lab/pro-json';
 export { DEMAND_OS_ARCHETYPES as VISIBILITY_LAB_ARCHETYPES } from './visibility-lab/archetypes';
 export * from './one-shot';
 export * from './biz-dev-assessment';
+export * from './wah-wah';

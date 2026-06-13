@@ -117,6 +117,18 @@ interface BizDevReport {
   createdAt: string;
 }
 
+interface WahWahReport {
+  id: string;
+  userId: string | null;
+  userName: string;
+  userEmail: string;
+  agencyName: string | null;
+  hostname: string;
+  url: string;
+  score: number | null;
+  createdAt: string;
+}
+
 interface ReportsData {
   agencies: AgencyData[];
   inferredAgencies?: AgencyData[];
@@ -128,11 +140,12 @@ interface ReportsData {
     assessments: AssessmentReport[];
     visibility: VisibilityReport[];
     bizDev: BizDevReport[];
+    wahWah: WahWahReport[];
   };
 }
 
 type TabType = 'agency' | 'user' | 'product';
-type ProductFilter = 'all' | 'callLabLite' | 'callLabPro' | 'callLabInstant' | 'discoveryLite' | 'discoveryPro' | 'assessments' | 'visibilityLab' | 'bizDev';
+type ProductFilter = 'all' | 'callLabLite' | 'callLabPro' | 'callLabInstant' | 'discoveryLite' | 'discoveryPro' | 'assessments' | 'visibilityLab' | 'bizDev' | 'wahWah';
 
 const PRODUCT_LABELS: Record<string, string> = {
   callLabInstant: 'Call Lab Instant',
@@ -143,6 +156,7 @@ const PRODUCT_LABELS: Record<string, string> = {
   assessments: 'WTF Assessment',
   visibilityLab: 'Visibility Lab',
   bizDev: 'BD Hire Readiness',
+  wahWah: 'Wah-Wah Detector',
 };
 
 const PRODUCT_COLORS: Record<string, string> = {
@@ -154,6 +168,7 @@ const PRODUCT_COLORS: Record<string, string> = {
   assessments: '#f59e0b',
   visibilityLab: '#a855f7',
   bizDev: '#c45a3b',
+  wahWah: '#D75A3F',
 };
 
 // ============================================
@@ -885,6 +900,7 @@ function ProductView({
     { key: 'visibilityLab', label: 'Visibility Lab' },
     { key: 'assessments', label: 'WTF Assessment' },
     { key: 'bizDev', label: 'BD Hire Readiness' },
+    { key: 'wahWah', label: 'Wah-Wah Detector' },
   ];
 
   const showCallLab = selectedProduct === 'all' || selectedProduct === 'callLabLite' || selectedProduct === 'callLabPro';
@@ -893,6 +909,7 @@ function ProductView({
   const showVisibility = selectedProduct === 'all' || selectedProduct === 'visibilityLab';
   const showAssessments = selectedProduct === 'all' || selectedProduct === 'assessments';
   const showBizDev = selectedProduct === 'all' || selectedProduct === 'bizDev';
+  const showWahWah = selectedProduct === 'all' || selectedProduct === 'wahWah';
 
   const callLabReports = useMemo(() => {
     // Merge call_lab_reports with pro/lite call_scores into one Call Lab view
@@ -938,6 +955,10 @@ function ProductView({
   const bizDevReports = useMemo(() => {
     return sortReports(applyUserFilter(data.reports.bizDev || []));
   }, [data.reports.bizDev, sortReports, applyUserFilter]);
+
+  const wahWahReports = useMemo(() => {
+    return sortReports(applyUserFilter(data.reports.wahWah || []));
+  }, [data.reports.wahWah, sortReports, applyUserFilter]);
 
   return (
     <div>
@@ -1184,6 +1205,45 @@ function ProductView({
         </div>
       )}
 
+      {/* Wah-Wah Detector table */}
+      {showWahWah && wahWahReports.length > 0 && (
+        <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4 mb-4">
+          <h3 className="text-sm font-bold text-white mb-3">
+            Wah-Wah Detector Reports
+            <span className="text-slate-500 font-normal ml-2">({wahWahReports.length})</span>
+          </h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-600/50">
+                  <SortHeader field="score">Score</SortHeader>
+                  <SortHeader field="hostname">Site</SortHeader>
+                  <SortHeader field="userEmail">Email</SortHeader>
+                  <SortHeader field="createdAt">Date</SortHeader>
+                  <th className="py-2 text-left text-slate-500 text-xs"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {wahWahReports.map((r: any) => (
+                  <tr key={r.id} className="border-b border-slate-700/30">
+                    <td className="py-2 pr-4">
+                      {/* Wah-Wah is inverted: a HIGH score is bad, so invert the color input. */}
+                      <span className="font-mono text-xs" style={{ color: scoreColor(r.score != null ? 100 - r.score : null, 100) }}>
+                        {r.score != null ? `${r.score}/100` : '-'}
+                      </span>
+                    </td>
+                    <td className="py-2 pr-4 text-white text-xs font-medium">{r.hostname || '-'}</td>
+                    <td className="py-2 pr-4 text-xs text-slate-400">{r.userEmail || <span className="text-slate-600">(no email yet)</span>}</td>
+                    <td className="py-2 pr-4 text-slate-500 text-xs">{formatTimeAgo(r.createdAt)}</td>
+                    <td className="py-2"><ReportLink href={`/wah-wah/r/${r.id}?admin=1`}>View</ReportLink></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
       {/* Assessments table */}
       {showAssessments && assessmentReports.length > 0 && (
         <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4 mb-4">
@@ -1307,6 +1367,9 @@ function ProductView({
       )}
       {showVisibility && visibilityReports.length === 0 && selectedProduct !== 'all' && (
         <EmptyState message="No Visibility Lab reports found" />
+      )}
+      {showWahWah && wahWahReports.length === 0 && selectedProduct !== 'all' && (
+        <EmptyState message="No Wah-Wah Detector reports found" />
       )}
       {showAssessments && assessmentReports.length === 0 && selectedProduct !== 'all' && (
         <EmptyState message="No assessments found" />

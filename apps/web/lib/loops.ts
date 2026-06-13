@@ -512,6 +512,32 @@ export async function onVisibilityProReportGenerated(
 }
 
 /**
+ * Fire when a Wah-Wah Detector report is generated (free top-of-funnel tool).
+ * The Detector collects only an email, so the submitted URL's hostname stands
+ * in for brand/company name. Triggers the AIC nurture sequence.
+ */
+export async function onWahWahReportGenerated(
+  email: string,
+  reportId: string,
+  wahWahScore: number,
+  hostname: string
+): Promise<{ success: boolean; error?: string }> {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.timkilroy.com';
+  const reportUrl = `${appUrl}/wah-wah/r/${reportId}`;
+
+  return sendEvent({
+    email,
+    eventName: 'wah_wah_report_generated',
+    eventProperties: {
+      reportId,
+      reportUrl,
+      wahWahScore,
+      hostname,
+    },
+  });
+}
+
+/**
  * Fire when a coaching report is ready (weekly, monthly, quarterly)
  * Triggers email with link to coaching report
  *

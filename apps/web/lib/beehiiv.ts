@@ -230,6 +230,24 @@ export async function addVisibilityLabSubscriber(
 }
 
 /**
+ * Add subscriber from Wah-Wah Detector submission (free top-of-funnel tool).
+ * Collects only an email; the submitted site's hostname stands in for company.
+ */
+export async function addWahWahSubscriber(
+  email: string,
+  hostname?: string
+): Promise<{ success: boolean; id?: string; error?: string }> {
+  return addSubscriber({
+    email,
+    utm_source: 'wah-wah-detector',
+    utm_medium: 'lead-magnet',
+    custom_fields: hostname
+      ? [{ name: 'company', value: hostname }]
+      : undefined,
+  });
+}
+
+/**
  * Add subscriber from Biz Dev Assessment completion
  * Tags them for the biz-dev-assessment list
  */

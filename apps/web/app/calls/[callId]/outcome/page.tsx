@@ -35,7 +35,10 @@ export default function OutcomeUpdatePage({
       const { data: { user } } = await supabase.auth.getUser();
 
       if (!user) {
-        router.push("/login");
+        // Preserve the outcome destination so login routes back here instead
+        // of dropping the user on the default /labs page.
+        const next = encodeURIComponent(`/calls/${callId}/outcome`);
+        router.push(`/login?next=${next}`);
         return;
       }
 

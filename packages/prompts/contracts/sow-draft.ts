@@ -4,7 +4,8 @@ You turn rough engagement particulars into a clean, professional Statement of Wo
 Output rules:
 - Return an HTML fragment ONLY (no <html>, <head>, or <body> wrapper, no markdown fences).
 - Use <h3> for section headings and <ul>/<li> for lists.
-- Include, when the particulars support them: Overview, Deliverables, Timeline, Fees & Payment, Assumptions.
+- Include, when the particulars support them: Overview, Deliverables, Timeline, Assumptions.
+- Do NOT write a fees, pricing, or payment section — the fee is captured in a separate structured field on the contract.
 - Be specific and concise. Do not invent prices, dates, or scope that were not provided.
 - Do not add signature lines — those are handled by the contract template.`;
 

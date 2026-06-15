@@ -83,6 +83,9 @@ ${INITIALS_FOOTER}
 <p>This is a schedule, effective {{effective_date}} to the Master Services Agreement between KLRY, LLC and {{client_company_name}} (Client, and collectively The Parties) dated {{msa_date}}. All terms and conditions set forth in the Agreement apply to this Schedule, except where expressly noted to the contrary.</p>
 
 {{sow}}
+
+<h3>Fees &amp; Payment</h3>
+<p>{{fee}}</p>
 ${SIG_BLOCK}`;
 
 // 3) Agency Studio Plus SOW — productized offer with fixed scope + $999/mo.
@@ -116,6 +119,13 @@ const SOW_VARS = [
   { key: 'msa_date', label: 'MSA date (date the MSA was dated)', required: true },
 ];
 
+// Generic SOW also captures the fee as a required, structured field so it is
+// never left to the AI-drafted scope (and so a send fails if it's missing).
+const SOW_VARS_WITH_FEE = [
+  ...SOW_VARS,
+  { key: 'fee', label: 'Total fee (e.g. $5,000/mo or $20,000 fixed)', required: true },
+];
+
 const TEMPLATES = [
   {
     name: 'Master Services Agreement',
@@ -132,7 +142,7 @@ const TEMPLATES = [
     name: 'Statement of Work',
     slug: 'sow',
     body_html: BODY_SOW,
-    variables: SOW_VARS,
+    variables: SOW_VARS_WITH_FEE,
     signer_config: { roles: ['client', 'counter'] },
   },
   {

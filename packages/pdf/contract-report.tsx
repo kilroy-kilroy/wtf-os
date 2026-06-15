@@ -90,6 +90,7 @@ function renderBlock(el: DomNode, key: string): React.ReactNode {
     case 'div': {
       const cls = el.attribs?.class ?? '';
       if (cls.includes('page-initials')) return null;
+      if (cls.includes('page-break')) return <View key={key} break />;
       if (cls.includes('sig-block')) {
         return <View key={key} style={styles.sigBlock} wrap={false}>{renderBlocks(el, key)}</View>;
       }

@@ -9,6 +9,7 @@ export async function POST(req: NextRequest) {
   try {
     const id = await createContract({
       templateId: body.templateId,
+      sowTemplateId: body.sowTemplateId ?? null,
       title: body.title,
       fieldValues: body.fieldValues,
       sowHtml: body.sowHtml,

@@ -16,9 +16,12 @@ export async function getContract(id: string) {
   const { data: template } = contract.template_id
     ? await db.from('contract_templates').select('name, body_html').eq('id', contract.template_id).single()
     : { data: null };
+  const { data: sowTemplate } = contract.sow_template_id
+    ? await db.from('contract_templates').select('name, body_html').eq('id', contract.sow_template_id).single()
+    : { data: null };
   const { data: signers } = await db
     .from('contract_signers').select('*').eq('contract_id', id).order('sign_order');
-  return { contract, template, signers: signers ?? [] };
+  return { contract, template, sowTemplate, signers: signers ?? [] };
 }
 
 export async function listActiveTemplates() {

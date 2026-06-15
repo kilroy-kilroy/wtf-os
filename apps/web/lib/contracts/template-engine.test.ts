@@ -1,5 +1,15 @@
 import { describe, it, expect } from 'vitest';
-import { merge, extractVariables, SIGNATURE_ANCHORS } from './template-engine';
+import { merge, extractVariables, combineMergedHtml, SIGNATURE_ANCHORS } from './template-engine';
+
+describe('combineMergedHtml', () => {
+  it('returns the base only when there is no SOW body', () => {
+    expect(combineMergedHtml('<p>{{a}}</p>{{sow}}', null, { a: 'X' }, 'S')).toBe('<p>X</p>S');
+  });
+  it('appends the SOW after a page break', () => {
+    const out = combineMergedHtml('<p>{{a}}</p>', '<h2>SOW</h2>{{sow}}', { a: 'X' }, 'Scope');
+    expect(out).toBe('<p>X</p><div class="page-break"></div><h2>SOW</h2>Scope');
+  });
+});
 
 describe('extractVariables', () => {
   it('returns unique placeholder keys, excluding the sow slot and signature anchors', () => {

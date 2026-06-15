@@ -10,6 +10,7 @@ type Snippet = { id: string; label: string; category: string; body_html: string 
 export default function NewContractForm({ templates, snippets }: { templates: Template[]; snippets: Snippet[] }) {
   const router = useRouter();
   const [templateId, setTemplateId] = useState('');
+  const [sowTemplateId, setSowTemplateId] = useState('');
   const [fields, setFields] = useState<Record<string, string>>({});
   const [particulars, setParticulars] = useState('');
   const [sowHtml, setSowHtml] = useState('');
@@ -21,6 +22,19 @@ export default function NewContractForm({ templates, snippets }: { templates: Te
   const [error, setError] = useState<string | null>(null);
 
   const template = useMemo(() => templates.find((t) => t.id === templateId), [templates, templateId]);
+  const sowTemplate = useMemo(() => templates.find((t) => t.id === sowTemplateId), [templates, sowTemplateId]);
+
+  // Fields the form asks for = union of both documents' variables, de-duped by key.
+  const allVars = useMemo(() => {
+    const seen = new Set<string>();
+    const out: Variable[] = [];
+    for (const t of [template, sowTemplate]) {
+      for (const v of t?.variables ?? []) {
+        if (!seen.has(v.key)) { seen.add(v.key); out.push(v); }
+      }
+    }
+    return out;
+  }, [template, sowTemplate]);
 
   async function draftWithAi() {
     setBusy('Drafting…'); setError(null);
@@ -41,10 +55,12 @@ export default function NewContractForm({ templates, snippets }: { templates: Te
   async function saveAndSend(send: boolean) {
     setBusy(send ? 'Generating & sending…' : 'Saving…'); setError(null);
     try {
+      const titleBits = [template?.name, sowTemplate?.name].filter(Boolean).join(' + ');
       const create = await fetch('/api/contracts', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          templateId, title: `${fields.company_name ?? 'Contract'} — ${template?.name ?? ''}`,
+          templateId, sowTemplateId: sowTemplateId || null,
+          title: `${fields.client_company_name ?? fields.company_name ?? 'Contract'} — ${titleBits}`,
           fieldValues: fields, sowHtml,
           signers: [
             { role: 'client', name: clientName, email: clientEmail, order: 1 },
@@ -65,28 +81,42 @@ export default function NewContractForm({ templates, snippets }: { templates: Te
   }
 
   const merged = useMemo(() => {
-    if (!template) return '';
-    let html = template.body_html.replace(/\{\{\s*sow\s*\}\}/gi, sowHtml);
-    for (const [k, v] of Object.entries(fields)) html = html.replaceAll(`{{${k}}}`, v);
-    return html;
-  }, [template, fields, sowHtml]);
+    const renderOne = (body?: string) => {
+      if (!body) return '';
+      let html = body.replace(/\{\{\s*sow\s*\}\}/gi, sowHtml);
+      for (const [k, v] of Object.entries(fields)) html = html.replaceAll(`{{${k}}}`, v);
+      return html;
+    };
+    const base = renderOne(template?.body_html);
+    if (!base) return '';
+    const sow = sowTemplate ? renderOne(sowTemplate.body_html) : '';
+    return sow ? `${base}<hr style="margin:24px 0;border:none;border-top:2px dashed #ccc"/>${sow}` : base;
+  }, [template, sowTemplate, fields, sowHtml]);
 
   return (
     <div className="grid md:grid-cols-2 gap-6 max-w-6xl">
       <div className="space-y-6">
         <section className="space-y-2">
-          <label className="text-sm text-slate-300 font-medium">1. Template</label>
+          <label className="text-sm text-slate-300 font-medium">1. Documents</label>
           <select value={templateId} onChange={(e) => setTemplateId(e.target.value)}
             className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white text-sm">
-            <option value="">Select a template…</option>
+            <option value="">Base agreement…</option>
             {templates.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
           </select>
+          <select value={sowTemplateId} onChange={(e) => setSowTemplateId(e.target.value)}
+            className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white text-sm">
+            <option value="">Attach a Statement of Work (optional)…</option>
+            {templates.filter((t) => t.id !== templateId).map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+          </select>
+          {sowTemplate && (
+            <p className="text-xs text-slate-500">Sent as one envelope: <strong>{template?.name}</strong> then <strong>{sowTemplate.name}</strong>. Both are signed + initialed.</p>
+          )}
         </section>
 
         {template && (
           <section className="space-y-2">
             <label className="text-sm text-slate-300 font-medium">2. Client details</label>
-            {template.variables.map((v) => (
+            {allVars.map((v) => (
               <input key={v.key} placeholder={v.label} value={fields[v.key] ?? ''}
                 onChange={(e) => setFields((f) => ({ ...f, [v.key]: e.target.value }))}
                 className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white text-sm" />
@@ -100,9 +130,9 @@ export default function NewContractForm({ templates, snippets }: { templates: Te
           </section>
         )}
 
-        {template && (
+        {(template || sowTemplate) && (
           <section className="space-y-2">
-            <label className="text-sm text-slate-300 font-medium">3. Statement of Work</label>
+            <label className="text-sm text-slate-300 font-medium">3. Statement of Work scope</label>
             <textarea placeholder="Rough particulars: deliverables, timeline, price…" value={particulars}
               onChange={(e) => setParticulars(e.target.value)} rows={4}
               className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white text-sm" />
@@ -115,7 +145,8 @@ export default function NewContractForm({ templates, snippets }: { templates: Te
               ))}
             </div>
             <textarea value={sowHtml} onChange={(e) => setSowHtml(e.target.value)} rows={8}
-              className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white text-xs font-mono" />
+              className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white text-xs font-mono"
+              placeholder="Generated SOW HTML fills the {{sow}} slot of the attached Statement of Work." />
           </section>
         )}
 
@@ -133,7 +164,7 @@ export default function NewContractForm({ templates, snippets }: { templates: Te
       <div className="md:sticky md:top-6 h-fit">
         <label className="text-sm text-slate-300 font-medium">4. Preview</label>
         <div className="mt-2 bg-white text-black rounded p-6 text-sm overflow-auto max-h-[80vh]"
-          dangerouslySetInnerHTML={{ __html: merged || '<p class="text-slate-400">Select a template…</p>' }} />
+          dangerouslySetInnerHTML={{ __html: merged || '<p class="text-slate-400">Select a base agreement…</p>' }} />
       </div>
     </div>
   );

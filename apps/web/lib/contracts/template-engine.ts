@@ -59,3 +59,20 @@ export function merge(bodyHtml: string, fieldValues: Record<string, string>, sow
   }
   return out;
 }
+
+/**
+ * Merge a base agreement and, if present, append a SOW schedule after a page
+ * break — one combined document. Both keep their own signature/initials anchors,
+ * so the client signs both sections in a single envelope.
+ */
+export function combineMergedHtml(
+  baseBody: string,
+  sowBody: string | null | undefined,
+  fieldValues: Record<string, string>,
+  sowHtml: string,
+): string {
+  const base = merge(baseBody, fieldValues, sowHtml);
+  if (!sowBody) return base;
+  const sow = merge(sowBody, fieldValues, sowHtml);
+  return `${base}<div class="page-break"></div>${sow}`;
+}

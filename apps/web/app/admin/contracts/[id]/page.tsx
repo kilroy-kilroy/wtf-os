@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getContract } from '@/lib/contracts/queries';
-import { merge } from '@/lib/contracts/template-engine';
+import { combineMergedHtml } from '@/lib/contracts/template-engine';
 import ContractActions from './ContractActions';
 
 const BADGE: Record<string, string> = {
@@ -15,14 +15,17 @@ export default async function ContractDetailPage({ params }: { params: Promise<{
   const { id } = await params;
   const data = await getContract(id);
   if (!data) notFound();
-  const { contract, template, signers } = data;
+  const { contract, template, sowTemplate, signers } = data;
 
   // Re-merge the immutable snapshot for an on-screen preview. If a field is
   // missing the merge throws — surface that rather than rendering a broken doc.
   let preview = '';
   let previewError: string | null = null;
   try {
-    preview = merge(template?.body_html ?? '', contract.field_values ?? {}, contract.sow_html ?? '');
+    preview = combineMergedHtml(
+      template?.body_html ?? '', sowTemplate?.body_html ?? null,
+      contract.field_values ?? {}, contract.sow_html ?? '',
+    ).replace(/<div class="page-break"><\/div>/g, '<hr style="margin:24px 0;border:none;border-top:2px dashed #ccc"/>');
   } catch (e) {
     previewError = e instanceof Error ? e.message : 'preview failed';
   }
@@ -39,7 +42,7 @@ export default async function ContractDetailPage({ params }: { params: Promise<{
         <div>
           <h1 className="text-xl font-bold text-white">{contract.title}</h1>
           <p className="text-slate-500 text-xs mt-1">
-            {template?.name ?? 'Unknown template'} · {new Date(contract.created_at).toLocaleString()}
+            {[template?.name, sowTemplate?.name].filter(Boolean).join(' + ') || 'Unknown template'} · {new Date(contract.created_at).toLocaleString()}
           </p>
         </div>
         <span className={`px-2 py-1 rounded text-xs ${BADGE[contract.status] ?? 'bg-slate-700'}`}>{contract.status}</span>

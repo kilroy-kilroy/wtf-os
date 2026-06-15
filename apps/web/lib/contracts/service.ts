@@ -3,7 +3,7 @@
 // Orchestration: DB + merge engine + PDF + Firma. Server-side only.
 
 import { getSupabaseServerClient } from '@/lib/supabase-server';
-import { merge } from './template-engine';
+import { combineMergedHtml } from './template-engine';
 import { renderContractPdf } from './contract-pdf';
 import {
   createSigningRequest, sendSigningRequest, getRequest, shouldApplyStatus,
@@ -14,6 +14,7 @@ const BUCKET = 'contracts';
 
 export interface CreateContractInput {
   templateId: string;
+  sowTemplateId?: string | null;
   title: string;
   fieldValues: Record<string, string>;
   sowHtml: string;
@@ -24,16 +25,18 @@ export interface CreateContractInput {
 /** Persist a draft contract + its signers. */
 export async function createContract(input: CreateContractInput): Promise<string> {
   const db = getSupabaseServerClient();
+  const row: Record<string, unknown> = {
+    template_id: input.templateId,
+    title: input.title,
+    field_values: input.fieldValues,
+    sow_html: input.sowHtml,
+    status: 'draft',
+    created_by: input.createdBy,
+  };
+  if (input.sowTemplateId) row.sow_template_id = input.sowTemplateId;
   const { data: contract, error } = await db
     .from('contracts')
-    .insert({
-      template_id: input.templateId,
-      title: input.title,
-      field_values: input.fieldValues,
-      sow_html: input.sowHtml,
-      status: 'draft',
-      created_by: input.createdBy,
-    })
+    .insert(row)
     .select('id')
     .single();
   if (error || !contract) throw new Error(`createContract failed: ${error?.message}`);
@@ -72,7 +75,7 @@ export async function generateAndSend(contractId: string): Promise<void> {
     .update({ status: 'sending', last_error: null, updated_at: new Date().toISOString() })
     .eq('id', contractId)
     .eq('status', 'draft')
-    .select('id, template_id, title, field_values, sow_html, firma_request_id')
+    .select('id, template_id, sow_template_id, title, field_values, sow_html, firma_request_id')
     .maybeSingle();
   if (!claimed) return; // not in draft (already sending/sent) — nothing to do
 
@@ -91,11 +94,20 @@ export async function generateAndSend(contractId: string): Promise<void> {
       .from('contract_templates').select('body_html').eq('id', claimed.template_id).single();
     if (!template) throw new Error('template not found');
 
+    // Optional attached SOW schedule — appended after a page break into one doc.
+    let sowBody: string | null = null;
+    if (claimed.sow_template_id) {
+      const { data: sowTpl } = await db
+        .from('contract_templates').select('body_html').eq('id', claimed.sow_template_id).single();
+      if (!sowTpl) throw new Error('attached SOW template not found');
+      sowBody = sowTpl.body_html;
+    }
+
     const { data: signers } = await db
       .from('contract_signers').select('*').eq('contract_id', contractId).order('sign_order');
     if (!signers?.length) throw new Error('no signers');
 
-    const mergedHtml = merge(template.body_html, claimed.field_values, claimed.sow_html);
+    const mergedHtml = combineMergedHtml(template.body_html, sowBody, claimed.field_values, claimed.sow_html);
     const pdf = await renderContractPdf(mergedHtml);
 
     const pdfPath = `${contractId}/contract.pdf`;

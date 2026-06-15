@@ -9,6 +9,18 @@ export async function listContracts() {
   return data ?? [];
 }
 
+export async function getContract(id: string) {
+  const db = getSupabaseServerClient();
+  const { data: contract } = await db.from('contracts').select('*').eq('id', id).single();
+  if (!contract) return null;
+  const { data: template } = contract.template_id
+    ? await db.from('contract_templates').select('name, body_html').eq('id', contract.template_id).single()
+    : { data: null };
+  const { data: signers } = await db
+    .from('contract_signers').select('*').eq('contract_id', id).order('sign_order');
+  return { contract, template, signers: signers ?? [] };
+}
+
 export async function listActiveTemplates() {
   const db = getSupabaseServerClient();
   const { data } = await db

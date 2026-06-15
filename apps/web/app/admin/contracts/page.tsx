@@ -22,18 +22,21 @@ export default async function ContractsPage() {
       <div className="rounded-lg border border-slate-800 divide-y divide-slate-800">
         {contracts.length === 0 && <p className="p-4 text-slate-500 text-sm">No contracts yet.</p>}
         {contracts.map((c) => (
-          <div key={c.id} className="flex items-center justify-between p-4">
+          <Link
+            key={c.id}
+            href={`/admin/contracts/${c.id}`}
+            className="flex items-center justify-between p-4 hover:bg-slate-900/40 transition-colors"
+          >
             <div>
               <p className="text-white text-sm font-medium">{c.title}</p>
               <p className="text-slate-500 text-xs">{new Date(c.created_at).toLocaleDateString()}</p>
             </div>
             <div className="flex items-center gap-3">
               <span className={`px-2 py-1 rounded text-xs ${BADGE[c.status] ?? 'bg-slate-700'}`}>{c.status}</span>
-              {c.signed_pdf_path && (
-                <a href={`/api/contracts/${c.id}/file`} className="text-xs text-blue-300 underline">Signed PDF</a>
-              )}
+              {c.signed_pdf_path && <span className="text-xs text-blue-300">Signed ✓</span>}
+              <span className="text-slate-600 text-xs">›</span>
             </div>
-          </div>
+          </Link>
         ))}
       </div>
     </div>

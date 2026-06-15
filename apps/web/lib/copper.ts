@@ -338,3 +338,49 @@ export async function copperLogReport(params: {
     console.error('[Copper] logReport failed:', err);
   }
 }
+
+// ============================================================================
+// Companies — contract autofill
+// ============================================================================
+
+export interface CopperCompanyMatch {
+  id: number;
+  name: string;
+  address: string; // formatted single line
+  contacts: Array<{ name: string; email: string; title: string | null }>;
+}
+
+function formatCopperAddress(a: any): string {
+  if (!a) return '';
+  return [a.street, a.city, [a.state, a.postal_code].filter(Boolean).join(' '), a.country]
+    .map((x) => (typeof x === 'string' ? x.trim() : ''))
+    .filter(Boolean)
+    .join(', ');
+}
+
+/**
+ * Search Copper companies by name (for contract autofill). Each match includes
+ * the company's contacts (people with an email) so a signer can be picked.
+ */
+export async function copperSearchCompanies(query: string): Promise<CopperCompanyMatch[]> {
+  const companies = await copperFetch('/companies/search', {
+    method: 'POST',
+    body: JSON.stringify({ name: query, page_size: 5 }),
+  });
+  if (!Array.isArray(companies)) return [];
+
+  const out: CopperCompanyMatch[] = [];
+  for (const c of companies.slice(0, 5)) {
+    const people = await copperFetch('/people/search', {
+      method: 'POST',
+      body: JSON.stringify({ company_ids: [c.id], page_size: 5 }),
+    });
+    const contacts = Array.isArray(people)
+      ? people
+          .map((p: any) => ({ name: p.name as string, email: (p.emails?.[0]?.email as string) || '', title: p.title ?? null }))
+          .filter((p) => p.email)
+      : [];
+    out.push({ id: c.id, name: c.name, address: formatCopperAddress(c.address), contacts });
+  }
+  return out;
+}

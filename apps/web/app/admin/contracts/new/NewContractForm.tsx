@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation';
 type Variable = { key: string; label: string; required?: boolean };
 type Template = { id: string; name: string; variables: Variable[]; body_html: string };
 type Snippet = { id: string; label: string; category: string; body_html: string };
+type CopperContact = { name: string; email: string; title: string | null };
+type CopperCompany = { id: number; name: string; address: string; contacts: CopperContact[] };
 
 export default function NewContractForm({ templates, snippets }: { templates: Template[]; snippets: Snippet[] }) {
   const router = useRouter();
@@ -20,6 +22,29 @@ export default function NewContractForm({ templates, snippets }: { templates: Te
   const [counterEmail, setCounterEmail] = useState('tim@timkilroy.com');
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [copperQuery, setCopperQuery] = useState('');
+  const [copperResults, setCopperResults] = useState<CopperCompany[]>([]);
+  const [copperBusy, setCopperBusy] = useState(false);
+  const [picked, setPicked] = useState<CopperCompany | null>(null);
+
+  async function searchCopper() {
+    if (copperQuery.trim().length < 2) return;
+    setCopperBusy(true); setError(null);
+    try {
+      const res = await fetch(`/api/contracts/copper/search?q=${encodeURIComponent(copperQuery.trim())}`);
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Copper search failed');
+      setCopperResults(json.companies ?? []);
+    } catch (e) { setError(e instanceof Error ? e.message : 'Copper search failed'); }
+    finally { setCopperBusy(false); }
+  }
+
+  function applyCompany(c: CopperCompany) {
+    setPicked(c);
+    setCopperResults([]);
+    setFields((f) => ({ ...f, client_company_name: c.name, client_address: c.address }));
+    if (c.contacts[0]) { setClientName(c.contacts[0].name); setClientEmail(c.contacts[0].email); }
+  }
 
   const template = useMemo(() => templates.find((t) => t.id === templateId), [templates, templateId]);
   const sowTemplate = useMemo(() => templates.find((t) => t.id === sowTemplateId), [templates, sowTemplateId]);
@@ -96,6 +121,43 @@ export default function NewContractForm({ templates, snippets }: { templates: Te
   return (
     <div className="grid md:grid-cols-2 gap-6 max-w-6xl">
       <div className="space-y-6">
+        <section className="space-y-2">
+          <label className="text-sm text-slate-300 font-medium">Pull from Copper (optional)</label>
+          <div className="flex gap-2">
+            <input value={copperQuery} onChange={(e) => setCopperQuery(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); searchCopper(); } }}
+              placeholder="Search a company in Copper…"
+              className="flex-1 bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white text-sm" />
+            <button type="button" onClick={searchCopper} disabled={copperBusy}
+              className="px-3 py-2 rounded bg-slate-700 text-white text-sm disabled:opacity-60">{copperBusy ? '…' : 'Search'}</button>
+          </div>
+          {copperResults.length > 0 && (
+            <div className="rounded border border-slate-800 divide-y divide-slate-800">
+              {copperResults.map((c) => (
+                <button key={c.id} type="button" onClick={() => applyCompany(c)}
+                  className="block w-full text-left p-2.5 hover:bg-slate-900/50">
+                  <span className="text-white text-sm">{c.name}</span>
+                  {c.address && <span className="block text-slate-500 text-xs">{c.address}</span>}
+                  <span className="block text-slate-600 text-xs">{c.contacts.length} contact{c.contacts.length === 1 ? '' : 's'}</span>
+                </button>
+              ))}
+            </div>
+          )}
+          {picked && (
+            <div className="text-xs text-slate-400 space-y-1">
+              <p>Filled from <strong>{picked.name}</strong>{picked.contacts.length > 0 ? ' — pick the signer:' : ' — no contacts, enter the signer manually.'}</p>
+              <div className="flex flex-wrap gap-1">
+                {picked.contacts.map((ct) => (
+                  <button key={ct.email} type="button" onClick={() => { setClientName(ct.name); setClientEmail(ct.email); }}
+                    className={`px-2 py-1 rounded text-xs ${clientEmail === ct.email ? 'bg-[#E51B23] text-white' : 'bg-slate-800 text-slate-300'}`}>
+                    {ct.name}{ct.title ? ` · ${ct.title}` : ''}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </section>
+
         <section className="space-y-2">
           <label className="text-sm text-slate-300 font-medium">1. Documents</label>
           <select value={templateId} onChange={(e) => setTemplateId(e.target.value)}

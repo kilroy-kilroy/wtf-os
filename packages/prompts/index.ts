@@ -11,3 +11,4 @@ export { DEMAND_OS_ARCHETYPES as VISIBILITY_LAB_ARCHETYPES } from './visibility-
 export * from './one-shot';
 export * from './biz-dev-assessment';
 export * from './wah-wah';
+export * from './contracts/sow-draft';

@@ -108,8 +108,14 @@ export async function generateAndSend(contractId: string): Promise<void> {
       role: s.role as 'client' | 'counter', name: s.name, email: s.email, order: s.sign_order,
     }));
 
+    // Only request per-page initials fields when the template actually carries
+    // the {{init_*}} anchors, so signature-only templates aren't given them.
+    const useInitials = mergedHtml.includes('{{init_');
+
     // Create the draft envelope, then persist its id BEFORE sending.
-    const { requestId, signerIds } = await createSigningRequest(pdf, firmaSigners, claimed.title);
+    const { requestId, signerIds } = await createSigningRequest(
+      pdf, firmaSigners, claimed.title, { initials: useInitials },
+    );
     await db.from('contracts').update({
       merged_html: mergedHtml, pdf_path: pdfPath, firma_request_id: requestId,
       updated_at: new Date().toISOString(),

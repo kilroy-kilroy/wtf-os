@@ -24,6 +24,11 @@ describe('merge', () => {
     expect(out).toBe('SOW<div>{{sig_client}}</div>');
   });
 
+  it('preserves per-page initials anchors for Firma', () => {
+    const out = merge('{{sow}}<span>{{init_client}}{{init_counter}}</span>', {}, 'S');
+    expect(out).toBe('S<span>{{init_client}}{{init_counter}}</span>');
+  });
+
   it('throws listing every missing required field', () => {
     expect(() => merge('{{a}} {{b}}{{sow}}', { a: 'x' }, '')).toThrowError(/missing.*b/i);
   });

@@ -61,6 +61,7 @@ export async function createSigningRequest(
   pdf: Buffer,
   signers: FirmaSigner[],
   name = 'Contract',
+  opts: { initials?: boolean } = {},
 ): Promise<CreateSigningRequestResult> {
   const recipients = signers.map((s) => {
     const { first, last } = splitName(s.name);
@@ -74,10 +75,19 @@ export async function createSigningRequest(
     };
   });
 
-  const anchor_tags = signers.flatMap((s) => [
-    { anchor_string: `{{sig_${s.role}}}`, type: 'signature', recipient_id: `temp_${s.role}` },
-    { anchor_string: `{{date_${s.role}}}`, type: 'date', recipient_id: `temp_${s.role}` },
-  ]);
+  // Signature + date bind once each. Initials are per-page: the template repeats
+  // the {{init_<role>}} anchor on every page (fixed footer), and Firma places an
+  // initials field at every occurrence it finds — so one anchor_tag covers all pages.
+  const anchor_tags = signers.flatMap((s) => {
+    const tags: Array<{ anchor_string: string; type: string; recipient_id: string }> = [
+      { anchor_string: `{{sig_${s.role}}}`, type: 'signature', recipient_id: `temp_${s.role}` },
+      { anchor_string: `{{date_${s.role}}}`, type: 'date', recipient_id: `temp_${s.role}` },
+    ];
+    if (opts.initials) {
+      tags.push({ anchor_string: `{{init_${s.role}}}`, type: 'initials', recipient_id: `temp_${s.role}` });
+    }
+    return tags;
+  });
 
   // Step 1: create draft.
   const createRes = await firmaFetch('/signing-requests', {

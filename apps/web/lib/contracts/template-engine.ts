@@ -6,9 +6,12 @@
 //   - {{sow}}                          → the rendered Statement of Work HTML
 //   - {{sig_client}} / {{sig_counter}} → Firma signature anchors (left intact)
 //   - {{date_client}} / {{date_counter}} → Firma date anchors (left intact)
+//   - {{init_client}} / {{init_counter}} → Firma per-page initials anchors (left intact)
 
 export const SIGNATURE_ANCHORS = ['sig_client', 'sig_counter', 'date_client', 'date_counter'] as const;
-const RESERVED = new Set<string>(['sow', ...SIGNATURE_ANCHORS]);
+// Per-page initials anchors. Optional — only templates that initial each page use them.
+export const INITIAL_ANCHORS = ['init_client', 'init_counter'] as const;
+const RESERVED = new Set<string>(['sow', ...SIGNATURE_ANCHORS, ...INITIAL_ANCHORS]);
 
 const PLACEHOLDER = /\{\{\s*([a-z0-9_]+)\s*\}\}/gi;
 

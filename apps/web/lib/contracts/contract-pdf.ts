@@ -10,6 +10,9 @@ const CONTRACT_CSS = `
   h3 { font-size: 12pt; margin: 14pt 0 6pt; }
   ul { margin: 6pt 0 6pt 18pt; }
   .sig-block { margin-top: 36pt; page-break-inside: avoid; }
+  /* position:fixed repeats on every printed page, so the {{init_*}} anchors it
+     carries land on each page for Firma to bind a per-page initials field. */
+  .page-initials { position: fixed; bottom: 0.3in; right: 0; font-size: 8pt; color: #555; }
 `;
 
 /**

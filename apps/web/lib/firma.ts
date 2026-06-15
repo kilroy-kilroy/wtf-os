@@ -7,7 +7,7 @@
 import crypto from 'node:crypto';
 
 export type ContractStatus =
-  | 'draft' | 'sent' | 'viewed' | 'signed' | 'completed' | 'declined' | 'voided';
+  | 'draft' | 'sending' | 'sent' | 'viewed' | 'signed' | 'completed' | 'declined' | 'voided';
 
 const FIRMA_BASE_URL = 'https://api.firma.dev/functions/v1/signing-request-api';
 
@@ -51,8 +51,10 @@ function splitName(name: string): { first: string; last: string } {
 }
 
 /**
- * Create a draft signing request from a PDF + signers, bind signature/date
- * fields to the PDF's text anchors, then send it (two-step Firma flow).
+ * Create a draft signing request from a PDF + signers, binding signature/date
+ * fields to the PDF's text anchors. Does NOT send — call sendSigningRequest once
+ * the returned request id has been persisted, so a send failure can never orphan
+ * a sent envelope we can't correlate back to a contract.
  * Anchors expected in the PDF: {{sig_<role>}} and {{date_<role>}}.
  */
 export async function createSigningRequest(
@@ -84,19 +86,26 @@ export async function createSigningRequest(
   });
   const created = await createRes.json();
 
-  // Map role -> real recipient UUID (match by signing order, fall back to email).
+  // Map role -> real recipient UUID. Match on signing order first (always unique:
+  // client=1, counter=2); fall back to email only if order is absent. Matching on
+  // `order || email` risked collapsing both roles onto one recipient when signers
+  // happen to share an email (e.g. internal test envelopes).
+  const recipientsOut: Array<{ order?: number; email?: string; id?: string }> =
+    created.recipients ?? [];
   const signerIds: Record<string, string> = {};
   for (const s of signers) {
-    const match = (created.recipients ?? []).find(
-      (r: { order?: number; email?: string; id?: string }) => r.order === s.order || r.email === s.email,
-    );
+    const match =
+      recipientsOut.find((r) => r.order === s.order) ??
+      recipientsOut.find((r) => r.email === s.email);
     if (match?.id) signerIds[s.role] = match.id;
   }
 
-  // Step 2: send (triggers email delivery to recipients in order).
-  await firmaFetch(`/signing-requests/${created.id}/send`, { method: 'POST' });
-
   return { requestId: created.id, signerIds };
+}
+
+/** Send a previously-created draft signing request (triggers email delivery). */
+export async function sendSigningRequest(requestId: string): Promise<void> {
+  await firmaFetch(`/signing-requests/${requestId}/send`, { method: 'POST' });
 }
 
 export interface FirmaRequestState {
@@ -143,6 +152,19 @@ export function mapFirmaStatus(eventType: string): ContractStatus | null {
     case 'signing_request.expired': return 'voided';
     default: return null;
   }
+}
+
+// Monotonic rank over the status lifecycle. Used to reject stale/out-of-order
+// webhook events and to stop the /download poll from regressing a richer state
+// (e.g. /download reports `in_progress` -> 'sent' after a webhook reached 'signed').
+const STATUS_RANK: Record<ContractStatus, number> = {
+  draft: 0, sending: 1, sent: 2, viewed: 3, signed: 4,
+  completed: 5, declined: 5, voided: 5,
+};
+
+/** True if `next` is a forward (or terminal) transition from `current`. */
+export function shouldApplyStatus(current: ContractStatus, next: ContractStatus): boolean {
+  return STATUS_RANK[next] >= STATUS_RANK[current];
 }
 
 /**

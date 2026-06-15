@@ -37,7 +37,7 @@ create table if not exists public.contracts (
   merged_html     text,
   pdf_path        text,
   signed_pdf_path text,
-  status          text not null default 'draft', -- draft|sent|viewed|signed|completed|declined|voided
+  status          text not null default 'draft', -- draft|sending|sent|viewed|signed|completed|declined|voided
   firma_request_id text,
   last_error      text,
   created_by      uuid references auth.users(id),

@@ -2,7 +2,8 @@ import Link from 'next/link';
 import { listContracts } from '@/lib/contracts/queries';
 
 const BADGE: Record<string, string> = {
-  draft: 'bg-slate-700 text-slate-200', sent: 'bg-blue-900 text-blue-200',
+  draft: 'bg-slate-700 text-slate-200', sending: 'bg-sky-900 text-sky-200',
+  sent: 'bg-blue-900 text-blue-200',
   viewed: 'bg-indigo-900 text-indigo-200', signed: 'bg-amber-900 text-amber-200',
   completed: 'bg-emerald-900 text-emerald-200', declined: 'bg-red-900 text-red-200',
   voided: 'bg-slate-800 text-slate-400',

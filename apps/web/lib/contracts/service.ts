@@ -6,7 +6,8 @@ import { getSupabaseServerClient } from '@/lib/supabase-server';
 import { merge } from './template-engine';
 import { renderContractPdf } from './contract-pdf';
 import {
-  createSigningRequest, getRequest, type FirmaSigner, type ContractStatus,
+  createSigningRequest, sendSigningRequest, getRequest, shouldApplyStatus,
+  type FirmaSigner, type ContractStatus,
 } from '@/lib/firma';
 
 const BUCKET = 'contracts';
@@ -50,28 +51,51 @@ export async function createContract(input: CreateContractInput): Promise<string
 }
 
 /**
- * Render the immutable snapshot, generate the PDF, create the Firma request,
- * and advance the contract to `sent`. Idempotent: only advances on success;
- * failures leave the contract `draft` with last_error set and send nothing.
+ * Render the immutable snapshot, generate the PDF, create + send the Firma
+ * envelope, and advance the contract to `sent`.
+ *
+ * Safe against duplicate envelopes (real money):
+ *  - The draft→sending transition is an ATOMIC conditional update, so two
+ *    concurrent callers can't both pass the guard and create two envelopes.
+ *  - The Firma request id is persisted BEFORE the envelope is sent, so a crash
+ *    mid-send leaves a correlatable id. On retry, if firma_request_id already
+ *    exists we resume at send instead of creating a second envelope.
+ *  - On failure the contract rolls back to `draft` (keeping any firma_request_id)
+ *    so it can be retried.
  */
 export async function generateAndSend(contractId: string): Promise<void> {
   const db = getSupabaseServerClient();
 
-  const { data: contract } = await db
-    .from('contracts').select('*').eq('id', contractId).single();
-  if (!contract) throw new Error('contract not found');
-  if (contract.status !== 'draft') return; // already sent — no duplicate envelope
-
-  const { data: template } = await db
-    .from('contract_templates').select('body_html').eq('id', contract.template_id).single();
-  if (!template) throw new Error('template not found');
-
-  const { data: signers } = await db
-    .from('contract_signers').select('*').eq('contract_id', contractId).order('sign_order');
-  if (!signers?.length) throw new Error('no signers');
+  // Atomic claim: only the caller that flips draft→sending proceeds.
+  const { data: claimed } = await db
+    .from('contracts')
+    .update({ status: 'sending', last_error: null, updated_at: new Date().toISOString() })
+    .eq('id', contractId)
+    .eq('status', 'draft')
+    .select('id, template_id, title, field_values, sow_html, firma_request_id')
+    .maybeSingle();
+  if (!claimed) return; // not in draft (already sending/sent) — nothing to do
 
   try {
-    const mergedHtml = merge(template.body_html, contract.field_values, contract.sow_html);
+    // Resume path: a prior attempt created the envelope but failed during send.
+    // Don't create a second one — just (re)send the existing request.
+    if (claimed.firma_request_id) {
+      await sendSigningRequest(claimed.firma_request_id);
+      await db.from('contracts')
+        .update({ status: 'sent', updated_at: new Date().toISOString() })
+        .eq('id', contractId);
+      return;
+    }
+
+    const { data: template } = await db
+      .from('contract_templates').select('body_html').eq('id', claimed.template_id).single();
+    if (!template) throw new Error('template not found');
+
+    const { data: signers } = await db
+      .from('contract_signers').select('*').eq('contract_id', contractId).order('sign_order');
+    if (!signers?.length) throw new Error('no signers');
+
+    const mergedHtml = merge(template.body_html, claimed.field_values, claimed.sow_html);
     const pdf = await renderContractPdf(mergedHtml);
 
     const pdfPath = `${contractId}/contract.pdf`;
@@ -83,20 +107,25 @@ export async function generateAndSend(contractId: string): Promise<void> {
     const firmaSigners: FirmaSigner[] = signers.map((s) => ({
       role: s.role as 'client' | 'counter', name: s.name, email: s.email, order: s.sign_order,
     }));
-    const { requestId, signerIds } = await createSigningRequest(pdf, firmaSigners, contract.title);
 
+    // Create the draft envelope, then persist its id BEFORE sending.
+    const { requestId, signerIds } = await createSigningRequest(pdf, firmaSigners, claimed.title);
     await db.from('contracts').update({
       merged_html: mergedHtml, pdf_path: pdfPath, firma_request_id: requestId,
-      status: 'sent', last_error: null, updated_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     }).eq('id', contractId);
-
     for (const s of signers) {
       const fid = signerIds[s.role];
       if (fid) await db.from('contract_signers').update({ firma_signer_id: fid }).eq('id', s.id);
     }
+
+    await sendSigningRequest(requestId);
+    await db.from('contracts')
+      .update({ status: 'sent', updated_at: new Date().toISOString() })
+      .eq('id', contractId);
   } catch (err) {
     await db.from('contracts').update({
-      last_error: err instanceof Error ? err.message : String(err),
+      status: 'draft', last_error: err instanceof Error ? err.message : String(err),
       updated_at: new Date().toISOString(),
     }).eq('id', contractId);
     throw err;
@@ -107,13 +136,19 @@ export async function generateAndSend(contractId: string): Promise<void> {
 export async function syncStatus(contractId: string): Promise<ContractStatus> {
   const db = getSupabaseServerClient();
   const { data: contract } = await db
-    .from('contracts').select('firma_request_id, status').eq('id', contractId).single();
+    .from('contracts').select('firma_request_id, status, signed_pdf_path').eq('id', contractId).single();
   if (!contract?.firma_request_id) throw new Error('contract has no Firma request');
 
+  const current = contract.status as ContractStatus;
   const state = await getRequest(contract.firma_request_id);
-  const update: Record<string, unknown> = { status: state.status, updated_at: new Date().toISOString() };
 
-  if (state.status === 'completed' && state.signedPdf) {
+  const update: Record<string, unknown> = { updated_at: new Date().toISOString() };
+  // The /download poll can only report coarse states (in_progress -> 'sent'), so
+  // never let it regress a richer status a webhook already advanced us to.
+  if (shouldApplyStatus(current, state.status)) update.status = state.status;
+
+  // Store the signed PDF once, on first completion.
+  if (state.status === 'completed' && state.signedPdf && !contract.signed_pdf_path) {
     const signedPath = `${contractId}/signed.pdf`;
     const up = await db.storage.from(BUCKET).upload(signedPath, state.signedPdf, {
       contentType: 'application/pdf', upsert: true,
@@ -121,5 +156,5 @@ export async function syncStatus(contractId: string): Promise<ContractStatus> {
     if (!up.error) update.signed_pdf_path = signedPath;
   }
   await db.from('contracts').update(update).eq('id', contractId);
-  return state.status;
+  return (update.status as ContractStatus) ?? current;
 }

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabase-server';
-import { verifyWebhook, mapFirmaStatus } from '@/lib/firma';
+import { verifyWebhook, mapFirmaStatus, shouldApplyStatus, type ContractStatus } from '@/lib/firma';
 import { syncStatus } from '@/lib/contracts/service';
 
 // Confirmed in docs/firma-api-notes.md: header X-Firma-Signature, Stripe-style
@@ -26,12 +26,13 @@ export async function POST(req: NextRequest) {
 
   const db = getSupabaseServerClient();
   const { data: contract } = await db
-    .from('contracts').select('id').eq('firma_request_id', requestId).single();
+    .from('contracts').select('id, status').eq('firma_request_id', requestId).single();
   if (!contract) return NextResponse.json({ ok: true }); // unknown request — ignore
 
   if (status === 'completed') {
     await syncStatus(contract.id); // pulls signed PDF + audit trail
-  } else {
+  } else if (shouldApplyStatus(contract.status as ContractStatus, status)) {
+    // Webhooks can arrive out of order / be retried — never regress a richer state.
     await db.from('contracts').update({ status, updated_at: new Date().toISOString() }).eq('id', contract.id);
   }
   return NextResponse.json({ ok: true });

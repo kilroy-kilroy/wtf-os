@@ -1,26 +1,41 @@
-import { htmlToPdf } from '@repo/pdf';
+// apps/web/lib/contracts/contract-pdf.ts
+//
+// Render a merged contract (HTML) to a PDF Buffer using @react-pdf/renderer.
+// Browserless on purpose: Puppeteer/Chromium does not launch reliably in Vercel
+// serverless (missing system libs), whereas @react-pdf/renderer is pure JS and is
+// the engine the rest of this app already depends on for production PDFs.
 
-// Print CSS for a Letter contract: readable serif body, real margins, page breaks.
-const CONTRACT_CSS = `
-  @page { size: Letter; margin: 1in; }
-  * { box-sizing: border-box; }
-  body { font-family: Georgia, 'Times New Roman', serif; font-size: 11pt; line-height: 1.5; color: #111; }
-  h1 { font-size: 18pt; margin: 0 0 16pt; }
-  h2 { font-size: 14pt; margin: 18pt 0 8pt; }
-  h3 { font-size: 12pt; margin: 14pt 0 6pt; }
-  ul { margin: 6pt 0 6pt 18pt; }
-  .sig-block { margin-top: 36pt; page-break-inside: avoid; }
-  /* position:fixed repeats on every printed page, so the {{init_*}} anchors it
-     carries land on each page for Firma to bind a per-page initials field. */
-  .page-initials { position: fixed; bottom: 0.3in; right: 0; font-size: 8pt; color: #555; }
-`;
+import React from 'react';
+import { renderToBuffer } from '@react-pdf/renderer';
+import { ContractDocument } from './contract-document';
+
+// Letterhead logo. Any file under apps/web/public/logos/ can be used — swap the
+// name here. Fetched from the app's own public URL so it doesn't need bundling.
+const LOGO_FILE = 'logo_transparent_background.png';
+
+/** Best-effort logo fetch; a failure must never block contract generation. */
+async function loadLogo(): Promise<Buffer | undefined> {
+  try {
+    // Only trust an https app URL; a dev 'localhost' value would fail in serverless.
+    const envUrl = process.env.NEXT_PUBLIC_APP_URL;
+    const base = envUrl && envUrl.startsWith('https://') ? envUrl : 'https://app.timkilroy.com';
+    const res = await fetch(`${base}/logos/${encodeURIComponent(LOGO_FILE)}`);
+    if (!res.ok) return undefined;
+    return Buffer.from(await res.arrayBuffer());
+  } catch {
+    return undefined;
+  }
+}
 
 /**
- * Wrap merged contract HTML in a full print document and render to a PDF buffer.
- * The merged HTML still contains Firma anchors ({{sig_client}} etc.) as literal
- * text — Firma binds signature fields to them after upload.
+ * Render the merged contract HTML to a PDF buffer. The HTML keeps Firma anchors
+ * ({{sig_*}}, {{date_*}}, {{init_*}}) as literal selectable text for Firma to bind.
  */
 export async function renderContractPdf(mergedHtml: string): Promise<Buffer> {
-  const doc = `<!doctype html><html><head><meta charset="utf-8"><style>${CONTRACT_CSS}</style></head><body>${mergedHtml}</body></html>`;
-  return htmlToPdf(doc, { format: 'Letter' });
+  const logo = await loadLogo();
+  // `as any`: renderToBuffer's types want a <Document> element, not a component
+  // that returns one — same cast the app's existing export/pdf route uses.
+  return renderToBuffer(
+    React.createElement(ContractDocument, { html: mergedHtml, logo }) as any,
+  );
 }

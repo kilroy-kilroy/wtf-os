@@ -37,3 +37,6 @@ export { parseDiscoveryLabProMarkdown } from './discovery-lab-pro-parser';
 // HTML to PDF converter
 export { htmlToPdf, htmlFileToPdf } from './html-to-pdf';
 export type { PdfOptions } from './html-to-pdf';
+
+// Contract PDF (react-pdf)
+export { renderContractReport } from './contract-report';

@@ -1,19 +1,19 @@
-// apps/web/lib/contracts/contract-document.tsx
+// packages/pdf/contract-report.tsx
 //
-// Renders a merged contract (HTML string) into a @react-pdf/renderer document.
-// This is browserless — unlike Puppeteer it runs reliably in Vercel serverless
-// (the rest of the app already relies on @react-pdf/renderer for the same reason).
+// Contract -> PDF via @react-pdf/renderer. Lives in @repo/pdf (alongside the
+// other react-pdf reports) on purpose: rendering react-pdf from app code in the
+// Next server/RSC bundle produces "Minified React error #31" in production. The
+// package's own transpile produces clean elements, matching the working reports.
 //
-// The merged HTML still carries Firma anchors as literal text ({{sig_client}},
+// The merged HTML keeps Firma anchors as literal text ({{sig_client}},
 // {{date_client}}, {{init_client}}, ...). react-pdf emits selectable text, so the
-// anchors survive into the PDF for Firma to bind fields to. Per-page initials use
-// react-pdf's native `fixed` prop (repeats the footer on every page).
+// anchors survive for Firma to bind fields to. Per-page initials use react-pdf's
+// native `fixed` prop (footer repeats on every page).
 
 import React from 'react';
-import { Document, Page, View, Text, Image, StyleSheet } from '@react-pdf/renderer';
+import { Document, Page, View, Text, Image, StyleSheet, renderToBuffer } from '@react-pdf/renderer';
 import { load } from 'cheerio';
 
-// Minimal shape of the parsed DOM nodes we walk (avoids a domhandler type dep).
 type DomNode = {
   type: string;
   name?: string;
@@ -22,7 +22,6 @@ type DomNode = {
   attribs?: Record<string, string>;
 };
 
-// Built-in PDF fonts (Times*/Helvetica) need no registration — keeps serverless simple.
 const styles = StyleSheet.create({
   page: {
     paddingTop: 70, paddingBottom: 56, paddingHorizontal: 60,
@@ -47,13 +46,12 @@ const styles = StyleSheet.create({
 const elementChildren = (node?: DomNode): DomNode[] =>
   (node?.children ?? []).filter((c) => c.type === 'tag');
 
-/** Inline content (text + <strong>/<em>/<br>) -> react-pdf text spans. */
 function inlineContent(node: DomNode, keyBase: string): React.ReactNode[] {
   const out: React.ReactNode[] = [];
   (node.children ?? []).forEach((child, i) => {
     const key = `${keyBase}-${i}`;
     if (child.type === 'text') {
-      if (child.data) out.push(child.data); // cheerio has already decoded entities
+      if (child.data) out.push(child.data);
     } else if (child.type === 'tag') {
       if (child.name === 'br') {
         out.push('\n');
@@ -62,7 +60,7 @@ function inlineContent(node: DomNode, keyBase: string): React.ReactNode[] {
       } else if (child.name === 'em' || child.name === 'i') {
         out.push(<Text key={key} style={styles.italic}>{inlineContent(child, key)}</Text>);
       } else {
-        out.push(...inlineContent(child, key)); // unknown inline tag: flatten
+        out.push(...inlineContent(child, key));
       }
     }
   });
@@ -91,7 +89,7 @@ function renderBlock(el: DomNode, key: string): React.ReactNode {
     case 'ol': return <View key={key}>{listItems(el, key, true)}</View>;
     case 'div': {
       const cls = el.attribs?.class ?? '';
-      if (cls.includes('page-initials')) return null; // rendered separately as a fixed footer
+      if (cls.includes('page-initials')) return null;
       if (cls.includes('sig-block')) {
         return <View key={key} style={styles.sigBlock} wrap={false}>{renderBlocks(el, key)}</View>;
       }
@@ -105,13 +103,11 @@ function renderBlocks(parent: DomNode, keyBase: string): React.ReactNode[] {
   return elementChildren(parent).map((el, i) => renderBlock(el, `${keyBase}-${i}`));
 }
 
-export function ContractDocument({ html, logo }: { html: string; logo?: Buffer }) {
+function ContractDocument({ html, logo }: { html: string; logo?: Buffer }) {
   const $ = load(html);
   const body = ($('body').get(0) ?? $.root().get(0)) as unknown as DomNode;
   const blocks = renderBlocks(body, 'c');
 
-  // The {{init_*}} anchors live in a .page-initials div; pull their text out and
-  // render it `fixed` so it (and the anchors) repeat on every page.
   const initialsEl = $('.page-initials').first();
   const initials = initialsEl.length ? initialsEl.text().replace(/\s+/g, ' ').trim() : '';
 
@@ -133,4 +129,9 @@ export function ContractDocument({ html, logo }: { html: string; logo?: Buffer }
       </Page>
     </Document>
   );
+}
+
+/** Render merged contract HTML (+ optional logo bytes) to a PDF buffer. */
+export async function renderContractReport(html: string, logo?: Buffer): Promise<Buffer> {
+  return renderToBuffer(React.createElement(ContractDocument, { html, logo }) as any);
 }

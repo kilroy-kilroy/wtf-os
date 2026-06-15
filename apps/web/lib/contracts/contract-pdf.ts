@@ -1,13 +1,11 @@
 // apps/web/lib/contracts/contract-pdf.ts
 //
-// Render a merged contract (HTML) to a PDF Buffer using @react-pdf/renderer.
-// Browserless on purpose: Puppeteer/Chromium does not launch reliably in Vercel
-// serverless (missing system libs), whereas @react-pdf/renderer is pure JS and is
-// the engine the rest of this app already depends on for production PDFs.
+// Render a merged contract (HTML) to a PDF Buffer. The actual react-pdf rendering
+// lives in @repo/pdf (renderContractReport) — rendering react-pdf from app code in
+// the Next server bundle throws "Minified React error #31" in production, so it
+// must run from the package, alongside the app's other working react-pdf reports.
 
-import React from 'react';
-import { renderToBuffer } from '@react-pdf/renderer';
-import { ContractDocument } from './contract-document';
+import { renderContractReport } from '@repo/pdf';
 
 // Letterhead logo. Any file under apps/web/public/logos/ can be used — swap the
 // name here. Fetched from the app's own public URL so it doesn't need bundling.
@@ -33,9 +31,5 @@ async function loadLogo(): Promise<Buffer | undefined> {
  */
 export async function renderContractPdf(mergedHtml: string): Promise<Buffer> {
   const logo = await loadLogo();
-  // `as any`: renderToBuffer's types want a <Document> element, not a component
-  // that returns one — same cast the app's existing export/pdf route uses.
-  return renderToBuffer(
-    React.createElement(ContractDocument, { html: mergedHtml, logo }) as any,
-  );
+  return renderContractReport(mergedHtml, logo);
 }

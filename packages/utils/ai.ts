@@ -98,6 +98,12 @@ const MODEL_CONFIGS: Record<string, ModelConfig> = {
     maxTokens: 8192,
     temperature: 0.4,
   },
+  'contract-sow': {
+    provider: 'anthropic',
+    model: 'claude-sonnet-4-6',
+    maxTokens: 4096,
+    temperature: 0.3,
+  },
 };
 
 function assertModelConfig(toolName: string, config: ModelConfig | undefined): asserts config is ModelConfig {

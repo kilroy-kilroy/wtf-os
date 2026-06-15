@@ -9,6 +9,7 @@ const NAV_LINKS = [
   { href: '/admin/content', label: 'Content', icon: '\u25A1' },
   { href: '/admin/reports', label: 'Reports', icon: '\u25B7' },
   { href: '/admin/five-minute-friday', label: '5-Minute Friday', icon: '\u25C7' },
+  { href: '/admin/contracts', label: 'Contracts', icon: '\u25A4' },
 ];
 
 function isActive(pathname: string, href: string) {

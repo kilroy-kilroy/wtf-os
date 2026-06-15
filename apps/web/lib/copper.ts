@@ -106,9 +106,14 @@ export async function copperFindOpportunityByPerson(
   personId: number,
   productPrefix: string
 ): Promise<{ id: number; pipeline_stage_id: number } | null> {
+  // Copper's /opportunities/search filter is `primary_contact_ids` (plural
+  // array). The singular `primary_contact_id` is rejected with HTTP 422, which
+  // made this return null every time — so find-or-create always created a NEW
+  // opportunity, producing duplicate opps for any lead who ran a tool twice
+  // (affected every copperSyncLead caller, not just one tool).
   const results = await copperFetch('/opportunities/search', {
     method: 'POST',
-    body: JSON.stringify({ primary_contact_id: personId }),
+    body: JSON.stringify({ primary_contact_ids: [personId] }),
   });
   if (!Array.isArray(results)) return null;
   const match = results.find((o: any) => o.name?.startsWith(productPrefix));

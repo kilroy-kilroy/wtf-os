@@ -39,6 +39,42 @@ export async function getIngestionItem(supabase: SupabaseClient, itemId: string)
   return data as any; // TODO: Properly type with Database['public']['Tables']['ingestion_items']['Row']
 }
 
+/**
+ * Atomically claim an ingestion item for processing.
+ *
+ * Transitions status -> 'processing' ONLY if the item is currently claimable
+ * (pending, failed, or a stale 'processing' that was abandoned by a crashed
+ * invocation). The conditional UPDATE is atomic at the Postgres row level, so
+ * when the same item is POSTed twice (double-click, client retry on a slow Pro
+ * analysis, platform retry) exactly one caller wins the claim. The loser gets
+ * `null` and must abort — this is what prevents duplicate call_scores /
+ * call_lab_reports rows (the root cause of phantom outcome-nudge emails).
+ *
+ * @returns the claimed row if we won the claim, otherwise null.
+ */
+export async function claimIngestionItem(
+  supabase: SupabaseClient,
+  itemId: string,
+  staleProcessingMinutes = 15
+) {
+  const staleThreshold = new Date(
+    Date.now() - staleProcessingMinutes * 60 * 1000
+  ).toISOString();
+
+  const { data, error } = await (supabase as any)
+    .from('ingestion_items')
+    .update({ status: 'processing', updated_at: new Date().toISOString() })
+    .eq('id', itemId)
+    .or(
+      `status.eq.pending,status.eq.failed,and(status.eq.processing,updated_at.lt.${staleThreshold})`
+    )
+    .select()
+    .maybeSingle();
+
+  if (error) throw error;
+  return data as any; // null when another invocation already holds the claim
+}
+
 export async function updateIngestionItemStatus(
   supabase: SupabaseClient,
   itemId: string,

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabase-server';
 import { sendSlackAlert, alertFridayOverdue } from '@/lib/slack';
+import { mostRecent } from '@/lib/last-active';
 
 export const runtime = 'nodejs';
 
@@ -44,20 +45,36 @@ export async function GET(request: NextRequest) {
         });
       }
 
+      // Return-visit activity (middleware-maintained) so clients with live
+      // sessions aren't falsely flagged inactive based only on last_sign_in_at.
+      const activeUserIds = enrollments.map((e: any) => e.user_id).filter(Boolean);
+      const { data: usersActivity } = await supabase
+        .from('users')
+        .select('id, last_login_at')
+        .in('id', activeUserIds);
+      const activityMap = new Map<string, string | null>();
+      for (const u of usersActivity || []) {
+        activityMap.set(u.id, u.last_login_at || null);
+      }
+
       const now = new Date();
       const inactiveClients: Array<{ name: string; days: number }> = [];
       for (const enrollment of enrollments) {
         if (!enrollment.user_id) continue;
         const authUser = authUserMap.get(enrollment.user_id);
-        if (!authUser?.lastSignIn) continue; // Never logged in — handled by invite flow
+        const lastActive = mostRecent(
+          authUser?.lastSignIn,
+          activityMap.get(enrollment.user_id)
+        );
+        if (!lastActive) continue; // Never logged in — handled by invite flow
 
-        const lastLogin = new Date(authUser.lastSignIn);
+        const lastLogin = new Date(lastActive);
         const daysSince = Math.floor(
           (now.getTime() - lastLogin.getTime()) / (1000 * 60 * 60 * 24)
         );
         if (daysSince >= 7) {
           inactiveClients.push({
-            name: authUser.name || authUser.email || 'Unknown',
+            name: authUser?.name || authUser?.email || 'Unknown',
             days: daysSince,
           });
           inactiveCount++;

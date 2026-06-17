@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabase-server';
+import { mostRecent } from '@/lib/last-active';
 
 // Free email providers — users with these domains won't be grouped into agencies
 const FREE_EMAIL_DOMAINS = new Set([
@@ -68,6 +69,18 @@ export async function GET(request: NextRequest) {
     const now = new Date();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
     const userIds = enrollments.map((e: any) => e.user_id).filter(Boolean);
+
+    // Activity timestamps (return-visit "last seen") from public.users. Combined
+    // with auth.users.last_sign_in_at below so returning clients with live
+    // sessions aren't shown as dormant.
+    const { data: usersActivity } = await supabase
+      .from('users')
+      .select('id, last_login_at')
+      .in('id', userIds);
+    const activityMap = new Map<string, string | null>();
+    for (const u of usersActivity || []) {
+      activityMap.set(u.id, u.last_login_at || null);
+    }
 
     const [callLabResult, discoveryResult, visibilityResult] = await Promise.all([
       supabase
@@ -139,7 +152,9 @@ export async function GET(request: NextRequest) {
     // Build health data for each client
     const clients = enrollments.map((e: any) => {
       const auth = authMap.get(e.user_id);
-      const lastSignIn = auth?.lastSignIn || null;
+      // True "last active": the more recent of a fresh auth sign-in and a
+      // throttled return-visit ping (middleware-maintained last_login_at).
+      const lastSignIn = mostRecent(auth?.lastSignIn, activityMap.get(e.user_id));
       const reportsThisMonth = reportCounts.get(e.user_id) || 0;
       const fridayCount = fridayCounts.get(e.id) || 0;
       const docCount = documentCounts.get(e.id) || 0;

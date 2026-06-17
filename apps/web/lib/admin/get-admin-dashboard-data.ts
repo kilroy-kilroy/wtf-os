@@ -3,6 +3,7 @@ import {
   getCoachingIntelligence,
   type CoachingIntelligence,
 } from './coaching-intelligence';
+import { mostRecent } from '../last-active';
 
 // Lazy-instantiate so `next build` config collection doesn't explode on
 // builds where env vars aren't populated until runtime.
@@ -149,9 +150,10 @@ export async function getAdminDashboardData(): Promise<AdminDashboardData> {
     client_programs: programMap.get(e.program_id) || null,
   }));
 
-  // Real last-sign-in lives on auth.users, not public.users.last_login_at
-  // (which is never populated). PostgREST can't see the auth schema, so we
-  // use the admin API. Cost: one call per enrolled client — negligible.
+  // Fresh sign-ins live on auth.users.last_sign_in_at (PostgREST can't see the
+  // auth schema, so we use the admin API — one call per client, negligible).
+  // We combine this below with public.users.last_login_at (return-visit pings
+  // from middleware) via mostRecent() so returning clients aren't shown stale.
   const authLookups = await Promise.all(
     enrollments.map((e) =>
       supabase.auth.admin
@@ -265,7 +267,10 @@ export async function getAdminDashboardData(): Promise<AdminDashboardData> {
       }
     }
 
-    const authSignedIn = authSignInByUser.get(enrollment.user_id);
+    const authSignedIn = mostRecent(
+      authSignInByUser.get(enrollment.user_id),
+      (enrollment.users as any)?.last_login_at
+    );
     const daysSinceLastLogin = authSignedIn
       ? Math.floor((now.getTime() - new Date(authSignedIn).getTime()) / (1000 * 60 * 60 * 24))
       : null;
@@ -330,7 +335,10 @@ export async function getAdminDashboardData(): Promise<AdminDashboardData> {
         user_id: e.user_id,
         enrolled_at: e.enrolled_at,
         email: user.email || '',
-        auth_last_sign_in_at: authSignInByUser.get(e.user_id) ?? null,
+        auth_last_sign_in_at: mostRecent(
+          authSignInByUser.get(e.user_id),
+          (e.users as any)?.last_login_at
+        ),
         has_five_minute_friday: program?.has_five_minute_friday || false,
         friday_submitted_this_week: fridaySubmittedByUser.has(e.user_id),
       };

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabase-server';
+import { mostRecent } from '@/lib/last-active';
 
 function verifyAuth(request: NextRequest): boolean {
   const authHeader = request.headers.get('authorization');
@@ -41,9 +42,14 @@ export async function GET(
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // Get auth metadata (last_sign_in_at)
+    // "Last active": the more recent of a fresh auth sign-in and the
+    // middleware-maintained return-visit ping (public.users.last_login_at), so
+    // a client with a live session isn't shown as stale.
     const { data: authData } = await supabase.auth.admin.getUserById(id);
-    const lastSignIn = authData?.user?.last_sign_in_at || null;
+    const lastSignIn = mostRecent(
+      authData?.user?.last_sign_in_at,
+      user.last_login_at
+    );
 
     // Parallel queries for all related data
     const [

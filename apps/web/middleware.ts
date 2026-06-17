@@ -83,6 +83,38 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  // Record lightweight "last seen" activity for authenticated users on normal
+  // page navigations (redirect paths above intentionally skip this). Throttled
+  // via the `ls_ping` cookie so we write at most once per ACTIVITY_THROTTLE_MS.
+  //
+  // Why: auth.users.last_sign_in_at only updates on a fresh authentication, so
+  // a client returning with a live session looks dormant on the client-health
+  // dashboard. Stamping users.last_login_at here captures those return visits.
+  // RLS policy "Users update own record" permits this self-update via the
+  // session client. We await it (rare, ~once/30min/user) so the write isn't
+  // lost when the serverless function freezes, and swallow errors so a failed
+  // write never blocks navigation.
+  if (user) {
+    const ACTIVITY_THROTTLE_MS = 30 * 60 * 1000;
+    const lastPing = Number(request.cookies.get('ls_ping')?.value || 0);
+    if (!lastPing || Date.now() - lastPing > ACTIVITY_THROTTLE_MS) {
+      try {
+        await supabase
+          .from('users')
+          .update({ last_login_at: new Date().toISOString() })
+          .eq('id', user.id);
+      } catch (err) {
+        console.error('[activity] last_login_at update failed', err);
+      }
+      response.cookies.set('ls_ping', String(Date.now()), {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 60 * 60 * 24 * 7,
+      });
+    }
+  }
+
   return response;
 }
 

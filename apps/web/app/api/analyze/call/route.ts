@@ -5,6 +5,7 @@ import { waitUntil } from '@vercel/functions';
 import { createServerClient } from '@repo/db/client';
 import {
   getIngestionItem,
+  claimIngestionItem,
   updateIngestionItemStatus,
   createCallScore,
   createCallSnippets,
@@ -139,8 +140,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Update status to processing
-    await updateIngestionItemStatus(supabase, ingestion_item_id, 'processing');
+    // Atomically claim this item for processing. If another invocation (a
+    // double-POST, a client retry on a slow Pro run, or a platform retry) is
+    // already handling it, claimIngestionItem returns null and we bail out as
+    // an idempotent no-op. This is the guard that prevents the duplicate
+    // call_scores / call_lab_reports rows that caused outcome-nudge emails to
+    // keep firing on phantom twin records.
+    const claimed = await claimIngestionItem(supabase, ingestion_item_id);
+    if (!claimed) {
+      return NextResponse.json({
+        success: true,
+        skipped: true,
+        reason: 'already_processing_or_completed',
+      });
+    }
 
     // Extract metadata
     const metadata = (ingestionItem.transcript_metadata as any) || {};

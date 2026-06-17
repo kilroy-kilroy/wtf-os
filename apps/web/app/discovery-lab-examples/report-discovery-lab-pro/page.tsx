@@ -11,70 +11,70 @@ import { ConsolePanel, ConsoleHeading, ConsoleMarkdownRenderer } from '@/compone
  * No auth required - all data is hardcoded.
  */
 
-const SYNTHETIC_PRO_REPORT = `Subject: Your SalesOS DiscoveryLab Pro Call Guide for Cairn Media
+const SYNTHETIC_PRO_REPORT = `Subject: Your SalesOS DiscoveryLab Pro Call Guide for Northwind Labs
 
 ### 🎯 Authority Snapshot
 
-- **Your Service:** Agency growth consulting -- helping boutique agency founders build predictable revenue engines so they stop being the bottleneck in every deal
-- **Target Company:** Cairn Media (cairnmedia.com)
-- **Contact:** Lauren Fleischmann, Founder
-- **Service Category:** Agency Growth Coaching, Demand Generation, Sales Process Development
-- **Authority Line:** "You've built Cairn Media into a creative storytelling shop that clients love -- my lane is making sure your growth engine matches your craft, so the pipeline doesn't dry up every time you finish a project and your team can sell without you carrying every conversation."
+- **Your Service:** Fractional GTM consulting -- helping technical SaaS founders build a repeatable sales motion so they stop being the only person who can close a deal
+- **Target Company:** Northwind Labs (northwindlabs.io)
+- **Contact:** Alex Rivera, Founder & CEO
+- **Service Category:** GTM Strategy, Demand Generation, Sales Process Development
+- **Authority Line:** "You've built Northwind into a product engineers genuinely love -- my lane is making sure the go-to-market motion matches the product, so growth doesn't stall the moment you step out of the sales calls and your team can close without you in the room."
 
 ---
 
 ### 🔍 Pain / Impact Probes
 
-1. **[Primary]** "Most agency founders I work with hit a wall around $2-3M where what got them here stops working -- they're still the closer on every deal, the team can't sell without them in the room, and the pipeline feels like a slot machine. Where are you in that journey?"
-   → Follow-up: "When you look at your last ten new clients, how many came from outbound versus your network doing the heavy lifting? And how do you feel about that ratio?"
+1. **[Primary]** "Most technical founders I work with hit a wall once the early-adopter crowd dries up -- they're still on every sales call, the product sells itself to engineers but stalls with the economic buyer, and pipeline feels like a slot machine. Where are you in that journey?"
+   → Follow-up: "When you look at your last ten closed deals, how many did you personally drive versus the team or self-serve? And how do you feel about that ratio?"
 
-2. **[Primary]** "When you look at your last ten new clients, how many came from outbound versus your network doing the heavy lifting?"
-   → Follow-up: "And how do you feel about that rate?"
+2. **[Primary]** "When you look at your last ten new customers, how many came from inbound and product-led versus you personally chasing them down?"
+   → Follow-up: "And how do you feel about that mix?"
 
-3. **[Primary]** "What's the conversation you're having internally about growth right now -- is it 'we need more at-bats' or 'we need to close more of what we're getting' or both?"
+3. **[Primary]** "What's the conversation you're having internally about growth right now -- is it 'we need more pipeline' or 'we need to convert more of what we already have' or both?"
    → Follow-up: "If you had to pick one number that tells you whether the business is healthy or not, what would it be?"
 
-4. **[Secondary]** "When a prospect ghosts you after a great discovery call, what story do you tell yourself about why that happened?"
+4. **[Secondary]** "When a deal ghosts you after a strong demo, what story do you tell yourself about why that happened?"
    → Follow-up: "What happens when something doesn't come up that you'd hoped for?"
 
-5. **[Secondary]** "What would have to be true about your business six months from now for you to feel like you're finally in control of revenue instead of revenue being in control of you?"
-   → Follow-up: "Gets her to articulate the emotional outcome, not just the number, which is what actually drives buying decisions"
+5. **[Secondary]** "What would have to be true about Northwind six months from now for you to feel like growth is finally a system instead of something you're holding together by hand?"
+   → Follow-up: "Gets him to articulate the emotional outcome, not just the ARR number, which is what actually drives the decision"
 
 ---
 
 ### 🎣 Market & Competitor Hooks
 
-**The Founder Ceiling**
-Every agency hits the point where the founder's Rolodex runs dry and the team can't close without them -- Lauren's likely there or about to be, which makes this the perfect time to build a system that scales beyond her.
+**The Founder-Led Sales Ceiling**
+Every SaaS startup hits the point where the founder can't be in every deal and the team can't close without them -- Alex is likely there or about to be, which makes this the perfect time to build a motion that scales beyond him.
 
-**The Positioning Void**
-Most boutique agencies look identical online -- beautiful work, vague promises, no clear POV. If Cairn sounds like everyone else, no amount of outbound will fix the pipeline problem.
+**The "Engineers Love It, Buyers Don't Get It" Gap**
+Product-led companies often win the user and lose the budget holder. If Northwind's pitch only lands with practitioners, deals stall the moment they reach procurement or finance.
 
-**The LinkedIn Dead Town**
-Agencies sell trust and expertise, but most agency teams are invisible on social. If Lauren's people aren't building authority online, they're leaving pipeline on the table every single day.
+**The Invisible-to-Buyers Problem**
+Technical founders build authority with engineers but stay invisible to the execs who actually sign. If Alex's team isn't reaching economic buyers, they're leaving pipeline on the table every single day.
 
 **The Sales Process Gap**
-Agencies are great at delivery and terrible at sales operations. No CRM discipline, no follow-up cadence, no qualification framework -- just vibes and hope. That's not a strategy.
+Great engineering orgs are often terrible at sales operations. No CRM discipline, no follow-up cadence, no qualification framework -- just founder intuition and hope. That's not a strategy.
 
 **The Likely Competitors**
-Cairn is probably losing deals to larger shops with recognizable names (agencies like Huge, R/GA, or Instrument if they're in digital/brand) or scrappier competitors who are better at content and outbound (think Refine Labs-style demand gen shops or founder-led agencies with strong personal brands). The real competitor is inertia -- prospects who like Cairn but don't feel urgency to move.
+Northwind is probably losing deals to bigger, "safer" incumbents every eng team already knows, and to scrappier open-source or build-it-yourself alternatives. The real competitor is inertia -- teams that like Northwind but don't feel enough urgency to switch.
 
 ---
 
 ### 🥊 Competitor Set
 
-- **Large Brand Shops (Huge, R/GA)** -- They compete on name recognition and breadth. Cairn wins on intimacy and founder involvement, but loses when procurement wants "safe" choices.
-- **Demand Gen Specialists (Refine Labs model)** -- They compete on measurable outcomes and thought leadership. If Lauren can't show ROI clearly, these shops eat her lunch.
-- **Freelancer Networks (Upwork, Toptal)** -- They compete on price and flexibility. Cairn needs to sell the strategic layer that freelancers can't provide.
-- **In-house Teams** -- The prospect might just hire internally. Lauren needs to make the case that agency expertise > a junior hire at the same cost.
+- **Incumbent Platforms (the big recognizable names)** -- They compete on safety and integrations. Northwind wins on developer experience, but loses when procurement wants the "nobody got fired for buying them" choice.
+- **Open Source / Build-It-Yourself** -- They compete on zero license cost. Northwind needs to sell the total-cost-of-ownership story that engineers love to underestimate.
+- **Point Solutions / Freemium Tools** -- They compete on "good enough and free." Northwind needs to sell the platform value a single-purpose tool can't match.
+- **Status Quo / Internal Tooling** -- The prospect might just keep their homegrown setup. Alex needs to make the case that Northwind beats paying engineers to maintain duct tape internally.
 
 ---
 
 ### ❤️ Emotional / Identity Probe
 
-"When you started Cairn, what was the version of this company you imagined building -- and how close are you to that right now?"
+"When you started Northwind, what was the version of this company you imagined building -- and how close are you to that right now?"
 
-This question ties to founder identity and pride. It surfaces whether Lauren feels she's building what she set out to build, or whether the business has drifted. The answer tells you everything about her motivation to change.
+This question ties to founder identity and pride. It surfaces whether Alex feels he's building what he set out to build, or whether the business has drifted into something he didn't sign up for. The answer tells you everything about his motivation to change.
 
 ---
 
@@ -82,11 +82,11 @@ This question ties to founder identity and pride. It surfaces whether Lauren fee
 
 **1. Opening**
 Start with curiosity, not credentials.
-"Lauren, I'm excited to dig into what's working and what's not at Cairn. Before I ask you anything, what's the one thing you want to make sure we cover today?"
+"Alex, I'm excited to dig into what's working and what's not at Northwind. Before I ask you anything, what's the one thing you want to make sure we cover today?"
 
 **2. Authority Frame**
-Establish you understand her world.
-"Most agency founders I work with are great at the work but hit a wall when it comes to predictable pipeline. Where does that land for you?"
+Establish you understand his world.
+"Most technical founders I work with are great at building the product but hit a wall turning it into a repeatable sales motion. Where does that land for you?"
 
 **3. Pain Uncovering**
 Go beneath the surface symptom.
@@ -94,11 +94,11 @@ Go beneath the surface symptom.
 
 **4. Impact Exploration**
 Connect pain to business outcomes.
-"If this doesn't get solved in the next six months, what does that cost you -- not just in revenue, but in terms of the business you're trying to build?"
+"If this doesn't get solved in the next six months, what does that cost you -- not just in revenue, but in terms of the company you're trying to build?"
 
 **5. Vision Bridge**
-Help her imagine the other side.
-"What would it feel like if your team could generate and close deals without you being the hero every time?"
+Help him imagine the other side.
+"What would it feel like if your team could generate and close deals without you being the hero on every call?"
 
 **6. Next Step Setup**
 Create forward momentum without being pushy.
@@ -108,23 +108,23 @@ Create forward momentum without being pushy.
 
 ### 🌳 Conversation Decision Tree
 
-**If she says "We're not really looking for help right now":**
+**If he says "We're not really looking for help right now":**
 → Respond with: "Totally get it. Can I ask -- when you say 'not right now,' is that because things are going well, or because you've got bigger fires to put out first?"
 → Then pivot to: "What would have to change for this to become a priority?"
 
-**If she gets excited and starts sharing problems openly:**
-→ Amplify with: "That's exactly what I hear from founders at your stage. Let me ask you this -- if we could solve [specific problem she mentioned], what would that unlock for the rest of the business?"
+**If he gets excited and starts sharing problems openly:**
+→ Amplify with: "That's exactly what I hear from founders at your stage. Let me ask you this -- if we could solve [specific problem he mentioned], what would that unlock for the rest of the business?"
 → Move to: The Vision Bridge question, then the Next Step Setup
 
-**If she asks "What do you actually do?" early in the call:**
-→ Say: "Great question. The short version -- I help agency founders build the systems that make revenue predictable instead of random. But before I get into that, I want to make sure what I share is actually relevant to where Cairn is right now. Can I ask a couple more questions?"
+**If he asks "What do you actually do?" early in the call:**
+→ Say: "Great question. The short version -- I help technical founders build the systems that make revenue predictable instead of random. But before I get into that, I want to make sure what I share is actually relevant to where Northwind is right now. Can I ask a couple more questions?"
 → Then redirect to Pain Uncovering
 
-**If she brings up pricing:**
+**If he brings up pricing:**
 → Say: "Happy to get into that. Before I do -- based on what you've told me, I want to make sure I'm recommending the right thing. Can I ask: what does success look like for you in the next 90 days? That'll help me figure out exactly what makes sense."
 → Then redirect to: Impact Exploration
 
-**If she goes quiet or gives short answers:**
+**If he goes quiet or gives short answers:**
 → Try: "I notice you got quiet on that one. Sometimes that means I hit something real. What's going on in your head right now?"
 → If still deflecting: "Totally fine if this isn't the right time. But I'm curious -- what made you take this call in the first place?"
 
@@ -132,28 +132,28 @@ Create forward momentum without being pushy.
 
 ### 🔮 What They'll Google After This Call
 
-1. **"Tim Kilroy agency consultant"** -- She'll research you to see if you're legit. Make sure your LinkedIn, website, and testimonials tell a cohesive story about agency growth.
+1. **"[Your Name] GTM consultant"** -- He'll research you to see if you're legit. Make sure your LinkedIn, website, and testimonials tell a cohesive story about helping founders build a sales motion.
 
-2. **"how to build predictable pipeline for agency"** -- This is the problem you surfaced. Have a blog post or resource ready to send in your follow-up that addresses this exact query.
+2. **"how to build a repeatable sales motion for SaaS"** -- This is the problem you surfaced. Have a blog post or resource ready to send in your follow-up that addresses this exact query.
 
-3. **"agency sales process framework"** -- If you referenced a framework during the call, she'll look for it. Make sure you have something she can find -- a PDF, a guide, a video.
+3. **"founder-led sales to sales team transition"** -- If you referenced a framework during the call, he'll look for it. Make sure you have something he can find -- a PDF, a guide, a video.
 
-4. **"Cairn Media competitors"** -- She might do her own competitive audit after your conversation makes her realize she's not differentiated enough. This is a good sign -- it means you created awareness.
+4. **"Northwind Labs alternatives"** -- He might run his own competitive audit after your conversation makes him realize he's not differentiated enough for the economic buyer. This is a good sign -- it means you created awareness.
 
-5. **"agency growth coaching cost"** -- She's pricing you in her head. Have your pricing page or a "what to expect" document ready for the follow-up.
+5. **"fractional GTM consultant cost"** -- He's pricing you in his head. Have your pricing page or a "what to expect" document ready for the follow-up.
 
 ---
 
 ### 👉 Call Objective
 
-You win this call when Lauren admits she's tired of being the bottleneck and asks you what it would take to fix it.
+You win this call when Alex admits he's tired of being the only one who can close, and asks you what it would take to fix it.
 
 ---
 
 **Key Research Insights:**
-- Cairn Media positions as a "creative storytelling" shop but the website lacks clear differentiation from dozens of similar agencies -- this is the positioning void you can surface
-- Lauren is founder-led with no visible sales team or process -- she's likely the sole closer, which is the exact bottleneck your coaching addresses
-- No visible thought leadership or content strategy from the Cairn team on LinkedIn -- this is low-hanging fruit you can reference as proof of the pipeline problem`;
+- Northwind Labs positions as a developer-loved product, but the website speaks to engineers rather than the economic buyer -- this is the positioning gap you can surface
+- Alex is founder-led with no visible sales leadership -- he's likely the sole closer, which is the exact bottleneck your work addresses
+- No visible thought leadership aimed at buyers (only practitioner-level content) -- this is low-hanging fruit you can reference as proof of the pipeline problem`;
 
 export default function ExampleDiscoveryProReportPage() {
   return (
@@ -184,7 +184,7 @@ export default function ExampleDiscoveryProReportPage() {
             Discovery Lab Pro - Full Intelligence
           </h1>
           <p className="text-[#666] text-sm">
-            Lauren Fleischmann — Cairn Media - Founder
+            Alex Rivera — Northwind Labs - Founder &amp; CEO
           </p>
         </div>
 

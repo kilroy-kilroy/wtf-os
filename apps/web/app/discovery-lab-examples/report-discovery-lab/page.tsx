@@ -52,7 +52,7 @@ Agencies sell trust and expertise, but most agency teams are invisible on social
 
 **1. Opening**
 Start with curiosity, not credentials.
-"Sarah, I'm excited to dig into what's working and what's not at Cairn. Before I ask you anything, what's the one thing you want to make sure we cover today?"
+"Sarah, I'm excited to dig into what's working and what's not at TechCorp. Before I ask you anything, what's the one thing you want to make sure we cover today?"
 
 **2. Authority Frame**
 Establish you understand her world.

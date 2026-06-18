@@ -268,6 +268,7 @@ export default function CallLabProPage() {
           call_type: formData.call_type,
           version: 'pro',
           use_markdown: false, // Get JSON for structured display
+          discovery_brief_id: formData.discovery_brief_id || null,
         }),
       });
 
@@ -304,37 +305,12 @@ export default function CallLabProPage() {
         });
       }
 
-      // Step 3: Save to dashboard via ingest API (non-blocking)
-      setLoadingStep('saving');
-      try {
-        const ingestPayload = {
-          report: report,
-          metadata: {
-            userId: userId,
-            agent: 'pro',
-            version: '1.0',
-            callId: callId,
-            transcript: formData.transcript,
-            createdAt: createdAt,
-            buyerName: formData.prospect_name,
-            companyName: formData.prospect_company,
-            discoveryBriefId: formData.discovery_brief_id || null,
-          }
-        };
-
-        const saveResponse = await fetch('/api/call-lab/ingest', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(ingestPayload),
-        });
-
-        if (!saveResponse.ok) {
-          const errorData = await saveResponse.json().catch(() => ({}));
-          console.error('Failed to save to dashboard:', errorData);
-        }
-      } catch (ingestError) {
-        console.error('Ingest error (non-fatal):', ingestError);
-      }
+      // NOTE: the report is already persisted to call_lab_reports server-side by
+      // /api/analyze/call (with call_id linked to the real call_score). We used
+      // to ALSO POST it to /api/call-lab/ingest here, which created a second,
+      // unlinked duplicate row per call — the phantom twins that kept the
+      // outcome-nudge emails firing. discovery_brief_id is now passed straight
+      // to /api/analyze/call above, so this redundant save is removed.
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {

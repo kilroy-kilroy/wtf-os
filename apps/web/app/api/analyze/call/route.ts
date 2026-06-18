@@ -121,6 +121,7 @@ export async function POST(request: NextRequest) {
       call_type,
       known_objections,
       icp_context,
+      discovery_brief_id,
     } = body;
 
     // Initialize Supabase client
@@ -392,6 +393,7 @@ ${ingestionItem.raw_content}`;
             version: '1.0',
             call_id: callScore.id,
             transcript: ingestionItem.raw_content || '',
+            discovery_brief_id: discovery_brief_id || null,
           });
 
           // Update ingestion item status

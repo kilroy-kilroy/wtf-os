@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@repo/db/client';
-import Anthropic from '@anthropic-ai/sdk';
+import { runModel } from '@repo/utils';
 
 /**
  * Admin API: Generate Content from Assessment Data
@@ -223,8 +223,6 @@ async function generateContent(
   topic?: string,
   tone?: string,
 ): Promise<string> {
-  const anthropic = new Anthropic();
-
   const typePrompt = CONTENT_TYPE_PROMPTS[type];
   if (!typePrompt) {
     throw new Error(`Unknown content type: ${type}. Valid types: ${Object.keys(CONTENT_TYPE_PROMPTS).join(', ')}`);
@@ -251,13 +249,6 @@ ${dataSummary}
 
 Generate the content now. Use specific numbers from the data. If certain data points are missing or show "N/A", skip them rather than guessing.`;
 
-  const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-6',
-    max_tokens: 4096,
-    system: systemPrompt,
-    messages: [{ role: 'user', content: userPrompt }],
-  });
-
-  const textBlock = response.content.find((b: any) => b.type === 'text');
-  return textBlock ? (textBlock as any).text : '';
+  const { content } = await runModel('assessment-content', systemPrompt, userPrompt);
+  return content;
 }

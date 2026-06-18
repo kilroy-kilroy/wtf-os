@@ -104,6 +104,34 @@ const MODEL_CONFIGS: Record<string, ModelConfig> = {
     maxTokens: 4096,
     temperature: 0.3,
   },
+  // Client portal: office-hours / 1:1 session synopsis + teaching (JSON)
+  'session-content': {
+    provider: 'anthropic',
+    model: 'claude-sonnet-4-6',
+    maxTokens: 2000,
+    temperature: 0.4,
+  },
+  // Admin: assessment marketing-content generation
+  'assessment-content': {
+    provider: 'anthropic',
+    model: 'claude-sonnet-4-6',
+    maxTokens: 4096,
+    temperature: 0.4,
+  },
+  // Coaching report generation
+  'coaching-report': {
+    provider: 'anthropic',
+    model: 'claude-sonnet-4-6',
+    maxTokens: 4096,
+    temperature: 0.4,
+  },
+  // Assessment diagnosis revelations (run in parallel; degrade to null on error/timeout)
+  'assessment-diagnosis': {
+    provider: 'anthropic',
+    model: 'claude-sonnet-4-6',
+    maxTokens: 1500,
+    temperature: 0.3,
+  },
 };
 
 function assertModelConfig(toolName: string, config: ModelConfig | undefined): asserts config is ModelConfig {
@@ -153,10 +181,11 @@ export async function runModel(
   toolName: string,
   systemPrompt: string,
   userPrompt: string,
-  options?: Partial<ModelConfig>
+  options?: Partial<ModelConfig> & { timeoutMs?: number }
 ): Promise<ModelResponse> {
+  const { timeoutMs, ...configOverrides } = options ?? {};
   const baseConfig = MODEL_CONFIGS[toolName];
-  const config = { ...baseConfig, ...options } as ModelConfig | undefined;
+  const config = { ...baseConfig, ...configOverrides } as ModelConfig | undefined;
   assertModelConfig(toolName, config);
 
   // Guard against malformed Unicode in scraped prompt content reaching the API.
@@ -164,9 +193,9 @@ export async function runModel(
   const safeUserPrompt = ensureWellFormed(userPrompt);
 
   if (config.provider === 'anthropic') {
-    return runAnthropic(config, safeSystemPrompt, safeUserPrompt);
+    return runAnthropic(config, safeSystemPrompt, safeUserPrompt, timeoutMs);
   } else {
-    return runOpenAI(config, safeSystemPrompt, safeUserPrompt);
+    return runOpenAI(config, safeSystemPrompt, safeUserPrompt, timeoutMs);
   }
 }
 
@@ -176,9 +205,10 @@ export async function runModel(
 async function runAnthropic(
   config: ModelConfig,
   systemPrompt: string,
-  userPrompt: string
+  userPrompt: string,
+  timeoutMs?: number
 ): Promise<ModelResponse> {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const apiKey = process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_API_KEY;
   if (!apiKey) {
     throw new Error('ANTHROPIC_API_KEY is not set');
   }
@@ -186,6 +216,10 @@ async function runAnthropic(
   const anthropic = new Anthropic({
     apiKey,
   });
+
+  // A caller-supplied deadline (e.g. parallel fan-out that degrades to null)
+  // implies fail-fast: cap the request and skip the SDK's default retries.
+  const requestOptions = timeoutMs ? { timeout: timeoutMs, maxRetries: 0 } : undefined;
 
   const message = await anthropic.messages.create({
     model: config.model,
@@ -198,7 +232,7 @@ async function runAnthropic(
         content: userPrompt,
       },
     ],
-  });
+  }, requestOptions);
 
   const content = message.content[0];
   if (content.type !== 'text') {
@@ -220,7 +254,8 @@ async function runAnthropic(
 async function runOpenAI(
   config: ModelConfig,
   systemPrompt: string,
-  userPrompt: string
+  userPrompt: string,
+  timeoutMs?: number
 ): Promise<ModelResponse> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
@@ -230,6 +265,9 @@ async function runOpenAI(
   const openai = new OpenAI({
     apiKey,
   });
+
+  // A caller-supplied deadline implies fail-fast: cap the request, skip retries.
+  const requestOptions = timeoutMs ? { timeout: timeoutMs, maxRetries: 0 } : undefined;
 
   const completion = await openai.chat.completions.create({
     model: config.model,
@@ -245,7 +283,7 @@ async function runOpenAI(
         content: userPrompt,
       },
     ],
-  });
+  }, requestOptions);
 
   const choice = completion.choices[0];
   if (!choice.message.content) {

@@ -8,6 +8,7 @@
 
 import type { IntakeData, AssessmentResult } from './scoring';
 import type { EnrichmentResult } from './enrichment';
+import { runModel } from '../../ai';
 import {
   type RevelationIntakeData,
   type RevelationsResult,
@@ -833,8 +834,7 @@ async function generateRevelation(
 ): Promise<string | null> {
   if (!canGenerateRevelation(type, ctx)) return null;
 
-  const apiKey = process.env.CLAUDE_API_KEY || process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) return null;
+  if (!process.env.CLAUDE_API_KEY && !process.env.ANTHROPIC_API_KEY) return null;
 
   const systemPrompt = DIAGNOSIS_SYSTEM_PROMPT.replace('{agencyName}', ctx.agencyName);
   const userPrompt = REVELATION_PROMPT_BUILDERS[type](ctx);
@@ -858,34 +858,12 @@ async function generateRevelation(
   }
 
   try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 1500,
-        system: systemPrompt,
-        messages: [{ role: 'user', content: finalPrompt }],
-      }),
-      signal: AbortSignal.timeout(45000),
+    // 45s deadline → fail-fast to null so one slow revelation can't stall the
+    // parallel fan-out (runModel caps the request and skips retries).
+    const { content } = await runModel('assessment-diagnosis', systemPrompt, finalPrompt, {
+      timeoutMs: 45000,
     });
-
-    if (!response.ok) {
-      console.error(`[Diagnosis] Claude returned ${response.status} for ${type}`);
-      return null;
-    }
-
-    const data = await response.json();
-    const text = data.content
-      ?.filter((c: any) => c.type === 'text')
-      .map((c: any) => c.text)
-      .join('\n') || '';
-
-    return text || null;
+    return content || null;
   } catch (error: any) {
     console.error(`[Diagnosis] Failed to generate ${type}:`, error.message);
     return null;

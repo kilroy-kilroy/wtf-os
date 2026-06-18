@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import Anthropic from '@anthropic-ai/sdk';
+import { runModel } from '@repo/utils';
 import {
   COACHING_SYSTEM_PROMPT,
   buildCoachingUserPrompt,
@@ -14,10 +14,6 @@ const getSupabase = () => createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
-
-const getAnthropic = () => new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY!,
-});
 
 interface GenerateCoachingRequest {
   user_id: string;
@@ -47,7 +43,6 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = getSupabase();
-    const anthropic = getAnthropic();
 
     // Get user info
     const { data: user, error: userError } = await supabase
@@ -237,22 +232,11 @@ export async function POST(request: NextRequest) {
     });
 
     // Generate coaching report with Claude
-    const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 4096,
-      messages: [
-        {
-          role: 'user',
-          content: userPrompt,
-        },
-      ],
-      system: COACHING_SYSTEM_PROMPT,
-    });
-
-    // Extract content
-    const responseText = message.content[0].type === 'text'
-      ? message.content[0].text
-      : '';
+    const { content: responseText } = await runModel(
+      'coaching-report',
+      COACHING_SYSTEM_PROMPT,
+      userPrompt,
+    );
 
     // Parse JSON from response
     let reportContent;

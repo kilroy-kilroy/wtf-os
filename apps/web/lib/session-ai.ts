@@ -1,8 +1,4 @@
-import Anthropic from '@anthropic-ai/sdk';
-
-const getAnthropic = () => new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY!,
-});
+import { runModel, parseModelJSON } from '@repo/utils';
 
 interface SessionAIResult {
   synopsis: string;
@@ -36,29 +32,18 @@ export async function generateSessionContent(
   type: 'office-hours' | 'one-on-one',
   clientName?: string,
 ): Promise<SessionAIResult> {
-  const anthropic = getAnthropic();
-
   const callDescription = type === 'office-hours'
     ? 'an office hours group call'
     : `a monthly 1:1 coaching call with ${clientName || 'a client'}`;
 
-  const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-6',
-    max_tokens: 2000,
-    system: SYSTEM_PROMPT,
-    messages: [
-      {
-        role: 'user',
-        content: `Here is the transcript from ${callDescription}:\n\n${transcript}`,
-      },
-    ],
-  });
+  const { content } = await runModel(
+    'session-content',
+    SYSTEM_PROMPT,
+    `Here is the transcript from ${callDescription}:\n\n${transcript}`,
+  );
 
-  let text = response.content[0].type === 'text' ? response.content[0].text : '';
-  // Strip markdown code fences if the model wraps the JSON
-  text = text.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
-  const parsed = JSON.parse(text) as SessionAIResult;
-  return parsed;
+  // parseModelJSON strips markdown code fences and parses the JSON payload.
+  return parseModelJSON<SessionAIResult>(content);
 }
 
 export async function regenerateField(

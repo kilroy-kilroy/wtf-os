@@ -44,11 +44,13 @@ export async function GET(request: NextRequest) {
 
     // Get all active enrollments and programs separately to avoid PostgREST join issues
     const [enrollmentsResult, programsResult] = await Promise.all([
+      // Any active enrollment counts — once a client is entered, they get 5MF
+      // reminders even if they haven't completed portal onboarding yet. This
+      // matches the submission gate, which only requires an active enrollment.
       supabase
         .from('client_enrollments')
         .select('id, user_id, program_id, timezone')
-        .eq('status', 'active')
-        .eq('onboarding_completed', true),
+        .eq('status', 'active'),
       supabase
         .from('client_programs')
         .select('id, name, has_five_minute_friday')

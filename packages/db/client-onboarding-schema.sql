@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS client_programs (
     slug TEXT NOT NULL UNIQUE,
     name TEXT NOT NULL,
     description TEXT,
-    has_five_minute_friday BOOLEAN DEFAULT false,
+    has_five_minute_friday BOOLEAN DEFAULT true,
     has_call_lab_pro BOOLEAN DEFAULT false,
     active BOOLEAN DEFAULT true,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -21,12 +21,12 @@ CREATE TABLE IF NOT EXISTS client_programs (
 INSERT INTO client_programs (slug, name, description, has_five_minute_friday, has_call_lab_pro) VALUES
     ('agency-studio', 'Agency Studio', 'Core agency coaching program', true, false),
     ('agency-studio-plus', 'Agency Studio+', 'Advanced agency coaching with extended support', true, true),
-    ('salesos-studio', 'SalesOS Studio', 'Individual sales coaching program', false, true),
-    ('salesos-growth', 'SalesOS Growth', 'Growth-focused sales program', false, true),
-    ('salesos-team', 'SalesOS Team', 'Team-based sales coaching', false, true),
-    ('demandos-studio', 'DemandOS Studio', 'Demand generation coaching', false, false),
-    ('demandos-growth', 'DemandOS Growth', 'Growth-focused demand gen program', false, false),
-    ('demandos-team', 'DemandOS Team', 'Team-based demand gen coaching', false, false)
+    ('salesos-studio', 'SalesOS Studio', 'Individual sales coaching program', true, true),
+    ('salesos-growth', 'SalesOS Growth', 'Growth-focused sales program', true, true),
+    ('salesos-team', 'SalesOS Team', 'Team-based sales coaching', true, true),
+    ('demandos-studio', 'DemandOS Studio', 'Demand generation coaching', true, false),
+    ('demandos-growth', 'DemandOS Growth', 'Growth-focused demand gen program', true, false),
+    ('demandos-team', 'DemandOS Team', 'Team-based demand gen coaching', true, false)
 ON CONFLICT (slug) DO NOTHING;
 
 -- ============================================

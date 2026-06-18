@@ -628,7 +628,7 @@ async function apifyScrapeWebsite(websiteUrl: string): Promise<ApifyWebsite | nu
       }`,
       maxPagesPerCrawl: 15,
       maxConcurrency: 5
-    }, 20000);
+    }, 150000);
 
     // Aggregate results from all pages
     const result: ApifyWebsite = {
@@ -860,7 +860,7 @@ The person taking this assessment runs a business:
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'claude-3-5-haiku-20241022',
+        model: 'claude-sonnet-4-6',
         max_tokens: 500,
         messages: [{
           role: 'user',
@@ -1057,7 +1057,7 @@ async function callClaude(prompt: string): Promise<string> {
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({
-      model: 'claude-3-5-sonnet-20241022',
+      model: 'claude-sonnet-4-6',
       max_tokens: 1000,
       messages: [{ role: 'user', content: prompt }]
     }),
@@ -1313,7 +1313,7 @@ async function callClaudeAnalysis(apiKey: string, prompt: string): Promise<strin
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({
-      model: 'claude-3-5-sonnet-20241022',
+      model: 'claude-sonnet-4-6',
       max_tokens: 2000,
       messages: [{ role: 'user', content: prompt }]
     }),
@@ -1405,7 +1405,7 @@ export async function runEnrichmentPipeline(intakeData: IntakeData): Promise<Enr
   const dataTimeout = new Promise<void>(resolve => setTimeout(() => {
     result.meta.errors.push({ source: 'pipeline.data', error: 'Timeout' });
     resolve();
-  }, 150000));
+  }, 180000));
 
   await Promise.race([Promise.allSettled(dataJobs), dataTimeout]);
 

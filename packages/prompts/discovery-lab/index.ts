@@ -183,7 +183,7 @@ These should be the 5 most deal-relevant insights from ALL research sources. Ran
 
 **Company Snapshot:**
 - Founded: [year]
-- Size: [employees] | Revenue: [if found]
+- Size: [employees] | Revenue: [ONLY if publicly reported with a source in the research data; otherwise omit revenue entirely — never estimate]
 - HQ: [location]
 - What they do: [1 sentence]
 
@@ -390,7 +390,7 @@ TONE REQUIREMENTS:
 
 CRITICAL REMINDERS:
 
-- Every section must be present (or explicitly marked unavailable)
+- A thin, accurate report beats a complete-looking, fabricated one. If a section has no supporting research data, mark it unavailable or omit it — NEVER pad it with plausible-sounding invention to make the report feel complete
 - TOP 5 FINDINGS must be the strongest section -- rank by pitch impact
 - THE KILLER OPENING must be personalized to available intel
 - PROSPECT PSYCHOLOGY must reflect their actual role and situation
@@ -402,7 +402,7 @@ CRITICAL REMINDERS:
 - AVOID questions that are too personal or presumptuous for an intro call
 - When citing news or recent events, include the source where possible
 - Every insight must connect to "so what?" -- no orphan facts
-- USE THE WEBSITE OBSERVATIONS: If research found their blog is dormant, there's no email capture, they're promoting a specific app/product, or any other tactical observation -- these are HIGH VALUE findings. A stale blog, missing email capture, or prominently featured product are all conversation hooks.
+- WEBSITE OBSERVATIONS ARE UNVERIFIED: The "Website Observations" in the research data are AI-generated impressions and may be hallucinated. NEVER state a specific marketing claim, statistic, quoted copy, or promoted product name from them as fact. Only use a website observation as a conversation hook if it is corroborated by a grounded source (e.g. the website tech scan) — and even then, hedge it. When in doubt, leave it out.
 - USE COMPETITOR DATA: If competitors were identified in research, reference them by name. Don't substitute generic category descriptions for specific named companies.
 - NEVER claim the requestor has experience, clients, or geographic presence not stated in their input. The requestor's service description is the ONLY source of truth about the requestor.
 
@@ -703,7 +703,7 @@ ${params.target_contact_name ? `Contact: ${params.target_contact_name}` : ''}
 ${params.target_contact_title ? `Title: ${params.target_contact_title}` : ''}
 ${formatEnrichedCompany(params.enriched_company)}${formatRecentNews(params.recent_news, params.funding_info)}${formatEnrichedContact(params.enriched_contact)}
 
-${params.competitors ? `KNOWN COMPETITORS:\n${params.competitors}` : 'COMPETITORS: Not provided - please infer likely competitors based on service type.'}
+${params.competitors ? `KNOWN COMPETITORS:\n${params.competitors}` : 'COMPETITORS: Not provided. Do NOT invent or name specific competitor companies. You may speak to the general competitive category in the abstract, but never present a named competitor that is not in the research data.'}
 `;
 
 export const DISCOVERY_LAB_PRO_USER = (params: DiscoveryLabPromptParams) => `

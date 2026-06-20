@@ -41,13 +41,17 @@ const MODEL_CONFIGS: Record<string, ModelConfig> = {
     provider: 'anthropic',
     model: 'claude-sonnet-4-6',
     maxTokens: 4096,
-    temperature: 0.4,
+    // Low temperature: this is a factual briefing, not creative writing.
+    // Higher temps increase the model's willingness to fill gaps with invention.
+    temperature: 0.1,
   },
   'discovery-lab-pro': {
     provider: 'anthropic',
     model: 'claude-sonnet-4-6',
     maxTokens: 8192,
-    temperature: 0.4,
+    // Low temperature: this is a factual briefing, not creative writing.
+    // Higher temps increase the model's willingness to fill gaps with invention.
+    temperature: 0.1,
   },
   // Content Engine tools
   'content-engine-calibrate': {

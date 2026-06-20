@@ -1764,7 +1764,13 @@ export async function researchTargetCompanyDeepDive(
   domain?: string,
   contactName?: string
 ): Promise<CompanyDeepDiveResult | null> {
-  const systemPrompt = `You are a competitive intelligence analyst preparing a briefing for a sales professional. Your job is to deeply research a specific company - read their website, LinkedIn, and any public sources. Be thorough, specific, and factual. Extract verbatim phrases from their website where possible. Do NOT fabricate information - if something is unknown, say so.`;
+  const systemPrompt = `You are a competitive intelligence analyst preparing a briefing for a sales professional. Your job is to deeply research a specific company using public sources. Be thorough, specific, and factual.
+
+CRITICAL ACCURACY RULES — a wrong "fact" is worse than a missing one:
+- NEVER estimate, infer, or guess financial figures. State revenue, funding, or valuation ONLY if it comes from a named, verifiable public source (e.g. an SEC filing, a press release, a funding announcement) — and cite that source inline. If you cannot verify it, write "not publicly disclosed." Do NOT produce a revenue range or "approximately $X".
+- NEVER invent specific website copy, marketing claims, statistics (e.g. "300% more leads"), banner text, or promoted product names. Only describe website content you can actually confirm from search results. If you cannot confirm exact wording, say "could not verify specific website claims."
+- If you are not certain a detail belongs to THIS exact company (and not a similarly-named one), omit it. Do not blend multiple companies or people together.
+- When something is unknown, say so explicitly. Do NOT fill gaps with plausible-sounding invention.`;
 
   const domainContext = domain ? ` (${domain})` : '';
   const contactContext = contactName ? `\n\nAlso research ${contactName} at ${companyName}. Find their LinkedIn profile URL, role, background, and any public content they've produced.` : '';
@@ -1774,7 +1780,7 @@ ${contactContext}
 Provide:
 
 1. COMPANY SUMMARY
-Who are they? What do they do? Who are their customers? How big are they (employees, revenue if findable)? Where are they located? When were they founded?
+Who are they? What do they do? Who are their customers? How big are they (employee count if available)? Where are they located? When were they founded? State revenue ONLY if it is publicly reported with a verifiable source you can cite — otherwise write "revenue not publicly disclosed." Never estimate a revenue figure.
 
 2. POSITIONING & MESSAGING
 How do they describe themselves? What language do they use? What are their core value propositions? Extract verbatim phrases from their website and LinkedIn.
@@ -1786,7 +1792,7 @@ What specific services or products do they offer? How are they structured? What'
 Who are the founders/leaders? What are their LinkedIn URLs? What's their background?
 
 5. WEBSITE OBSERVATIONS
-What's notable about their website? Is there a blog - when was it last updated? Do they have email capture? Any prominent CTAs, banners, or apps being promoted? What platform is the site built on?
+What's notable about their website that you can actually confirm? Is there a blog, and when was it last updated? Do they have email capture? Only describe CTAs, banners, promoted products, or marketing claims if you can verify the actual wording — do NOT invent specific claims, statistics, or product names. If you cannot confirm the specifics, say "specific website content could not be verified."
 
 6. COMPETITORS & MARKET POSITION
 Who are their direct competitors? Name specific companies. How do they differentiate from competitors? What market segment do they occupy? What's their competitive advantage and disadvantage?
@@ -1914,6 +1920,46 @@ Be specific. Name real companies only. If you're not confident a company is a re
  * Find a person's LinkedIn URL using Perplexity search.
  * Used when the user provides a contact name but no LinkedIn URL.
  */
+/**
+ * Normalize a company name for fuzzy comparison: lowercase, strip punctuation,
+ * drop common corporate suffixes, collapse whitespace.
+ */
+function normalizeCompanyName(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[.,&'/()-]/g, ' ')
+    .replace(/\b(inc|llc|ltd|corp|corporation|co|company|group|holdings|llp|plc|gmbh|sa|ag|the)\b/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
+ * Entity-verification gate: does a discovered profile's employer actually match
+ * the target company? Used to reject Perplexity-guessed LinkedIn profiles that
+ * resolve to the wrong person (a different human with the same/similar name).
+ *
+ * Returns true when the names plausibly refer to the same company. Returns true
+ * when either name is missing (we can't disprove a match — don't discard on
+ * thin data). Only returns false when we have two distinct, conflicting names.
+ */
+export function companyNameMatches(a: string | undefined | null, b: string | undefined | null): boolean {
+  const na = a ? normalizeCompanyName(a) : '';
+  const nb = b ? normalizeCompanyName(b) : '';
+  if (!na || !nb) return true; // unverifiable — don't reject
+
+  if (na === nb) return true;
+  if (na.includes(nb) || nb.includes(na)) return true;
+
+  // Token overlap: how many of the smaller name's tokens appear in the larger.
+  const ta = new Set(na.split(' ').filter(t => t.length >= 2));
+  const tb = new Set(nb.split(' ').filter(t => t.length >= 2));
+  if (ta.size === 0 || tb.size === 0) return true;
+  const [small, large] = ta.size <= tb.size ? [ta, tb] : [tb, ta];
+  let shared = 0;
+  small.forEach(t => { if (large.has(t)) shared++; });
+  return shared / small.size >= 0.5;
+}
+
 export async function findLinkedInUrl(
   contactName: string,
   companyName: string,
@@ -2224,8 +2270,34 @@ export async function runV2DiscoveryResearch(input: V2ResearchInput): Promise<V2
                 return null;
               }),
             ]);
-            result.linkedin_profile = profile;
-            result.linkedin_posts = posts;
+            // Entity-verification gate: findLinkedInUrl asked Perplexity to GUESS
+            // this profile by name, so it may resolve to a different person. Only
+            // trust it if the scraped employer matches the target company (current
+            // role or any prior role — allows for recent job changes). A hard
+            // mismatch means wrong human; discard the bio rather than feed a
+            // stranger's career into the report.
+            if (profile) {
+              const employers = [profile.current_company, ...profile.previous_roles.map(r => r.company)];
+              const matchesTarget = employers.some(c => companyNameMatches(c, input.target_company));
+              if (!matchesTarget) {
+                console.warn(
+                  `[Discovery:v2] Discovered LinkedIn profile rejected — employer "${profile.current_company}" does not match target company "${input.target_company}" (likely wrong person)`
+                );
+                errors.push(
+                  `LinkedIn profile discarded: discovered profile for "${input.target_contact}" lists employer "${profile.current_company || 'unknown'}", which does not match target company "${input.target_company}". Likely a different person — person-level research omitted to avoid fabrication.`
+                );
+                result.discovered_linkedin_url = null;
+                // posts are scraped from the same (wrong) profile — discard too
+                result.linkedin_profile = null;
+                result.linkedin_posts = null;
+              } else {
+                result.linkedin_profile = profile;
+                result.linkedin_posts = posts;
+              }
+            } else {
+              result.linkedin_profile = profile;
+              result.linkedin_posts = posts;
+            }
           } else {
             console.warn('[Discovery:v2] Could not discover LinkedIn URL for:', input.target_contact);
             errors.push('LinkedIn URL not provided and could not be discovered');

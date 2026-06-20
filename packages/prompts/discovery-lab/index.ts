@@ -598,7 +598,7 @@ function formatV2Research(data: DiscoveryLabPromptParams['v2_research']): string
     if (dd.positioning) parts.push(`\nPositioning & Messaging:\n${dd.positioning}`);
     if (dd.services) parts.push(`\nServices & Offerings:\n${dd.services}`);
     if (dd.key_people) parts.push(`\nKey People:\n${dd.key_people}`);
-    if (dd.website_observations) parts.push(`\nWebsite Observations (USE THESE - stale blogs, missing email capture, promoted products are high-value hooks):\n${dd.website_observations}`);
+    if (dd.website_observations) parts.push(`\nWebsite Observations (UNVERIFIED AI impressions — these may be inaccurate or hallucinated. Do NOT state specific marketing claims, statistics, or quoted website copy as fact. Use only as soft, hedged context, and only if corroborated by another source):\n${dd.website_observations}`);
     if (dd.competitors) parts.push(`\nCompetitors Found:\n${dd.competitors}`);
     sections.push(parts.join('\n'));
   }

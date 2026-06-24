@@ -2,13 +2,12 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { getAnalysis } from "@/lib/wah-wah/db";
 import ScoreCard from "@/components/wah-wah/ScoreCard";
-import ReportGate, { type WahWahResult } from "@/components/wah-wah/ReportGate";
+import ReportBody, { type WahWahResult } from "@/components/wah-wah/ReportBody";
 
 export const dynamic = "force-dynamic";
 
 type Props = {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ admin?: string }>;
 };
 
 function hostnameOf(url: string): string {
@@ -30,24 +29,18 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default async function ResultPage({ params, searchParams }: Props) {
+export default async function ResultPage({ params }: Props) {
   const { id } = await params;
-  const { admin } = await searchParams;
   const analysis = await getAnalysis(id);
   if (!analysis) notFound();
 
   const result = analysis.result as WahWahResult & { verdict: string };
-  const isAdmin = admin === "1";
 
   return (
     <div className="min-h-screen bg-black">
       <main className="mx-auto flex max-w-2xl flex-col items-center gap-10 px-4 py-16">
         <ScoreCard score={analysis.score} verdict={result.verdict} url={analysis.url} />
-        <ReportGate
-          analysisId={analysis.id}
-          flagCount={result.flags.length}
-          initialResult={isAdmin ? result : null}
-        />
+        <ReportBody result={result} />
         <a href="/wah-wah" className="font-poppins text-sm text-[#808080] underline">
           Score another homepage
         </a>

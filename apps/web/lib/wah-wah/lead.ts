@@ -1,11 +1,11 @@
 import { waitUntil } from "@vercel/functions";
-import { getAnalysis, attachLead } from "@/lib/wah-wah/db";
+import { attachLead } from "@/lib/wah-wah/db";
 import { onWahWahReportGenerated } from "@/lib/loops";
 import { addWahWahSubscriber } from "@/lib/beehiiv";
 import { copperSyncLead, COPPER_STAGES } from "@/lib/copper";
 import { alertReportGenerated } from "@/lib/slack";
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+export const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 function hostnameOf(url: string): string {
   try {
@@ -15,23 +15,28 @@ function hostnameOf(url: string): string {
   }
 }
 
-export async function POST(req: Request): Promise<Response> {
-  let id: string, email: string, firstName: string;
-  try {
-    const body = await req.json();
-    id = String(body.id ?? "");
-    email = String(body.email ?? "").trim().toLowerCase();
-    // Optional gate field — captured when freely given, never required.
-    firstName = String(body.firstName ?? "").trim().slice(0, 80);
-    if (!id || !EMAIL_RE.test(email)) throw new Error("bad input");
-  } catch {
-    return Response.json({ error: "Enter a real email address" }, { status: 400 });
-  }
-
-  const analysis = await getAnalysis(id);
-  if (!analysis) {
-    return Response.json({ error: "Analysis not found" }, { status: 404 });
-  }
+/**
+ * Capture the lead and fan out to the full pipeline for a Wah-Wah report.
+ *
+ * Persists the email onto the report row, then fires Beehiiv / Copper / Slack /
+ * Loops. Everything downstream is best-effort and non-blocking (`waitUntil`) —
+ * the caller's response is never held up by a third-party hiccup. Wah-Wah
+ * collects only an email, so the submitted site's hostname stands in for
+ * brand/company.
+ *
+ * Shared by the analyze route (upfront capture) so the lead lifecycle is
+ * identical no matter where the email is collected.
+ */
+export async function captureWahWahLead(params: {
+  id: string;
+  email: string;
+  firstName?: string;
+  url: string;
+  score: number;
+}): Promise<void> {
+  const { id, email, firstName, url, score } = params;
+  const hostname = hostnameOf(url);
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://app.timkilroy.com";
 
   // Persist the lead email onto the report row before anything else.
   try {
@@ -39,13 +44,6 @@ export async function POST(req: Request): Promise<Response> {
   } catch (e) {
     console.error("[wah-wah] attachLead failed:", e);
   }
-
-  // Full lead pipeline — parity with Visibility Lab. All best-effort; never
-  // block the user's report on a downstream hiccup. Wah-Wah collects only an
-  // email, so the submitted site's hostname stands in for brand/company.
-  const hostname = hostnameOf(analysis.url);
-  const score = analysis.score as number;
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://app.timkilroy.com";
 
   waitUntil(
     addWahWahSubscriber(email, hostname, firstName || undefined).catch((err) =>
@@ -72,10 +70,4 @@ export async function POST(req: Request): Promise<Response> {
       console.error("[wah-wah] loops event failed:", err)
     )
   );
-
-  return Response.json({
-    url: analysis.url,
-    result: analysis.result,
-    created_at: analysis.created_at,
-  });
 }

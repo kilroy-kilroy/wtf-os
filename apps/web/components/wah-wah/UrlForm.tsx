@@ -6,6 +6,8 @@ import { ConsoleInput, ConsoleButton } from "@/components/console";
 
 export default function UrlForm() {
   const [url, setUrl] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
@@ -18,7 +20,7 @@ export default function UrlForm() {
       const res = await fetch("/api/wah-wah/analyze", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ url }),
+        body: JSON.stringify({ url, email, firstName }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? "Something broke");
@@ -31,6 +33,21 @@ export default function UrlForm() {
 
   return (
     <form onSubmit={submit} className="w-full space-y-3">
+      <ConsoleInput
+        type="text"
+        value={firstName}
+        onChange={(e) => setFirstName((e.target as HTMLInputElement).value)}
+        placeholder="First name (optional)"
+        aria-label="First name (optional)"
+      />
+      <ConsoleInput
+        type="email"
+        required
+        value={email}
+        onChange={(e) => setEmail((e.target as HTMLInputElement).value)}
+        placeholder="you@youragency.com"
+        aria-label="Your email"
+      />
       <div className="flex flex-col gap-3 sm:flex-row">
         <div className="flex-1">
           <ConsoleInput
@@ -47,6 +64,12 @@ export default function UrlForm() {
         </ConsoleButton>
       </div>
       {error && <p className="font-poppins text-sm text-[#E51B23]">{error}</p>}
+      <p className="font-poppins text-xs text-[#808080]">
+        We email you the full report — every flagged phrase, what you were trying to say
+        underneath it, and one line of what to say instead. Your email also gets you
+        Agency Inner Circle, the newsletter these teardowns come from. Unsubscribe
+        whenever, no hard feelings.
+      </p>
     </form>
   );
 }

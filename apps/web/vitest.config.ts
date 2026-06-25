@@ -11,7 +11,7 @@ export default defineConfig({
     },
   },
   test: {
-    include: ["lib/wah-wah/**/*.test.ts", "lib/contracts/**/*.test.ts", "lib/slack.test.ts"],
+    include: ["lib/wah-wah/**/*.test.ts", "lib/contracts/**/*.test.ts", "lib/slack.test.ts", "lib/client-documents/**/*.test.ts"],
     environment: "node",
   },
 });

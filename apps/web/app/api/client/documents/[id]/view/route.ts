@@ -9,11 +9,17 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   const authz = await authorizeClientDocument(id)
   if (!authz.ok) return NextResponse.json({ error: authz.error }, { status: authz.status })
 
-  const firstView = isFirstView(authz.doc)
+  let firstView = isFirstView(authz.doc)
   if (firstView) {
     const admin = getSupabaseServerClient()
-    await admin.from('client_documents').update({ viewed_at: new Date().toISOString() }).eq('id', id)
-    alertDocumentViewed(authz.clientName, authz.doc.title)
+    const { data } = await admin.from('client_documents')
+      .update({ viewed_at: new Date().toISOString() })
+      .eq('id', id).is('viewed_at', null).select('id')
+    if (data && data.length > 0) {
+      alertDocumentViewed(authz.clientName, authz.doc.title)
+    } else {
+      firstView = false
+    }
   }
   return NextResponse.json({ firstView })
 }

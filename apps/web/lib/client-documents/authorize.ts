@@ -26,6 +26,7 @@ export async function authorizeClientDocument(id: string): Promise<AuthzOk | Aut
     .select('id')
     .eq('id', doc.enrollment_id)
     .eq('user_id', user.id)
+    .eq('status', 'active')
     .maybeSingle()
   if (!enrollment) return { ok: false, status: 404, error: 'Not found' }
 

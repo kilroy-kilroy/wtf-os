@@ -48,6 +48,7 @@ export default function ClientDocumentsPage() {
   const [filter, setFilter] = useState<string>('all');
   const [textModal, setTextModal] = useState<ClientDocument | null>(null);
   const [approveName, setApproveName] = useState<string>('');
+  const [approveError, setApproveError] = useState('');
 
   useEffect(() => {
     async function load() {
@@ -89,6 +90,7 @@ export default function ClientDocumentsPage() {
     } else if (doc.document_type === 'html') {
       setTextModal(doc);
       setApproveName('');
+      setApproveError('');
       fetch(`/api/client/documents/${doc.id}/view`, { method: 'POST' });
     } else if (doc.document_type === 'link' && doc.external_url) {
       window.open(doc.external_url, '_blank');
@@ -193,6 +195,7 @@ export default function ClientDocumentsPage() {
                 <div>
                   <iframe
                     sandbox="allow-scripts"
+                    referrerPolicy="no-referrer"
                     srcDoc={textModal.content_body ?? ''}
                     title={textModal.title}
                     style={{ width: '100%', height: '70vh', border: 0, background: '#fff', borderRadius: 8 }}
@@ -224,10 +227,13 @@ export default function ClientDocumentsPage() {
                             });
                             const json = await res.json();
                             if (json.ok) {
+                              setApproveError('');
                               const now = new Date().toISOString();
                               const updatedDoc = { ...textModal, approved_at: now, approved_name: approveName.trim() };
                               setDocuments(prev => prev.map(d => d.id === textModal.id ? updatedDoc : d));
                               setTextModal(updatedDoc);
+                            } else {
+                              setApproveError(json.error || 'Approval failed');
                             }
                           }}
                           style={{ backgroundColor: '#E51B23' }}
@@ -235,6 +241,7 @@ export default function ClientDocumentsPage() {
                         >
                           Approve
                         </button>
+                        {approveError && <p className="text-[#E51B23] text-sm mt-1">{approveError}</p>}
                       </div>
                     ) : null}
                   </div>

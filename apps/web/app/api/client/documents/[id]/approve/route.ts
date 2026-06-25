@@ -16,12 +16,13 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if (!check.ok) return NextResponse.json({ error: check.error }, { status: 400 })
 
   const admin = getSupabaseServerClient()
-  const { error } = await admin.from('client_documents').update({
+  const { data, error } = await admin.from('client_documents').update({
     approved_at: new Date().toISOString(),
     approved_by: authz.userId,
     approved_name: name.trim(),
-  }).eq('id', id)
+  }).eq('id', id).is('approved_at', null).select('id')
   if (error) return NextResponse.json({ error: 'Database error' }, { status: 500 })
+  if (!data || data.length === 0) return NextResponse.json({ error: 'already approved' }, { status: 409 })
 
   alertDocumentApproved(authz.clientName, authz.doc.title, name.trim())
   return NextResponse.json({ ok: true })

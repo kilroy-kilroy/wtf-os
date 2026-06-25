@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabase-server';
 import { alertDocumentShared } from '@/lib/slack';
 import { sendEvent } from '@/lib/loops';
+import { validateAdminDocPayload } from '@/lib/client-documents/admin-validate';
 
 function verifyAuth(request: NextRequest): boolean {
   const authHeader = request.headers.get('authorization');
@@ -67,6 +68,7 @@ export async function POST(request: NextRequest) {
     let fileName: string | null = null;
     let externalUrl: string | null = null;
     let contentBody: string | null = null;
+    let requiresApproval: boolean = false;
 
     if (contentType.includes('multipart/form-data')) {
       // ── File upload ──────────────────────────────────────
@@ -122,6 +124,7 @@ export async function POST(request: NextRequest) {
       category = body.category || null;
       externalUrl = body.external_url || null;
       contentBody = body.content_body || null;
+      requiresApproval = body.requires_approval === true;
 
       if (!enrollmentId || !title) {
         return NextResponse.json(
@@ -130,18 +133,9 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      if (documentType === 'link' && !externalUrl) {
-        return NextResponse.json(
-          { error: 'external_url is required for link documents' },
-          { status: 400 }
-        );
-      }
-
-      if (documentType === 'text' && !contentBody) {
-        return NextResponse.json(
-          { error: 'content_body is required for text documents' },
-          { status: 400 }
-        );
+      const result = validateAdminDocPayload({ document_type: documentType, title, external_url: externalUrl, content_body: contentBody });
+      if (!result.ok) {
+        return NextResponse.json({ error: result.error }, { status: 400 });
       }
     }
 
@@ -178,6 +172,7 @@ export async function POST(request: NextRequest) {
         external_url: externalUrl,
         content_body: contentBody,
         category: category || 'other',
+        requires_approval: requiresApproval,
       })
       .select()
       .single();

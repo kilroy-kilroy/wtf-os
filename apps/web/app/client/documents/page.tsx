@@ -4,18 +4,22 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase-browser';
 import Link from 'next/link';
+import { canApprove } from '@/lib/client-documents/ui-state';
 
 interface ClientDocument {
   id: string;
   title: string;
   description: string | null;
-  document_type: 'file' | 'link' | 'text';
+  document_type: 'file' | 'link' | 'text' | 'html';
   file_url: string | null;
   file_name: string | null;
   external_url: string | null;
   content_body: string | null;
   category: string;
   created_at: string;
+  requires_approval: boolean;
+  approved_at: string | null;
+  approved_name: string | null;
 }
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -43,6 +47,7 @@ export default function ClientDocumentsPage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>('all');
   const [textModal, setTextModal] = useState<ClientDocument | null>(null);
+  const [approveName, setApproveName] = useState<string>('');
 
   useEffect(() => {
     async function load() {
@@ -81,6 +86,10 @@ export default function ClientDocumentsPage() {
   function openDocument(doc: ClientDocument) {
     if (doc.document_type === 'text') {
       setTextModal(doc);
+    } else if (doc.document_type === 'html') {
+      setTextModal(doc);
+      setApproveName('');
+      fetch(`/api/client/documents/${doc.id}/view`, { method: 'POST' });
     } else if (doc.document_type === 'link' && doc.external_url) {
       window.open(doc.external_url, '_blank');
     } else if (doc.document_type === 'file' && doc.file_url) {
@@ -141,7 +150,7 @@ export default function ClientDocumentsPage() {
               >
                 {/* Type icon */}
                 <div className="w-10 h-10 flex items-center justify-center bg-[#0A0A0A] border border-[#333333] text-[10px] font-bold uppercase text-[#999999] shrink-0">
-                  {doc.document_type === 'file' ? (doc.file_name?.split('.').pop() || 'FILE') : doc.document_type === 'link' ? 'LINK' : 'TXT'}
+                  {doc.document_type === 'file' ? (doc.file_name?.split('.').pop() || 'FILE') : doc.document_type === 'link' ? 'LINK' : doc.document_type === 'html' ? 'HTML' : 'TXT'}
                 </div>
 
                 {/* Content */}
@@ -171,7 +180,7 @@ export default function ClientDocumentsPage() {
           </div>
         )}
 
-        {/* Text/Session content modal */}
+        {/* Text/HTML/Session content modal */}
         {textModal && (
           <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-6 z-50" onClick={() => setTextModal(null)}>
             <div className="bg-[#1A1A1A] border border-[#333333] max-w-2xl w-full max-h-[80vh] overflow-y-auto p-8" onClick={e => e.stopPropagation()}>
@@ -180,7 +189,57 @@ export default function ClientDocumentsPage() {
                 <button onClick={() => setTextModal(null)} className="text-[#999999] hover:text-white text-xl">&times;</button>
               </div>
 
-              {textModal.category === 'session' && textModal.content_body ? (() => {
+              {textModal.document_type === 'html' ? (
+                <div>
+                  <iframe
+                    sandbox="allow-scripts"
+                    srcDoc={textModal.content_body ?? ''}
+                    title={textModal.title}
+                    style={{ width: '100%', height: '70vh', border: 0, background: '#fff', borderRadius: 8 }}
+                  />
+                  <div className="mt-4">
+                    {textModal.approved_at ? (
+                      <div className="flex items-center gap-2 text-sm text-[#22c55e]">
+                        <span>✅ Approved</span>
+                        {textModal.approved_name && (
+                          <span className="text-[#999999]">by {textModal.approved_name}</span>
+                        )}
+                      </div>
+                    ) : canApprove(textModal) ? (
+                      <div className="flex flex-col gap-2">
+                        <input
+                          type="text"
+                          placeholder="Type your full name to approve"
+                          value={approveName}
+                          onChange={e => setApproveName(e.target.value)}
+                          className="bg-[#0A0A0A] border border-[#333333] text-white px-3 py-2 text-sm w-full focus:outline-none focus:border-[#E51B23]"
+                        />
+                        <button
+                          disabled={!approveName.trim()}
+                          onClick={async () => {
+                            const res = await fetch(`/api/client/documents/${textModal.id}/approve`, {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ name: approveName.trim() }),
+                            });
+                            const json = await res.json();
+                            if (json.ok) {
+                              const now = new Date().toISOString();
+                              const updatedDoc = { ...textModal, approved_at: now, approved_name: approveName.trim() };
+                              setDocuments(prev => prev.map(d => d.id === textModal.id ? updatedDoc : d));
+                              setTextModal(updatedDoc);
+                            }
+                          }}
+                          style={{ backgroundColor: '#E51B23' }}
+                          className="px-4 py-2 text-white text-sm font-bold uppercase disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                          Approve
+                        </button>
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+              ) : textModal.category === 'session' && textModal.content_body ? (() => {
                 try {
                   const session = JSON.parse(textModal.content_body);
                   return (

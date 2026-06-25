@@ -169,3 +169,18 @@ export function alertBrightDataAuthExpired(detail: string): void {
     color: 'danger',
   }).catch(err => console.error('[Slack] BrightData auth alert failed:', err));
 }
+
+export function buildDocumentViewedText(clientName: string, docTitle: string): string {
+  return `:eyes: *${clientName}* viewed *${docTitle}*`
+}
+export function buildDocumentApprovedText(clientName: string, docTitle: string, approverName: string): string {
+  return `:white_check_mark: *${clientName}* approved *${docTitle}* (signed: ${approverName})`
+}
+export function alertDocumentViewed(clientName: string, docTitle: string): void {
+  sendSlackAlert({ text: buildDocumentViewedText(clientName, docTitle), color: 'info' })
+    .catch(err => console.error('[Slack] Document viewed alert failed:', err))
+}
+export function alertDocumentApproved(clientName: string, docTitle: string, approverName: string): void {
+  sendSlackAlert({ text: buildDocumentApprovedText(clientName, docTitle, approverName), color: 'success' })
+    .catch(err => console.error('[Slack] Document approved alert failed:', err))
+}

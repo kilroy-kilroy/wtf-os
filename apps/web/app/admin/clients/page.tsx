@@ -46,6 +46,7 @@ const PROGRAMS = [
 export default function AdminClientsPage() {
   const [apiKey, setApiKey] = useState('');
   const [authed, setAuthed] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
   const [clients, setClients] = useState<ClientRow[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -92,15 +93,26 @@ export default function AdminClientsPage() {
       if (res.ok) {
         const data = await res.json();
         setClients(data.clients || []);
+      } else if (res.status === 401 || res.status === 403) {
+        // Stale/wrong key — evict it so it can't silently re-fail on reload,
+        // and bounce back to the auth form with a visible message.
+        sessionStorage.removeItem('admin_api_key');
+        setAuthed(false);
+        setAuthError('Invalid or expired admin key. Please re-enter it.');
+      } else {
+        // Transient server/network failure — keep the (valid) key, surface it.
+        setAuthError(`Failed to load clients (${res.status}). Try again.`);
       }
     } catch (err) {
       console.error(err);
+      setAuthError('Network error loading clients. Try again.');
     }
     setLoading(false);
   }
 
   function handleAuth(e: React.FormEvent) {
     e.preventDefault();
+    setAuthError(null);
     sessionStorage.setItem('admin_api_key', apiKey);
     setAuthed(true);
     loadClients(apiKey);
@@ -354,6 +366,11 @@ export default function AdminClientsPage() {
       <div className="min-h-screen bg-black text-white flex items-center justify-center p-6">
         <form onSubmit={handleAuth} className="max-w-md w-full space-y-4">
           <h1 className="text-2xl font-anton uppercase text-[#E51B23]">Admin: Client Management</h1>
+          {authError && (
+            <p className="text-sm text-[#E51B23] border border-[#E51B23]/40 bg-[#E51B23]/10 px-4 py-2">
+              {authError}
+            </p>
+          )}
           <input
             type="password"
             value={apiKey}

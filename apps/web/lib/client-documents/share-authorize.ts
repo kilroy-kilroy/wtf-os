@@ -11,11 +11,12 @@ export async function authorizeShareDocument(
 ): Promise<{ ok: true; doc: ShareDocRow } | { ok: false; status: number }> {
   if (!token) return { ok: false, status: 404 }
   const admin = getSupabaseServerClient()
-  const { data: doc } = await admin
+  const { data: doc, error } = await admin
     .from('client_documents')
     .select('id, title, document_type, content_body, requires_approval, viewed_at, approved_at, approved_name, prospect_name')
     .eq('share_token', token)
     .single()
+  if (error && error.code !== 'PGRST116') return { ok: false, status: 500 }
   if (!doc) return { ok: false, status: 404 }
   return { ok: true, doc: doc as ShareDocRow }
 }

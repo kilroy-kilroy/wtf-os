@@ -1,7 +1,9 @@
 # The 7-Minute Case Study — Design
 
+> **⚠️ SUPERSEDED (2026-06-27)** by `docs/superpowers/specs/2026-06-27-case-study-lab-design.md` and the plan `docs/superpowers/plans/2026-06-27-case-study-lab.md`. No code was ever written against this version. The successor keeps this spec's framework, no-fabrication hard rule, and "client-brand-only card (no Tim mark)" decision, but changes the input mode to a **conversational interview** (was a guided form), ships **three card sizes** (was square-only), names the tool **Case Study Lab** (slug `/case-study-lab`), and uses the table `case_study_lab_reports`. Kept for history.
+
 **Date:** 2026-06-24
-**Status:** Approved, ready for implementation planning
+**Status:** Superseded — see banner above
 **Origin:** Lead magnet derived from WTF Assessment issue #9 (Insufficient Social Proof), built to productize Tim's "7-Minute Case Study" framework (see transcript in conversation of 2026-06-24).
 
 ## One-line

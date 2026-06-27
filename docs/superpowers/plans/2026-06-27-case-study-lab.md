@@ -1,10 +1,10 @@
-# Case Study Builder Implementation Plan
+# Case Study Lab Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Ship a public lead-magnet tool that turns one client win into a shareable web report plus downloadable branded social cards, via a conversational interview held to Tim's "7-Minute Case Study" rules.
 
-**Architecture:** Mirrors the Wild Wild Detector (`wah-wah`) tool exactly — a public Next.js App Router page collects email + agency URL up front, fires the lead pipeline, then runs a stateful chat. Each turn the model returns a conversational reply plus the structured "slots" it has gathered so far; when complete, a second model pass composes the final case study. State lives in one Supabase row (`case_study_reports`); the model is stateless per turn. The report renders server-side in the agency's brand colors; branded images render via `next/og` `ImageResponse` in three aspect ratios.
+**Architecture:** Mirrors the Wild Wild Detector (`wah-wah`) tool exactly — a public Next.js App Router page collects email + agency URL up front, fires the lead pipeline, then runs a stateful chat. Each turn the model returns a conversational reply plus the structured "slots" it has gathered so far; when complete, a second model pass composes the final case study. State lives in one Supabase row (`case_study_lab_reports`); the model is stateless per turn. The report renders server-side in the agency's brand colors; branded images render via `next/og` `ImageResponse` in three aspect ratios.
 
 **Tech Stack:** Next.js 15 App Router (RSC), TypeScript, Anthropic SDK (`claude-opus-4-8`) + Zod, cheerio (HTML parse), Supabase (Postgres + Storage), Vitest, `@vercel/functions` `waitUntil`, Tailwind + existing `@/components/console` primitives.
 
@@ -13,23 +13,23 @@
 - **Model:** `claude-opus-4-8` via the Anthropic SDK directly (NOT `runModel`), output validated with Zod — exactly the `wah-wah` pattern. Strip markdown code fences before `JSON.parse`.
 - **Public tool:** must stay OUT of `PROTECTED_PREFIXES` in `apps/web/middleware.ts` (`/dashboard`, `/client`, `/admin`, `/settings`). No change needed — just never add it. API routes under `/api/` are already exempt from the middleware matcher.
 - **Email up front:** captured on screen one; the lead pipeline fires immediately on `/start` so the lead is kept even if the interview is abandoned.
-- **Rate limit:** per-IP, 5 reports/hour, counted via `countRecentByIp` over `case_study_reports`.
+- **Rate limit:** per-IP, 5 reports/hour, counted via `countRecentByIp` over `case_study_lab_reports`.
 - **Voice/rules (the 7-Minute rails):** results must be numeric; max 3 issues; each solution names a part of the agency's process and maps to one issue; client is the hero, agency is the bridge; no epic narrative, no activity lists.
-- **Prompt package is dependency-free:** `packages/prompts/case-study-builder/` holds only strings, plain interfaces, and pure builders. Zod schemas + SDK calls live in `apps/web/lib/case-study-builder/` (matches `wah-wah`).
-- **Slug:** `case-study-builder` everywhere (route, lib dir, API, table, prompt folder).
+- **Prompt package is dependency-free:** `packages/prompts/case-study-lab/` holds only strings, plain interfaces, and pure builders. Zod schemas + SDK calls live in `apps/web/lib/case-study-lab/` (matches `wah-wah`).
+- **Slug:** `case-study-lab` everywhere (route, lib dir, API, table, prompt folder).
 - **SSRF:** all outbound fetches go through `normalizeUrl` (imported from `@/lib/wah-wah/extract`) on every hop.
 - **Test runner:** `cd apps/web && npx vitest run <path>`. Test files sit next to source as `*.test.ts` (repo convention; only `lib/**` units are unit-tested — UI/route/DB glue is verified manually).
-- **Storage bucket:** `case-study-assets`, PUBLIC (cards + client logos are meant to be shared — unlike the private `client-documents` bucket).
+- **Storage bucket:** `case-study-lab-assets`, PUBLIC (cards + client logos are meant to be shared — unlike the private `client-documents` bucket).
 
 ---
 
 ## File Structure
 
 **New — prompts package**
-- `packages/prompts/case-study-builder/index.ts` — model const, `CaseStudySlots`/`CaseStudy`/`AgencyBrand` interfaces, interviewer + composer system prompts, `buildInterviewTurnPrompt`, `buildComposePrompt`.
-- `packages/prompts/index.ts` — add `export * from './case-study-builder'`.
+- `packages/prompts/case-study-lab/index.ts` — model const, `CaseStudySlots`/`CaseStudy`/`AgencyBrand` interfaces, interviewer + composer system prompts, `buildInterviewTurnPrompt`, `buildComposePrompt`.
+- `packages/prompts/index.ts` — add `export * from './case-study-lab'`.
 
-**New — app lib (`apps/web/lib/case-study-builder/`)**
+**New — app lib (`apps/web/lib/case-study-lab/`)**
 - `extract.ts` — `extractBrand(html, baseUrl)` + `fetchBrand(url)`; brand colors + logo. Reuses `normalizeUrl` from `@/lib/wah-wah/extract`.
 - `interview.ts` — `parseInterviewTurn(text)` (Zod) + `runInterviewTurn(...)` (Anthropic call).
 - `compose.ts` — `parseCaseStudy(text)` (Zod) + `composeCaseStudy(...)` (Anthropic call).
@@ -42,14 +42,14 @@
 - `apps/web/lib/slack.ts` — add `'case-study'` to the `productLabels` map.
 - (`copper.ts` unchanged — reuse `copperSyncLead` + `COPPER_STAGES`.)
 
-**New — API routes (`apps/web/app/api/case-study-builder/`)**
+**New — API routes (`apps/web/app/api/case-study-lab/`)**
 - `start/route.ts` — POST email + agency url → grab brand, create row, capture lead, return `{ id, brand, reply }`.
 - `turn/route.ts` — POST `{ id, message }` → next reply + updated slots + `readyToGenerate`.
 - `generate/route.ts` — POST `{ id, clientName, clientAnonymized, clientLogoUrl, cta }` → compose final, save, return `{ ok: true }`.
 - `logo/route.ts` — POST multipart client logo → upload to bucket → return `{ url }`.
 - `card/[id]/route.ts` — GET `?size=square|portrait|landscape` → `ImageResponse` PNG.
 
-**New — pages & components (`apps/web/app/case-study-builder/`, `apps/web/components/case-study-builder/`)**
+**New — pages & components (`apps/web/app/case-study-lab/`, `apps/web/components/case-study-lab/`)**
 - `page.tsx` — landing + `StartForm`.
 - `Flow.tsx` (client) — orchestrates start → chat → draft-edit → redirect to report.
 - `r/[id]/page.tsx` — server report (`force-dynamic`) + `generateMetadata`.
@@ -57,14 +57,14 @@
 - components: `StartForm.tsx`, `InterviewChat.tsx`, `DraftEditor.tsx`, `ReportBody.tsx`, `CaseStudyCardSvg.tsx` (shared layout used by both the report render and the `card` route), `DownloadButtons.tsx`.
 
 **New — migration**
-- `supabase/migrations/20260627_create_case_study_reports.sql`.
+- `supabase/migrations/20260627_create_case_study_lab_reports.sql`.
 
 ---
 
 ## Task 1: Prompts package (strings, interfaces, builders)
 
 **Files:**
-- Create: `packages/prompts/case-study-builder/index.ts`
+- Create: `packages/prompts/case-study-lab/index.ts`
 - Modify: `packages/prompts/index.ts`
 
 **Interfaces:**
@@ -83,12 +83,12 @@
 
 - [ ] **Step 1: Create the prompt module**
 
-Create `packages/prompts/case-study-builder/index.ts`:
+Create `packages/prompts/case-study-lab/index.ts`:
 
 ```ts
-// Case Study Builder — public lead-magnet tool. Voice + rules tuned from Tim's
+// Case Study Lab — public lead-magnet tool. Voice + rules tuned from Tim's
 // "7-Minute Case Study" talk. Canonical prompt home (see CLAUDE.md convention).
-// Zod schemas + the Anthropic calls live in apps/web/lib/case-study-builder/*
+// Zod schemas + the Anthropic calls live in apps/web/lib/case-study-lab/*
 // so this package stays dependency-free.
 
 export const CASE_STUDY_MODEL = "claude-opus-4-8";
@@ -165,6 +165,7 @@ RULES OF THE INTERVIEW:
 - The client and their results are the hero. The agency is the bridge, never the hero.
 - When you have all required ingredients (descriptor, >=1 numeric result, 1-3 issue/solution pairs, a quote, a cta), set readyToGenerate to true and tell them they're ready.
 - If the owner clearly can't produce a number after you push twice, accept it but note the case study will be weaker.
+- NO FABRICATION: only record facts the owner actually gives you. Never invent or inflate a number, a client name, or a quote. If they didn't say it, it does not go in the slots.
 
 OUTPUT — every turn, respond with ONLY a valid JSON object, no markdown fences, in exactly this shape:
 {
@@ -184,6 +185,8 @@ OUTPUT — every turn, respond with ONLY a valid JSON object, no markdown fences
 Always return the FULL slots object reflecting everything gathered so far (carry prior values forward; never drop a value the owner already gave). issues must never exceed 3 entries.`;
 
 export const CASE_STUDY_COMPOSER_PROMPT = `You are Tim Kilroy writing the final "7-Minute Case Study" from gathered ingredients. Structure: transformation with the agency in the middle — before -> after, agency is the bridge. Results are the hook. No epic narrative, no activity lists, no agency-as-hero.
+
+HARD RULE — NO FABRICATION: use ONLY the numbers, names, quotes, and facts present in the supplied ingredients. Never invent or inflate a metric, never fabricate a quote or a client name, never add a claim that was not provided. If a field is missing, omit it — do not make one up. You sharpen wording only; you never manufacture facts.
 
 Write tight. The headline leads with the most impressive numeric result. Each issue is one line; each solution is one line naming the process piece. Keep the client's voice in the quote verbatim. If clientAnonymized is true, never name the client — use the descriptor as the subject (e.g. "A B2B SaaS company in fintech").
 
@@ -239,19 +242,19 @@ Respond with the JSON object described in your instructions.`;
 Edit `packages/prompts/index.ts`, add after the `wah-wah` line:
 
 ```ts
-export * from './case-study-builder';
+export * from './case-study-lab';
 ```
 
 - [ ] **Step 3: Typecheck the package**
 
 Run: `cd apps/web && npx tsc --noEmit`
-Expected: no errors referencing `case-study-builder`. (The new exports are pure types/strings; this confirms they resolve through `@repo/prompts`.)
+Expected: no errors referencing `case-study-lab`. (The new exports are pure types/strings; this confirms they resolve through `@repo/prompts`.)
 
 - [ ] **Step 4: Commit**
 
 ```bash
-git add packages/prompts/case-study-builder/index.ts packages/prompts/index.ts
-git commit -m "feat(case-study-builder): prompts package — interviewer + composer prompts, slot types"
+git add packages/prompts/case-study-lab/index.ts packages/prompts/index.ts
+git commit -m "feat(case-study-lab): prompts package — interviewer + composer prompts, slot types"
 ```
 
 ---
@@ -259,8 +262,8 @@ git commit -m "feat(case-study-builder): prompts package — interviewer + compo
 ## Task 2: Brand extractor
 
 **Files:**
-- Create: `apps/web/lib/case-study-builder/extract.ts`
-- Test: `apps/web/lib/case-study-builder/extract.test.ts`
+- Create: `apps/web/lib/case-study-lab/extract.ts`
+- Test: `apps/web/lib/case-study-lab/extract.test.ts`
 
 **Interfaces:**
 - Consumes: `normalizeUrl` from `@/lib/wah-wah/extract`; `AgencyBrand` from `@repo/prompts`.
@@ -268,11 +271,11 @@ git commit -m "feat(case-study-builder): prompts package — interviewer + compo
 
 - [ ] **Step 1: Write the failing test**
 
-Create `apps/web/lib/case-study-builder/extract.test.ts`:
+Create `apps/web/lib/case-study-lab/extract.test.ts`:
 
 ```ts
 import { describe, it, expect } from "vitest";
-import { extractBrand } from "@/lib/case-study-builder/extract";
+import { extractBrand } from "@/lib/case-study-lab/extract";
 
 describe("extractBrand", () => {
   it("pulls theme-color and resolves a relative logo against the base url", () => {
@@ -304,12 +307,12 @@ describe("extractBrand", () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd apps/web && npx vitest run lib/case-study-builder/extract.test.ts`
-Expected: FAIL — cannot find module `@/lib/case-study-builder/extract`.
+Run: `cd apps/web && npx vitest run lib/case-study-lab/extract.test.ts`
+Expected: FAIL — cannot find module `@/lib/case-study-lab/extract`.
 
 - [ ] **Step 3: Write the implementation**
 
-Create `apps/web/lib/case-study-builder/extract.ts`:
+Create `apps/web/lib/case-study-lab/extract.ts`:
 
 ```ts
 import * as cheerio from "cheerio";
@@ -371,14 +374,14 @@ export async function fetchBrand(url: string): Promise<AgencyBrand> {
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd apps/web && npx vitest run lib/case-study-builder/extract.test.ts`
+Run: `cd apps/web && npx vitest run lib/case-study-lab/extract.test.ts`
 Expected: PASS (3 tests).
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add apps/web/lib/case-study-builder/extract.ts apps/web/lib/case-study-builder/extract.test.ts
-git commit -m "feat(case-study-builder): agency brand extractor (colors + logo)"
+git add apps/web/lib/case-study-lab/extract.ts apps/web/lib/case-study-lab/extract.test.ts
+git commit -m "feat(case-study-lab): agency brand extractor (colors + logo)"
 ```
 
 ---
@@ -386,8 +389,8 @@ git commit -m "feat(case-study-builder): agency brand extractor (colors + logo)"
 ## Task 3: Migration, storage bucket, and DB layer
 
 **Files:**
-- Create: `supabase/migrations/20260627_create_case_study_reports.sql`
-- Create: `apps/web/lib/case-study-builder/db.ts`
+- Create: `supabase/migrations/20260627_create_case_study_lab_reports.sql`
+- Create: `apps/web/lib/case-study-lab/db.ts`
 
 **Interfaces:**
 - Consumes: `getSupabaseServerClient` from `@/lib/supabase-server`; `CaseStudySlots`, `CaseStudy`, `AgencyBrand` from `@repo/prompts`.
@@ -395,16 +398,16 @@ git commit -m "feat(case-study-builder): agency brand extractor (colors + logo)"
 
 - [ ] **Step 1: Create the migration**
 
-Create `supabase/migrations/20260627_create_case_study_reports.sql`:
+Create `supabase/migrations/20260627_create_case_study_lab_reports.sql`:
 
 ```sql
--- Case Study Builder (public lead-magnet tool). A row is created on /start with
+-- Case Study Lab (public lead-magnet tool). A row is created on /start with
 -- the captured email; the interview transcript + gathered slots are updated each
 -- turn; the composed case study lands in `result` on /generate. Leads flow through
 -- the existing Loops/beehiiv/Copper pipeline; this table is the report store +
 -- rate-limit source. Mirrors wah_wah_reports.
 
-create table if not exists public.case_study_reports (
+create table if not exists public.case_study_lab_reports (
   id                 uuid primary key default gen_random_uuid(),
   user_id            uuid references auth.users(id),
   email              text,
@@ -421,17 +424,17 @@ create table if not exists public.case_study_reports (
   created_at         timestamptz not null default now()
 );
 
-create index if not exists case_study_reports_ip_created_idx
-  on public.case_study_reports (ip, created_at);
+create index if not exists case_study_lab_reports_ip_created_idx
+  on public.case_study_lab_reports (ip, created_at);
 
-alter table public.case_study_reports enable row level security;
+alter table public.case_study_lab_reports enable row level security;
 
-drop policy if exists "Service role full access case_study_reports" on public.case_study_reports;
-create policy "Service role full access case_study_reports" on public.case_study_reports
+drop policy if exists "Service role full access case_study_lab_reports" on public.case_study_lab_reports;
+create policy "Service role full access case_study_lab_reports" on public.case_study_lab_reports
   for all using ((select auth.role()) = 'service_role');
 
-drop policy if exists "Users read own case_study reports" on public.case_study_reports;
-create policy "Users read own case_study reports" on public.case_study_reports
+drop policy if exists "Users read own case_study reports" on public.case_study_lab_reports;
+create policy "Users read own case_study reports" on public.case_study_lab_reports
   for select using (
     user_id = (select auth.uid())
     or email = (select auth.jwt() ->> 'email')
@@ -439,20 +442,20 @@ create policy "Users read own case_study reports" on public.case_study_reports
 
 -- Public bucket for shareable client logos + generated cards.
 insert into storage.buckets (id, name, public)
-values ('case-study-assets', 'case-study-assets', true)
+values ('case-study-lab-assets', 'case-study-lab-assets', true)
 on conflict (id) do nothing;
 ```
 
 - [ ] **Step 2: Create the DB layer**
 
-Create `apps/web/lib/case-study-builder/db.ts`:
+Create `apps/web/lib/case-study-lab/db.ts`:
 
 ```ts
 import { getSupabaseServerClient } from "@/lib/supabase-server";
 import type { CaseStudySlots, CaseStudy, AgencyBrand } from "@repo/prompts";
 
-const TABLE = "case_study_reports";
-const BUCKET = "case-study-assets";
+const TABLE = "case_study_lab_reports";
+const BUCKET = "case-study-lab-assets";
 
 export type ConversationTurn = { role: "assistant" | "user"; content: string };
 
@@ -570,19 +573,19 @@ export async function uploadClientLogo(
 - [ ] **Step 3: Apply the migration**
 
 Run (the project's standard migration apply — use whichever the repo uses; Supabase CLI shown):
-`supabase db push` (or apply `supabase/migrations/20260627_create_case_study_reports.sql` via the Supabase SQL editor).
-Expected: `case_study_reports` table exists and the `case-study-assets` bucket is listed as public. Verify in the Supabase dashboard (Table editor + Storage).
+`supabase db push` (or apply `supabase/migrations/20260627_create_case_study_lab_reports.sql` via the Supabase SQL editor).
+Expected: `case_study_lab_reports` table exists and the `case-study-lab-assets` bucket is listed as public. Verify in the Supabase dashboard (Table editor + Storage).
 
 - [ ] **Step 4: Typecheck**
 
 Run: `cd apps/web && npx tsc --noEmit`
-Expected: no errors in `lib/case-study-builder/db.ts`.
+Expected: no errors in `lib/case-study-lab/db.ts`.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add supabase/migrations/20260627_create_case_study_reports.sql apps/web/lib/case-study-builder/db.ts
-git commit -m "feat(case-study-builder): migration, public asset bucket, db layer"
+git add supabase/migrations/20260627_create_case_study_lab_reports.sql apps/web/lib/case-study-lab/db.ts
+git commit -m "feat(case-study-lab): migration, public asset bucket, db layer"
 ```
 
 ---
@@ -590,20 +593,20 @@ git commit -m "feat(case-study-builder): migration, public asset bucket, db laye
 ## Task 4: Interview turn lib
 
 **Files:**
-- Create: `apps/web/lib/case-study-builder/interview.ts`
-- Test: `apps/web/lib/case-study-builder/interview.test.ts`
+- Create: `apps/web/lib/case-study-lab/interview.ts`
+- Test: `apps/web/lib/case-study-lab/interview.test.ts`
 
 **Interfaces:**
-- Consumes: `CASE_STUDY_MODEL`, `CASE_STUDY_INTERVIEWER_PROMPT`, `buildInterviewTurnPrompt`, `CaseStudySlots`, `AgencyBrand` from `@repo/prompts`; `ConversationTurn` from `@/lib/case-study-builder/db`.
+- Consumes: `CASE_STUDY_MODEL`, `CASE_STUDY_INTERVIEWER_PROMPT`, `buildInterviewTurnPrompt`, `CaseStudySlots`, `AgencyBrand` from `@repo/prompts`; `ConversationTurn` from `@/lib/case-study-lab/db`.
 - Produces (consumed by Tasks 7, 8): `InterviewTurn = { reply: string; slots: CaseStudySlots; readyToGenerate: boolean }`; `parseInterviewTurn(text: string): InterviewTurn`; `runInterviewTurn(input): Promise<InterviewTurn>`.
 
 - [ ] **Step 1: Write the failing test**
 
-Create `apps/web/lib/case-study-builder/interview.test.ts`:
+Create `apps/web/lib/case-study-lab/interview.test.ts`:
 
 ```ts
 import { describe, it, expect } from "vitest";
-import { parseInterviewTurn } from "@/lib/case-study-builder/interview";
+import { parseInterviewTurn } from "@/lib/case-study-lab/interview";
 
 describe("parseInterviewTurn", () => {
   it("parses a clean JSON turn", () => {
@@ -674,12 +677,12 @@ describe("parseInterviewTurn", () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd apps/web && npx vitest run lib/case-study-builder/interview.test.ts`
+Run: `cd apps/web && npx vitest run lib/case-study-lab/interview.test.ts`
 Expected: FAIL — cannot find module.
 
 - [ ] **Step 3: Write the implementation**
 
-Create `apps/web/lib/case-study-builder/interview.ts`:
+Create `apps/web/lib/case-study-lab/interview.ts`:
 
 ```ts
 import Anthropic from "@anthropic-ai/sdk";
@@ -691,7 +694,7 @@ import {
   type CaseStudySlots,
   type AgencyBrand,
 } from "@repo/prompts";
-import type { ConversationTurn } from "@/lib/case-study-builder/db";
+import type { ConversationTurn } from "@/lib/case-study-lab/db";
 
 const ResultSchema = z.object({ label: z.string(), value: z.string() });
 const IssueSchema = z.object({ issue: z.string(), solution: z.string() });
@@ -768,14 +771,14 @@ export async function runInterviewTurn(input: {
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd apps/web && npx vitest run lib/case-study-builder/interview.test.ts`
+Run: `cd apps/web && npx vitest run lib/case-study-lab/interview.test.ts`
 Expected: PASS (3 tests).
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add apps/web/lib/case-study-builder/interview.ts apps/web/lib/case-study-builder/interview.test.ts
-git commit -m "feat(case-study-builder): interview turn lib + zod slot parsing"
+git add apps/web/lib/case-study-lab/interview.ts apps/web/lib/case-study-lab/interview.test.ts
+git commit -m "feat(case-study-lab): interview turn lib + zod slot parsing"
 ```
 
 ---
@@ -783,8 +786,8 @@ git commit -m "feat(case-study-builder): interview turn lib + zod slot parsing"
 ## Task 5: Compose lib
 
 **Files:**
-- Create: `apps/web/lib/case-study-builder/compose.ts`
-- Test: `apps/web/lib/case-study-builder/compose.test.ts`
+- Create: `apps/web/lib/case-study-lab/compose.ts`
+- Test: `apps/web/lib/case-study-lab/compose.test.ts`
 
 **Interfaces:**
 - Consumes: `CASE_STUDY_MODEL`, `CASE_STUDY_COMPOSER_PROMPT`, `buildComposePrompt`, `CaseStudySlots`, `CaseStudy` from `@repo/prompts`.
@@ -792,11 +795,11 @@ git commit -m "feat(case-study-builder): interview turn lib + zod slot parsing"
 
 - [ ] **Step 1: Write the failing test**
 
-Create `apps/web/lib/case-study-builder/compose.test.ts`:
+Create `apps/web/lib/case-study-lab/compose.test.ts`:
 
 ```ts
 import { describe, it, expect } from "vitest";
-import { parseCaseStudy } from "@/lib/case-study-builder/compose";
+import { parseCaseStudy } from "@/lib/case-study-lab/compose";
 
 describe("parseCaseStudy", () => {
   it("parses a composed case study and caps issues at 3", () => {
@@ -821,12 +824,12 @@ describe("parseCaseStudy", () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd apps/web && npx vitest run lib/case-study-builder/compose.test.ts`
+Run: `cd apps/web && npx vitest run lib/case-study-lab/compose.test.ts`
 Expected: FAIL — cannot find module.
 
 - [ ] **Step 3: Write the implementation**
 
-Create `apps/web/lib/case-study-builder/compose.ts`:
+Create `apps/web/lib/case-study-lab/compose.ts`:
 
 ```ts
 import Anthropic from "@anthropic-ai/sdk";
@@ -892,14 +895,14 @@ export async function composeCaseStudy(input: {
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd apps/web && npx vitest run lib/case-study-builder/compose.test.ts`
+Run: `cd apps/web && npx vitest run lib/case-study-lab/compose.test.ts`
 Expected: PASS.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add apps/web/lib/case-study-builder/compose.ts apps/web/lib/case-study-builder/compose.test.ts
-git commit -m "feat(case-study-builder): compose lib — slots to final case study"
+git add apps/web/lib/case-study-lab/compose.ts apps/web/lib/case-study-lab/compose.test.ts
+git commit -m "feat(case-study-lab): compose lib — slots to final case study"
 ```
 
 ---
@@ -910,10 +913,10 @@ git commit -m "feat(case-study-builder): compose lib — slots to final case stu
 - Modify: `apps/web/lib/beehiiv.ts` (add `addCaseStudySubscriber` after `addWahWahSubscriber`)
 - Modify: `apps/web/lib/loops.ts` (add `onCaseStudyReportGenerated` after `onWahWahReportGenerated`)
 - Modify: `apps/web/lib/slack.ts` (add `'case-study'` to the `productLabels` map in `alertReportGenerated`)
-- Create: `apps/web/lib/case-study-builder/lead.ts`
+- Create: `apps/web/lib/case-study-lab/lead.ts`
 
 **Interfaces:**
-- Consumes: `attachLead` from `@/lib/case-study-builder/db`; `EMAIL_RE` from `@/lib/wah-wah/lead`; `copperSyncLead`, `COPPER_STAGES` from `@/lib/copper`; `alertReportGenerated` from `@/lib/slack`; the two new helpers.
+- Consumes: `attachLead` from `@/lib/case-study-lab/db`; `EMAIL_RE` from `@/lib/wah-wah/lead`; `copperSyncLead`, `COPPER_STAGES` from `@/lib/copper`; `alertReportGenerated` from `@/lib/slack`; the two new helpers.
 - Produces (consumed by Tasks 7, 9): `captureCaseStudyLead(params: { id: string; email: string; agencyUrl: string }): Promise<void>`.
 
 - [ ] **Step 1: Add the Beehiiv helper**
@@ -922,7 +925,7 @@ In `apps/web/lib/beehiiv.ts`, add after `addWahWahSubscriber`:
 
 ```ts
 /**
- * Add subscriber from Case Study Builder. Tags the source for segmentation.
+ * Add subscriber from Case Study Lab. Tags the source for segmentation.
  */
 export async function addCaseStudySubscriber(
   email: string,
@@ -932,7 +935,7 @@ export async function addCaseStudySubscriber(
   return addSubscriber({
     email,
     first_name: firstName || undefined,
-    utm_source: "case-study-builder",
+    utm_source: "case-study-lab",
     utm_medium: "lead-magnet",
     custom_fields: hostname ? [{ name: "company", value: hostname }] : undefined,
   });
@@ -950,7 +953,7 @@ export async function onCaseStudyReportGenerated(
   hostname: string
 ): Promise<{ success: boolean; error?: string }> {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://app.timkilroy.com";
-  const reportUrl = `${appUrl}/case-study-builder/r/${reportId}`;
+  const reportUrl = `${appUrl}/case-study-lab/r/${reportId}`;
   return sendEvent({
     email,
     eventName: "case_study_report_generated",
@@ -964,16 +967,16 @@ export async function onCaseStudyReportGenerated(
 In `apps/web/lib/slack.ts`, inside `alertReportGenerated`'s `productLabels` map, add:
 
 ```ts
-    'case-study': 'Case Study Builder',
+    'case-study': 'Case Study Lab',
 ```
 
 - [ ] **Step 4: Create the lead capture orchestrator**
 
-Create `apps/web/lib/case-study-builder/lead.ts`:
+Create `apps/web/lib/case-study-lab/lead.ts`:
 
 ```ts
 import { waitUntil } from "@vercel/functions";
-import { attachLead } from "@/lib/case-study-builder/db";
+import { attachLead } from "@/lib/case-study-lab/db";
 import { EMAIL_RE } from "@/lib/wah-wah/lead";
 import { addCaseStudySubscriber } from "@/lib/beehiiv";
 import { copperSyncLead, COPPER_STAGES } from "@/lib/copper";
@@ -991,7 +994,7 @@ function hostnameOf(url: string): string {
 }
 
 /**
- * Capture the lead and fan out for a Case Study Builder report. Fires up front on
+ * Capture the lead and fan out for a Case Study Lab report. Fires up front on
  * /start so the lead is kept even if the interview is abandoned. All downstream
  * calls are best-effort and non-blocking (`waitUntil`).
  */
@@ -1020,10 +1023,10 @@ export async function captureCaseStudyLead(params: {
     copperSyncLead({
       email,
       companyName: hostname,
-      productName: "Case Study Builder",
+      productName: "Case Study Lab",
       opportunityValue: 0,
       stageId: COPPER_STAGES.LEAD,
-      note: `Started Case Study Builder on ${hostname}. View: ${appUrl}/case-study-builder/r/${id}`,
+      note: `Started Case Study Lab on ${hostname}. View: ${appUrl}/case-study-lab/r/${id}`,
     }).catch((err) => console.error("[case-study] copper sync failed:", err))
   );
 
@@ -1047,8 +1050,8 @@ Expected: no errors. Resolves the new exports and the `lead.ts` imports.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add apps/web/lib/beehiiv.ts apps/web/lib/loops.ts apps/web/lib/slack.ts apps/web/lib/case-study-builder/lead.ts
-git commit -m "feat(case-study-builder): lead pipeline fan-out (beehiiv/copper/slack/loops)"
+git add apps/web/lib/beehiiv.ts apps/web/lib/loops.ts apps/web/lib/slack.ts apps/web/lib/case-study-lab/lead.ts
+git commit -m "feat(case-study-lab): lead pipeline fan-out (beehiiv/copper/slack/loops)"
 ```
 
 ---
@@ -1056,7 +1059,7 @@ git commit -m "feat(case-study-builder): lead pipeline fan-out (beehiiv/copper/s
 ## Task 7: `/start` API route
 
 **Files:**
-- Create: `apps/web/app/api/case-study-builder/start/route.ts`
+- Create: `apps/web/app/api/case-study-lab/start/route.ts`
 
 **Interfaces:**
 - Consumes: `fetchBrand` (Task 2), `createDraft`/`countRecentByIp` (Task 3), `runInterviewTurn` (Task 4), `captureCaseStudyLead`/`EMAIL_RE` (Task 6), `normalizeUrl` from `@/lib/wah-wah/extract`, `EMPTY_SLOTS` from `@repo/prompts`.
@@ -1064,14 +1067,14 @@ git commit -m "feat(case-study-builder): lead pipeline fan-out (beehiiv/copper/s
 
 - [ ] **Step 1: Write the route**
 
-Create `apps/web/app/api/case-study-builder/start/route.ts`:
+Create `apps/web/app/api/case-study-lab/start/route.ts`:
 
 ```ts
 import { normalizeUrl } from "@/lib/wah-wah/extract";
-import { fetchBrand } from "@/lib/case-study-builder/extract";
-import { createDraft, countRecentByIp } from "@/lib/case-study-builder/db";
-import { runInterviewTurn } from "@/lib/case-study-builder/interview";
-import { captureCaseStudyLead, EMAIL_RE } from "@/lib/case-study-builder/lead";
+import { fetchBrand } from "@/lib/case-study-lab/extract";
+import { createDraft, countRecentByIp } from "@/lib/case-study-lab/db";
+import { runInterviewTurn } from "@/lib/case-study-lab/interview";
+import { captureCaseStudyLead, EMAIL_RE } from "@/lib/case-study-lab/lead";
 import { EMPTY_SLOTS, type AgencyBrand } from "@repo/prompts";
 
 export const maxDuration = 60;
@@ -1136,17 +1139,17 @@ export async function POST(req: Request): Promise<Response> {
 
 Run the dev server (`npm run dev` from repo root or the app's standard command), then:
 ```bash
-curl -s -X POST http://localhost:3000/api/case-study-builder/start \
+curl -s -X POST http://localhost:3000/api/case-study-lab/start \
   -H 'content-type: application/json' \
   -d '{"url":"stripe.com","email":"you@example.com"}' | head -c 600
 ```
-Expected: JSON with `id` (uuid), `brand` (`colors`/`logoUrl`), and a `reply` that asks an opening question. Confirm a row appears in `case_study_reports` with `status='interviewing'` and the email set.
+Expected: JSON with `id` (uuid), `brand` (`colors`/`logoUrl`), and a `reply` that asks an opening question. Confirm a row appears in `case_study_lab_reports` with `status='interviewing'` and the email set.
 
 - [ ] **Step 3: Commit**
 
 ```bash
-git add apps/web/app/api/case-study-builder/start/route.ts
-git commit -m "feat(case-study-builder): /start route — brand grab, draft, lead capture, first question"
+git add apps/web/app/api/case-study-lab/start/route.ts
+git commit -m "feat(case-study-lab): /start route — brand grab, draft, lead capture, first question"
 ```
 
 ---
@@ -1154,7 +1157,7 @@ git commit -m "feat(case-study-builder): /start route — brand grab, draft, lea
 ## Task 8: `/turn` API route
 
 **Files:**
-- Create: `apps/web/app/api/case-study-builder/turn/route.ts`
+- Create: `apps/web/app/api/case-study-lab/turn/route.ts`
 
 **Interfaces:**
 - Consumes: `getReport`/`saveTurn` (Task 3), `runInterviewTurn` (Task 4), `AgencyBrand`/`CaseStudySlots`/`EMPTY_SLOTS` from `@repo/prompts`.
@@ -1162,11 +1165,11 @@ git commit -m "feat(case-study-builder): /start route — brand grab, draft, lea
 
 - [ ] **Step 1: Write the route**
 
-Create `apps/web/app/api/case-study-builder/turn/route.ts`:
+Create `apps/web/app/api/case-study-lab/turn/route.ts`:
 
 ```ts
-import { getReport, saveTurn, type ConversationTurn } from "@/lib/case-study-builder/db";
-import { runInterviewTurn } from "@/lib/case-study-builder/interview";
+import { getReport, saveTurn, type ConversationTurn } from "@/lib/case-study-lab/db";
+import { runInterviewTurn } from "@/lib/case-study-lab/interview";
 import { EMPTY_SLOTS, type AgencyBrand, type CaseStudySlots } from "@repo/prompts";
 
 export const maxDuration = 60;
@@ -1229,7 +1232,7 @@ export async function POST(req: Request): Promise<Response> {
 
 Using an `id` from Task 7:
 ```bash
-curl -s -X POST http://localhost:3000/api/case-study-builder/turn \
+curl -s -X POST http://localhost:3000/api/case-study-lab/turn \
   -H 'content-type: application/json' \
   -d '{"id":"<ID>","message":"The client is Hustler Marketing, an e-comm retention agency. We grew their revenue 800%."}' | head -c 800
 ```
@@ -1238,8 +1241,8 @@ Expected: a `reply` pushing for the next missing ingredient, `slots` reflecting 
 - [ ] **Step 3: Commit**
 
 ```bash
-git add apps/web/app/api/case-study-builder/turn/route.ts
-git commit -m "feat(case-study-builder): /turn route — stateful interview step"
+git add apps/web/app/api/case-study-lab/turn/route.ts
+git commit -m "feat(case-study-lab): /turn route — stateful interview step"
 ```
 
 ---
@@ -1247,8 +1250,8 @@ git commit -m "feat(case-study-builder): /turn route — stateful interview step
 ## Task 9: `/generate` and `/logo` API routes
 
 **Files:**
-- Create: `apps/web/app/api/case-study-builder/generate/route.ts`
-- Create: `apps/web/app/api/case-study-builder/logo/route.ts`
+- Create: `apps/web/app/api/case-study-lab/generate/route.ts`
+- Create: `apps/web/app/api/case-study-lab/logo/route.ts`
 
 **Interfaces:**
 - Consumes: `getReport`/`finalizeReport`/`uploadClientLogo` (Task 3), `composeCaseStudy` (Task 5), `CaseStudySlots` from `@repo/prompts`.
@@ -1256,11 +1259,11 @@ git commit -m "feat(case-study-builder): /turn route — stateful interview step
 
 - [ ] **Step 1: Write the generate route**
 
-Create `apps/web/app/api/case-study-builder/generate/route.ts`:
+Create `apps/web/app/api/case-study-lab/generate/route.ts`:
 
 ```ts
-import { getReport, finalizeReport } from "@/lib/case-study-builder/db";
-import { composeCaseStudy } from "@/lib/case-study-builder/compose";
+import { getReport, finalizeReport } from "@/lib/case-study-lab/db";
+import { composeCaseStudy } from "@/lib/case-study-lab/compose";
 import type { CaseStudySlots } from "@repo/prompts";
 
 export const maxDuration = 60;
@@ -1319,10 +1322,10 @@ export async function POST(req: Request): Promise<Response> {
 
 - [ ] **Step 2: Write the logo upload route**
 
-Create `apps/web/app/api/case-study-builder/logo/route.ts`:
+Create `apps/web/app/api/case-study-lab/logo/route.ts`:
 
 ```ts
-import { uploadClientLogo, getReport } from "@/lib/case-study-builder/db";
+import { uploadClientLogo, getReport } from "@/lib/case-study-lab/db";
 
 export const maxDuration = 30;
 
@@ -1357,7 +1360,7 @@ export async function POST(req: Request): Promise<Response> {
 - [ ] **Step 3: Manual verification**
 
 ```bash
-curl -s -X POST http://localhost:3000/api/case-study-builder/generate \
+curl -s -X POST http://localhost:3000/api/case-study-lab/generate \
   -H 'content-type: application/json' \
   -d '{"id":"<ID>","clientName":"Hustler Marketing","clientAnonymized":false,"clientLogoUrl":null,"cta":"Want results like this? Book a call."}'
 ```
@@ -1366,8 +1369,8 @@ Expected: `{"ok":true}` and the row now has `status='complete'` with a populated
 - [ ] **Step 4: Commit**
 
 ```bash
-git add apps/web/app/api/case-study-builder/generate/route.ts apps/web/app/api/case-study-builder/logo/route.ts
-git commit -m "feat(case-study-builder): /generate compose route + /logo upload route"
+git add apps/web/app/api/case-study-lab/generate/route.ts apps/web/app/api/case-study-lab/logo/route.ts
+git commit -m "feat(case-study-lab): /generate compose route + /logo upload route"
 ```
 
 ---
@@ -1375,9 +1378,9 @@ git commit -m "feat(case-study-builder): /generate compose route + /logo upload 
 ## Task 10: Branded card image route
 
 **Files:**
-- Create: `apps/web/components/case-study-builder/cardModel.ts` (shared, pure: maps a report row → flat card view-model + size dims)
-- Create: `apps/web/app/api/case-study-builder/card/[id]/route.ts`
-- Test: `apps/web/components/case-study-builder/cardModel.test.ts`
+- Create: `apps/web/components/case-study-lab/cardModel.ts` (shared, pure: maps a report row → flat card view-model + size dims)
+- Create: `apps/web/app/api/case-study-lab/card/[id]/route.ts`
+- Test: `apps/web/components/case-study-lab/cardModel.test.ts`
 
 **Interfaces:**
 - Consumes: `getReport` (Task 3), `CaseStudy`, `AgencyBrand` from `@repo/prompts`.
@@ -1385,11 +1388,11 @@ git commit -m "feat(case-study-builder): /generate compose route + /logo upload 
 
 - [ ] **Step 1: Write the failing test**
 
-Create `apps/web/components/case-study-builder/cardModel.test.ts`:
+Create `apps/web/components/case-study-lab/cardModel.test.ts`:
 
 ```ts
 import { describe, it, expect } from "vitest";
-import { CARD_SIZES, buildCardModel } from "@/components/case-study-builder/cardModel";
+import { CARD_SIZES, buildCardModel } from "@/components/case-study-lab/cardModel";
 
 describe("CARD_SIZES", () => {
   it("defines the three aspect ratios", () => {
@@ -1442,12 +1445,12 @@ describe("buildCardModel", () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd apps/web && npx vitest run components/case-study-builder/cardModel.test.ts`
+Run: `cd apps/web && npx vitest run components/case-study-lab/cardModel.test.ts`
 Expected: FAIL — cannot find module.
 
 - [ ] **Step 3: Write the model**
 
-Create `apps/web/components/case-study-builder/cardModel.ts`:
+Create `apps/web/components/case-study-lab/cardModel.ts`:
 
 ```ts
 import type { CaseStudy, AgencyBrand } from "@repo/prompts";
@@ -1495,17 +1498,17 @@ export function buildCardModel(report: {
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd apps/web && npx vitest run components/case-study-builder/cardModel.test.ts`
+Run: `cd apps/web && npx vitest run components/case-study-lab/cardModel.test.ts`
 Expected: PASS (3 tests).
 
 - [ ] **Step 5: Write the card route**
 
-Create `apps/web/app/api/case-study-builder/card/[id]/route.ts`:
+Create `apps/web/app/api/case-study-lab/card/[id]/route.ts`:
 
 ```ts
 import { ImageResponse } from "next/og";
-import { getReport } from "@/lib/case-study-builder/db";
-import { CARD_SIZES, buildCardModel, type CardSize } from "@/components/case-study-builder/cardModel";
+import { getReport } from "@/lib/case-study-lab/db";
+import { CARD_SIZES, buildCardModel, type CardSize } from "@/components/case-study-lab/cardModel";
 
 export async function GET(
   req: Request,
@@ -1559,9 +1562,9 @@ export async function GET(
             </div>
           ) : null}
           <div style={{ fontSize: 26, color: m.accent, fontWeight: 700, display: "flex" }}>{m.cta}</div>
-          <div style={{ fontSize: 20, color: "#808080", display: "flex" }}>
-            Built with Case Study Builder · timkilroy.com
-          </div>
+          {/* No Tim/Case Study Lab mark on the downloadable asset — it carries the
+              agency's client logo and goes to their prospects. Locked decision
+              (see 2026-06-24 spec). The hosted report page keeps the branding. */}
         </div>
       </div>
     ),
@@ -1573,15 +1576,15 @@ export async function GET(
 - [ ] **Step 6: Manual verification**
 
 Visit in a browser (using a completed report id):
-`http://localhost:3000/api/case-study-builder/card/<ID>?size=square`
+`http://localhost:3000/api/case-study-lab/card/<ID>?size=square`
 `...?size=portrait` · `...?size=landscape`
 Expected: three PNGs at 1080×1080, 1080×1350, 1200×675 respectively, in the agency accent color with the headline, stat values, quote, and CTA.
 
 - [ ] **Step 7: Commit**
 
 ```bash
-git add apps/web/components/case-study-builder/cardModel.ts apps/web/components/case-study-builder/cardModel.test.ts apps/web/app/api/case-study-builder/card/[id]/route.ts
-git commit -m "feat(case-study-builder): branded card image route in 3 aspect ratios"
+git add apps/web/components/case-study-lab/cardModel.ts apps/web/components/case-study-lab/cardModel.test.ts apps/web/app/api/case-study-lab/card/[id]/route.ts
+git commit -m "feat(case-study-lab): branded card image route in 3 aspect ratios"
 ```
 
 ---
@@ -1589,18 +1592,18 @@ git commit -m "feat(case-study-builder): branded card image route in 3 aspect ra
 ## Task 11: Report page, body, OG image, download buttons
 
 **Files:**
-- Create: `apps/web/components/case-study-builder/ReportBody.tsx`
-- Create: `apps/web/components/case-study-builder/DownloadButtons.tsx`
-- Create: `apps/web/app/case-study-builder/r/[id]/page.tsx`
-- Create: `apps/web/app/case-study-builder/r/[id]/opengraph-image.tsx`
+- Create: `apps/web/components/case-study-lab/ReportBody.tsx`
+- Create: `apps/web/components/case-study-lab/DownloadButtons.tsx`
+- Create: `apps/web/app/case-study-lab/r/[id]/page.tsx`
+- Create: `apps/web/app/case-study-lab/r/[id]/opengraph-image.tsx`
 
 **Interfaces:**
 - Consumes: `getReport` (Task 3), `buildCardModel`/`CARD_SIZES` (Task 10), `CaseStudy`/`AgencyBrand` from `@repo/prompts`.
-- Produces: the public shareable report at `/case-study-builder/r/[id]`.
+- Produces: the public shareable report at `/case-study-lab/r/[id]`.
 
 - [ ] **Step 1: Write the report body component**
 
-Create `apps/web/components/case-study-builder/ReportBody.tsx`:
+Create `apps/web/components/case-study-lab/ReportBody.tsx`:
 
 ```tsx
 import type { CaseStudy } from "@repo/prompts";
@@ -1678,12 +1681,12 @@ export default function ReportBody({
 
 - [ ] **Step 2: Write the download buttons (client component)**
 
-Create `apps/web/components/case-study-builder/DownloadButtons.tsx`:
+Create `apps/web/components/case-study-lab/DownloadButtons.tsx`:
 
 ```tsx
 "use client";
 
-import { CARD_SIZES, type CardSize } from "@/components/case-study-builder/cardModel";
+import { CARD_SIZES, type CardSize } from "@/components/case-study-lab/cardModel";
 
 const LABELS: Record<CardSize, string> = {
   square: "Square (Instagram)",
@@ -1698,7 +1701,7 @@ export default function DownloadButtons({ id }: { id: string }) {
       {sizes.map((s) => (
         <a
           key={s}
-          href={`/api/case-study-builder/card/${id}?size=${s}`}
+          href={`/api/case-study-lab/card/${id}?size=${s}`}
           download={`case-study-${s}.png`}
           target="_blank"
           rel="noreferrer"
@@ -1714,16 +1717,16 @@ export default function DownloadButtons({ id }: { id: string }) {
 
 - [ ] **Step 3: Write the report page**
 
-Create `apps/web/app/case-study-builder/r/[id]/page.tsx`:
+Create `apps/web/app/case-study-lab/r/[id]/page.tsx`:
 
 ```tsx
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import type { CaseStudy, AgencyBrand } from "@repo/prompts";
-import { getReport } from "@/lib/case-study-builder/db";
-import { buildCardModel } from "@/components/case-study-builder/cardModel";
-import ReportBody from "@/components/case-study-builder/ReportBody";
-import DownloadButtons from "@/components/case-study-builder/DownloadButtons";
+import { getReport } from "@/lib/case-study-lab/db";
+import { buildCardModel } from "@/components/case-study-lab/cardModel";
+import ReportBody from "@/components/case-study-lab/ReportBody";
+import DownloadButtons from "@/components/case-study-lab/DownloadButtons";
 
 export const dynamic = "force-dynamic";
 
@@ -1759,7 +1762,7 @@ export default async function ReportPage({ params }: Props) {
           <div className="text-sm font-semibold text-[#9aa0a6]">Download to post:</div>
           <DownloadButtons id={id} />
         </div>
-        <a href="/case-study-builder" className="text-sm text-[#808080] underline">
+        <a href="/case-study-lab" className="text-sm text-[#808080] underline">
           Build another case study
         </a>
       </main>
@@ -1770,13 +1773,13 @@ export default async function ReportPage({ params }: Props) {
 
 - [ ] **Step 4: Write the OG image**
 
-Create `apps/web/app/case-study-builder/r/[id]/opengraph-image.tsx`:
+Create `apps/web/app/case-study-lab/r/[id]/opengraph-image.tsx`:
 
 ```tsx
 import { ImageResponse } from "next/og";
 import type { CaseStudy } from "@repo/prompts";
-import { getReport } from "@/lib/case-study-builder/db";
-import { buildCardModel } from "@/components/case-study-builder/cardModel";
+import { getReport } from "@/lib/case-study-lab/db";
+import { buildCardModel } from "@/components/case-study-lab/cardModel";
 
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
@@ -1805,7 +1808,7 @@ export default async function Image({ params }: { params: Promise<{ id: string }
           Case Study
         </div>
         <div style={{ fontSize: 64, fontWeight: 900, color: accent, lineHeight: 1.05 }}>{headline}</div>
-        <div style={{ fontSize: 22, color: "#808080" }}>Built with Case Study Builder · timkilroy.com</div>
+        <div style={{ fontSize: 22, color: "#808080" }}>Built with Case Study Lab · timkilroy.com</div>
       </div>
     ),
     size
@@ -1815,14 +1818,14 @@ export default async function Image({ params }: { params: Promise<{ id: string }
 
 - [ ] **Step 5: Manual verification**
 
-Visit `http://localhost:3000/case-study-builder/r/<ID>` for a completed report.
+Visit `http://localhost:3000/case-study-lab/r/<ID>` for a completed report.
 Expected: a branded report — client header (logo or monogram), headline, stat row in the accent color, issue→solution pairs, quote, CTA, team credit — plus three working download buttons producing the cards from Task 10. Confirm `generateMetadata` shows the right `<title>` (view source).
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add apps/web/components/case-study-builder/ReportBody.tsx apps/web/components/case-study-builder/DownloadButtons.tsx apps/web/app/case-study-builder/r/
-git commit -m "feat(case-study-builder): shareable report page, body, OG image, downloads"
+git add apps/web/components/case-study-lab/ReportBody.tsx apps/web/components/case-study-lab/DownloadButtons.tsx apps/web/app/case-study-lab/r/
+git commit -m "feat(case-study-lab): shareable report page, body, OG image, downloads"
 ```
 
 ---
@@ -1830,17 +1833,17 @@ git commit -m "feat(case-study-builder): shareable report page, body, OG image, 
 ## Task 12: Landing page + StartForm
 
 **Files:**
-- Create: `apps/web/components/case-study-builder/StartForm.tsx`
-- Create: `apps/web/components/case-study-builder/Flow.tsx`
-- Create: `apps/web/app/case-study-builder/page.tsx`
+- Create: `apps/web/components/case-study-lab/StartForm.tsx`
+- Create: `apps/web/components/case-study-lab/Flow.tsx`
+- Create: `apps/web/app/case-study-lab/page.tsx`
 
 **Interfaces:**
-- Consumes: `/api/case-study-builder/start`; `AgencyBrand` from `@repo/prompts`.
+- Consumes: `/api/case-study-lab/start`; `AgencyBrand` from `@repo/prompts`.
 - Produces (consumed by Task 13): `Flow` owns the phase state (`start` → `interview` → `review`) and passes `id`/`brand`/first `reply` down. `StartForm` calls `onStarted({ id, brand, reply })`.
 
 - [ ] **Step 1: Write StartForm**
 
-Create `apps/web/components/case-study-builder/StartForm.tsx`:
+Create `apps/web/components/case-study-lab/StartForm.tsx`:
 
 ```tsx
 "use client";
@@ -1864,7 +1867,7 @@ export default function StartForm({
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch("/api/case-study-builder/start", {
+      const res = await fetch("/api/case-study-lab/start", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ url, email }),
@@ -1916,14 +1919,14 @@ export default function StartForm({
 
 - [ ] **Step 2: Write the Flow orchestrator (phase shell)**
 
-Create `apps/web/components/case-study-builder/Flow.tsx`:
+Create `apps/web/components/case-study-lab/Flow.tsx`:
 
 ```tsx
 "use client";
 
 import { useState } from "react";
 import type { AgencyBrand } from "@repo/prompts";
-import StartForm from "@/components/case-study-builder/StartForm";
+import StartForm from "@/components/case-study-lab/StartForm";
 
 type Phase = "start" | "interview";
 
@@ -1960,14 +1963,14 @@ export default function Flow() {
 
 - [ ] **Step 3: Write the landing page**
 
-Create `apps/web/app/case-study-builder/page.tsx`:
+Create `apps/web/app/case-study-lab/page.tsx`:
 
 ```tsx
 import type { Metadata } from "next";
-import Flow from "@/components/case-study-builder/Flow";
+import Flow from "@/components/case-study-lab/Flow";
 
 export const metadata: Metadata = {
-  title: "Case Study Builder — turn a client win into a postable case study",
+  title: "Case Study Lab — turn a client win into a postable case study",
   description:
     "Answer a short interview about one client win. Get a shareable case study and ready-to-post branded images in minutes.",
 };
@@ -1992,14 +1995,14 @@ export default function Page() {
 
 - [ ] **Step 4: Manual verification**
 
-Visit `http://localhost:3000/case-study-builder`. Enter an email + agency URL, submit.
-Expected: the form posts to `/start`, then the view switches to the interview placeholder showing the first interviewer question. A `case_study_reports` row is created and the lead pipeline fires (check Slack/logs).
+Visit `http://localhost:3000/case-study-lab`. Enter an email + agency URL, submit.
+Expected: the form posts to `/start`, then the view switches to the interview placeholder showing the first interviewer question. A `case_study_lab_reports` row is created and the lead pipeline fires (check Slack/logs).
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add apps/web/components/case-study-builder/StartForm.tsx apps/web/components/case-study-builder/Flow.tsx apps/web/app/case-study-builder/page.tsx
-git commit -m "feat(case-study-builder): landing page, start form, flow shell"
+git add apps/web/components/case-study-lab/StartForm.tsx apps/web/components/case-study-lab/Flow.tsx apps/web/app/case-study-lab/page.tsx
+git commit -m "feat(case-study-lab): landing page, start form, flow shell"
 ```
 
 ---
@@ -2007,17 +2010,17 @@ git commit -m "feat(case-study-builder): landing page, start form, flow shell"
 ## Task 13: Interview chat + draft review/edit
 
 **Files:**
-- Create: `apps/web/components/case-study-builder/InterviewChat.tsx`
-- Create: `apps/web/components/case-study-builder/DraftEditor.tsx`
-- Modify: `apps/web/components/case-study-builder/Flow.tsx` (replace the placeholder; wire phases `interview` → `review` → redirect)
+- Create: `apps/web/components/case-study-lab/InterviewChat.tsx`
+- Create: `apps/web/components/case-study-lab/DraftEditor.tsx`
+- Modify: `apps/web/components/case-study-lab/Flow.tsx` (replace the placeholder; wire phases `interview` → `review` → redirect)
 
 **Interfaces:**
-- Consumes: `/api/case-study-builder/turn`, `/api/case-study-builder/logo`, `/api/case-study-builder/generate`; `CaseStudySlots` from `@repo/prompts`.
-- Produces: the full client experience ending in a redirect to `/case-study-builder/r/[id]`.
+- Consumes: `/api/case-study-lab/turn`, `/api/case-study-lab/logo`, `/api/case-study-lab/generate`; `CaseStudySlots` from `@repo/prompts`.
+- Produces: the full client experience ending in a redirect to `/case-study-lab/r/[id]`.
 
 - [ ] **Step 1: Write InterviewChat**
 
-Create `apps/web/components/case-study-builder/InterviewChat.tsx`:
+Create `apps/web/components/case-study-lab/InterviewChat.tsx`:
 
 ```tsx
 "use client";
@@ -2053,7 +2056,7 @@ export default function InterviewChat({
     setMessages((m) => [...m, { role: "user", content: message }]);
     setInput("");
     try {
-      const res = await fetch("/api/case-study-builder/turn", {
+      const res = await fetch("/api/case-study-lab/turn", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ id, message }),
@@ -2120,7 +2123,7 @@ export default function InterviewChat({
 
 - [ ] **Step 2: Write DraftEditor**
 
-Create `apps/web/components/case-study-builder/DraftEditor.tsx`:
+Create `apps/web/components/case-study-lab/DraftEditor.tsx`:
 
 ```tsx
 "use client";
@@ -2149,7 +2152,7 @@ export default function DraftEditor({
     const form = new FormData();
     form.append("id", id);
     form.append("file", file);
-    const res = await fetch("/api/case-study-builder/logo", { method: "POST", body: form });
+    const res = await fetch("/api/case-study-lab/logo", { method: "POST", body: form });
     const json = await res.json();
     if (!res.ok) throw new Error(json.error ?? "Upload failed");
     setLogoUrl(json.url);
@@ -2159,7 +2162,7 @@ export default function DraftEditor({
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch("/api/case-study-builder/generate", {
+      const res = await fetch("/api/case-study-lab/generate", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
@@ -2237,7 +2240,7 @@ export default function DraftEditor({
 
 - [ ] **Step 3: Wire the phases in Flow**
 
-Replace the body of `apps/web/components/case-study-builder/Flow.tsx` with the full three-phase orchestrator:
+Replace the body of `apps/web/components/case-study-lab/Flow.tsx` with the full three-phase orchestrator:
 
 ```tsx
 "use client";
@@ -2245,9 +2248,9 @@ Replace the body of `apps/web/components/case-study-builder/Flow.tsx` with the f
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { AgencyBrand, CaseStudySlots } from "@repo/prompts";
-import StartForm from "@/components/case-study-builder/StartForm";
-import InterviewChat from "@/components/case-study-builder/InterviewChat";
-import DraftEditor from "@/components/case-study-builder/DraftEditor";
+import StartForm from "@/components/case-study-lab/StartForm";
+import InterviewChat from "@/components/case-study-lab/InterviewChat";
+import DraftEditor from "@/components/case-study-lab/DraftEditor";
 
 type Phase = "start" | "interview" | "review";
 
@@ -2290,7 +2293,7 @@ export default function Flow() {
     <DraftEditor
       id={id}
       slots={slots!}
-      onDone={() => router.push(`/case-study-builder/r/${id}`)}
+      onDone={() => router.push(`/case-study-lab/r/${id}`)}
     />
   );
 }
@@ -2298,24 +2301,24 @@ export default function Flow() {
 
 - [ ] **Step 4: Full end-to-end manual verification**
 
-Run the dev server, go to `/case-study-builder`, and complete the whole flow:
+Run the dev server, go to `/case-study-lab`, and complete the whole flow:
 1. Submit email + agency URL → interview starts with a real first question.
 2. Answer: a client, a numeric result, ≤3 issues + their solutions, a quote. Confirm the AI pushes for numbers and caps issues at 3.
 3. When the "review my case study" button appears, click it → DraftEditor.
 4. Optionally upload a client logo or toggle anonymize; confirm CTA; click Generate.
-5. Land on `/case-study-builder/r/[id]` with the styled report + three working download buttons.
+5. Land on `/case-study-lab/r/[id]` with the styled report + three working download buttons.
 Expected: each card downloads in the agency accent color; an anonymized run shows no client name/logo.
 
 - [ ] **Step 5: Typecheck and full test run**
 
-Run: `cd apps/web && npx tsc --noEmit && npx vitest run lib/case-study-builder components/case-study-builder`
+Run: `cd apps/web && npx tsc --noEmit && npx vitest run lib/case-study-lab components/case-study-lab`
 Expected: typecheck clean; all case-study unit tests pass.
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add apps/web/components/case-study-builder/InterviewChat.tsx apps/web/components/case-study-builder/DraftEditor.tsx apps/web/components/case-study-builder/Flow.tsx
-git commit -m "feat(case-study-builder): interview chat + draft review/edit, full flow wired"
+git add apps/web/components/case-study-lab/InterviewChat.tsx apps/web/components/case-study-lab/DraftEditor.tsx apps/web/components/case-study-lab/Flow.tsx
+git commit -m "feat(case-study-lab): interview chat + draft review/edit, full flow wired"
 ```
 
 ---

@@ -1,8 +1,9 @@
-# Case Study Builder — Design Spec
+# Case Study Lab — Design Spec
 
 **Date:** 2026-06-27
-**Status:** Approved (design); pending implementation plan
-**Working name:** Case Study Builder (route slug `/case-study-builder`)
+**Status:** Approved; implementation plan written (`docs/superpowers/plans/2026-06-27-case-study-lab.md`)
+**Working name:** Case Study Lab (route slug `/case-study-lab`)
+**Supersedes:** `docs/superpowers/specs/2026-06-24-seven-minute-case-study-design.md` (no code was written against it). Carries forward that spec's framework, **hard no-fabrication rule**, and **client-brand-only card (no Tim/Case Study Lab mark on the downloadable image)**. Changes from it: conversational interview (was a guided form), three card sizes (was square-only), name Case Study Lab, table `case_study_lab_reports`.
 
 ## Premise
 
@@ -58,7 +59,7 @@ prospect. Results are the hook; process points build credibility.
 
 ## User flow
 
-1. **Landing + start** (`/case-study-builder`): pitch + one screen capturing
+1. **Landing + start** (`/case-study-lab`): pitch + one screen capturing
    **email + agency website URL**. Fires lead capture, kicks off the interview.
 2. **Brand grab (background, non-blocking):** scrape the agency's own site for
    brand colors + logo. Falls back to a neutral theme + manual color pickers on
@@ -69,7 +70,7 @@ prospect. Results are the hook; process points build credibility.
    **review screen** to tweak any field, upload the client logo (or keep
    anonymized), and confirm the CTA. Required because this is factual client data —
    the AI must never be the last word on a client's numbers.
-5. **Reveal:** finished **web report** at `/case-study-builder/r/[id]` (shareable)
+5. **Reveal:** finished **web report** at `/case-study-lab/r/[id]` (shareable)
    + a **"Download image"** button producing the branded social card.
 
 ## The conversational interview engine (the rails)
@@ -100,7 +101,7 @@ artifact.
 
 ## Output generation
 
-- **Web report** (`/case-study-builder/r/[id]`): server component,
+- **Web report** (`/case-study-lab/r/[id]`): server component,
   `force-dynamic`, styled with the agency's brand colors. Layout from the talk:
   **stat bar of numbers up top** (the hook), client logo (or anonymized monogram),
   the ≤3 issue→solution pairs, the quote, the CTA button, the team-credit footer.
@@ -112,30 +113,35 @@ artifact.
   - **Portrait 1080×1350** — LinkedIn / Facebook feed (default)
   - **Landscape 1200×675** — Twitter/X, link previews
   One shared card-rendering component drives all three; the route takes a `size`
-  param. One click → download → post.
+  param. One click → download → post. **The downloadable card carries the agency's
+  brand + the client logo only — NO Tim / Case Study Lab mark** (locked: it goes to
+  the agency's own prospects). The hosted report page and its OG preview keep the
+  tool's branding/CTA for lead-gen.
 - **Composition:** a second AI pass turns slots into tight final copy in the fixed
-  structure — client-as-hero, agency-as-bridge, no fluff.
+  structure — client-as-hero, agency-as-bridge, no fluff. **Hard no-fabrication
+  rule:** both the interviewer and composer prompts may only record/sharpen facts
+  the owner supplied — never invent or inflate a number, name, or quote.
 
 ## Architecture (mirrors `wah-wah`)
 
 ```
-packages/prompts/case-study-builder/index.ts   # interviewer + composer system prompts, model const, input types, builders
-apps/web/lib/case-study-builder/
+packages/prompts/case-study-lab/index.ts   # interviewer + composer system prompts, model const, input types, builders
+apps/web/lib/case-study-lab/
   extract.ts     # agency brand grab (colors + logo); reuses normalizeUrl/fetchPage from wah-wah's extract
   interview.ts   # one conversational turn: messages -> { reply, slots, readyToGenerate } (Anthropic + Zod)
   compose.ts     # slots -> final case study copy (Anthropic + Zod)
   db.ts          # saveDraft / getReport / appendTurn / countRecentByIp
   lead.ts        # captureLead fan-out (beehiiv/copper/slack/loops) via waitUntil
-apps/web/app/api/case-study-builder/
+apps/web/app/api/case-study-lab/
   start/route.ts     # email + agency url -> grab brand, create row, capture lead, return id + first message
   turn/route.ts      # message -> next reply + updated slots
   generate/route.ts  # compose final -> save -> return
-apps/web/app/case-study-builder/
+apps/web/app/case-study-lab/
   page.tsx                    # landing + start form + chat UI
   r/[id]/page.tsx             # shareable web report + image download
   r/[id]/opengraph-image.tsx  # OG image + reused for the downloadable card
-apps/web/components/case-study-builder/  # StartForm, InterviewChat, DraftEditor, CaseStudyCard, ReportBody
-supabase/migrations/<date>_create_case_study_reports.sql
+apps/web/components/case-study-lab/  # StartForm, InterviewChat, DraftEditor, CaseStudyCard, ReportBody
+supabase/migrations/<date>_create_case_study_lab_reports.sql
 ```
 
 - **Brand extraction is net-new** (no logo/brand-color extractor exists in the repo
@@ -148,7 +154,7 @@ supabase/migrations/<date>_create_case_study_reports.sql
 ## Data model
 
 ```sql
-create table public.case_study_reports (
+create table public.case_study_lab_reports (
   id uuid primary key default gen_random_uuid(),
   user_id uuid references auth.users(id),   -- back-filled if email matches an account
   email text,
@@ -187,6 +193,8 @@ non-blocking via `waitUntil`:
 - Brand grab fails → neutral theme + manual color pickers (never blocks).
 - No client logo → anonymized monogram placeholder.
 - Results stay qualitative despite pushing → allow, but warn the card is weaker.
+- Model must never fabricate → hard no-fabrication rule in both prompts; the
+  composer echoes back only supplied facts.
 - Abuse / off-topic chat → interviewer redirects; input length caps; IP rate
   limit; `maxDuration` on AI routes.
 - Interview runs long → turn cap + "generate now with what we have" escape hatch.

@@ -66,18 +66,21 @@ export async function finalizeReport(
     clientName: string;
     clientAnonymized: boolean;
     clientLogoUrl: string | null;
+    slots?: CaseStudySlots;
   }
 ): Promise<void> {
   const supabase = getSupabaseServerClient();
+  const update: Record<string, unknown> = {
+    result: patch.result,
+    client_name: patch.clientName,
+    client_anonymized: patch.clientAnonymized,
+    client_logo_url: patch.clientLogoUrl,
+    status: "complete",
+  };
+  if (patch.slots !== undefined) update.slots = patch.slots;
   const { error } = await (supabase as any)
     .from(TABLE)
-    .update({
-      result: patch.result,
-      client_name: patch.clientName,
-      client_anonymized: patch.clientAnonymized,
-      client_logo_url: patch.clientLogoUrl,
-      status: "complete",
-    })
+    .update(update)
     .eq("id", id);
   if (error) throw error;
 }

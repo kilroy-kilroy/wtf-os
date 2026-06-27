@@ -32,7 +32,8 @@ export async function POST(req: Request): Promise<Response> {
 
   try {
     // Honor a CTA override from the review screen before composing.
-    const effectiveSlots: CaseStudySlots = { ...slots, cta: cta ?? slots.cta };
+    // Strip the real client name from slots when anonymized so it never reaches the model prompt.
+    const effectiveSlots: CaseStudySlots = { ...slots, cta: cta ?? slots.cta, clientName: clientAnonymized ? null : slots.clientName };
     // Real name for the not-anonymized path only (clientName field the user typed, else extracted).
     const resolvedName = clientName || slots.clientName || "";
     // When anonymized, pass a generic descriptor — never the real name — to the model.
@@ -51,6 +52,7 @@ export async function POST(req: Request): Promise<Response> {
       clientName: clientAnonymized ? "" : resolvedName,
       clientAnonymized,
       clientLogoUrl: clientAnonymized ? null : clientLogoUrl,
+      slots: clientAnonymized ? effectiveSlots : undefined,
     });
 
     return Response.json({ ok: true });

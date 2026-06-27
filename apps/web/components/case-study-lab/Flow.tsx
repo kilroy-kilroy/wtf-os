@@ -1,16 +1,22 @@
 "use client";
 
 import { useState } from "react";
-import type { AgencyBrand } from "@repo/prompts";
+import { useRouter } from "next/navigation";
+import type { AgencyBrand, CaseStudySlots } from "@repo/prompts";
 import StartForm from "@/components/case-study-lab/StartForm";
+import InterviewChat from "@/components/case-study-lab/InterviewChat";
+import DraftEditor from "@/components/case-study-lab/DraftEditor";
 
-type Phase = "start" | "interview";
+type Phase = "start" | "interview" | "review";
 
 export default function Flow() {
+  const router = useRouter();
   const [phase, setPhase] = useState<Phase>("start");
   const [id, setId] = useState<string>("");
-  const [brand, setBrand] = useState<AgencyBrand>({ colors: [], logoUrl: null });
   const [firstReply, setFirstReply] = useState<string>("");
+  const [slots, setSlots] = useState<CaseStudySlots | null>(null);
+  // brand is captured for potential future theming of the live UI; not yet used.
+  const [, setBrand] = useState<AgencyBrand>({ colors: [], logoUrl: null });
 
   if (phase === "start") {
     return (
@@ -25,13 +31,24 @@ export default function Flow() {
     );
   }
 
-  // Interview UI is added in Task 13; placeholder keeps the build green until then.
+  if (phase === "interview") {
+    return (
+      <InterviewChat
+        id={id}
+        firstReply={firstReply}
+        onReady={(s) => {
+          setSlots(s);
+          setPhase("review");
+        }}
+      />
+    );
+  }
+
   return (
-    <div className="text-white">
-      <p className="mb-2 text-sm text-[#9aa0a6]">Interview started (id: {id})</p>
-      <p>{firstReply}</p>
-      {/* brand available for theming downstream */}
-      <span className="hidden">{brand.colors.join(",")}</span>
-    </div>
+    <DraftEditor
+      id={id}
+      slots={slots!}
+      onDone={() => router.push(`/case-study-lab/r/${id}`)}
+    />
   );
 }

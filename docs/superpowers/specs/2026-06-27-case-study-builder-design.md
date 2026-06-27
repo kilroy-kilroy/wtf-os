@@ -105,9 +105,14 @@ artifact.
   **stat bar of numbers up top** (the hook), client logo (or anonymized monogram),
   the ≤3 issue→solution pairs, the quote, the CTA button, the team-credit footer.
   Exports `generateMetadata` for a shareable title.
-- **Branded image:** a downloadable single card (PNG, ~1080×1350 for social),
-  rendered with Next.js `ImageResponse` — the same engine the existing
-  `opengraph-image.tsx` files use. One click → download → post.
+- **Branded image:** downloadable cards rendered with Next.js `ImageResponse` —
+  the same engine the existing `opengraph-image.tsx` files use. Offered in **three
+  aspect ratios** so the user grabs the right one per platform:
+  - **Square 1080×1080** — Instagram feed, general-purpose
+  - **Portrait 1080×1350** — LinkedIn / Facebook feed (default)
+  - **Landscape 1200×675** — Twitter/X, link previews
+  One shared card-rendering component drives all three; the route takes a `size`
+  param. One click → download → post.
 - **Composition:** a second AI pass turns slots into tight final copy in the fixed
   structure — client-as-hero, agency-as-bridge, no fluff.
 
@@ -194,6 +199,5 @@ wah-wah pattern. Two system prompts: **interviewer** and **composer**.
 ## Open / deferred
 
 - Final tool name (could rebrand to "Case Study Lab" to fit the Lab family).
-- Exact social-card dimensions and whether to offer multiple aspect ratios.
 - Whether to later add the optional client-interview branch (explicitly out of
   scope for v1).

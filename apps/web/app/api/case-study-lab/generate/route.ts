@@ -33,18 +33,22 @@ export async function POST(req: Request): Promise<Response> {
   try {
     // Honor a CTA override from the review screen before composing.
     const effectiveSlots: CaseStudySlots = { ...slots, cta: cta ?? slots.cta };
-    const resolvedName =
-      clientAnonymized || !clientName ? slots.clientName ?? clientName : clientName;
+    // Real name for the not-anonymized path only (clientName field the user typed, else extracted).
+    const resolvedName = clientName || slots.clientName || "";
+    // When anonymized, pass a generic descriptor — never the real name — to the model.
+    const modelName = clientAnonymized
+      ? (slots.clientDescriptor ?? "the client")
+      : (resolvedName || "the client");
 
     const caseStudy = await composeCaseStudy({
       slots: effectiveSlots,
-      clientName: resolvedName || "the client",
+      clientName: modelName,
       clientAnonymized,
     });
 
     await finalizeReport(id, {
       result: caseStudy,
-      clientName: resolvedName || "",
+      clientName: clientAnonymized ? "" : resolvedName,
       clientAnonymized,
       clientLogoUrl: clientAnonymized ? null : clientLogoUrl,
     });

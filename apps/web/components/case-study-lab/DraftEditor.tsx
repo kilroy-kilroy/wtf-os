@@ -86,7 +86,7 @@ export default function DraftEditor({
             Client logo (optional)
             <input
               type="file"
-              accept="image/png,image/jpeg,image/svg+xml,image/webp"
+              accept="image/png,image/jpeg,image/webp"
               className="mt-1 block text-sm"
               onChange={(e) => {
                 const f = e.target.files?.[0];

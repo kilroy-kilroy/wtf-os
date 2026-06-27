@@ -31,24 +31,42 @@ describe("extractBrand", () => {
 describe("fetchBrand redirect + resilience", () => {
   afterEach(() => vi.unstubAllGlobals());
 
-  it("absolutizes a relative logo against the FINAL redirect URL (finding 1)", async () => {
+  it("absolutizes a relative logo against the FINAL redirect URL (manual redirect model)", async () => {
     // Use a path-relative href (no leading slash) so the base URL's path matters.
     // new URL("logo.png", "https://acme.com/") → "https://acme.com/logo.png"  (wrong base)
     // new URL("logo.png", "https://www.acme.com/en/") → "https://www.acme.com/en/logo.png"  (correct)
     const html = `<head><link rel="icon" href="logo.png"></head>`;
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async () => ({
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        status: 302,
+        ok: false,
+        headers: { get: (k: string) => (k === "location" ? "https://www.acme.com/en/" : null) },
+      } as any)
+      .mockResolvedValueOnce({
+        status: 200,
         ok: true,
-        url: "https://www.acme.com/en/",
         text: async () => html,
-      }) as any)
-    );
+      } as any);
+    vi.stubGlobal("fetch", fetchMock);
     const brand = await fetchBrand("https://acme.com/");
     expect(brand.logoUrl).toBe("https://www.acme.com/en/logo.png");
   });
 
-  it("returns empty brand on network throw (finding 2) and still throws for SSRF URLs", async () => {
+  it("returns empty brand (not throws) when a redirect points to a private host (SSRF mid-hop)", async () => {
+    // The per-hop normalizeUrl guard should throw inside the loop; the outer try/catch
+    // swallows it as best-effort and returns the empty brand — it must NOT propagate.
+    const fetchMock = vi.fn().mockResolvedValueOnce({
+      status: 302,
+      ok: false,
+      headers: { get: (k: string) => (k === "location" ? "http://169.254.169.254/" : null) },
+    } as any);
+    vi.stubGlobal("fetch", fetchMock);
+    const brand = await fetchBrand("https://acme.com/");
+    expect(brand).toEqual({ colors: [], logoUrl: null });
+  });
+
+  it("returns empty brand on network throw and still throws for initial SSRF URLs", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async () => { throw new Error("ECONNREFUSED"); })

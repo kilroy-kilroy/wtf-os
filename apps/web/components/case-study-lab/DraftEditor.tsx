@@ -17,17 +17,23 @@ export default function DraftEditor({
   const [anonymized, setAnonymized] = useState(slots.clientAnonymized);
   const [cta, setCta] = useState(slots.cta ?? "Want results like this? Book a call.");
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [logoUploading, setLogoUploading] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function uploadLogo(file: File) {
-    const form = new FormData();
-    form.append("id", id);
-    form.append("file", file);
-    const res = await fetch("/api/case-study-lab/logo", { method: "POST", body: form });
-    const json = await res.json();
-    if (!res.ok) throw new Error(json.error ?? "Upload failed");
-    setLogoUrl(json.url);
+    setLogoUploading(true);
+    try {
+      const form = new FormData();
+      form.append("id", id);
+      form.append("file", file);
+      const res = await fetch("/api/case-study-lab/logo", { method: "POST", body: form });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? "Upload failed");
+      setLogoUrl(json.url);
+    } finally {
+      setLogoUploading(false);
+    }
   }
 
   async function generate() {
@@ -88,7 +94,8 @@ export default function DraftEditor({
               }}
             />
           </label>
-          {logoUrl && <span className="text-xs text-[#22c55e]">Logo uploaded ✓</span>}
+          {logoUploading && <span className="text-xs text-[#9aa0a6]">Uploading logo…</span>}
+          {!logoUploading && logoUrl && <span className="text-xs text-[#22c55e]">Logo uploaded ✓</span>}
         </>
       )}
 
@@ -102,7 +109,7 @@ export default function DraftEditor({
 
       {error && <p className="text-sm text-[#E51B23]">{error}</p>}
 
-      <ConsoleButton type="button" onClick={generate} disabled={busy} className="self-start">
+      <ConsoleButton type="button" onClick={generate} disabled={busy || logoUploading} className="self-start">
         {busy ? "⟳ GENERATING…" : "▶ GENERATE CASE STUDY"}
       </ConsoleButton>
     </div>

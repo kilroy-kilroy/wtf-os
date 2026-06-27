@@ -31,6 +31,34 @@ export async function GET(
           fontFamily: "sans-serif",
         }}
       >
+        {/* Client brand header — logo or monogram fallback */}
+        <div style={{ display: "flex" }}>
+          {m.clientLogoUrl ? (
+            <img
+              src={m.clientLogoUrl}
+              alt={m.clientName}
+              style={{ height: 96, width: "auto", objectFit: "contain" }}
+            />
+          ) : (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: 96,
+                height: 96,
+                background: m.accent,
+                borderRadius: 12,
+                fontSize: 52,
+                fontWeight: 900,
+                color: "#ffffff",
+              }}
+            >
+              {m.clientName.charAt(0).toUpperCase()}
+            </div>
+          )}
+        </div>
+
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           <div style={{ fontSize: 28, color: "#9aa0a6", display: "flex" }}>{m.clientDescriptor}</div>
           <div style={{ fontSize: 64, fontWeight: 900, color: "#ffffff", lineHeight: 1.05, display: "flex" }}>

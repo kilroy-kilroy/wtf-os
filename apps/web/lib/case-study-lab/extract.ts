@@ -39,17 +39,21 @@ export function extractBrand(html: string, baseUrl: string): AgencyBrand {
 }
 
 export async function fetchBrand(url: string): Promise<AgencyBrand> {
-  const safe = normalizeUrl(url);
-  const res = await fetch(safe, {
-    headers: {
-      "User-Agent":
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
-      Accept: "text/html,application/xhtml+xml",
-    },
-    signal: AbortSignal.timeout(10_000),
-    redirect: "follow",
-  });
-  if (!res.ok) return { colors: [], logoUrl: null };
-  const html = await res.text();
-  return extractBrand(html, safe);
+  const safe = normalizeUrl(url); // intentionally outside try/catch: SSRF guard must throw
+  try {
+    const res = await fetch(safe, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+        Accept: "text/html,application/xhtml+xml",
+      },
+      signal: AbortSignal.timeout(10_000),
+      redirect: "follow",
+    });
+    if (!res.ok) return { colors: [], logoUrl: null };
+    const html = await res.text();
+    return extractBrand(html, res.url); // use final URL after redirects
+  } catch {
+    return { colors: [], logoUrl: null };
+  }
 }

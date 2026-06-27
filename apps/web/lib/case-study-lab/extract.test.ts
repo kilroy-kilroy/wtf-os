@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
-import { extractBrand } from "@/lib/case-study-lab/extract";
+import { describe, it, expect, vi, afterEach } from "vitest";
+import { extractBrand, fetchBrand } from "@/lib/case-study-lab/extract";
 
 describe("extractBrand", () => {
   it("pulls theme-color and resolves a relative logo against the base url", () => {
@@ -25,5 +25,38 @@ describe("extractBrand", () => {
     const brand = extractBrand("<head></head>", "https://acme.com/");
     expect(brand.colors).toEqual([]);
     expect(brand.logoUrl).toBeNull();
+  });
+});
+
+describe("fetchBrand redirect + resilience", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("absolutizes a relative logo against the FINAL redirect URL (finding 1)", async () => {
+    // Use a path-relative href (no leading slash) so the base URL's path matters.
+    // new URL("logo.png", "https://acme.com/") → "https://acme.com/logo.png"  (wrong base)
+    // new URL("logo.png", "https://www.acme.com/en/") → "https://www.acme.com/en/logo.png"  (correct)
+    const html = `<head><link rel="icon" href="logo.png"></head>`;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: true,
+        url: "https://www.acme.com/en/",
+        text: async () => html,
+      }) as any)
+    );
+    const brand = await fetchBrand("https://acme.com/");
+    expect(brand.logoUrl).toBe("https://www.acme.com/en/logo.png");
+  });
+
+  it("returns empty brand on network throw (finding 2) and still throws for SSRF URLs", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => { throw new Error("ECONNREFUSED"); })
+    );
+    const brand = await fetchBrand("https://acme.com/");
+    expect(brand).toEqual({ colors: [], logoUrl: null });
+
+    // normalizeUrl runs BEFORE try/catch, so SSRF URLs must still throw
+    await expect(fetchBrand("http://localhost")).rejects.toThrow();
   });
 });

@@ -250,6 +250,23 @@ export async function addWahWahSubscriber(
 }
 
 /**
+ * Add subscriber from Case Study Lab. Tags the source for segmentation.
+ */
+export async function addCaseStudySubscriber(
+  email: string,
+  hostname?: string,
+  firstName?: string
+): Promise<{ success: boolean; id?: string; error?: string }> {
+  return addSubscriber({
+    email,
+    first_name: firstName || undefined,
+    utm_source: "case-study-lab",
+    utm_medium: "lead-magnet",
+    custom_fields: hostname ? [{ name: "company", value: hostname }] : undefined,
+  });
+}
+
+/**
  * Add subscriber from Biz Dev Assessment completion
  * Tags them for the biz-dev-assessment list
  */

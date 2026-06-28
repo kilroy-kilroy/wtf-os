@@ -551,6 +551,20 @@ export async function onWahWahReportGenerated(
   });
 }
 
+export async function onCaseStudyReportGenerated(
+  email: string,
+  reportId: string,
+  hostname: string
+): Promise<{ success: boolean; error?: string }> {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://app.timkilroy.com";
+  const reportUrl = `${appUrl}/case-study-lab/r/${reportId}`;
+  return sendEvent({
+    email,
+    eventName: "case_study_report_generated",
+    eventProperties: { reportId, reportUrl, hostname },
+  });
+}
+
 /**
  * Fire when a coaching report is ready (weekly, monthly, quarterly)
  * Triggers email with link to coaching report

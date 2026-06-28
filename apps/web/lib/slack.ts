@@ -94,6 +94,7 @@ export function alertReportGenerated(
     'call-lab-lite': 'Call Lab',
     'call-lab-pro': 'Call Lab Pro',
     'wah-wah': 'Wah-Wah Detector',
+    'case-study': 'Case Study Lab',
   };
   const label = productLabels[product] || product;
 

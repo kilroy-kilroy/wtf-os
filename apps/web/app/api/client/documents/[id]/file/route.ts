@@ -11,6 +11,12 @@
 // The Supabase `client-documents` bucket stays PRIVATE — the signed URL lives
 // for seconds and the client never holds it. This is what lets us keep
 // permanent links without making client documents publicly readable.
+//
+// EXCEPTION — HTML docs: Supabase Storage force-serves text/html objects as
+// text/plain (+ nosniff), so a redirect would show raw source instead of a
+// rendered page. For .html/.htm we instead stream the bytes from this route with
+// Content-Type: text/html so it renders on OUR origin, locked down by a strict
+// CSP (HTML_DOC_CSP) that blocks scripts/forms/framing.
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase-auth-server';
@@ -20,6 +26,22 @@ const BUCKET = 'client-documents';
 // Short on purpose: the browser follows the redirect immediately, so the URL is
 // dead long before it could leak or be shared.
 const SIGNED_URL_TTL_SECONDS = 60;
+
+// CSP for HTML we serve inline from our OWN origin. Supabase Storage refuses to
+// render HTML (it force-serves text/html objects as text/plain + nosniff, so the
+// browser shows raw source). To render it we have to stream the bytes ourselves
+// and set Content-Type: text/html — but that means admin-uploaded HTML would run
+// with the logged-in client's session. This CSP neutralizes that: no scripts, no
+// framing, no form posts; only inline styles, data-URI images, and Google Fonts.
+const HTML_DOC_CSP = [
+  "default-src 'none'",
+  "img-src data: https:",
+  "style-src 'unsafe-inline' https://fonts.googleapis.com",
+  "font-src https://fonts.gstatic.com",
+  "base-uri 'none'",
+  "form-action 'none'",
+  "frame-ancestors 'self'",
+].join('; ');
 
 /**
  * Derive the in-bucket object path from a legacy public URL, e.g.
@@ -88,6 +110,39 @@ export async function GET(
       { error: 'No file is associated with this document' },
       { status: 404 }
     );
+  }
+
+  // HTML must be served from our own origin to render: Supabase Storage downgrades
+  // text/html objects to text/plain, so a redirect would show raw source. Stream
+  // the bytes ourselves with Content-Type: text/html, locked down by HTML_DOC_CSP.
+  if (/\.html?$/i.test(storagePath)) {
+    const { data: blob, error: dlError } = await admin.storage
+      .from(BUCKET)
+      .download(storagePath);
+
+    if (dlError || !blob) {
+      console.error('[documents/file] html download failed', {
+        id,
+        storagePath,
+        error: dlError?.message,
+      });
+      return NextResponse.json(
+        { error: 'Could not load document' },
+        { status: 500 }
+      );
+    }
+
+    const buffer = Buffer.from(await blob.arrayBuffer());
+    return new NextResponse(buffer, {
+      status: 200,
+      headers: {
+        'Content-Type': 'text/html; charset=utf-8',
+        'Content-Disposition': 'inline',
+        'Content-Security-Policy': HTML_DOC_CSP,
+        'X-Content-Type-Options': 'nosniff',
+        'Cache-Control': 'private, no-store',
+      },
+    });
   }
 
   const { data: signed, error } = await admin.storage

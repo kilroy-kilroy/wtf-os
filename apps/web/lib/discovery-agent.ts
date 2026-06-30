@@ -16,6 +16,7 @@ import {
   type DiscoveryLabPromptParams,
 } from '@repo/prompts';
 import type { CopperCompany, CopperPerson, CopperOpportunity, DiscoverySummary } from './copper-discovery';
+import { resolveDiscoveryTarget } from './discovery-target';
 
 export interface DiscoveryAgentInput {
   opportunity: CopperOpportunity;
@@ -38,8 +39,10 @@ export async function runDiscoveryAgent(input: DiscoveryAgentInput): Promise<Dis
   const startTime = Date.now();
   const { opportunity, company, contact } = input;
 
-  const companyName = company?.name || opportunity.name;
-  const companyWebsite = company?.websites?.[0]?.url || null;
+  // Resolve the real prospect company. Lead-magnet opportunities (Wah-Wah, Biz
+  // Dev) aren't linked to a Copper Company and are named "{product} — {email}",
+  // so never fall back to opportunity.name — derive from the contact instead.
+  const { companyName, companyWebsite } = resolveDiscoveryTarget({ company, contact, opportunity });
   const contactName = contact ? `${contact.first_name || ''} ${contact.last_name || ''}`.trim() : null;
   const contactTitle = contact?.title || null;
   const contactEmail = contact?.emails?.[0]?.email || null;

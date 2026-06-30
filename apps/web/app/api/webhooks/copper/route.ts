@@ -9,6 +9,7 @@ import {
   writeDiscoveryResults,
 } from '@/lib/copper-discovery';
 import { runDiscoveryAgent } from '@/lib/discovery-agent';
+import { resolveDiscoveryTarget } from '@/lib/discovery-target';
 import { sendSlackAlert } from '@/lib/slack';
 
 export const maxDuration = 300; // 5 minutes — research + summarization
@@ -72,7 +73,10 @@ async function processOpportunity(opportunityId: number) {
       ? await fetchPerson(opportunity.primary_contact_id).catch(() => null)
       : null;
 
-    const companyName = company?.name || opportunity.name;
+    // Resolve the real prospect company. Lead-magnet opportunities (Wah-Wah,
+    // Biz Dev) aren't linked to a Copper Company and are named
+    // "{product} — {email}", so never fall back to opportunity.name.
+    const { companyName, companyWebsite } = resolveDiscoveryTarget({ company, contact, opportunity });
 
     // Update log with company name
     if (logId) {
@@ -104,7 +108,7 @@ async function processOpportunity(opportunityId: number) {
         target_company: companyName,
         target_contact_name: contactName,
         target_contact_title: contact?.title || null,
-        target_company_url: company?.websites?.[0]?.url || null,
+        target_company_url: companyWebsite,
         markdown_response: result.fullMarkdown,
         metadata: {
           source: 'copper_webhook',

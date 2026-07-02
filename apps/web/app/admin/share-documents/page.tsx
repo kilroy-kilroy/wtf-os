@@ -1,5 +1,6 @@
 import { getSupabaseServerClient } from '@/lib/supabase-server'
 import ShareDocForm from './ShareDocForm'
+import DeleteLinkButton from './DeleteLinkButton'
 
 export const dynamic = 'force-dynamic'
 
@@ -91,16 +92,19 @@ export default async function ShareDocumentsPage() {
                         {doc.approved_at ? ` · approved ${fmtDate(doc.approved_at)} by ${doc.approved_name || doc.approved_email || 'prospect'}` : ''}
                       </p>
                     </div>
-                    {url && (
-                      <a
-                        href={url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="flex-shrink-0 text-xs font-mono text-[#00D4FF] hover:underline break-all max-w-[240px]"
-                      >
-                        {url.replace(/^https?:\/\//, '')}
-                      </a>
-                    )}
+                    <div className="flex-shrink-0 flex flex-col items-end gap-1.5">
+                      {url && (
+                        <a
+                          href={url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-xs font-mono text-[#00D4FF] hover:underline break-all max-w-[240px]"
+                        >
+                          {url.replace(/^https?:\/\//, '')}
+                        </a>
+                      )}
+                      <DeleteLinkButton id={doc.id} title={doc.title || 'Untitled'} />
+                    </div>
                   </div>
                 </div>
               )

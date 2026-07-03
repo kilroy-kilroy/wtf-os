@@ -825,3 +825,65 @@ export async function onReportRevisited(
     eventProperties: { tool, reportId, reportUrl },
   });
 }
+
+// ============================================
+// PROSPECT SHARE-LINK EVENTS
+// ============================================
+
+/**
+ * Fire when a prospect share-doc (proposal / alignment / scope / custom) is
+ * emailed to a prospect. Upserts them as a subscribed contact first, then sends
+ * a SINGLE event whose `category` property drives which email the Loops
+ * automation sends:
+ *
+ *   trigger: event `prospect_doc_shared`
+ *     ├─ category is "proposal"  → Proposal email
+ *     ├─ category is "alignment" → Alignment email
+ *     ├─ category is "scope"     → Scope email
+ *     └─ else (custom label)     → Default / fallback email
+ *
+ * `category` holds the exact stored value — one of the three known slugs, or a
+ * user-defined custom label. Use `categoryLabel` (title-cased) for display copy
+ * like "I've prepared a {categoryLabel} for you".
+ *
+ * Adding the prospect to the Agency Inner Circle Beehiiv list is handled
+ * separately by the caller (lib/beehiiv.ts addProspectShareSubscriber) so a
+ * newsletter failure never blocks the link email.
+ */
+export async function onProspectDocShared(args: {
+  email: string;
+  prospectName?: string;
+  shareUrl: string;
+  docTitle: string;
+  category: string;
+  categoryLabel: string;
+  requiresApproval: boolean;
+  companyName?: string;
+}): Promise<{ success: boolean; error?: string }> {
+  const firstName = (args.prospectName || '').trim().split(/\s+/)[0] || '';
+
+  // Upsert as a subscribed prospect contact so nurture sequences can reach them
+  // later; also gives the triggered email a firstName on the contact record.
+  await createOrUpdateContact({
+    email: args.email,
+    firstName: firstName || undefined,
+    source: 'prospect_share',
+    subscribed: true,
+    userGroup: 'prospect',
+    companyName: args.companyName,
+  });
+
+  return sendEvent({
+    email: args.email,
+    eventName: 'prospect_doc_shared',
+    eventProperties: {
+      shareUrl: args.shareUrl,
+      docTitle: args.docTitle,
+      category: args.category,
+      categoryLabel: args.categoryLabel,
+      prospectName: args.prospectName || '',
+      firstName,
+      requiresApproval: args.requiresApproval,
+    },
+  });
+}

@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation'
 const inputCls =
   'w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#00D4FF]'
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
 export default function ShareDocForm() {
   const router = useRouter()
   const fileRef = useRef<HTMLInputElement>(null)
@@ -14,14 +16,19 @@ export default function ShareDocForm() {
   const [prospectName, setProspectName] = useState('')
   const [prospectEmail, setProspectEmail] = useState('')
   const [category, setCategory] = useState('proposal')
+  const [customCategory, setCustomCategory] = useState('')
   const [requiresApproval, setRequiresApproval] = useState(true)
+  const [sendEmail, setSendEmail] = useState(false)
   const [contentBody, setContentBody] = useState('')
   const [uploadedName, setUploadedName] = useState<string | null>(null)
 
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [shareUrl, setShareUrl] = useState<string | null>(null)
+  const [emailNote, setEmailNote] = useState<{ ok: boolean; text: string } | null>(null)
   const [copied, setCopied] = useState(false)
+
+  const canEmail = EMAIL_RE.test(prospectEmail.trim())
 
   async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -29,15 +36,27 @@ export default function ShareDocForm() {
     const text = await file.text()
     setContentBody(text)
     setUploadedName(file.name)
-    // Auto-fill title from filename if empty
     if (!title.trim()) setTitle(file.name.replace(/\.html?$/i, ''))
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
+
+    const effectiveCategory = category === 'custom' ? customCategory.trim() : category
+    if (category === 'custom' && !effectiveCategory) {
+      setError('Enter a label for the custom category.')
+      return
+    }
+    if (sendEmail && !canEmail) {
+      setError('Add a valid prospect email to send the link.')
+      return
+    }
+
     setShareUrl(null)
+    setEmailNote(null)
     setSubmitting(true)
+    const sentTo = prospectEmail.trim()
     try {
       const res = await fetch('/api/admin/share-documents/create', {
         method: 'POST',
@@ -47,8 +66,9 @@ export default function ShareDocForm() {
           content_body: contentBody,
           prospect_name: prospectName || null,
           prospect_email: prospectEmail || null,
-          category,
+          category: effectiveCategory,
           requires_approval: requiresApproval,
+          send_email: sendEmail,
         }),
       })
       const json = await res.json()
@@ -57,11 +77,20 @@ export default function ShareDocForm() {
         return
       }
       setShareUrl(json.shareUrl)
-      // Reset the compose fields, keep the link visible
+      if (sendEmail) {
+        setEmailNote(
+          json.emailSent
+            ? { ok: true, text: `Emailed to ${sentTo} and added to the Agency Inner Circle.` }
+            : { ok: false, text: `Email not sent${json.emailError ? ` (${json.emailError})` : ''} — copy the link and send it manually.` }
+        )
+      }
+      // Reset compose fields; keep the created link + note visible
       setTitle('')
       setProspectName('')
       setProspectEmail('')
       setContentBody('')
+      setCustomCategory('')
+      setSendEmail(false)
       setUploadedName(null)
       if (fileRef.current) fileRef.current.value = ''
       router.refresh()
@@ -101,6 +130,11 @@ export default function ShareDocForm() {
               Preview
             </a>
           </div>
+          {emailNote && (
+            <p className={`mt-2 text-xs ${emailNote.ok ? 'text-emerald-300' : 'text-amber-300'}`}>
+              {emailNote.ok ? '✉️ ' : '⚠️ '}{emailNote.text}
+            </p>
+          )}
         </div>
       )}
 
@@ -116,8 +150,16 @@ export default function ShareDocForm() {
               <option value="proposal">Proposal</option>
               <option value="alignment">Alignment</option>
               <option value="scope">Scope</option>
-              <option value="other">Other</option>
+              <option value="custom">Custom…</option>
             </select>
+            {category === 'custom' && (
+              <input
+                className={`${inputCls} mt-2`}
+                value={customCategory}
+                onChange={(e) => setCustomCategory(e.target.value)}
+                placeholder="Custom label (e.g. Partnership Memo)"
+              />
+            )}
           </div>
           <div>
             <label className="block text-xs text-slate-400 mb-1">Prospect name</label>
@@ -159,6 +201,18 @@ export default function ShareDocForm() {
           Require approval (prospect submits name + email to approve)
         </label>
 
+        <label className={`flex items-center gap-2 text-sm ${canEmail ? 'text-slate-300' : 'text-slate-500'}`}>
+          <input
+            type="checkbox"
+            checked={sendEmail && canEmail}
+            disabled={!canEmail}
+            onChange={(e) => setSendEmail(e.target.checked)}
+            className="accent-[#E51B23]"
+          />
+          Email the link to the prospect (via Loops) + add to Agency Inner Circle
+          {!canEmail && <span className="text-[11px]">— add a prospect email to enable</span>}
+        </label>
+
         {error && <p className="text-sm text-[#E51B23]">{error}</p>}
 
         <button
@@ -166,7 +220,7 @@ export default function ShareDocForm() {
           disabled={submitting}
           className="px-4 py-2 rounded-lg bg-[#E51B23] text-white text-sm font-medium hover:bg-[#c8161d] disabled:opacity-50"
         >
-          {submitting ? 'Creating…' : 'Create share-link'}
+          {submitting ? (sendEmail ? 'Creating & sending…' : 'Creating…') : (sendEmail ? 'Create & email link' : 'Create share-link')}
         </button>
       </form>
     </section>

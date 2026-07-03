@@ -267,6 +267,31 @@ export async function addCaseStudySubscriber(
 }
 
 /**
+ * Add a prospect to the Agency Inner Circle list when they're emailed a
+ * share-doc (proposal / alignment / scope / custom). Beehiiv upserts with
+ * reactivate_existing, so calling this for someone already subscribed is a safe
+ * no-op — that satisfies "add them if they aren't already."
+ */
+export async function addProspectShareSubscriber(
+  email: string,
+  name?: string,
+  company?: string
+): Promise<{ success: boolean; id?: string; error?: string }> {
+  const [firstName, ...lastNameParts] = (name || '').split(' ');
+  const lastName = lastNameParts.join(' ');
+
+  return addSubscriber({
+    email,
+    first_name: firstName || undefined,
+    last_name: lastName || undefined,
+    utm_source: 'prospect-share',
+    utm_medium: 'proposal',
+    utm_campaign: 'agency-inner-circle',
+    custom_fields: company ? [{ name: 'company', value: company }] : undefined,
+  });
+}
+
+/**
  * Add subscriber from Biz Dev Assessment completion
  * Tags them for the biz-dev-assessment list
  */

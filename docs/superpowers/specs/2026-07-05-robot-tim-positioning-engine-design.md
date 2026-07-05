@@ -32,8 +32,13 @@ moat. Source material: `docs/positioning/robot-tim-question-tree (1).md` and
    via Loops. (Confirmed over the account-portal alternative.)
 5. **Deliverable export:** PDF of the finished Spine + makeover, reusing the `packages/pdf`
    HTML-report pattern. (Confirmed.)
-6. **Model:** `claude-opus-4-8` for reactions and synthesis (matches the Detector; one-constant
-   swap to a cheaper model is the cost lever).
+6. **Model:** `claude-opus-4-8` for **all** LLM work — interview reactions, per-page crawl
+   analysis, and the synthesis passes (Spine, makeover, Node 7). One model = one voice, one code
+   path. The whole deliverable is voice-sensitive (even the per-page punch list is read by the
+   founder), and at a $395 price the per-run cost (~$1–2) is negligible, so there's no reason to
+   tier. The model is a single constant — if volume ever makes the per-page crawl pass worth
+   downgrading to `claude-sonnet-5`, that's a one-line change later, not now. **Apify only crawls
+   (fetches page text); Opus does all analysis.**
 
 ## End-to-end flow
 
@@ -133,10 +138,12 @@ alter table robot_tim_sessions enable row level security;
 ### Crawl + synthesis
 
 - **Crawl:** reuse the Apify `website-content-crawler` actor already driven in
-  `packages/utils/research.ts` (`maxCrawlPages: 10`) and `app/api/one-shot/analyze`. Each page
-  scored with the Detector's `findLexiconHits` (lexicon-only per-page score — no per-page Claude
-  call, to control cost). Result stored in `crawl` jsonb. Kicked off from the Stripe webhook at
-  payment time so it overlaps the interview.
+  `packages/utils/research.ts` (`maxCrawlPages: 10`) and `app/api/one-shot/analyze` — Apify only
+  **fetches** the page text. Each interior page then gets a **full `claude-opus-4-8` analysis**
+  (the Detector's `findLexiconHits` seeds the call; Opus returns the per-page verdict + "what this
+  page actually says vs. what you told me"). ≈ $0.40 for a full 9-page crawl. The **homepage** is
+  handled at full depth by the makeover synthesis, not here. Result stored in `crawl` jsonb. Kicked
+  off from the Stripe webhook at payment time so it overlaps the interview.
 - **Synthesis (two structured Opus calls, `synthesize` route):**
   1. **Spine** — from all answers → Narrative Spine Starter: who this is for (Node 1) / who it is
      NOT (Node 2); the problem they think they have vs the one they actually have (Nodes 3, 5);

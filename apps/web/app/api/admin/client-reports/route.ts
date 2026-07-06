@@ -59,6 +59,7 @@ export async function GET(request: NextRequest) {
       visibilityResult,
       bizDevResult,
       wahWahResult,
+      robotTimResult,
     ] = await Promise.all([
       (supabase as any)
         .from('agencies')
@@ -107,6 +108,11 @@ export async function GET(request: NextRequest) {
         .select('id, user_id, email, url, score, created_at')
         .order('created_at', { ascending: false })
         .limit(1000),
+      (supabase as any)
+        .from('robot_tim_sessions')
+        .select('id, site_url, email, status, crawl, created_at')
+        .order('created_at', { ascending: false })
+        .limit(1000),
     ]);
 
     const agencies = agenciesResult.data || [];
@@ -119,6 +125,7 @@ export async function GET(request: NextRequest) {
     const visibilityReports = visibilityResult.data || [];
     const bizDevAssessments = bizDevResult.data || [];
     const wahWahReports = wahWahResult.data || [];
+    const robotTimReports = robotTimResult.data || [];
 
     // Log query errors for debugging (queries fail silently with (supabase as any))
     if (callLabResult.error) console.error('[Admin Reports] call_lab_reports query error:', callLabResult.error);
@@ -439,6 +446,19 @@ export async function GET(request: NextRequest) {
             hostname,
             url: r.url,
             score: r.score,
+            createdAt: r.created_at,
+          };
+        }),
+        robotTim: robotTimReports.map((r: any) => {
+          let hostname = r.site_url;
+          try { hostname = new URL(r.site_url).hostname; } catch { /* keep raw url */ }
+          return {
+            id: r.id,
+            userEmail: r.email || '',
+            hostname,
+            siteUrl: r.site_url,
+            status: r.status,
+            crawl: r.crawl,
             createdAt: r.created_at,
           };
         }),

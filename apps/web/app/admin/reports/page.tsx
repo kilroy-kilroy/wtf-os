@@ -129,6 +129,16 @@ interface WahWahReport {
   createdAt: string;
 }
 
+interface RobotTimReport {
+  id: string;
+  userEmail: string;
+  hostname: string;
+  siteUrl: string;
+  status: string;
+  crawl: { pages: Array<{ url: string; score: number; flags: unknown[] }>; homepageText: string } | null;
+  createdAt: string;
+}
+
 interface ReportsData {
   agencies: AgencyData[];
   inferredAgencies?: AgencyData[];
@@ -141,11 +151,12 @@ interface ReportsData {
     visibility: VisibilityReport[];
     bizDev: BizDevReport[];
     wahWah: WahWahReport[];
+    robotTim: RobotTimReport[];
   };
 }
 
 type TabType = 'agency' | 'user' | 'product';
-type ProductFilter = 'all' | 'callLabLite' | 'callLabPro' | 'callLabInstant' | 'discoveryLite' | 'discoveryPro' | 'assessments' | 'visibilityLab' | 'bizDev' | 'wahWah';
+type ProductFilter = 'all' | 'callLabLite' | 'callLabPro' | 'callLabInstant' | 'discoveryLite' | 'discoveryPro' | 'assessments' | 'visibilityLab' | 'bizDev' | 'wahWah' | 'robotTim';
 
 const PRODUCT_LABELS: Record<string, string> = {
   callLabInstant: 'Call Lab Instant',
@@ -157,6 +168,7 @@ const PRODUCT_LABELS: Record<string, string> = {
   visibilityLab: 'Visibility Lab',
   bizDev: 'BD Hire Readiness',
   wahWah: 'Wah-Wah Detector',
+  robotTim: 'Robot-Tim Positioning Engine',
 };
 
 const PRODUCT_COLORS: Record<string, string> = {
@@ -169,6 +181,7 @@ const PRODUCT_COLORS: Record<string, string> = {
   visibilityLab: '#a855f7',
   bizDev: '#c45a3b',
   wahWah: '#D75A3F',
+  robotTim: '#D75A3F',
 };
 
 // ============================================
@@ -901,6 +914,7 @@ function ProductView({
     { key: 'assessments', label: 'WTF Assessment' },
     { key: 'bizDev', label: 'BD Hire Readiness' },
     { key: 'wahWah', label: 'Wah-Wah Detector' },
+    { key: 'robotTim', label: 'Robot-Tim' },
   ];
 
   const showCallLab = selectedProduct === 'all' || selectedProduct === 'callLabLite' || selectedProduct === 'callLabPro';
@@ -910,6 +924,7 @@ function ProductView({
   const showAssessments = selectedProduct === 'all' || selectedProduct === 'assessments';
   const showBizDev = selectedProduct === 'all' || selectedProduct === 'bizDev';
   const showWahWah = selectedProduct === 'all' || selectedProduct === 'wahWah';
+  const showRobotTim = selectedProduct === 'all' || selectedProduct === 'robotTim';
 
   const callLabReports = useMemo(() => {
     // Merge call_lab_reports with pro/lite call_scores into one Call Lab view
@@ -959,6 +974,19 @@ function ProductView({
   const wahWahReports = useMemo(() => {
     return sortReports(applyUserFilter(data.reports.wahWah || []));
   }, [data.reports.wahWah, sortReports, applyUserFilter]);
+
+  const robotTimReports = useMemo(() => {
+    // Derive an overall crawl score client-side: mean of each crawled page's score,
+    // or null when the crawl hasn't landed yet (interview-only sessions).
+    const withScore = (data.reports.robotTim || []).map((r) => {
+      const pages = r.crawl?.pages || [];
+      const overallCrawlScore = pages.length > 0
+        ? pages.reduce((sum, p) => sum + (p.score || 0), 0) / pages.length
+        : null;
+      return { ...r, overallCrawlScore };
+    });
+    return sortReports(applyUserFilter(withScore as any));
+  }, [data.reports.robotTim, sortReports, applyUserFilter]);
 
   return (
     <div>
@@ -1244,6 +1272,51 @@ function ProductView({
         </div>
       )}
 
+      {/* Robot-Tim Positioning Engine table */}
+      {showRobotTim && robotTimReports.length > 0 && (
+        <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4 mb-4">
+          <h3 className="text-sm font-bold text-white mb-3">
+            Robot-Tim Positioning Engine
+            <span className="text-slate-500 font-normal ml-2">({robotTimReports.length})</span>
+          </h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-600/50">
+                  <SortHeader field="userEmail">Email</SortHeader>
+                  <SortHeader field="hostname">Site</SortHeader>
+                  <SortHeader field="status">Status</SortHeader>
+                  <SortHeader field="overallCrawlScore">Crawl Score</SortHeader>
+                  <SortHeader field="createdAt">Date</SortHeader>
+                  <th className="py-2 text-left text-slate-500 text-xs"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {robotTimReports.map((r: any) => (
+                  <tr key={r.id} className="border-b border-slate-700/30">
+                    <td className="py-2 pr-4 text-xs text-slate-400">{r.userEmail || <span className="text-slate-600">(no email yet)</span>}</td>
+                    <td className="py-2 pr-4 text-white text-xs font-medium">{r.hostname || '-'}</td>
+                    <td className="py-2 pr-4">
+                      <span className="text-[10px] font-medium uppercase px-1.5 py-0.5 rounded" style={{ color: r.status === 'complete' ? '#22c55e' : r.status === 'failed' ? '#ef4444' : '#94a3b8', backgroundColor: r.status === 'complete' ? '#22c55e20' : r.status === 'failed' ? '#ef444420' : '#94a3b820' }}>
+                        {r.status}
+                      </span>
+                    </td>
+                    <td className="py-2 pr-4">
+                      {/* Crawl score reuses the Wah-Wah Detector scale: a HIGH score is bad, so invert the color input. */}
+                      <span className="font-mono text-xs" style={{ color: scoreColor(r.overallCrawlScore != null ? 100 - r.overallCrawlScore : null, 100) }}>
+                        {r.overallCrawlScore != null ? `${r.overallCrawlScore.toFixed(0)}/100` : '-'}
+                      </span>
+                    </td>
+                    <td className="py-2 pr-4 text-slate-500 text-xs">{formatTimeAgo(r.createdAt)}</td>
+                    <td className="py-2"><ReportLink href={`/robot-tim/${r.id}`}>View</ReportLink></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
       {/* Assessments table */}
       {showAssessments && assessmentReports.length > 0 && (
         <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4 mb-4">
@@ -1370,6 +1443,9 @@ function ProductView({
       )}
       {showWahWah && wahWahReports.length === 0 && selectedProduct !== 'all' && (
         <EmptyState message="No Wah-Wah Detector reports found" />
+      )}
+      {showRobotTim && robotTimReports.length === 0 && selectedProduct !== 'all' && (
+        <EmptyState message="No Robot-Tim reports found" />
       )}
       {showAssessments && assessmentReports.length === 0 && selectedProduct !== 'all' && (
         <EmptyState message="No assessments found" />

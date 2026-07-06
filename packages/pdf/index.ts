@@ -34,6 +34,10 @@ export type {
 } from './discovery-lab-pro-html-report';
 export { parseDiscoveryLabProMarkdown } from './discovery-lab-pro-parser';
 
+// Robot-Tim Positioning Engine HTML/CSS-based PDF generation
+export { generateRobotTimHTML } from './robot-tim-html-report';
+export type { RobotTimReportData } from './robot-tim-html-report';
+
 // HTML to PDF converter
 export { htmlToPdf, htmlFileToPdf } from './html-to-pdf';
 export type { PdfOptions } from './html-to-pdf';

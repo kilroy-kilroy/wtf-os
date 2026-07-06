@@ -1,4 +1,5 @@
 // apps/web/lib/robot-tim/synthesis-guard.ts
+import { waitUntil } from "@vercel/functions";
 import { tryClaimSynthesis } from "@/lib/robot-tim/db";
 
 // Called by BOTH the answer route (last node) and the crawl route. Whichever
@@ -7,10 +8,13 @@ export async function maybeStartSynthesis(id: string): Promise<void> {
   const claimed = await tryClaimSynthesis(id);
   if (!claimed) return;
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://app.timkilroy.com";
-  // Fire-and-forget; the synthesize route persists the deliverable.
-  fetch(`${appUrl}/api/robot-tim/synthesize`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ id }),
-  }).catch((e) => console.error("[robot-tim] synthesize kick failed:", e));
+  // Fire-and-forget; the synthesize route persists the deliverable. waitUntil
+  // keeps the kick alive past this function's return on Vercel serverless.
+  waitUntil(
+    fetch(`${appUrl}/api/robot-tim/synthesize`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ id }),
+    }).catch((e) => console.error("[robot-tim] synthesize kick failed:", e))
+  );
 }

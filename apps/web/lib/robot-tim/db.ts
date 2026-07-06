@@ -92,6 +92,17 @@ export async function tryClaimSynthesis(id: string): Promise<boolean> {
   return Array.isArray(data) && data.length > 0;
 }
 
+// Mark a session failed so the UI does not spin forever when background
+// synthesis work throws inside waitUntil (no route response is left to carry
+// the error back to the client).
+export async function markFailed(id: string): Promise<void> {
+  const { error } = await db()
+    .from(TABLE)
+    .update({ status: "failed", updated_at: new Date().toISOString() })
+    .eq("id", id);
+  if (error) throw error;
+}
+
 export async function saveDeliverable(
   id: string,
   d: { spine: Spine; makeover: Makeover; node7: Node7 }

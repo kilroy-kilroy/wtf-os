@@ -250,6 +250,25 @@ export async function addWahWahSubscriber(
 }
 
 /**
+ * Add subscriber from Robot-Tim Positioning Engine purchase ($395 customer).
+ */
+export async function addRobotTimSubscriber(
+  email: string,
+  hostname?: string,
+  firstName?: string
+): Promise<{ success: boolean; id?: string; error?: string }> {
+  return addSubscriber({
+    email,
+    first_name: firstName || undefined,
+    utm_source: 'robot-tim',
+    utm_medium: 'positioning-engine',
+    custom_fields: hostname
+      ? [{ name: 'company', value: hostname }]
+      : undefined,
+  });
+}
+
+/**
  * Add subscriber from Case Study Lab. Tags the source for segmentation.
  */
 export async function addCaseStudySubscriber(

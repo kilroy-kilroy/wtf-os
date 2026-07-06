@@ -95,6 +95,7 @@ export function alertReportGenerated(
     'call-lab-pro': 'Call Lab Pro',
     'wah-wah': 'Wah-Wah Detector',
     'case-study': 'Case Study Lab',
+    'robot-tim': 'Robot-Tim Positioning Engine',
   };
   const label = productLabels[product] || product;
 

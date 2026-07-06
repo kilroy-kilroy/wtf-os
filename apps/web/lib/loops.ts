@@ -551,6 +551,43 @@ export async function onWahWahReportGenerated(
   });
 }
 
+/**
+ * Fire when a Robot-Tim Positioning Engine purchase completes ($395 WON
+ * customer). The purchase flow collects only an email + the target site, so
+ * the submitted site's hostname stands in for brand/company name, mirroring
+ * onWahWahReportGenerated.
+ */
+export async function onRobotTimPurchased(
+  email: string,
+  sessionId: string,
+  hostname: string,
+  firstName?: string
+): Promise<{ success: boolean; error?: string }> {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.timkilroy.com';
+  const reportUrl = `${appUrl}/robot-tim/${sessionId}`;
+
+  if (firstName) {
+    await createOrUpdateContact({
+      email,
+      firstName,
+      source: 'robot_tim',
+      subscribed: true,
+      userGroup: 'robot_tim_customer',
+    });
+  }
+
+  return sendEvent({
+    email,
+    eventName: 'robot_tim_purchased',
+    eventProperties: {
+      sessionId,
+      reportUrl,
+      hostname,
+      firstName: firstName || '',
+    },
+  });
+}
+
 export async function onCaseStudyReportGenerated(
   email: string,
   reportId: string,

@@ -211,7 +211,7 @@ interface ApifyDatasetResponse {
   items: unknown[];
 }
 
-async function runApifyActor(
+export async function runApifyActor(
   actorId: string,
   input: Record<string, unknown>,
   options: { timeoutSecs?: number; waitForFinish?: boolean } = {}

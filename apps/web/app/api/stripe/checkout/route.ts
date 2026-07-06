@@ -14,7 +14,32 @@ function getStripe() {
 
 export async function POST(request: NextRequest) {
   try {
-    const { priceType, email, coupon, product = 'call-lab-pro' } = await request.json();
+    const { priceType, email, coupon, product = 'call-lab-pro', siteUrl, firstName } = await request.json();
+
+    if (product === "robot-tim") {
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://app.timkilroy.com";
+      const priceId = process.env.STRIPE_PRICE_ROBOT_TIM;
+      if (!priceId) {
+        return NextResponse.json({ error: "Robot-Tim price not configured" }, { status: 500 });
+      }
+      if (!siteUrl) {
+        return NextResponse.json({ error: "Missing site URL" }, { status: 400 });
+      }
+      const session = await getStripe().checkout.sessions.create({
+        mode: "payment",
+        payment_method_types: ["card"],
+        line_items: [{ price: priceId, quantity: 1 }],
+        customer_email: email || undefined,
+        success_url: `${appUrl}/robot-tim/pending?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${appUrl}/robot-tim?checkout=cancelled`,
+        metadata: {
+          product: "robot-tim",
+          site_url: siteUrl,
+          first_name: firstName || "",
+        },
+      });
+      return NextResponse.json({ url: session.url });
+    }
 
     // Get the appropriate price ID based on product and plan type
     let priceId: string | undefined;

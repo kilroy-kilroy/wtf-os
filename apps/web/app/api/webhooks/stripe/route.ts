@@ -7,6 +7,9 @@ import { addProSubscriber } from '@/lib/beehiiv'
 import { copperCloseDeal, PRO_ACV, BUNDLE_ACV } from '@/lib/copper'
 import { trackPurchaseCompleted, trackSubscriptionCancelled } from '@/lib/analytics'
 import { alertNewSubscription, alertSubscriptionCancelled } from '@/lib/slack'
+import { waitUntil } from '@vercel/functions'
+import { createSession } from '@/lib/robot-tim/db'
+import { captureRobotTimCustomer } from '@/lib/robot-tim/lead'
 
 export const runtime = 'nodejs'
 
@@ -60,6 +63,40 @@ export async function POST(request: NextRequest) {
         priceType: session.metadata?.priceType,
         subscriptionId: session.subscription,
       })
+
+      // Robot-Tim: one-time payment, not a subscription. Create the session row,
+      // start the crawl in the background, fire the customer pipeline, and stop.
+      if (session.metadata?.product === 'robot-tim') {
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.timkilroy.com'
+        const siteUrl = session.metadata.site_url as string
+        const firstName = (session.metadata.first_name as string) || null
+        const email = session.customer_email || null
+
+        try {
+          const id = await createSession({
+            email,
+            firstName,
+            siteUrl,
+            stripeSessionId: session.id,
+          })
+
+          // Kick the crawl in the background (Apify can take up to 2 min).
+          waitUntil(
+            fetch(`${appUrl}/api/robot-tim/crawl`, {
+              method: 'POST',
+              headers: { 'content-type': 'application/json' },
+              body: JSON.stringify({ id }),
+            }).catch((e) => console.error('[robot-tim] crawl kick failed:', e))
+          )
+
+          if (email) {
+            await captureRobotTimCustomer({ id, email, firstName: firstName || undefined, siteUrl })
+          }
+        } catch (e) {
+          console.error('[robot-tim] session create failed:', e)
+        }
+        return NextResponse.json({ received: true })
+      }
 
       // Get subscription details from Stripe
       if (session.subscription && session.customer) {

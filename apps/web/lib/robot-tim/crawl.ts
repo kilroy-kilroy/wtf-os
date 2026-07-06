@@ -31,9 +31,9 @@ export async function crawlSite(url: string): Promise<Crawl> {
     const pageUrl = item.url ?? start;
     const body = (item.text ?? "").slice(0, 12000);
     if (!body) continue;
-    if (!homepageText && new URL(pageUrl).hostname === startHost) homepageText = body;
 
     try {
+      if (!homepageText && new URL(pageUrl).hostname === startHost) homepageText = body;
       const hits = findLexiconHits([item.title ?? "", body].join("\n"));
       const analysis = await analyzeCopy(
         { title: item.title ?? "", metaDescription: "", h1: "", bodyText: body },

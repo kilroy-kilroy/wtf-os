@@ -4,6 +4,7 @@ import { classifyAnswer } from "@/lib/robot-tim/classify";
 import { advanceInterview } from "@/lib/robot-tim/state-machine";
 import { maybeStartSynthesis } from "@/lib/robot-tim/synthesis-guard";
 import { NODES } from "@repo/prompts";
+import { waitUntil } from "@vercel/functions";
 
 export const maxDuration = 60;
 
@@ -43,6 +44,17 @@ export async function POST(req: Request): Promise<Response> {
   );
 
   if (move.interviewComplete) {
+    const fresh = await getSession(id);
+    if (fresh && !fresh.crawl) {
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://app.timkilroy.com";
+      waitUntil(
+        fetch(`${appUrl}/api/robot-tim/crawl`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ id }),
+        }).catch((e) => console.error("[robot-tim] crawl re-kick failed:", e))
+      );
+    }
     await maybeStartSynthesis(id);
   }
 

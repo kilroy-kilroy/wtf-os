@@ -8,7 +8,7 @@ import { copperCloseDeal, PRO_ACV, BUNDLE_ACV } from '@/lib/copper'
 import { trackPurchaseCompleted, trackSubscriptionCancelled } from '@/lib/analytics'
 import { alertNewSubscription, alertSubscriptionCancelled } from '@/lib/slack'
 import { waitUntil } from '@vercel/functions'
-import { createSession } from '@/lib/robot-tim/db'
+import { createSession, getSessionByStripe } from '@/lib/robot-tim/db'
 import { captureRobotTimCustomer } from '@/lib/robot-tim/lead'
 
 export const runtime = 'nodejs'
@@ -73,6 +73,11 @@ export async function POST(request: NextRequest) {
         const email = session.customer_email || null
 
         try {
+          const existing = await getSessionByStripe(session.id)
+          if (existing) {
+            return NextResponse.json({ received: true })
+          }
+
           const id = await createSession({
             email,
             firstName,

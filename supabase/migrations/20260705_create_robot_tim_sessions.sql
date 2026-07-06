@@ -18,6 +18,6 @@ create table robot_tim_sessions (
   updated_at         timestamptz not null default now(),
   completed_at       timestamptz
 );
-create index robot_tim_sessions_stripe_idx on robot_tim_sessions (stripe_session_id);
+create unique index robot_tim_sessions_stripe_idx on robot_tim_sessions (stripe_session_id);
 alter table robot_tim_sessions enable row level security;
 -- Service-role only (app reads/writes server-side). No public policy — mirrors wah_wah_reports.

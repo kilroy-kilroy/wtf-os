@@ -16,6 +16,7 @@ export async function POST(req: Request): Promise<Response> {
 
   const session = await getSession(id);
   if (!session) return Response.json({ error: "Session not found" }, { status: 404 });
+  if (session.status !== "interviewing") return Response.json({ ok: true, skipped: true });
 
   try {
     const crawl = await crawlSite(session.site_url);

@@ -39,9 +39,9 @@ export async function getSessionByStripe(stripeSessionId: string): Promise<Robot
     .from(TABLE)
     .select("*")
     .eq("stripe_session_id", stripeSessionId)
-    .single();
+    .maybeSingle();
   if (error) return null;
-  return data as RobotTimSession;
+  return data as RobotTimSession | null;
 }
 
 // Append one answer and move the interview pointer. `pushed` and `interviewComplete`

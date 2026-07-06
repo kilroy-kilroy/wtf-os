@@ -28,6 +28,7 @@ export default async function RobotTimSessionPage({ params }: Props) {
         <BuildingState />
       ) : (
         <InterviewCard
+          key={NODES[session.current_node].id}
           sessionId={session.id}
           nodeId={NODES[session.current_node].id}
           ask={NODES[session.current_node].ask}

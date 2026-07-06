@@ -36,7 +36,7 @@ export default function RobotTimLanding() {
         You know your homepage is going wah wah. Now let a robot version of me fix what it is actually trying to say.
       </h1>
       <p className="text-lg text-zinc-300">
-        A $395 async positioning teardown. You answer seven questions, Robot-Tim crawls your whole site, and you walk
+        A $399 async positioning teardown. You answer seven questions, Robot-Tim crawls your whole site, and you walk
         away with a Narrative Spine, a rewritten hero, and a page-by-page punch list.
       </p>
       <form onSubmit={submit} className="flex flex-col gap-3">
@@ -48,7 +48,7 @@ export default function RobotTimLanding() {
           className="rounded-lg border border-zinc-700 bg-zinc-900 px-4 py-3 text-lg" />
         <button type="submit" disabled={busy}
           className="rounded-lg bg-[#D75A3F] px-6 py-3 text-lg font-semibold text-white disabled:opacity-50">
-          {busy ? "Taking you to checkout…" : "Start — $395"}
+          {busy ? "Taking you to checkout…" : "Start — $399"}
         </button>
         {error && <p className="text-sm text-red-400">{error}</p>}
       </form>

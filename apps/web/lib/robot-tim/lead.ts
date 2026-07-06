@@ -4,7 +4,7 @@ import { addRobotTimSubscriber } from "@/lib/beehiiv";
 import { copperSyncLead, COPPER_STAGES } from "@/lib/copper";
 import { alertReportGenerated } from "@/lib/slack";
 
-const ROBOT_TIM_ACV = 39500; // $395 one-time, in cents (Copper convention)
+const ROBOT_TIM_ACV = 39900; // $399 one-time, in cents (Copper convention)
 
 function hostnameOf(url: string): string {
   try {
@@ -16,7 +16,7 @@ function hostnameOf(url: string): string {
 
 /**
  * Fires the full pipeline for a paid Robot-Tim purchase. Unlike the
- * Detector's free lead, this is a WON customer at $395. Best-effort /
+ * Detector's free lead, this is a WON customer at $399. Best-effort /
  * non-blocking — mirrors captureWahWahLead's fan-out shape.
  */
 export async function captureRobotTimCustomer(params: {
@@ -43,7 +43,7 @@ export async function captureRobotTimCustomer(params: {
       productName: "Robot-Tim Positioning Engine",
       opportunityValue: ROBOT_TIM_ACV,
       stageId: COPPER_STAGES.CLOSED_WON,
-      note: `Bought Robot-Tim ($395) for ${hostname}. Session: ${appUrl}/robot-tim/${id}`,
+      note: `Bought Robot-Tim ($399) for ${hostname}. Session: ${appUrl}/robot-tim/${id}`,
     }).catch((e) => console.error("[robot-tim] copper sync failed:", e))
   );
 

@@ -33,21 +33,35 @@ export async function GET(request: NextRequest) {
   // High-water mark; default to 7 days back on first run.
   const { data: state } = await db.from('sync_state')
     .select('last_synced_at').eq('source', 'fireflies').maybeSingle();
+  // Subtract a 1-hour lag buffer: Fireflies transcription lags the call, so a
+  // call ending just before a cron tick may not be listed by the API until
+  // after it ticks, and its `date` could then fall before the recorded
+  // watermark and be permanently skipped. Reprocessing the overlap is
+  // harmless — emits are idempotent on (source_type, source_id).
   const since = state?.last_synced_at
-    ? new Date(state.last_synced_at)
+    ? new Date(new Date(state.last_synced_at).getTime() - 60 * 60 * 1000)
     : new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
   const now = new Date();
 
   const apiKey = process.env.FIREFLIES_API_KEY;
+  let ok = false;
   let calls = 0;
   if (apiKey) {
-    calls = await syncFireflies(supabase, apiKey, since);
+    const result = await syncFireflies(supabase, apiKey, since);
+    ok = result.ok;
+    calls = result.emitted;
   }
 
-  await db.from('sync_state').upsert(
-    { source: 'fireflies', last_synced_at: now.toISOString(), updated_at: now.toISOString() },
-    { onConflict: 'source' },
-  );
+  // Only advance the watermark when the sync actually ran successfully —
+  // if the API key is missing or the fetch failed, advancing `now` would
+  // permanently skip the window we just failed to cover. The next run will
+  // retry the same `since` (with its own fresh lag buffer applied).
+  if (apiKey && ok) {
+    await db.from('sync_state').upsert(
+      { source: 'fireflies', last_synced_at: now.toISOString(), updated_at: now.toISOString() },
+      { onConflict: 'source' },
+    );
+  }
 
-  return NextResponse.json({ ok: true, calls });
+  return NextResponse.json({ ok, calls });
 }

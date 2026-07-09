@@ -39,7 +39,11 @@ export function transcriptToEvents(
       contactId: contact.id,
       companyId: contact.company_id,
       sourceType: 'call',
-      sourceId: meta.id,
+      // Compound id keeps the upsert key (source_type, source_id) unique per
+      // attendee — a bare `meta.id` would collapse a multi-attendee call to a
+      // single row, since contact_id is not part of the unique constraint.
+      // Mirrors the `${kind}:${row.id}` pattern in emit-assessment.ts.
+      sourceId: `${meta.id}:${contact.id}`,
       occurredAt: new Date(meta.date).toISOString(),
       title: `Call: ${meta.title}`,
       payload: { firefliesId: meta.id },
@@ -72,15 +76,19 @@ function attendeeEmailsFor(t: FirefliesTranscript): string[] {
 // window's worth of new calls plus headroom for a missed run.
 const SYNC_FETCH_LIMIT = 100;
 
+export type SyncResult = { ok: boolean; emitted: number };
+
 export async function syncFireflies(
   supabase: SupabaseClient,
   apiKey: string,
   since: Date,
-): Promise<number> {
+): Promise<SyncResult> {
   const result = await listTranscripts(apiKey, SYNC_FETCH_LIMIT);
   if (!result.success || !result.transcripts) {
     if (!result.success) console.error('[fireflies-sync] listTranscripts failed', result.error);
-    return 0;
+    // ok: false so the caller knows the fetch failed (distinct from "0 new
+    // transcripts") and does not advance the sync_state watermark.
+    return { ok: false, emitted: 0 };
   }
 
   const sinceMs = since.getTime();
@@ -102,5 +110,5 @@ export async function syncFireflies(
       emitted++;
     }
   }
-  return emitted;
+  return { ok: true, emitted };
 }

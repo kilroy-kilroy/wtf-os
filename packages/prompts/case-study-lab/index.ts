@@ -8,6 +8,7 @@ export const CASE_STUDY_MODEL = "claude-opus-4-8";
 export interface AgencyBrand {
   colors: string[];
   logoUrl: string | null;
+  name: string | null;
 }
 
 export interface CaseStudyResult {

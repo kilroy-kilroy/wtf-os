@@ -26,6 +26,23 @@ describe("extractBrand", () => {
     expect(brand.colors).toEqual([]);
     expect(brand.logoUrl).toBeNull();
   });
+
+  it("reads the agency name from og:site_name", () => {
+    const html = `<html><head>
+      <meta property="og:site_name" content="El Toro" />
+      <title>El Toro — Ecommerce Growth</title>
+    </head><body></body></html>`;
+    expect(extractBrand(html, "https://eltoro.com").name).toBe("El Toro");
+  });
+
+  it("falls back to <title> when og:site_name is absent", () => {
+    const html = `<html><head><title>Northbound Agency</title></head><body></body></html>`;
+    expect(extractBrand(html, "https://x.com").name).toBe("Northbound Agency");
+  });
+
+  it("name is null when neither is present", () => {
+    expect(extractBrand("<html><head></head><body></body></html>", "https://x.com").name).toBeNull();
+  });
 });
 
 describe("fetchBrand redirect + resilience", () => {
@@ -63,7 +80,7 @@ describe("fetchBrand redirect + resilience", () => {
     } as any);
     vi.stubGlobal("fetch", fetchMock);
     const brand = await fetchBrand("https://acme.com/");
-    expect(brand).toEqual({ colors: [], logoUrl: null });
+    expect(brand).toEqual({ colors: [], logoUrl: null, name: null });
   });
 
   it("returns empty brand on network throw and still throws for initial SSRF URLs", async () => {
@@ -72,7 +89,7 @@ describe("fetchBrand redirect + resilience", () => {
       vi.fn(async () => { throw new Error("ECONNREFUSED"); })
     );
     const brand = await fetchBrand("https://acme.com/");
-    expect(brand).toEqual({ colors: [], logoUrl: null });
+    expect(brand).toEqual({ colors: [], logoUrl: null, name: null });
 
     // normalizeUrl runs BEFORE try/catch, so SSRF URLs must still throw
     await expect(fetchBrand("http://localhost")).rejects.toThrow();

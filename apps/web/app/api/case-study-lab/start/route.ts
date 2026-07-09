@@ -29,7 +29,7 @@ export async function POST(req: Request): Promise<Response> {
 
   try {
     // Brand grab is best-effort — never block the interview on it.
-    let brand: AgencyBrand = { colors: [], logoUrl: null };
+    let brand: AgencyBrand = { colors: [], logoUrl: null, name: null };
     try {
       brand = await fetchBrand(url);
     } catch (e) {

@@ -37,7 +37,7 @@ export async function POST(req: Request): Promise<Response> {
       conversation,
       slots: (report.slots as CaseStudySlots) ?? EMPTY_SLOTS,
       latestUserMessage: message,
-      brand: (report.agency_brand as AgencyBrand) ?? { colors: [], logoUrl: null },
+      brand: (report.agency_brand as AgencyBrand) ?? { colors: [], logoUrl: null, name: null },
     });
 
     const nextConversation: ConversationTurn[] = [

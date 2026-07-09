@@ -35,7 +35,12 @@ export function extractBrand(html: string, baseUrl: string): AgencyBrand {
   const logoRaw = og || icon || null;
   const logoUrl = logoRaw ? absolutize(logoRaw, baseUrl) : null;
 
-  return { colors: colors.slice(0, 5), logoUrl };
+  const siteName =
+    $('meta[property="og:site_name"]').attr("content")?.trim() ||
+    $("title").first().text().trim() ||
+    null;
+
+  return { colors: colors.slice(0, 5), logoUrl, name: siteName };
 }
 
 const MAX_REDIRECTS = 5;
@@ -64,12 +69,12 @@ export async function fetchBrand(url: string): Promise<AgencyBrand> {
         current = normalizeUrl(new URL(location, current).toString());
         continue;
       }
-      if (!res.ok) return { colors: [], logoUrl: null };
+      if (!res.ok) return { colors: [], logoUrl: null, name: null };
       const html = await res.text();
       return extractBrand(html, current); // resolve logo against the FINAL hop URL
     }
-    return { colors: [], logoUrl: null };
+    return { colors: [], logoUrl: null, name: null };
   } catch {
-    return { colors: [], logoUrl: null };
+    return { colors: [], logoUrl: null, name: null };
   }
 }

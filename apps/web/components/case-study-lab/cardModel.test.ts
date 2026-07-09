@@ -12,7 +12,7 @@ describe("CARD_SIZES", () => {
 describe("buildCardModel", () => {
   it("picks an accent color from brand, with a safe fallback", () => {
     const m = buildCardModel({
-      agency_brand: { colors: ["#1a2b3c"], logoUrl: null },
+      agency_brand: { colors: ["#1a2b3c"], logoUrl: null, name: null },
       client_logo_url: null,
       result: {
         headline: "800% revenue growth",
@@ -32,7 +32,7 @@ describe("buildCardModel", () => {
 
   it("falls back to a default accent when brand has no colors", () => {
     const m = buildCardModel({
-      agency_brand: { colors: [], logoUrl: null },
+      agency_brand: { colors: [], logoUrl: null, name: null },
       client_logo_url: null,
       result: {
         headline: "x",

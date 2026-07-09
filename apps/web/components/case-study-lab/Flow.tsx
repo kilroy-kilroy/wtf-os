@@ -14,7 +14,7 @@ export default function Flow() {
   const [firstReply, setFirstReply] = useState<string>("");
   const [slots, setSlots] = useState<CaseStudySlots | null>(null);
   // brand is captured for potential future theming of the live UI; not yet used.
-  const [, setBrand] = useState<AgencyBrand>({ colors: [], logoUrl: null });
+  const [, setBrand] = useState<AgencyBrand>({ colors: [], logoUrl: null, name: null });
 
   if (phase === "start") {
     return (

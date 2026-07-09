@@ -4,18 +4,33 @@ import { normalizeEmail, deriveDomain, isFreeMailDomain } from './identity';
 
 type Contact = { id: string; company_id: string | null };
 
+function urlMatchesDomain(url: string | null | undefined, domain: string): boolean {
+  if (!url) return false;
+  try {
+    const host = new URL(url.startsWith('http') ? url : `https://${url}`).hostname
+      .toLowerCase()
+      .replace(/^www\./, '');
+    const d = domain.toLowerCase();
+    return host === d || host.endsWith(`.${d}`);
+  } catch {
+    return false;
+  }
+}
+
 async function resolveCompany(
   supabase: any,
   domain: string,
   opts: { companyName?: string; url?: string },
 ): Promise<string | null> {
-  // Match an existing company by its url containing the domain.
-  const { data: existing } = await supabase
+  // Fetch candidate companies whose url contains the domain, then narrow to
+  // an exact hostname match in JS (ILIKE substring alone can false-positive,
+  // e.g. domain `acme.com` matching url `https://acme.company.com`).
+  const { data: candidates } = await supabase
     .from('companies')
-    .select('id')
+    .select('id, url')
     .ilike('url', `%${domain}%`)
-    .limit(1)
-    .maybeSingle();
+    .limit(5);
+  const existing = (candidates ?? []).find((c: any) => urlMatchesDomain(c.url, domain));
   if (existing) return existing.id;
 
   const { data: created, error } = await supabase
@@ -39,7 +54,7 @@ export async function resolveContact(
   const { data: existing } = await db
     .from('contacts')
     .select('id, company_id')
-    .ilike('email', normalized)
+    .eq('email', normalized)
     .limit(1)
     .maybeSingle();
   if (existing) return { id: existing.id, company_id: existing.company_id ?? null };

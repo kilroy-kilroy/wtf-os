@@ -10,7 +10,8 @@ import { emitAssessmentEvent } from '@/lib/timeline/emit-assessment';
 export const maxDuration = 300;
 
 export async function POST(request: NextRequest) {
-  if (request.headers.get('authorization') !== `Bearer ${process.env.CRON_SECRET}`) {
+  const secret = process.env.CRON_SECRET;
+  if (!secret || request.headers.get('authorization') !== `Bearer ${secret}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
   const supabase = createServerClient();
@@ -20,18 +21,26 @@ export async function POST(request: NextRequest) {
   const biz = (await db.from('biz_dev_assessments')
     .select('id, email, name, company_name, website_url, created_at, composite_score')).data || [];
   for (const r of biz) {
-    await emitAssessmentEvent(supabase, { ...r, score: r.composite_score }, 'biz_dev');
-    count++;
+    try {
+      await emitAssessmentEvent(supabase, { ...r, score: r.composite_score }, 'biz_dev');
+      count++;
+    } catch (err) {
+      console.error(`[Timeline backfill] biz_dev_assessments row ${r.id} failed:`, err);
+    }
   }
 
   const disc = (await db.from('discovery_briefs')
     .select('id, lead_email, lead_name, lead_company, created_at')).data || [];
   for (const r of disc) {
-    await emitAssessmentEvent(supabase, {
-      id: r.id, email: r.lead_email, name: r.lead_name,
-      company_name: r.lead_company, created_at: r.created_at,
-    }, 'discovery');
-    count++;
+    try {
+      await emitAssessmentEvent(supabase, {
+        id: r.id, email: r.lead_email, name: r.lead_name,
+        company_name: r.lead_company, created_at: r.created_at,
+      }, 'discovery');
+      count++;
+    } catch (err) {
+      console.error(`[Timeline backfill] discovery_briefs row ${r.id} failed:`, err);
+    }
   }
 
   const growth = (await db.from('assessments')
@@ -41,12 +50,16 @@ export async function POST(request: NextRequest) {
     // (packages/utils/src/assessment/scoring.ts): founderName/agencyName/website,
     // not name/company_name/website_url.
     const intake = r.intake_data || {};
-    await emitAssessmentEvent(supabase, {
-      id: r.id, email: intake.email, name: intake.founderName,
-      company_name: intake.agencyName,
-      website_url: intake.website, created_at: r.created_at, score: r.overall_score,
-    }, 'growthos');
-    count++;
+    try {
+      await emitAssessmentEvent(supabase, {
+        id: r.id, email: intake.email, name: intake.founderName,
+        company_name: intake.agencyName,
+        website_url: intake.website, created_at: r.created_at, score: r.overall_score,
+      }, 'growthos');
+      count++;
+    } catch (err) {
+      console.error(`[Timeline backfill] assessments row ${r.id} failed:`, err);
+    }
   }
 
   return NextResponse.json({ ok: true, processed: count });

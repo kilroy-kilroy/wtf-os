@@ -274,18 +274,23 @@ export async function POST(request: NextRequest) {
       console.error('[GrowthOS] Failed to update assessment:', updateError);
     }
 
-    try {
-      await emitAssessmentEvent(supabase, {
-        id: assessmentId,
-        email: intakeData.email,
-        name: intakeData.founderName,
-        company_name: intakeData.agencyName,
-        website_url: intakeData.website,
-        created_at: assessment.created_at,
-        score: scores.overall,
-      }, 'growthos');
-    } catch (err) {
-      console.error('[GrowthOS] Timeline emit failed:', err);
+    // Only emit a "completed" timeline event if the completion actually
+    // persisted — otherwise the DB row is still in its pre-update status,
+    // and a later backfill would overwrite this event with stale data.
+    if (!updateError) {
+      try {
+        await emitAssessmentEvent(supabase, {
+          id: assessmentId,
+          email: intakeData.email,
+          name: intakeData.founderName,
+          company_name: intakeData.agencyName,
+          website_url: intakeData.website,
+          created_at: assessment.created_at,
+          score: scores.overall,
+        }, 'growthos');
+      } catch (err) {
+        console.error('[GrowthOS] Timeline emit failed:', err);
+      }
     }
 
     // Persist assessment data to org profile for future product onboarding

@@ -24,6 +24,7 @@ import { resolveOrCreateUserByEmail, mintAccessToken } from '@/lib/biz-dev-auth'
 import { onBizDevReportGenerated } from '@/lib/loops';
 import { addBizDevAssessmentSubscriber } from '@/lib/beehiiv';
 import { copperSyncBizDevLead } from '@/lib/copper';
+import { emitAssessmentEvent } from '@/lib/timeline/emit-assessment';
 
 const intakeSchema = z.object({
   name: z.string().min(1),
@@ -98,12 +99,26 @@ export async function POST(request: NextRequest) {
         dominant_trap: score.dominant_trap,
         cta_tier: score.cta_tier,
       })
-      .select('id')
+      .select('id, created_at')
       .single();
 
     if (insertErr || !row) {
       console.error('[biz-dev] insert failed:', insertErr);
       return NextResponse.json({ error: 'Database error' }, { status: 500 });
+    }
+
+    try {
+      await emitAssessmentEvent(supabase, {
+        id: row.id,
+        email: intake.email,
+        name: intake.name,
+        company_name: intake.company_name,
+        website_url: intake.website_url,
+        created_at: row.created_at,
+        score: score.composite,
+      }, 'biz_dev');
+    } catch (err) {
+      console.error('[biz-dev] timeline emit failed:', err);
     }
 
     waitUntil(processAssessment(row.id, intake, answers, score));

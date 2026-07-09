@@ -13,6 +13,7 @@ import { addAssessmentSubscriber } from '@/lib/beehiiv';
 import { onAssessmentCompleted } from '@/lib/loops';
 import { copperSyncLead, COPPER_STAGES } from '@/lib/copper';
 import { getArchetypeForLoops } from '@/lib/growth-quadrant';
+import { emitAssessmentEvent } from '@/lib/timeline/emit-assessment';
 
 export const maxDuration = 300;
 
@@ -271,6 +272,20 @@ export async function POST(request: NextRequest) {
 
     if (updateError) {
       console.error('[GrowthOS] Failed to update assessment:', updateError);
+    }
+
+    try {
+      await emitAssessmentEvent(supabase, {
+        id: assessmentId,
+        email: intakeData.email,
+        name: intakeData.founderName,
+        company_name: intakeData.agencyName,
+        website_url: intakeData.website,
+        created_at: assessment.created_at,
+        score: scores.overall,
+      }, 'growthos');
+    } catch (err) {
+      console.error('[GrowthOS] Timeline emit failed:', err);
     }
 
     // Persist assessment data to org profile for future product onboarding

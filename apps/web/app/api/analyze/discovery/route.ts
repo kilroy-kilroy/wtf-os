@@ -25,6 +25,7 @@ import { addDiscoveryLabSubscriber } from '@/lib/beehiiv';
 import { copperSyncLead, PRO_ACV, COPPER_STAGES } from '@/lib/copper';
 import { getArchetypeForLoops } from '@/lib/growth-quadrant';
 import { alertReportGenerated, alertBrightDataAuthExpired } from '@/lib/slack';
+import { emitAssessmentEvent } from '@/lib/timeline/emit-assessment';
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
@@ -385,7 +386,7 @@ export async function POST(request: NextRequest) {
             : null,
         },
       })
-      .select('id')
+      .select('id, created_at')
       .single();
 
     if (insertError) {
@@ -394,6 +395,21 @@ export async function POST(request: NextRequest) {
     }
 
     const reportId = insertedReport?.id;
+
+    if (reportId) {
+      try {
+        await emitAssessmentEvent(supabase, {
+          id: reportId,
+          email: requestor_email,
+          name: requestor_name,
+          company_name: requestor_company || null,
+          website_url: requestor_website || null,
+          created_at: insertedReport?.created_at,
+        }, 'discovery');
+      } catch (err) {
+        console.error('[discovery] timeline emit failed:', err);
+      }
+    }
 
     // Slack alert
     if (userId) {

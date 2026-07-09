@@ -20,6 +20,14 @@ export interface CaseStudyIssue {
   solution: string;
 }
 
+// During the interview, blockers are gathered before their solutions (the
+// interviewer asks for issues first, then the process piece that solved each).
+// So a slot-stage issue may not have a solution yet — the final CaseStudy does.
+export interface CaseStudySlotIssue {
+  issue: string;
+  solution: string | null;
+}
+
 export interface CaseStudyQuote {
   text: string;
   attribution: string;
@@ -30,7 +38,7 @@ export interface CaseStudySlots {
   clientAnonymized: boolean;
   clientDescriptor: string | null;
   results: CaseStudyResult[];
-  issues: CaseStudyIssue[];
+  issues: CaseStudySlotIssue[];
   quote: CaseStudyQuote | null;
   cta: string | null;
   teamCredit: string | null;

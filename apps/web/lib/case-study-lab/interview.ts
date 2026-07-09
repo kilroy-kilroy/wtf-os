@@ -10,7 +10,15 @@ import {
 import type { ConversationTurn } from "@/lib/case-study-lab/db";
 
 const ResultSchema = z.object({ label: z.string(), value: z.string() });
-const IssueSchema = z.object({ issue: z.string(), solution: z.string() });
+// solution is gathered AFTER the issue during the interview, so it may be
+// absent/null on the turn where the owner first lists blockers. Normalize to null.
+const IssueSchema = z.object({
+  issue: z.string(),
+  solution: z
+    .string()
+    .nullish()
+    .transform((v) => v ?? null),
+});
 const QuoteSchema = z.object({ text: z.string(), attribution: z.string() });
 
 const SlotsSchema = z.object({
@@ -76,7 +84,13 @@ export async function runInterviewTurn(input: {
   const text = response.content[0]?.type === "text" ? response.content[0].text : "";
   try {
     return parseInterviewTurn(text);
-  } catch {
+  } catch (e) {
+    // Don't swallow the real reason — a blind 502 here is undebuggable.
+    console.error("[case-study-lab] interview turn parse failed", {
+      stopReason: response.stop_reason,
+      error: e instanceof Error ? e.message : String(e),
+      rawHead: text.slice(0, 800),
+    });
     throw new Error("Interview hiccup — try sending that again");
   }
 }

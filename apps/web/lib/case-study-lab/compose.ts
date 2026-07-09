@@ -53,7 +53,12 @@ export async function composeCaseStudy(input: {
   const text = response.content[0]?.type === "text" ? response.content[0].text : "";
   try {
     return parseCaseStudy(text);
-  } catch {
+  } catch (e) {
+    console.error("[case-study-lab] compose parse failed", {
+      stopReason: response.stop_reason,
+      error: e instanceof Error ? e.message : String(e),
+      rawHead: text.slice(0, 800),
+    });
     throw new Error("Couldn't compose the case study — please try again");
   }
 }

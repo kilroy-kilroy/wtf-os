@@ -17,11 +17,20 @@ export default async function PeopleIndex({
 
   let contacts: any[] = [];
   if (q) {
-    const { data } = await db.from('contacts')
-      .select('id, name, email')
-      .or(`name.ilike.%${q}%,email.ilike.%${q}%`)
-      .limit(25);
-    contacts = data ?? [];
+    // Two separate .ilike() queries instead of a single .or() with an
+    // interpolated combinator string: .or() parses its argument as
+    // PostgREST filter syntax, so raw user input (commas, parens) can
+    // break the filter or inject extra predicates. .ilike(column, pattern)
+    // sends the pattern as a parameter, not as syntax to parse.
+    const pattern = `%${q}%`;
+    const [byName, byEmail] = await Promise.all([
+      db.from('contacts').select('id, name, email').ilike('name', pattern).limit(25),
+      db.from('contacts').select('id, name, email').ilike('email', pattern).limit(25),
+    ]);
+    const seen = new Set<string>();
+    contacts = [...(byName.data ?? []), ...(byEmail.data ?? [])]
+      .filter((c: any) => (seen.has(c.id) ? false : (seen.add(c.id), true)))
+      .slice(0, 25);
   } else {
     // recently active: contacts with the newest timeline events
     const { data } = await db.from('timeline_events')

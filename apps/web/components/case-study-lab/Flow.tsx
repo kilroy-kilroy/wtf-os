@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import type { AgencyBrand, CaseStudySlots } from "@repo/prompts";
 import StartForm from "@/components/case-study-lab/StartForm";
 import InterviewChat from "@/components/case-study-lab/InterviewChat";
@@ -10,7 +9,6 @@ import DraftEditor from "@/components/case-study-lab/DraftEditor";
 type Phase = "start" | "interview" | "review";
 
 export default function Flow() {
-  const router = useRouter();
   const [phase, setPhase] = useState<Phase>("start");
   const [id, setId] = useState<string>("");
   const [firstReply, setFirstReply] = useState<string>("");
@@ -48,7 +46,13 @@ export default function Flow() {
     <DraftEditor
       id={id}
       slots={slots!}
-      onDone={() => router.push(`/case-study-lab/r/${id}`)}
+      // Hard navigation to the finished report. A soft router.push to this
+      // force-dynamic page could fetch the RSC payload without visibly
+      // committing, stranding the user on the "GENERATING…" screen while the
+      // report already exists. A full load always lands on the rendered page.
+      onDone={() => {
+        window.location.href = `/case-study-lab/r/${id}`;
+      }}
     />
   );
 }

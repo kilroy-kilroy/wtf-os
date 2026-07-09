@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@repo/db/client';
 import { syncFireflies } from '@/lib/timeline/fireflies-sync';
+import { syncCopperEmails } from '@/lib/timeline/copper-email-sync';
 
 export const maxDuration = 300;
 
 /**
- * Cron: sync new Fireflies call transcripts into the unified timeline.
+ * Cron: sync new Fireflies call transcripts and Copper-logged emails into
+ * the unified timeline.
  *
  * ASSUMPTION (flagged for human confirmation): the Fireflies API key here is
  * read from a single operator env var, `FIREFLIES_API_KEY`. The existing
@@ -17,6 +19,12 @@ export const maxDuration = 300;
  * question to resolve for this cron; it syncs one operator's Fireflies
  * account. If multiple operators end up needing independent Fireflies sync,
  * this will need to loop over users with a connected integration instead.
+ *
+ * The Copper email sync reuses the same single-operator assumption: `COPPER_API`
+ * / `COPPER_API_EMAIL` (the existing repo-wide Copper credentials — see
+ * lib/copper.ts) act as one Copper user. See lib/copper-emails.ts for the
+ * (unverified) assumptions about how Copper represents logged emails as
+ * activities.
  *
  * Runs every 3 hours via vercel.json cron config.
  */
@@ -63,5 +71,37 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  return NextResponse.json({ ok, calls });
+  // Independent Copper-email high-water mark; default to 7 days back on
+  // first run. Mirrors the Fireflies block above exactly.
+  const { data: emailState } = await db.from('sync_state')
+    .select('last_synced_at').eq('source', 'copper_email').maybeSingle();
+  // Same 1-hour lag-buffer rationale as Fireflies: a Copper activity for an
+  // email sent/received just before a cron tick may not be logged/searchable
+  // until slightly after, and could otherwise fall before the recorded
+  // watermark and be permanently skipped. Reprocessing the overlap is
+  // harmless — emits are idempotent on (source_type, source_id).
+  const emailSince = emailState?.last_synced_at
+    ? new Date(new Date(emailState.last_synced_at).getTime() - 60 * 60 * 1000)
+    : new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+  const copperConfigured = Boolean(process.env.COPPER_API && process.env.COPPER_API_EMAIL);
+  let emailOk = false;
+  let emails = 0;
+  if (copperConfigured) {
+    const emailResult = await syncCopperEmails(supabase, emailSince);
+    emailOk = emailResult.ok;
+    emails = emailResult.emitted;
+  }
+
+  // Same success-gated rule as Fireflies: only advance the Copper-email
+  // watermark when the credentials were present and the sync actually
+  // succeeded, so a failed/unconfigured run doesn't skip its window.
+  if (copperConfigured && emailOk) {
+    await db.from('sync_state').upsert(
+      { source: 'copper_email', last_synced_at: now.toISOString(), updated_at: now.toISOString() },
+      { onConflict: 'source' },
+    );
+  }
+
+  return NextResponse.json({ ok, calls, emailOk, emails });
 }

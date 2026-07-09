@@ -7,15 +7,21 @@ import { GlobalHeaderWrapper } from "@/components/navigation/GlobalHeaderWrapper
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"] });
+// Anton + Poppins are decorative/heading faces used only on specific pages.
+// Preloading them globally (next/font default) emits <link rel=preload as=font>
+// on every page — including ones that never render them — which Chrome flags as
+// "preloaded but not used". They still load on demand (display: swap) where used.
 const anton = Anton({
   weight: '400',
   subsets: ["latin"],
-  variable: '--font-anton'
+  variable: '--font-anton',
+  preload: false,
 });
 const poppins = Poppins({
   weight: ['400', '500', '600', '700'],
   subsets: ["latin"],
-  variable: '--font-poppins'
+  variable: '--font-poppins',
+  preload: false,
 });
 
 export const metadata: Metadata = {

@@ -1,4 +1,4 @@
-// apps/web/app/person/[id]/page.tsx
+// apps/web/app/admin/people/[id]/page.tsx
 //
 // Person View: one page showing everything WTF-OS knows about a contact —
 // header (name/company/role), the cached AI "where we are / next step" card,
@@ -8,6 +8,7 @@
 // is a single query fan-out with no side effects.
 import { createServerClient } from '@repo/db/client';
 import { notFound } from 'next/navigation';
+import Link from 'next/link';
 
 const ICON: Record<string, string> = {
   email: '📧', call: '📞', assessment: '📋', discovery: '🔎',
@@ -49,7 +50,14 @@ export default async function PersonPage({
       <header>
         <h1 className="text-2xl font-semibold">{contact.name}</h1>
         <p className="text-muted-foreground">
-          {company?.name ?? ''}{contact.role ? ` · ${contact.role}` : ''}
+          {company?.name
+            ? (
+              <Link href={`/admin/company/${contact.company_id}`} className="hover:underline">
+                {company.name}
+              </Link>
+            )
+            : ''}
+          {contact.role ? ` · ${contact.role}` : ''}
           {contact.buyer_type ? ` · ${contact.buyer_type}` : ''}
         </p>
         <p className="text-sm text-muted-foreground">{contact.email}</p>

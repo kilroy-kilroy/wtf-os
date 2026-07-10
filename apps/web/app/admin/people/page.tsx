@@ -1,8 +1,9 @@
-// apps/web/app/person/page.tsx
+// apps/web/app/admin/people/page.tsx
 //
 // Entry point into the unified person timeline: search contacts by name/email,
 // or (with no query) see the people with the most recent timeline activity —
-// the natural "who do I need to look at" landing view.
+// the natural "who do I need to look at" landing view. Lives under /admin so it
+// inherits the admin sidebar chrome and is_admin gating (see middleware).
 import { createServerClient } from '@repo/db/client';
 import Link from 'next/link';
 
@@ -57,7 +58,7 @@ export default async function PeopleIndex({
       <ul className="divide-y">
         {contacts.map((c) => (
           <li key={c.id} className="py-2">
-            <Link href={`/person/${c.id}`} className="hover:underline">
+            <Link href={`/admin/people/${c.id}`} className="hover:underline">
               {c.name} <span className="text-muted-foreground text-sm">{c.email}</span>
             </Link>
           </li>

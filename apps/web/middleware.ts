@@ -2,7 +2,7 @@ import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
 // Routes that require authentication
-const PROTECTED_PREFIXES = ['/dashboard', '/client', '/admin', '/settings', '/person'];
+const PROTECTED_PREFIXES = ['/dashboard', '/client', '/admin', '/settings'];
 
 // Routes that authenticated users should be redirected away from
 // Pages that must be reachable WITHOUT a session even though they sit under a
@@ -10,9 +10,10 @@ const PROTECTED_PREFIXES = ['/dashboard', '/client', '/admin', '/settings', '/pe
 // redirect skips them (see isAuthPage usage below).
 const AUTH_PAGES = ['/login', '/client/login', '/client/activate'];
 
-// Routes that require admin access. /person is the internal contact timeline
-// (all leads + clients, with AI summaries and PII) — admin-only, same as /admin.
-const ADMIN_PREFIXES = ['/admin', '/person'];
+// Routes that require admin access. Everything under /admin is admin-only —
+// including the internal contact timeline at /admin/people (all leads + clients,
+// with AI summaries and PII) and the company rollup at /admin/company.
+const ADMIN_PREFIX = '/admin';
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({
@@ -72,7 +73,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // Admin route protection: check is_admin flag
-  if (user && ADMIN_PREFIXES.some((prefix) => pathname.startsWith(prefix))) {
+  if (user && pathname.startsWith(ADMIN_PREFIX)) {
     const { data: userData } = await supabase
       .from('users')
       .select('is_admin')

@@ -3,7 +3,6 @@ import { getReport } from "@/lib/case-study-lab/db";
 import { buildCaseStudyView, type CaseStudyView } from "@/lib/case-study-lab/view";
 
 export const dynamic = "force-dynamic";
-const ARROW = { up: "↑", down: "↓", flat: "→" } as const;
 
 function styles(accent: string) {
   return StyleSheet.create({
@@ -24,6 +23,7 @@ function styles(accent: string) {
     rail: { width: 170, backgroundColor: "#f6f7f9", borderRadius: 6, padding: 16 },
     railH: { color: "#5b6472", fontFamily: "Helvetica-Bold", fontSize: 8, letterSpacing: 1.2, textTransform: "uppercase", marginBottom: 12 },
     stat: { borderBottomWidth: 1, borderBottomColor: "#e4e7ec", paddingVertical: 10 },
+    numRow: { flexDirection: "row", alignItems: "center" },
     num: { color: accent, fontFamily: "Helvetica-Bold", fontSize: 30 },
     cap: { color: "#5b6472", fontSize: 9, marginTop: 4, lineHeight: 1.35 },
     quote: { marginTop: 22, backgroundColor: "#f6f7f9", borderLeftWidth: 3, borderLeftColor: accent, padding: 18 },
@@ -43,7 +43,11 @@ function Doc({ v }: { v: CaseStudyView }) {
         <View style={s.band}>
           {v.agencyLogoUrl ? <Image src={v.agencyLogoUrl} style={{ height: 26, marginRight: 12 }} /> : v.agencyName ? <Text style={s.agency}>{v.agencyName}</Text> : null}
           {(v.agencyLogoUrl || v.agencyName) && v.clientLogoUrl ? <Text style={{ color: "#fff", opacity: 0.6, marginHorizontal: 8 }}>×</Text> : null}
-          {v.clientLogoUrl ? <Image src={v.clientLogoUrl} style={{ height: 26 }} /> : null}
+          {v.clientLogoUrl ? (
+            <View style={{ backgroundColor: "#ffffff", borderRadius: 4, padding: 3 }}>
+              <Image src={v.clientLogoUrl} style={{ height: 22 }} />
+            </View>
+          ) : null}
         </View>
 
         <View style={s.body}>
@@ -68,7 +72,25 @@ function Doc({ v }: { v: CaseStudyView }) {
                 <Text style={s.railH}>The Results</Text>
                 {v.stats.map((st, i) => (
                   <View key={i} style={s.stat}>
-                    <Text style={s.num}>{ARROW[st.direction]} {st.value}</Text>
+                    <View style={s.numRow}>
+                      {st.direction !== "flat" ? (
+                        <View
+                          style={{
+                            width: 0,
+                            height: 0,
+                            borderLeftWidth: 4,
+                            borderRightWidth: 4,
+                            borderLeftColor: "#f6f7f9",
+                            borderRightColor: "#f6f7f9",
+                            marginRight: 5,
+                            ...(st.direction === "up"
+                              ? { borderBottomWidth: 7, borderBottomColor: v.accent }
+                              : { borderTopWidth: 7, borderTopColor: v.accent }),
+                          }}
+                        />
+                      ) : null}
+                      <Text style={s.num}>{st.value}</Text>
+                    </View>
                     <Text style={s.cap}>{st.caption}</Text>
                   </View>
                 ))}

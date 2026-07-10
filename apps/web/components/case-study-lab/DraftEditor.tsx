@@ -1,16 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import type { CaseStudySlots } from "@repo/prompts";
+import type { CaseStudySlots, AgencyBrand } from "@repo/prompts";
 import { ConsoleInput, ConsoleButton } from "@/components/console";
 
 export default function DraftEditor({
   id,
   slots,
+  brand,
   onDone,
 }: {
   id: string;
   slots: CaseStudySlots;
+  brand: AgencyBrand;
   onDone: () => void;
 }) {
   const [clientName, setClientName] = useState(slots.clientName ?? "");
@@ -20,19 +22,27 @@ export default function DraftEditor({
   const [logoUploading, setLogoUploading] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [agencyName, setAgencyName] = useState(brand.name ?? "");
+  const [agencyLogoUrl, setAgencyLogoUrl] = useState<string | null>(null);
+  const [agencyLogoUploading, setAgencyLogoUploading] = useState(false);
+  const firstBrandHex = brand.colors.find((c) => /^#[0-9a-f]{6}$/i.test(c));
+  const [accent, setAccent] = useState(firstBrandHex ?? "#E51B23");
 
-  async function uploadLogo(file: File) {
-    setLogoUploading(true);
+  async function uploadLogoFile(file: File, kind: "client" | "agency") {
+    const setUploading = kind === "agency" ? setAgencyLogoUploading : setLogoUploading;
+    setUploading(true);
     try {
       const form = new FormData();
       form.append("id", id);
+      form.append("kind", kind);
       form.append("file", file);
       const res = await fetch("/api/case-study-lab/logo", { method: "POST", body: form });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? "Upload failed");
-      setLogoUrl(json.url);
+      if (kind === "agency") setAgencyLogoUrl(json.url);
+      else setLogoUrl(json.url);
     } finally {
-      setLogoUploading(false);
+      setUploading(false);
     }
   }
 
@@ -49,6 +59,9 @@ export default function DraftEditor({
           clientAnonymized: anonymized,
           clientLogoUrl: logoUrl,
           cta,
+          agencyName: agencyName || null,
+          agencyLogoUrl,
+          accent,
         }),
       });
       const json = await res.json();
@@ -63,6 +76,41 @@ export default function DraftEditor({
   return (
     <div className="flex flex-col gap-4 text-white">
       <h2 className="text-xl font-bold">Quick review before we generate</h2>
+
+      <div className="flex flex-col gap-2 border-b border-[#222] pb-4">
+        <ConsoleInput
+          type="text"
+          value={agencyName}
+          onChange={(e) => setAgencyName((e.target as HTMLInputElement).value)}
+          placeholder="Your agency name"
+          aria-label="Agency name"
+        />
+        <label className="text-sm text-[#9aa0a6]">
+          Agency logo (optional — falls back to your name)
+          <input
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            className="mt-1 block text-sm"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) uploadLogoFile(f, "agency").catch((err) => setError(err.message));
+            }}
+          />
+        </label>
+        {agencyLogoUploading && <span className="text-xs text-[#9aa0a6]">Uploading logo…</span>}
+        {!agencyLogoUploading && agencyLogoUrl && (
+          <span className="text-xs text-[#22c55e]">Agency logo uploaded ✓</span>
+        )}
+        <label className="flex items-center gap-2 text-sm text-[#9aa0a6]">
+          Brand color
+          <input
+            type="color"
+            value={accent}
+            onChange={(e) => setAccent((e.target as HTMLInputElement).value)}
+            aria-label="Brand color"
+          />
+        </label>
+      </div>
 
       <label className="flex items-center gap-2 text-sm">
         <input
@@ -90,7 +138,7 @@ export default function DraftEditor({
               className="mt-1 block text-sm"
               onChange={(e) => {
                 const f = e.target.files?.[0];
-                if (f) uploadLogo(f).catch((err) => setError(err.message));
+                if (f) uploadLogoFile(f, "client").catch((err) => setError(err.message));
               }}
             />
           </label>
@@ -109,7 +157,7 @@ export default function DraftEditor({
 
       {error && <p className="text-sm text-[#E51B23]">{error}</p>}
 
-      <ConsoleButton type="button" onClick={generate} disabled={busy || logoUploading} className="self-start">
+      <ConsoleButton type="button" onClick={generate} disabled={busy || logoUploading || agencyLogoUploading} className="self-start">
         {busy ? "⟳ GENERATING…" : "▶ GENERATE CASE STUDY"}
       </ConsoleButton>
     </div>

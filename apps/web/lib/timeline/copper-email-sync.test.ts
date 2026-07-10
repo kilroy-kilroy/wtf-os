@@ -8,9 +8,9 @@ describe('copperEmailToEvent', () => {
       {
         id: 42,
         subject: 'Proposal follow-up',
-        snippet: 'Circling back…',
-        senderEmail: 'jane@acme.co',
         occurredAt: '2026-07-08T12:00:00Z',
+        personId: 99,
+        candidateEmails: ['tim@mail.salesos.app', 'jane@acme.co'],
       },
       { id: 'c1', company_id: 'co1' },
     );
@@ -20,23 +20,22 @@ describe('copperEmailToEvent', () => {
       sourceType: 'email',
       sourceId: 'copper:42',
       title: 'Email: Proposal follow-up',
-      summary: 'Circling back…',
       occurredAt: '2026-07-08T12:00:00Z',
     });
   });
 
-  it('carries the copper activity id and sender in the payload', () => {
+  it('carries the copper activity id and parent person in the payload', () => {
     const e = copperEmailToEvent(
       {
         id: 'act-7',
         subject: 'Re: pricing',
-        snippet: '',
-        senderEmail: 'bob@acme.co',
         occurredAt: '2026-07-01T00:00:00Z',
+        personId: 1234,
+        candidateEmails: [],
       },
       { id: 'c2', company_id: null },
     );
     expect(e.companyId).toBeNull();
-    expect(e.payload).toMatchObject({ copperActivityId: 'act-7', from: 'bob@acme.co' });
+    expect(e.payload).toMatchObject({ copperActivityId: 'act-7', personId: 1234 });
   });
 });

@@ -10,8 +10,9 @@ const PROTECTED_PREFIXES = ['/dashboard', '/client', '/admin', '/settings', '/pe
 // redirect skips them (see isAuthPage usage below).
 const AUTH_PAGES = ['/login', '/client/login', '/client/activate'];
 
-// Routes that require admin access
-const ADMIN_PREFIX = '/admin';
+// Routes that require admin access. /person is the internal contact timeline
+// (all leads + clients, with AI summaries and PII) — admin-only, same as /admin.
+const ADMIN_PREFIXES = ['/admin', '/person'];
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({
@@ -71,7 +72,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // Admin route protection: check is_admin flag
-  if (user && pathname.startsWith(ADMIN_PREFIX)) {
+  if (user && ADMIN_PREFIXES.some((prefix) => pathname.startsWith(prefix))) {
     const { data: userData } = await supabase
       .from('users')
       .select('is_admin')

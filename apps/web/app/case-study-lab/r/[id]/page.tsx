@@ -35,6 +35,8 @@ export default async function ReportPage({ params }: Props) {
           result={report.result as CaseStudy}
           accent={model.accent}
           clientLogoUrl={report.client_logo_url}
+          agencyLogoUrl={model.agencyLogoUrl}
+          agencyName={model.agencyName}
         />
         <div className="flex flex-col gap-3">
           <div className="text-sm font-semibold text-[#9aa0a6]">Download to post:</div>

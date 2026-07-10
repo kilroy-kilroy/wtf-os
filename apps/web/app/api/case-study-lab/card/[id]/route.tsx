@@ -31,13 +31,29 @@ export async function GET(
           fontFamily: "sans-serif",
         }}
       >
-        {/* Client brand header — logo or monogram fallback */}
-        <div style={{ display: "flex" }}>
+        {/* Co-branded header — agency (left) × client (right) */}
+        <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
+          {m.agencyLogoUrl ? (
+            <img
+              src={m.agencyLogoUrl}
+              alt={m.agencyName ?? "Agency"}
+              style={{ height: 72, width: "auto", objectFit: "contain" }}
+            />
+          ) : m.agencyName ? (
+            <div style={{ display: "flex", fontSize: 40, fontWeight: 900, color: "#ffffff" }}>
+              {m.agencyName}
+            </div>
+          ) : null}
+
+          {(m.agencyLogoUrl || m.agencyName) ? (
+            <div style={{ display: "flex", fontSize: 44, color: "#4a4a4a" }}>×</div>
+          ) : null}
+
           {m.clientLogoUrl ? (
             <img
               src={m.clientLogoUrl}
               alt={m.clientName}
-              style={{ height: 96, width: "auto", objectFit: "contain" }}
+              style={{ height: 72, width: "auto", objectFit: "contain" }}
             />
           ) : (
             <div
@@ -45,11 +61,11 @@ export async function GET(
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                width: 96,
-                height: 96,
+                width: 72,
+                height: 72,
                 background: m.accent,
                 borderRadius: 12,
-                fontSize: 52,
+                fontSize: 40,
                 fontWeight: 900,
                 color: "#ffffff",
               }}

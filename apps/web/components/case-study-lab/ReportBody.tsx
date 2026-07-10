@@ -4,25 +4,45 @@ export default function ReportBody({
   result,
   accent,
   clientLogoUrl,
+  agencyLogoUrl,
+  agencyName,
 }: {
   result: CaseStudy;
   accent: string;
   clientLogoUrl: string | null;
+  agencyLogoUrl: string | null;
+  agencyName: string | null;
 }) {
   return (
     <article className="w-full rounded-lg bg-[#0b0b0b] p-8 text-white">
-      <header className="mb-8 flex items-center gap-4">
-        {clientLogoUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={clientLogoUrl} alt={result.clientName} className="h-12 w-auto" />
-        ) : (
-          <div
-            className="flex h-12 w-12 items-center justify-center rounded font-bold"
-            style={{ background: accent }}
-          >
-            {result.clientName.slice(0, 1).toUpperCase()}
+      <header className="mb-8 flex flex-col gap-4">
+        {(agencyLogoUrl || agencyName || clientLogoUrl) && (
+          <div className="flex items-center gap-3">
+            {agencyLogoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={agencyLogoUrl} alt={agencyName ?? "Agency"} className="h-9 w-auto" />
+            ) : agencyName ? (
+              <span className="text-base font-bold">{agencyName}</span>
+            ) : null}
+
+            {(agencyLogoUrl || agencyName) && (
+              <span className="text-lg text-[#4a4a4a]">×</span>
+            )}
+
+            {clientLogoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={clientLogoUrl} alt={result.clientName} className="h-9 w-auto" />
+            ) : (
+              <div
+                className="flex h-9 w-9 items-center justify-center rounded font-bold"
+                style={{ background: accent }}
+              >
+                {result.clientName.slice(0, 1).toUpperCase()}
+              </div>
+            )}
           </div>
         )}
+
         <div>
           <div className="text-lg font-bold">{result.clientName}</div>
           <div className="text-sm text-[#9aa0a6]">{result.clientDescriptor}</div>

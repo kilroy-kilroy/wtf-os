@@ -113,4 +113,33 @@ describe("parseInterviewTurn", () => {
     );
     expect(t.slots.issues).toHaveLength(3);
   });
+
+  it("carries beforeState through the turn parser", () => {
+    const t = parseInterviewTurn(
+      JSON.stringify({
+        reply: "Got it.",
+        slots: {
+          clientName: "Splendid", clientAnonymized: false, clientDescriptor: "A DTC brand",
+          beforeState: "Before us, their paid channel was scaling cost, not profit.",
+          results: [], issues: [], quote: null, cta: null, teamCredit: null,
+        },
+        readyToGenerate: false,
+      })
+    );
+    expect(t.slots.beforeState).toMatch(/scaling cost/);
+  });
+
+  it("defaults a missing beforeState to null", () => {
+    const t = parseInterviewTurn(
+      JSON.stringify({
+        reply: "ok",
+        slots: {
+          clientName: null, clientAnonymized: false, clientDescriptor: null,
+          results: [], issues: [], quote: null, cta: null, teamCredit: null,
+        },
+        readyToGenerate: false,
+      })
+    );
+    expect(t.slots.beforeState).toBeNull();
+  });
 });

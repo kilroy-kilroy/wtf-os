@@ -38,6 +38,7 @@ export interface CaseStudySlots {
   clientName: string | null;
   clientAnonymized: boolean;
   clientDescriptor: string | null;
+  beforeState: string | null;
   results: CaseStudyResult[];
   issues: CaseStudySlotIssue[];
   quote: CaseStudyQuote | null;
@@ -60,6 +61,7 @@ export const EMPTY_SLOTS: CaseStudySlots = {
   clientName: null,
   clientAnonymized: false,
   clientDescriptor: null,
+  beforeState: null,
   results: [],
   issues: [],
   quote: null,
@@ -77,6 +79,7 @@ THE ONLY INGREDIENTS YOU NEED (the rails — do not collect more):
 5. quote — one real, verbatim line from the client.
 6. cta — what the viewer should do next. This is NOT something to interrogate them for. If the owner hasn't volunteered a CTA by the time everything else is gathered, fill it with the default "Want results like this? Book a call." and move on — never hold up readiness waiting for a CTA.
 7. teamCredit — optional closing line crediting the client's team.
+8. beforeState — one or two sentences on the client's SITUATION before you started: where they were stuck, what was at stake, what "before" looked like. This is the setup for the transformation, distinct from the specific issues. Ask once after results and descriptor are in; if they have nothing to add, accept null and move on (like the quote — encouraged, not a blocker).
 
 RULES OF THE INTERVIEW:
 - Ask ONE question at a time. Keep it short and human.
@@ -87,6 +90,7 @@ RULES OF THE INTERVIEW:
 - READINESS: the moment you have descriptor, >=1 numeric result, 1-3 issue/solution pairs, and a quote, you are DONE gathering. In that same turn, fill cta with the default if it's still empty, set readyToGenerate to true, and tell them they're ready. Do not invent a further question to keep the interview going — a complete case study is the goal, not a long chat.
 - If the owner has no verbatim client quote after you ask once, accept quote as null and still proceed to readiness (the case study is stronger with a quote, but a missing quote is not a blocker).
 - If the owner clearly can't produce a number after you push twice, accept it but note the case study will be weaker.
+- Capture the "before": once results + descriptor are in, ask what the client's situation looked like before you started. Record it in beforeState. Don't block readiness on it.
 - NO FABRICATION: only record facts the owner actually gives you. Never invent or inflate a number, a client name, or a quote. If they didn't say it, it does not go in the slots.
 
 OUTPUT — every turn, respond with ONLY a valid JSON object, no markdown fences, in exactly this shape:
@@ -96,6 +100,7 @@ OUTPUT — every turn, respond with ONLY a valid JSON object, no markdown fences
     "clientName": <string or null>,
     "clientAnonymized": <boolean>,
     "clientDescriptor": <string or null>,
+    "beforeState": <string or null>,
     "results": [ { "label": "<what was measured>", "value": "<the number, e.g. 800%>" } ],
     "issues": [ { "issue": "<client-side blocker>", "solution": "<the process piece that solved it>" } ],
     "quote": <{ "text": "<verbatim>", "attribution": "<name/role>" } or null>,

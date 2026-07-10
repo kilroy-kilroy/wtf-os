@@ -25,6 +25,7 @@ const SlotsSchema = z.object({
   clientName: z.string().nullable(),
   clientAnonymized: z.boolean(),
   clientDescriptor: z.string().nullable(),
+  beforeState: z.string().nullish().transform((v) => v ?? null),
   results: z.array(ResultSchema),
   issues: z.array(IssueSchema).transform((a) => a.slice(0, 3)),
   quote: QuoteSchema.nullable(),

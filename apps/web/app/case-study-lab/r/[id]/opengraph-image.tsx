@@ -1,7 +1,6 @@
 import { ImageResponse } from "next/og";
-import type { CaseStudy } from "@repo/prompts";
 import { getReport } from "@/lib/case-study-lab/db";
-import { buildCardModel } from "@/components/case-study-lab/cardModel";
+import { buildCaseStudyView } from "@/lib/case-study-lab/view";
 
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
@@ -9,8 +8,9 @@ export const contentType = "image/png";
 export default async function Image({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const report = await getReport(id);
-  const headline = report?.result ? (report.result as CaseStudy).headline : "Case Study";
-  const accent = report?.result ? buildCardModel(report).accent : "#E51B23";
+  const view = report?.result ? buildCaseStudyView(report) : null;
+  const headline = view?.headline ?? "Case Study";
+  const accent = view?.accent ?? "#E51B23";
 
   return new ImageResponse(
     (

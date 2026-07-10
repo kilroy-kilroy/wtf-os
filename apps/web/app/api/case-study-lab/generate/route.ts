@@ -10,6 +10,9 @@ export async function POST(req: Request): Promise<Response> {
   let clientAnonymized: boolean;
   let clientLogoUrl: string | null;
   let cta: string | null;
+  let agencyName: string | null;
+  let agencyLogoUrl: string | null;
+  let accent: string | null;
   try {
     const body = await req.json();
     id = String(body.id ?? "").trim();
@@ -18,6 +21,12 @@ export async function POST(req: Request): Promise<Response> {
     clientName = String(body.clientName ?? "").trim().slice(0, 120);
     clientLogoUrl = body.clientLogoUrl ? String(body.clientLogoUrl).slice(0, 500) : null;
     cta = body.cta ? String(body.cta).trim().slice(0, 200) : null;
+    agencyName = body.agencyName ? String(body.agencyName).trim().slice(0, 120) : null;
+    agencyLogoUrl = body.agencyLogoUrl ? String(body.agencyLogoUrl).slice(0, 500) : null;
+    accent =
+      typeof body.accent === "string" && /^#[0-9a-f]{6}$/i.test(body.accent.trim())
+        ? body.accent.trim()
+        : null;
   } catch (e) {
     return Response.json({ error: e instanceof Error ? e.message : "Invalid request" }, { status: 400 });
   }
@@ -53,6 +62,9 @@ export async function POST(req: Request): Promise<Response> {
       clientAnonymized,
       clientLogoUrl: clientAnonymized ? null : clientLogoUrl,
       slots: clientAnonymized ? effectiveSlots : undefined,
+      agencyName,
+      agencyLogoUrl,
+      accent,
     });
 
     return Response.json({ ok: true });

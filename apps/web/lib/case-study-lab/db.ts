@@ -1,4 +1,5 @@
 import { getSupabaseServerClient } from "@/lib/supabase-server";
+import { transcodeToPng } from "@/lib/case-study-lab/image";
 import type { CaseStudySlots, CaseStudy, AgencyBrand } from "@repo/prompts";
 
 const TABLE = "case_study_lab_reports";
@@ -37,7 +38,7 @@ export async function getReport(id: string) {
   const { data, error } = await (supabase as any)
     .from(TABLE)
     .select(
-      "id, email, agency_url, agency_brand, client_name, client_anonymized, client_logo_url, status, conversation, slots, result, created_at"
+      "id, email, agency_url, agency_brand, client_name, client_anonymized, client_logo_url, agency_name, agency_logo_url, accent, status, conversation, slots, result, created_at"
     )
     .eq("id", id)
     .single();
@@ -67,6 +68,9 @@ export async function finalizeReport(
     clientAnonymized: boolean;
     clientLogoUrl: string | null;
     slots?: CaseStudySlots;
+    agencyName?: string | null;
+    agencyLogoUrl?: string | null;
+    accent?: string | null;
   }
 ): Promise<void> {
   const supabase = getSupabaseServerClient();
@@ -78,6 +82,9 @@ export async function finalizeReport(
     status: "complete",
   };
   if (patch.slots !== undefined) update.slots = patch.slots;
+  if (patch.agencyName !== undefined) update.agency_name = patch.agencyName;
+  if (patch.agencyLogoUrl !== undefined) update.agency_logo_url = patch.agencyLogoUrl;
+  if (patch.accent !== undefined) update.accent = patch.accent;
   const { error } = await (supabase as any)
     .from(TABLE)
     .update(update)
@@ -103,18 +110,18 @@ export async function attachLead(id: string, email: string): Promise<void> {
   if (error) throw error;
 }
 
-export async function uploadClientLogo(
+export async function uploadLogo(
   id: string,
   bytes: ArrayBuffer,
-  contentType: string
+  kind: "client" | "agency"
 ): Promise<string> {
   const supabase = getSupabaseServerClient();
-  const ext = contentType.split("/")[1]?.replace("+xml", "") || "png";
-  const path = `${id}/logo.${ext}`;
+  const png = await transcodeToPng(bytes);
+  const path = `${id}/${kind}-logo.png`;
   const { error } = await (supabase as any).storage
     .from(BUCKET)
-    .upload(path, bytes, { contentType, upsert: true });
+    .upload(path, png, { contentType: "image/png", upsert: true });
   if (error) throw error;
   const { data } = (supabase as any).storage.from(BUCKET).getPublicUrl(path);
-  return data.publicUrl;
+  return data.publicUrl as string;
 }

@@ -18,6 +18,7 @@ export default function DraftEditor({
   const [clientName, setClientName] = useState(slots.clientName ?? "");
   const [anonymized, setAnonymized] = useState(slots.clientAnonymized);
   const [cta, setCta] = useState(slots.cta ?? "Want results like this? Book a call.");
+  const [ctaUrl, setCtaUrl] = useState("");
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [logoUploading, setLogoUploading] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -59,6 +60,7 @@ export default function DraftEditor({
           clientAnonymized: anonymized,
           clientLogoUrl: logoUrl,
           cta,
+          ctaUrl: ctaUrl || null,
           agencyName: agencyName || null,
           agencyLogoUrl,
           accent,
@@ -153,6 +155,14 @@ export default function DraftEditor({
         onChange={(e) => setCta((e.target as HTMLInputElement).value)}
         placeholder="Call to action"
         aria-label="Call to action"
+      />
+
+      <ConsoleInput
+        type="url"
+        value={ctaUrl}
+        onChange={(e) => setCtaUrl((e.target as HTMLInputElement).value)}
+        placeholder="CTA link — your booking or contact page (optional)"
+        aria-label="CTA link"
       />
 
       {error && <p className="text-sm text-[#E51B23]">{error}</p>}

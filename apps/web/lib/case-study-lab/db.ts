@@ -38,7 +38,7 @@ export async function getReport(id: string) {
   const { data, error } = await (supabase as any)
     .from(TABLE)
     .select(
-      "id, email, agency_url, agency_brand, client_name, client_anonymized, client_logo_url, agency_name, agency_logo_url, accent, status, conversation, slots, result, created_at"
+      "id, email, agency_url, agency_brand, client_name, client_anonymized, client_logo_url, agency_name, agency_logo_url, accent, cta_url, status, conversation, slots, result, created_at"
     )
     .eq("id", id)
     .single();
@@ -71,6 +71,7 @@ export async function finalizeReport(
     agencyName?: string | null;
     agencyLogoUrl?: string | null;
     accent?: string | null;
+    ctaUrl?: string | null;
   }
 ): Promise<void> {
   const supabase = getSupabaseServerClient();
@@ -85,6 +86,7 @@ export async function finalizeReport(
   if (patch.agencyName !== undefined) update.agency_name = patch.agencyName;
   if (patch.agencyLogoUrl !== undefined) update.agency_logo_url = patch.agencyLogoUrl;
   if (patch.accent !== undefined) update.accent = patch.accent;
+  if (patch.ctaUrl !== undefined) update.cta_url = patch.ctaUrl;
   const { error } = await (supabase as any)
     .from(TABLE)
     .update(update)

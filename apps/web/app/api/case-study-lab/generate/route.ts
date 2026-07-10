@@ -13,6 +13,7 @@ export async function POST(req: Request): Promise<Response> {
   let agencyName: string | null;
   let agencyLogoUrl: string | null;
   let accent: string | null;
+  let ctaUrl: string | null;
   try {
     const body = await req.json();
     id = String(body.id ?? "").trim();
@@ -27,6 +28,7 @@ export async function POST(req: Request): Promise<Response> {
       typeof body.accent === "string" && /^#[0-9a-f]{6}$/i.test(body.accent.trim())
         ? body.accent.trim()
         : null;
+    ctaUrl = body.ctaUrl ? String(body.ctaUrl).trim().slice(0, 500) : null;
   } catch (e) {
     return Response.json({ error: e instanceof Error ? e.message : "Invalid request" }, { status: 400 });
   }
@@ -65,6 +67,7 @@ export async function POST(req: Request): Promise<Response> {
       agencyName,
       agencyLogoUrl,
       accent,
+      ctaUrl,
     });
 
     return Response.json({ ok: true });

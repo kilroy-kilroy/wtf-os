@@ -93,6 +93,7 @@ export async function syncFireflies(
 
   const sinceMs = since.getTime();
   let emitted = 0;
+  let allEmitsOk = true;
   for (const t of result.transcripts) {
     const dateMs = parseTranscriptDate(t.date);
     if (dateMs < sinceMs) continue;
@@ -106,9 +107,16 @@ export async function syncFireflies(
 
     const meta: Meta = { id: t.id, title: t.title || 'Untitled', date: dateMs, attendeeEmails };
     for (const e of transcriptToEvents(meta, resolved)) {
-      await emitTimelineEvent(supabase, e);
-      emitted++;
+      const ok = await emitTimelineEvent(supabase, e);
+      if (ok) {
+        emitted++;
+      } else {
+        // A failed upsert must block the watermark advance (see SyncResult's
+        // ok field below) so this event is retried on the next cron run
+        // instead of being permanently skipped.
+        allEmitsOk = false;
+      }
     }
   }
-  return { ok: true, emitted };
+  return { ok: allEmitsOk, emitted };
 }

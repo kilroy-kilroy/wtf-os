@@ -15,7 +15,7 @@ export type TimelineEventInput = {
 export async function emitTimelineEvent(
   supabase: SupabaseClient,
   e: TimelineEventInput,
-): Promise<void> {
+): Promise<boolean> {
   const { error } = await (supabase as any)
     .from('timeline_events')
     .upsert(
@@ -34,5 +34,7 @@ export async function emitTimelineEvent(
     );
   if (error) {
     console.error('[timeline] emitTimelineEvent failed', error);
+    return false;
   }
+  return true;
 }

@@ -30,10 +30,8 @@ export const maxDuration = 300;
  * Runs every 3 hours via vercel.json cron config.
  */
 export async function GET(request: NextRequest) {
-  if (
-    process.env.CRON_SECRET &&
-    request.headers.get('authorization') !== `Bearer ${process.env.CRON_SECRET}`
-  ) {
+  const secret = process.env.CRON_SECRET;
+  if (!secret || request.headers.get('authorization') !== `Bearer ${secret}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
   const supabase = createServerClient();
@@ -56,9 +54,19 @@ export async function GET(request: NextRequest) {
   let ok = false;
   let calls = 0;
   if (apiKey) {
-    const result = await syncFireflies(supabase, apiKey, since);
-    ok = result.ok;
-    calls = result.emitted;
+    try {
+      const result = await syncFireflies(supabase, apiKey, since);
+      ok = result.ok;
+      calls = result.emitted;
+    } catch (err) {
+      // Keep this source independent of the other: an unexpected throw here
+      // must not abort the Copper-email sync or the summary regeneration
+      // step below. Treat it like any other sync failure — do not advance
+      // the watermark; the next run retries the same window.
+      console.error('[cron] timeline-sync: syncFireflies threw', err);
+      ok = false;
+      calls = 0;
+    }
   }
 
   // Only advance the watermark when the sync actually ran successfully —
@@ -89,9 +97,18 @@ export async function GET(request: NextRequest) {
   let emailOk = false;
   let emails = 0;
   if (copperConfigured) {
-    const emailResult = await syncCopperEmails(supabase, emailSince);
-    emailOk = emailResult.ok;
-    emails = emailResult.emitted;
+    try {
+      const emailResult = await syncCopperEmails(supabase, emailSince);
+      emailOk = emailResult.ok;
+      emails = emailResult.emitted;
+    } catch (err) {
+      // Same independence rule as the Fireflies block above: a throw here
+      // must not prevent the summary regeneration step from running, and
+      // must not advance the Copper-email watermark.
+      console.error('[cron] timeline-sync: syncCopperEmails threw', err);
+      emailOk = false;
+      emails = 0;
+    }
   }
 
   // Same success-gated rule as Fireflies: only advance the Copper-email

@@ -35,11 +35,18 @@ export async function syncCopperEmails(
   if (!result.ok) return { ok: false, emitted: 0 };
 
   let emitted = 0;
+  let allEmitsOk = true;
   for (const email of result.emails) {
     const contact = await resolveContact(supabase, email.senderEmail);
     if (!contact) continue;
-    await emitTimelineEvent(supabase, copperEmailToEvent(email, contact));
-    emitted++;
+    const ok = await emitTimelineEvent(supabase, copperEmailToEvent(email, contact));
+    if (ok) {
+      emitted++;
+    } else {
+      // A failed upsert must block the watermark advance so this event is
+      // retried on the next cron run instead of being permanently skipped.
+      allEmitsOk = false;
+    }
   }
-  return { ok: true, emitted };
+  return { ok: allEmitsOk, emitted };
 }

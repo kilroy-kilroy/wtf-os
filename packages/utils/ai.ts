@@ -136,6 +136,14 @@ const MODEL_CONFIGS: Record<string, ModelConfig> = {
     maxTokens: 1500,
     temperature: 0.3,
   },
+  // Unified person timeline: cached "where we are / next step" contact summary
+  'contact-summary': {
+    provider: 'anthropic',
+    model: 'claude-sonnet-4-6',
+    maxTokens: 600,
+    // Low temperature: this restates known activity, not creative writing.
+    temperature: 0.2,
+  },
 };
 
 function assertModelConfig(toolName: string, config: ModelConfig | undefined): asserts config is ModelConfig {

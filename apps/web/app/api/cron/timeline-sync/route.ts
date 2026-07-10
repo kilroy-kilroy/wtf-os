@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@repo/db/client';
 import { syncFireflies } from '@/lib/timeline/fireflies-sync';
 import { syncCopperEmails } from '@/lib/timeline/copper-email-sync';
+import { generateContactSummary } from '@/lib/timeline/summary';
 
 export const maxDuration = 300;
 
@@ -103,5 +104,33 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  return NextResponse.json({ ok, calls, emailOk, emails });
+  // Regenerate cached contact_summaries, but only for contacts whose timeline
+  // actually changed this run — regenerating for every contact would fan out
+  // an unbounded number of LLM calls on every 3-hour tick. `now` was captured
+  // above, before either sync ran, so `created_at >= now` catches exactly the
+  // timeline_events rows this run inserted. This relies on emitTimelineEvent's
+  // upsert (source_type, source_id) leaving created_at untouched when an
+  // already-synced event is re-processed inside the 1-hour lag-buffer overlap
+  // — only genuinely new rows get a created_at at or after this run's start.
+  const { data: touched } = await db
+    .from('timeline_events')
+    .select('contact_id')
+    .gte('created_at', now.toISOString());
+  const touchedContactIds: string[] = Array.from(
+    new Set<string>((touched ?? []).map((r: any) => r.contact_id as string)),
+  );
+
+  let summariesRegenerated = 0;
+  for (const contactId of touchedContactIds) {
+    try {
+      const result = await generateContactSummary(supabase, contactId);
+      if (result) summariesRegenerated++;
+    } catch (err) {
+      // A single contact's summary failing must never abort the cron run —
+      // the sync work above already succeeded and its watermarks are saved.
+      console.error('[cron] timeline-sync: summary regeneration failed for', contactId, err);
+    }
+  }
+
+  return NextResponse.json({ ok, calls, emailOk, emails, touched: touchedContactIds.length, summariesRegenerated });
 }

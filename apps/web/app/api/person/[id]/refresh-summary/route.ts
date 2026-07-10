@@ -7,6 +7,7 @@
 // hiccup here still lands the user back on /person/[id] rather than a 500.
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@repo/db/client';
+import { createClient } from '@/lib/supabase-auth-server';
 import { generateContactSummary } from '@/lib/timeline/summary';
 
 export const maxDuration = 60;
@@ -16,6 +17,16 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
+
+  // Auth guard: this route triggers a billed Anthropic call via
+  // generateContactSummary and is excluded from middleware (api/ paths), so
+  // it must check for an authenticated user itself.
+  const authClient = await createClient();
+  const { data: { user } } = await authClient.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   const supabase = createServerClient();
 
   try {

@@ -52,4 +52,25 @@ describe("buildCaseStudyView", () => {
     expect(v.stats[0].value).toBe("50% (1.8x to 2.9x over year 1)");
     expect(v.stats[0].caption).toBe("Overall ROAS increase");
   });
+
+  it("robustness: skips null/non-object items in results and issues without throwing", () => {
+    const v = buildCaseStudyView({
+      ...base,
+      result: {
+        headline: "H", clientName: "C", clientDescriptor: "d",
+        results: [null, { value: "2x", caption: "c", direction: "up" }],
+        issues: [null, { issue: "i", solution: "s" }],
+        quote: null, cta: "go",
+      },
+    });
+    expect(v.stats).toHaveLength(1);
+    expect(v.stats[0].value).toBe("2x");
+    expect(v.approach).toHaveLength(1);
+    expect(v.approach[0]).toEqual({ challenge: "i", method: "s" });
+  });
+
+  it("robustness: coerces a non-object quote to null", () => {
+    const v = buildCaseStudyView({ ...base, result: { ...NEW_RESULT(), quote: "just a string" } });
+    expect(v.quote).toBeNull();
+  });
 });

@@ -51,18 +51,24 @@ export function buildCaseStudyView(report: {
   const r = report.result ?? {};
 
   const approach: { challenge: string; method: string }[] = Array.isArray(r.approach)
-    ? r.approach.slice(0, 3).map((a: any) => ({ challenge: String(a.challenge ?? ""), method: String(a.method ?? "") }))
+    ? r.approach.filter((a: any) => a && typeof a === "object").slice(0, 3).map((a: any) => ({ challenge: String(a.challenge ?? ""), method: String(a.method ?? "") }))
     : Array.isArray(r.issues)
-      ? r.issues.slice(0, 3).map((i: any) => ({ challenge: String(i.issue ?? ""), method: String(i.solution ?? "") }))
+      ? r.issues.filter((i: any) => i && typeof i === "object").slice(0, 3).map((i: any) => ({ challenge: String(i.issue ?? ""), method: String(i.solution ?? "") }))
       : [];
 
   const stats = Array.isArray(r.results)
-    ? r.results.slice(0, 3).map((st: any) =>
+    ? r.results.filter((st: any) => st && typeof st === "object").slice(0, 3).map((st: any) =>
         "caption" in st
           ? { value: String(st.value ?? ""), caption: String(st.caption ?? ""), direction: (st.direction ?? "up") as "up" | "down" | "flat" }
           : { value: String(st.value ?? ""), caption: String(st.label ?? ""), direction: "up" as const }
       )
     : [];
+
+  const q = r.quote;
+  const quote =
+    q && typeof q === "object" && typeof q.text === "string" && typeof q.attribution === "string"
+      ? { text: q.text, attribution: q.attribution }
+      : null;
 
   return {
     accent,
@@ -71,13 +77,13 @@ export function buildCaseStudyView(report: {
     clientLogoUrl: report.client_logo_url ?? null,
     clientName: String(r.clientName ?? ""),
     clientDescriptor: String(r.clientDescriptor ?? ""),
-    kicker: r.kicker ?? null,
+    kicker: typeof r.kicker === "string" ? r.kicker : null,
     dek: typeof r.dek === "string" ? r.dek : null,
     headline: String(r.headline ?? ""),
     approach,
     bridge: typeof r.bridge === "string" ? r.bridge : null,
     stats,
-    quote: r.quote ?? null,
+    quote,
     cta: String(r.cta ?? "Want results like this? Book a call."),
     ctaHref: safeUrl(report.cta_url) ?? safeUrl(report.agency_url),
     poweredByHref: POWERED_BY_HREF,

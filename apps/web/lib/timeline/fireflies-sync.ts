@@ -72,9 +72,10 @@ function attendeeEmailsFor(t: FirefliesTranscript): string[] {
 }
 
 // listTranscripts has no server-side date filter, so fetch a bounded page and
-// filter against `since` client-side. 100 comfortably covers a 3-hour cron
-// window's worth of new calls plus headroom for a missed run.
-const SYNC_FETCH_LIMIT = 100;
+// filter against `since` client-side. Fireflies hard-caps the transcripts
+// `limit` at 50 (limit > 50 → 400 "invalid_arguments"), so 50 is the ceiling;
+// it comfortably covers a 3-hour cron window plus headroom for a missed run.
+const SYNC_FETCH_LIMIT = 50;
 
 export type SyncResult = { ok: boolean; emitted: number };
 

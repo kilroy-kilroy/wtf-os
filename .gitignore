@@ -45,3 +45,6 @@ apps/web/supabase/.temp/
 
 # Skill workspace artifacts
 .superpowers/
+
+# Local Claude Code tooling state
+.claude/

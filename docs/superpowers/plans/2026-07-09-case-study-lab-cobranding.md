@@ -178,9 +178,9 @@ In `apps/web/package.json`, add to `dependencies` (alphabetical position):
 ```
 Then install:
 ```bash
-cd apps/web && pnpm install
+cd /Users/timkilroy/Projects/wtf-os && npm install
 ```
-(Use the repo's package manager — pnpm, per the monorepo. If npm/yarn is used instead, match it.)
+(Repo is npm-managed: npm workspaces + package-lock.json.)
 
 - [ ] **Step 2: Write the failing test**
 
@@ -239,7 +239,7 @@ Expected: PASS (both).
 ```bash
 git add apps/web/package.json apps/web/lib/case-study-lab/image.ts apps/web/lib/case-study-lab/image.test.ts
 # include the lockfile updated by install:
-git add pnpm-lock.yaml apps/web/pnpm-lock.yaml 2>/dev/null || true
+git add package-lock.json
 git commit -m "feat(case-study-lab): transcodeToPng logo normalizer (sharp)"
 ```
 
@@ -374,7 +374,7 @@ Expected: no errors.
 
 - [ ] **Step 4: Manual verification — webp upload no longer breaks the card**
 
-Start the app (`cd apps/web && pnpm dev`), or against the deployed preview: upload a **webp** client logo through the review screen and generate. Then fetch the card:
+Start the app (`cd apps/web && npm run dev -w apps/web`), or against the deployed preview: upload a **webp** client logo through the review screen and generate. Then fetch the card:
 ```bash
 curl -s -o /tmp/card.png -w "%{http_code} %{content_type}\n" \
   "http://localhost:3000/api/case-study-lab/card/<id>?size=portrait"

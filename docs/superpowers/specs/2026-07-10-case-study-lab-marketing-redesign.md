@@ -32,6 +32,9 @@ Two failures, confirmed by studying Tim's corpus of professional case studies:
   Case Study Lab" are small (band + footer). Deliberately single-theme (case studies are light).
 - **Scope containment:** the **interview is unchanged**. All marketing transformation happens in
   the **composer** — it turns the same gathered slots into tight stats + narrative.
+- **Live CTA:** the agency can add a **booking/CTA link** on the review screen so the "Book a
+  call" button actually goes somewhere. The web report and PDF link the CTA button to it;
+  fallback is the agency's own site, then plain text. (Image crops can't be clickable — text only.)
 - **Reference mock (approved direction):** the one-pager mockup shown in chat
   (light sheet, El Toro blue band, "What El Toro did" challenge→method column, Results rail,
   quote, CTA, powered-by footer).
@@ -103,6 +106,12 @@ element). Accent confined to band + stat arrows + CTA.
 The review screen's **Download** section gains a **"Download PDF"** button alongside the image
 crops. The "Build another" and footer keep the powered-by link.
 
+**Live CTA link.** The review screen gains a **CTA link** URL field (next to the existing CTA
+text). Persisted as a new nullable column `cta_url` on `case_study_lab_reports` (set at
+`/generate`, like the agency fields; additive migration, applied by Tim). Render: the CTA button
+on the **web report** and **PDF** is an anchor to `cta_url` → falls back to `agency_url` → if
+neither, plain non-linked text. The **social crops** render the CTA as text only (not clickable).
+
 ## Back-compat
 
 New `CaseStudy` fields are additive. Renderers **fall back** when a field is absent on an old
@@ -110,7 +119,9 @@ row: `kicker`/`dek`/`bridge` → omit the block; `approach` → derive from lega
 (issue→challenge, solution→method); `results` → if legacy `{label,value}`, show `value` big and
 `label` as caption (no arrow). So the existing El Toro/Splendid row still renders (in the new
 light layout, minus the new prose) until regenerated. Regenerating through the review screen
-produces the full new treatment. No migration required (result is jsonb).
+produces the full new treatment. The only schema change is one additive nullable column
+`cta_url text` (for the live CTA link); the redesigned content itself needs no migration
+(`result` is jsonb).
 
 ## Non-goals
 
@@ -133,5 +144,6 @@ produces the full new treatment. No migration required (result is jsonb).
 
 ## Rollout
 
-Additive/back-compat; no DB migration. Ship behind normal deploy. Regenerate the El Toro/Splendid
+Additive/back-compat. One additive nullable column (`cta_url`) — same apply-before-deploy
+ordering as the co-branding migration (Tim applies the SQL first). Regenerate the El Toro/Splendid
 row to showcase the full new treatment.

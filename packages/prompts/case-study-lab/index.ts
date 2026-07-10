@@ -46,15 +46,28 @@ export interface CaseStudySlots {
   teamCredit: string | null;
 }
 
+export interface CaseStudyStat {
+  value: string;
+  caption: string;
+  direction: "up" | "down" | "flat";
+}
+
+export interface CaseStudyApproach {
+  challenge: string;
+  method: string;
+}
+
 export interface CaseStudy {
   headline: string;
   clientName: string;
   clientDescriptor: string;
-  results: CaseStudyResult[];
-  issues: CaseStudyIssue[];
-  quote: CaseStudyQuote | null;
+  kicker: string | null;
+  dek: string;
+  approach: CaseStudyApproach[];
+  bridge: string;
+  results: CaseStudyStat[];
+  quote: { text: string; attribution: string } | null;
   cta: string;
-  teamCredit: string | null;
 }
 
 export const EMPTY_SLOTS: CaseStudySlots = {
@@ -111,24 +124,36 @@ OUTPUT — every turn, respond with ONLY a valid JSON object, no markdown fences
 }
 Always return the FULL slots object reflecting everything gathered so far (carry prior values forward; never drop a value the owner already gave). issues must never exceed 3 entries.`;
 
-export const CASE_STUDY_COMPOSER_PROMPT = `You are Tim Kilroy writing the final "7-Minute Case Study" from gathered ingredients. Structure: transformation with the agency in the middle — before -> after, agency is the bridge. Results are the hook. No epic narrative, no activity lists, no agency-as-hero.
+export const CASE_STUDY_COMPOSER_PROMPT = `You are Tim Kilroy writing a polished, published-quality marketing case study from gathered interview ingredients. You are NOT transcribing — you turn raw facts into crisp marketing copy, in the voice of a great agency case study (a clean KlientBoost one-pager). The client and their results are the hero; the agency is the bridge, never the hero.
 
-HARD RULE — NO FABRICATION: use ONLY the numbers, names, quotes, and facts present in the supplied ingredients. Never invent or inflate a metric, never fabricate a quote or a client name, never add a claim that was not provided. If a field is missing, omit it — do not make one up. You sharpen wording only; you never manufacture facts.
+HARD RULE — NO FABRICATION: use ONLY the numbers, names, quotes, and facts in the supplied ingredients. Never invent or inflate a metric, never fabricate a quote or a name, never add a claim that wasn't provided. You sharpen and structure wording; you never manufacture facts.
 
-Write tight. The headline leads with the most impressive numeric result. Each issue is one line; each solution is one line naming the process piece. Keep the client's voice in the quote verbatim. If clientAnonymized is true, never name the client — use the descriptor as the subject (e.g. "A B2B SaaS company in fintech").
+WRITE IT LIKE THIS:
+- headline: ONE sentence, ~12-18 words, shape "[Client] [verb] [result] [method]". Lead with the strongest real result. No throat-clearing.
+- kicker: a short eyebrow like "DTC Apparel · Paid Media & Growth" from the descriptor + the work. Null if you can't infer it cleanly.
+- dek: 2-3 sentences. Establish the client, then the BEFORE — where they were stuck / what was at stake (use beforeState if present; otherwise infer the tension from the issues) — ending on the gap that set up the work. Dramatized but tight.
+- approach: for EACH gathered issue, a punchy one-line "challenge" and a "method" naming the specific process piece that solved it (e.g. "Meta Power 5 rebuild — consolidated ad sets, Advantage+ Shopping, ..."). Max 3. Zero self-praise; specificity IS the credibility.
+- bridge: ONE sentence chaining the methods to the outcome.
+- results: turn EACH gathered result into a TIGHT value + a context caption. value is short ("2.9x", "35%", "$1.4M") — never a sentence. caption carries the context, including the starting point when given ("Return on ad spend, up from 1.8x — a 50% lift"). direction is "up" for growth, "down" for a good reduction (e.g. CPA down), "flat" otherwise. 1-3 results.
+- quote: verbatim; attribute name + title + company if given, else null.
+- cta: one line (default "Want results like this? Book a call.").
 
-OUTPUT — respond with ONLY a valid JSON object, no markdown fences, in exactly this shape:
+If clientAnonymized is true, never name the client — use the descriptor as the subject.
+
+OUTPUT — ONLY a valid JSON object, no markdown fences, in exactly this shape:
 {
-  "headline": "<results-forward hook, one line>",
-  "clientName": "<client name, or an anonymized label if anonymized>",
-  "clientDescriptor": "<one sentence on what they do>",
-  "results": [ { "label": "<metric>", "value": "<number>" } ],
-  "issues": [ { "issue": "<one line>", "solution": "<one line naming the process piece>" } ],
-  "quote": <{ "text": "<verbatim>", "attribution": "<name/role>" } or null>,
-  "cta": "<one line>",
-  "teamCredit": <string or null>
+  "headline": "<one line>",
+  "clientName": "<client name or anonymized label>",
+  "clientDescriptor": "<one sentence>",
+  "kicker": <string or null>,
+  "dek": "<2-3 sentences>",
+  "approach": [ { "challenge": "<one line>", "method": "<named process piece>" } ],
+  "bridge": "<one sentence>",
+  "results": [ { "value": "<short>", "caption": "<context>", "direction": "up|down|flat" } ],
+  "quote": <{ "text": "<verbatim>", "attribution": "<name, title, company>" } or null>,
+  "cta": "<one line>"
 }
-issues must contain at most 3 entries.`;
+approach and results each contain at most 3 entries.`;
 
 export function buildInterviewTurnPrompt(input: {
   transcript: string;

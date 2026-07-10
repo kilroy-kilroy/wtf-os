@@ -12,13 +12,23 @@ const CaseStudySchema = z.object({
   headline: z.string(),
   clientName: z.string(),
   clientDescriptor: z.string(),
-  results: z.array(z.object({ label: z.string(), value: z.string() })),
-  issues: z
-    .array(z.object({ issue: z.string(), solution: z.string() }))
+  kicker: z.string().nullish().transform((v) => v ?? null),
+  dek: z.string(),
+  approach: z
+    .array(z.object({ challenge: z.string(), method: z.string() }))
+    .transform((a) => a.slice(0, 3)),
+  bridge: z.string(),
+  results: z
+    .array(
+      z.object({
+        value: z.string(),
+        caption: z.string(),
+        direction: z.enum(["up", "down", "flat"]).catch("up"),
+      })
+    )
     .transform((a) => a.slice(0, 3)),
   quote: z.object({ text: z.string(), attribution: z.string() }).nullable(),
   cta: z.string(),
-  teamCredit: z.string().nullable(),
 });
 
 export function parseCaseStudy(text: string): CaseStudy {

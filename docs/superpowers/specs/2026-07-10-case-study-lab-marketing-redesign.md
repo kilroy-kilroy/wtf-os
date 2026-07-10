@@ -30,11 +30,14 @@ Two failures, confirmed by studying Tim's corpus of professional case studies:
 - **Visual system:** **light** (white paper), one **agency-accent band** at top, accent used
   only on the band, stat arrows, and CTA. Client is the visual hero; agency + "Powered by
   Case Study Lab" are small (band + footer). Deliberately single-theme (case studies are light).
-- **Scope containment:** the **interview is unchanged**. All marketing transformation happens in
-  the **composer** — it turns the same gathered slots into tight stats + narrative.
+- **Interview gains a "before" beat.** One new question captures the client's **situation before
+  the engagement** (the stakes / where they were stuck), distinct from the specific issues. This
+  feeds a real before→after arc in the narrative. Everything else in the interview is unchanged;
+  the rest of the marketing transformation still happens in the **composer**.
 - **Live CTA:** the agency can add a **booking/CTA link** on the review screen so the "Book a
   call" button actually goes somewhere. The web report and PDF link the CTA button to it;
   fallback is the agency's own site, then plain text. (Image crops can't be clickable — text only.)
+  The field is **blank by default** — no guessed prefill (a wrong booking URL is worse than empty).
 - **Reference mock (approved direction):** the one-pager mockup shown in chat
   (light sheet, El Toro blue band, "What El Toro did" challenge→method column, Results rail,
   quote, CTA, powered-by footer).
@@ -44,9 +47,10 @@ Two failures, confirmed by studying Tim's corpus of professional case studies:
 From the two genuine case studies; the QBR decks are the anti-pattern.
 
 - **Headline = `[Client] [verb] [result] [method]`**, one sentence (~12–18 words). No throat-clearing.
-- **Dek (2–3 sentences):** client credibility + a one-clause need + a line of tension
-  (e.g., "The demand was there; the paid engine underneath it wasn't."). Not a dramatized
-  problem section.
+- **Dek = the "before" beat (2–3 sentences):** client credibility + the situation they were in
+  before (sourced from the new `beforeState` slot) + a line of tension (e.g., "The demand was
+  there; the paid engine underneath it wasn't."). This is the before→after setup — dramatized but
+  tight, never a bloated problem section.
 - **Approach = challenge → method pairs** (1–3). Each: a punchy one-line challenge, then the
   **named** process piece that solved it ("Meta Power 5 rebuild — …"). Specificity is the
   agency's only credibility; **zero self-praise**.
@@ -81,9 +85,21 @@ interface CaseStudy {
 }
 ```
 
-The composer still consumes the **existing gathered slots** (descriptor, results[label/value],
-issues[issue/solution], quote, cta). Its new job: tighten each result into `value`+`caption`+
-`direction`, reframe issues into `approach`, and write `kicker`, `dek`, `bridge`.
+The composer consumes the gathered slots (descriptor, results[label/value], issues[issue/solution],
+quote, cta) **plus a new `beforeState` slot**. Its new job: tighten each result into `value`+
+`caption`+`direction`, reframe issues into `approach`, and write `kicker`, `dek` (the before→after
+setup, sourced from `beforeState`), and `bridge`.
+
+### Interview change — the "before" beat
+
+`CaseStudySlots` gains `beforeState: string | null`. The interviewer prompt
+(`packages/prompts/case-study-lab`) adds **one question**, asked after the results/descriptor are
+in and before wrapping: *what did things look like on the client's side before you started — where
+were they stuck, what was at stake?* This captures the situation/pain **before** the engagement,
+distinct from the specific `issues`. Carried in the slots like every other field (`EMPTY_SLOTS`,
+`buildInterviewTurnPrompt`, the turn's `SlotsSchema` all gain it). **Readiness:** encouraged but
+not a hard blocker — if the owner has nothing to add after one ask, proceed (same rule as `quote`),
+and the composer leans on `issues` for the setup. Everything else in the interview is unchanged.
 
 ## Surfaces
 
@@ -125,16 +141,20 @@ produces the full new treatment. The only schema change is one additive nullable
 
 ## Non-goals
 
-- Changing the interview flow or the gathered-slots schema.
+- Interview changes beyond the single new "before" question (`beforeState`) — no other reordering
+  or new ingredients.
 - Multi-page PDFs or a PDF "brochure" — one letter page.
 - Charts/graphs — typography-driven stats only (the corpus's charts read as the least premium).
 - Re-scraping agency brand reliably (still manual per co-branding spec).
 
 ## Testing
 
-- Composer: given a fixed slots fixture, output validates against the V2 schema; a verbose input
-  value ("50% (1.8x to 2.9x over year 1)") yields a **tight** `value` + a context `caption`
-  (assert `value.length` is short and the "1.8x"/"2.9x" context landed in `caption`).
+- Interview: `beforeState` is present in `EMPTY_SLOTS` and round-trips through the turn parser;
+  a turn that supplies a before-situation populates `slots.beforeState`.
+- Composer: given a fixed slots fixture (including `beforeState`), output validates against the V2
+  schema; a verbose input value ("50% (1.8x to 2.9x over year 1)") yields a **tight** `value` + a
+  context `caption` (assert `value.length` is short and the "1.8x"/"2.9x" context landed in
+  `caption`); the `dek` reflects the `beforeState`.
 - Back-compat mapper: a legacy `result` (old `issues`/`{label,value}`) maps to `approach` +
   `results` without throwing; renderers get renderable data.
 - PDF route: returns `200 application/pdf`, non-empty, `%PDF` header, for a completed row.

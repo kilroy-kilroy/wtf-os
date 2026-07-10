@@ -2,6 +2,45 @@ import { ImageResponse } from "next/og";
 import { getReport } from "@/lib/case-study-lab/db";
 import { CARD_SIZES, buildCardModel, type CardSize } from "@/components/case-study-lab/cardModel";
 
+const LOGO_HEIGHT = 72;
+const LOGO_MAX_WIDTH = 360;
+
+// Satori collapses <img width="auto"> to zero width, so logos need an explicit
+// numeric width. Read the logo's intrinsic PNG/JPEG size and scale it to the
+// fixed header height. Falls back to a reasonable width if the size can't be read.
+async function logoWidth(url: string): Promise<number> {
+  const fallback = LOGO_HEIGHT * 3;
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return fallback;
+    const dv = new DataView(await res.arrayBuffer());
+    let w = 0;
+    let h = 0;
+    if (dv.byteLength > 24 && dv.getUint8(0) === 0x89 && dv.getUint8(1) === 0x50) {
+      // PNG: IHDR width/height are big-endian uint32 at offsets 16 and 20.
+      w = dv.getUint32(16);
+      h = dv.getUint32(20);
+    } else if (dv.byteLength > 4 && dv.getUint8(0) === 0xff && dv.getUint8(1) === 0xd8) {
+      // JPEG: scan for a SOF marker carrying height/width.
+      let o = 2;
+      while (o + 9 < dv.byteLength) {
+        if (dv.getUint8(o) !== 0xff) { o++; continue; }
+        const marker = dv.getUint8(o + 1);
+        if (marker >= 0xc0 && marker <= 0xcf && marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc) {
+          h = dv.getUint16(o + 5);
+          w = dv.getUint16(o + 7);
+          break;
+        }
+        o += 2 + dv.getUint16(o + 2);
+      }
+    }
+    if (!w || !h) return fallback;
+    return Math.min(Math.round(LOGO_HEIGHT * (w / h)), LOGO_MAX_WIDTH);
+  } catch {
+    return fallback;
+  }
+}
+
 export async function GET(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -16,6 +55,12 @@ export async function GET(
     return new Response("Not found", { status: 404 });
   }
   const m = buildCardModel(report);
+
+  // Resolve explicit logo widths up front (Satori needs real numeric dimensions).
+  const [agencyLogoW, clientLogoW] = await Promise.all([
+    m.agencyLogoUrl ? logoWidth(m.agencyLogoUrl) : Promise.resolve(0),
+    m.clientLogoUrl ? logoWidth(m.clientLogoUrl) : Promise.resolve(0),
+  ]);
 
   return new ImageResponse(
     (
@@ -37,7 +82,9 @@ export async function GET(
             <img
               src={m.agencyLogoUrl}
               alt={m.agencyName ?? "Agency"}
-              style={{ height: 72, width: "auto", objectFit: "contain" }}
+              width={agencyLogoW}
+              height={LOGO_HEIGHT}
+              style={{ objectFit: "contain" }}
             />
           ) : m.agencyName ? (
             <div style={{ display: "flex", fontSize: 40, fontWeight: 900, color: "#ffffff" }}>
@@ -53,7 +100,9 @@ export async function GET(
             <img
               src={m.clientLogoUrl}
               alt={m.clientName}
-              style={{ height: 72, width: "auto", objectFit: "contain" }}
+              width={clientLogoW}
+              height={LOGO_HEIGHT}
+              style={{ objectFit: "contain" }}
             />
           ) : (
             <div

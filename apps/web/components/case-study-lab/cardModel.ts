@@ -13,6 +13,8 @@ const DEFAULT_ACCENT = "#E51B23";
 export type CardModel = {
   accent: string;
   clientLogoUrl: string | null;
+  agencyLogoUrl: string | null;
+  agencyName: string | null;
   headline: string;
   clientName: string;
   clientDescriptor: string;
@@ -24,13 +26,22 @@ export type CardModel = {
 export function buildCardModel(report: {
   agency_brand: AgencyBrand | null;
   client_logo_url: string | null;
+  agency_logo_url?: string | null;
+  agency_name?: string | null;
+  accent?: string | null;
   result: CaseStudy;
 }): CardModel {
   const colors = report.agency_brand?.colors ?? [];
-  const accent = colors.find((c) => /^#[0-9a-f]{6}$/i.test(c)) ?? colors[0] ?? DEFAULT_ACCENT;
+  const scraped = colors.find((c) => /^#[0-9a-f]{6}$/i.test(c)) ?? colors[0];
+  const accent =
+    (report.accent && /^#[0-9a-f]{6}$/i.test(report.accent) ? report.accent : undefined) ??
+    scraped ??
+    DEFAULT_ACCENT;
   return {
     accent,
     clientLogoUrl: report.client_logo_url,
+    agencyLogoUrl: report.agency_logo_url ?? null,
+    agencyName: report.agency_name ?? null,
     headline: report.result.headline,
     clientName: report.result.clientName,
     clientDescriptor: report.result.clientDescriptor,

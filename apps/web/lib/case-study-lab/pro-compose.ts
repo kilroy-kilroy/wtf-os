@@ -7,6 +7,7 @@ import {
   type ProCaseStudySlots,
   type TransformationCaseStudy,
   type BigIdeaCaseStudy,
+  type MethodCaseStudy,
 } from "@repo/prompts";
 
 const StatSchema = z.object({
@@ -144,5 +145,68 @@ export async function composeBigIdea(input: {
       rawHead: text.slice(0, 800),
     });
     throw new Error("Couldn't compose the big idea story — please try again");
+  }
+}
+
+const MethodStepSchema = z.object({ name: z.string(), detail: z.string() });
+
+const MethodSchema = z.object({
+  headline: z.string(),
+  clientName: z.string(),
+  clientDescriptor: z.string(),
+  kicker: z
+    .string()
+    .nullish()
+    .transform((v) => v ?? null),
+  dek: z.string(),
+  framework: z.string(),
+  steps: z.array(MethodStepSchema).transform((a) => a.slice(0, 6)),
+  results: z
+    .array(StatSchema)
+    .nullish()
+    .transform((a) => (a ?? []).slice(0, 3)),
+  quote: z.object({ text: z.string(), attribution: z.string() }).nullable(),
+  cta: z.string(),
+});
+
+export function parseMethodCaseStudy(text: string): MethodCaseStudy {
+  const cleaned = text
+    .replace(/^```(?:json)?\s*\n?/i, "")
+    .replace(/\n?```\s*$/i, "")
+    .trim();
+  return MethodSchema.parse(JSON.parse(cleaned)) as MethodCaseStudy;
+}
+
+export async function composeMethod(input: {
+  slots: ProCaseStudySlots;
+  clientName: string;
+  clientAnonymized: boolean;
+}): Promise<MethodCaseStudy> {
+  const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
+  const response = await anthropic.messages.create({
+    model: CASE_STUDY_MODEL,
+    max_tokens: 4000,
+    system: composerPromptFor("method"),
+    messages: [
+      {
+        role: "user",
+        content: buildComposePrompt({
+          slots: input.slots,
+          clientName: input.clientName,
+          clientAnonymized: input.clientAnonymized,
+        }),
+      },
+    ],
+  });
+  const text = response.content[0]?.type === "text" ? response.content[0].text : "";
+  try {
+    return parseMethodCaseStudy(text);
+  } catch (e) {
+    console.error("[case-study-lab] method compose parse failed", {
+      stopReason: response.stop_reason,
+      error: e instanceof Error ? e.message : String(e),
+      rawHead: text.slice(0, 800),
+    });
+    throw new Error("Couldn't compose the method story — please try again");
   }
 }

@@ -82,6 +82,35 @@ describe("parseProInterviewTurn", () => {
     expect(t.slots.manifestation).toMatch(/first night/);
   });
 
+  it("carries the Method framework and named steps, capping steps at 6", () => {
+    const seven = [1, 2, 3, 4, 5, 6, 7].map((n) => ({ name: `s${n}`, detail: `d${n}` }));
+    const t = parseProInterviewTurn(
+      JSON.stringify({
+        reply: "Great — what's the next stage?",
+        slots: {
+          ...base,
+          framework: "Pain Point SEO",
+          frameworkSteps: seven,
+        },
+        readyToGenerate: false,
+      })
+    );
+    expect(t.slots.framework).toBe("Pain Point SEO");
+    expect(t.slots.frameworkSteps).toHaveLength(6);
+    expect(t.slots.frameworkSteps[0].name).toBe("s1");
+  });
+
+  it("accepts a framework step named before its detail (detail: null)", () => {
+    const t = parseProInterviewTurn(
+      JSON.stringify({
+        reply: "What happens in that stage?",
+        slots: { ...base, framework: "A.R.T.", frameworkSteps: [{ name: "Audit", detail: null }] },
+        readyToGenerate: false,
+      })
+    );
+    expect(t.slots.frameworkSteps[0].detail).toBeNull();
+  });
+
   it("strips markdown code fences before parsing", () => {
     const wrapped =
       "```json\n" +

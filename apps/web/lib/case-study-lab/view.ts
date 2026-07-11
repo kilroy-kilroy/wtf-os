@@ -259,3 +259,88 @@ export function buildBigIdeaView(report: {
     poweredByHref: report.white_label ? null : POWERED_BY_HREF,
   };
 }
+
+// ── Case Study Lab Pro: Method Demonstration view ───────────────────────────
+// The named framework is the hero, shown as portable steps, with the client
+// engagement as where it proved out.
+
+export interface MethodView {
+  accent: string;
+  agencyLogoUrl: string | null;
+  agencyName: string | null;
+  clientLogoUrl: string | null;
+  clientName: string;
+  clientDescriptor: string;
+  kicker: string | null;
+  dek: string | null;
+  headline: string;
+  framework: string | null;
+  steps: { name: string; detail: string }[];
+  stats: { value: string; caption: string; direction: "up" | "down" | "flat" }[];
+  quote: { text: string; attribution: string } | null;
+  cta: string;
+  ctaHref: string | null;
+  poweredByHref: string | null;
+}
+
+export function buildMethodView(report: {
+  agency_brand?: AgencyBrand | null;
+  agency_url?: string | null;
+  client_logo_url?: string | null;
+  agency_logo_url?: string | null;
+  agency_name?: string | null;
+  accent?: string | null;
+  cta_url?: string | null;
+  white_label?: boolean | null;
+  result: any; // stored JSON — typed loosely on purpose
+}): MethodView {
+  const colors = report.agency_brand?.colors ?? [];
+  const scraped = colors.find((c) => HEX.test(c)) ?? colors[0];
+  const accent =
+    (report.accent && HEX.test(report.accent) ? report.accent : undefined) ?? scraped ?? DEFAULT_ACCENT;
+
+  const r = report.result ?? {};
+
+  const steps = Array.isArray(r.steps)
+    ? r.steps
+        .filter((s: any) => s && typeof s === "object")
+        .slice(0, 6)
+        .map((s: any) => ({ name: String(s.name ?? ""), detail: String(s.detail ?? "") }))
+    : [];
+
+  const stats = Array.isArray(r.results)
+    ? r.results
+        .filter((st: any) => st && typeof st === "object")
+        .slice(0, 3)
+        .map((st: any) =>
+          "caption" in st
+            ? { value: String(st.value ?? ""), caption: String(st.caption ?? ""), direction: (st.direction ?? "up") as "up" | "down" | "flat" }
+            : { value: String(st.value ?? ""), caption: String(st.label ?? ""), direction: "up" as const }
+        )
+    : [];
+
+  const q = r.quote;
+  const quote =
+    q && typeof q === "object" && typeof q.text === "string" && typeof q.attribution === "string"
+      ? { text: q.text, attribution: q.attribution }
+      : null;
+
+  return {
+    accent,
+    agencyLogoUrl: report.agency_logo_url ?? null,
+    agencyName: report.agency_name ?? null,
+    clientLogoUrl: report.client_logo_url ?? null,
+    clientName: String(r.clientName ?? ""),
+    clientDescriptor: String(r.clientDescriptor ?? ""),
+    kicker: typeof r.kicker === "string" ? r.kicker : null,
+    dek: typeof r.dek === "string" ? r.dek : null,
+    headline: String(r.headline ?? ""),
+    framework: typeof r.framework === "string" ? r.framework : null,
+    steps,
+    stats,
+    quote,
+    cta: String(r.cta ?? "Want us to run this for you? Book a call."),
+    ctaHref: safeUrl(report.cta_url) ?? safeUrl(report.agency_url),
+    poweredByHref: report.white_label ? null : POWERED_BY_HREF,
+  };
+}

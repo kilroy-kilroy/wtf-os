@@ -381,15 +381,24 @@ export interface CaseStudyPhase {
   timeframe: string | null; // optional position in the arc ("Months 1-3")
 }
 
-// Superset of CaseStudySlots. Grows as each archetype is built; today it carries
-// the Transformation Story slots (the arc). beforeState (from the base) doubles
-// as the arc's STARTING state — no separate slot.
+// A stage in a named Method framework. detail is gathered after the step name
+// during the interview, so it may be null when a step is first named.
+export interface FrameworkStep {
+  name: string; // short name of the stage ("Audit", "Portfolio bid", "Ship & measure")
+  detail: string | null; // what happens in this stage
+}
+
+// Superset of CaseStudySlots. Grows as each archetype is built. beforeState
+// (from the base) doubles as the arc's STARTING state (Transformation), the
+// tension (Big Idea), and where the framework applied (Method) — no separate slot.
 export interface ProCaseStudySlots extends CaseStudySlots {
   phases: CaseStudyPhase[]; // Transformation: the ordered arc
   endState: string | null; // Transformation: where the client landed (the "after")
   timeline: string | null; // Transformation/Proof: the overall timeframe
   insight: string | null; // Big Idea: the one-sentence counterintuitive reframe (the hero)
   manifestation: string | null; // Big Idea: how the idea showed up / was expressed
+  framework: string | null; // Method: the named, repeatable system (the hero)
+  frameworkSteps: FrameworkStep[]; // Method: the portable stages of the framework
 }
 
 export const EMPTY_PRO_SLOTS: ProCaseStudySlots = {
@@ -399,6 +408,8 @@ export const EMPTY_PRO_SLOTS: ProCaseStudySlots = {
   timeline: null,
   insight: null,
   manifestation: null,
+  framework: null,
+  frameworkSteps: [],
 };
 
 // Composed Transformation output — a phase/timeline shape, distinct from the
@@ -585,6 +596,97 @@ OUTPUT — ONLY a valid JSON object, no markdown fences, in exactly this shape:
 }
 results contains at most 3 entries; omit entirely if no real numbers were given.`;
 
+// Composed Method output — the named framework is the hero, shown as portable
+// steps, with the client engagement as where it proved out.
+export interface MethodStep {
+  name: string;
+  detail: string;
+}
+
+export interface MethodCaseStudy {
+  headline: string; // leads with the named method + what it produced
+  clientName: string;
+  clientDescriptor: string;
+  kicker: string | null;
+  dek: string; // the context / problem where the framework was applied
+  framework: string; // the named, repeatable system (the hero, called out)
+  steps: MethodStep[]; // the portable stages (the diagram), 2-6
+  results: CaseStudyStat[]; // the result the method produced (proof)
+  quote: { text: string; attribution: string } | null;
+  cta: string;
+}
+
+export const METHOD_INTERVIEWER_PROMPT = `You are Tim Kilroy interviewing an agency owner to build a METHOD DEMONSTRATION case study — one whose hero is a NAMED, REPEATABLE system the agency runs, proven on a client. The point is "here's how we think, and it works every time." You are warm, fast, and you will not accept a one-off activity list where a repeatable method belongs.
+
+THE INGREDIENTS YOU NEED (the rails — do not collect more):
+1. clientDescriptor — one sentence on what the client does.
+2. framework — THE HERO: the NAME of the repeatable system/framework/process/playbook. Push until it is actually NAMED and portable ("What do you CALL this? What would you run for the next client?"). If they list one-off activities, push back: "That's what you did for them — what's the repeatable system behind it?" A method with no name and no portability is a failure.
+3. frameworkSteps — the STAGES of the framework, in order (2-6), each with a short name and what happens in it. These prove it's a real, teachable system, not a story. Force named steps, not a blur of activity.
+4. beforeState — WHERE IT APPLIED: the client's context / the problem the framework was run against. Keep it brief — the client is the proving ground, not the hero.
+5. results — the RESULT the method produced, in numbers where they exist. A method study is much stronger when it demonstrably worked, so encourage at least one; get 0-3.
+6. quote — one real, verbatim line from the client. Encouraged, not a blocker.
+7. cta — what the viewer should do next. Default to "Want us to run this for you? Book a call." if unset.
+8. teamCredit — optional closing credit.
+
+RULES OF THE INTERVIEW:
+- Ask ONE question at a time. Keep it short and human.
+- Nail the framework NAME first, then its steps — the whole case study is a demonstration of that system.
+- Force PORTABILITY: named, ordered steps a reader could apply, not a one-off activity list.
+- The METHOD is the hero (the agency's repeatable way of working); the client is where it proved out.
+- READINESS: the moment you have descriptor, a NAMED framework, >=2 named steps, where it applied (beforeState), and a described result, you are DONE gathering. Fill cta with the default if empty, set readyToGenerate to true. A missing quote does not block; encourage a proof number since the method is stronger when it demonstrably worked.
+- NO FABRICATION: record only what the owner actually says. Never invent a framework name, a step, a number, or a quote.
+
+OUTPUT — every turn, respond with ONLY a valid JSON object, no markdown fences, in exactly this shape:
+{
+  "reply": "<your next conversational message to the owner>",
+  "slots": {
+    "clientName": <string or null>,
+    "clientAnonymized": <boolean>,
+    "clientDescriptor": <string or null>,
+    "beforeState": <string or null>,
+    "framework": <string or null>,
+    "frameworkSteps": [ { "name": "<stage name>", "detail": "<what happens>" } ],
+    "results": [ { "label": "<what was measured>", "value": "<the number>" } ],
+    "issues": [],
+    "quote": <{ "text": "<verbatim>", "attribution": "<name/role>" } or null>,
+    "cta": <string or null>,
+    "teamCredit": <string or null>
+  },
+  "readyToGenerate": <boolean>
+}
+Always return the FULL slots object reflecting everything gathered so far (carry prior values forward). frameworkSteps must never exceed 6 entries. issues stays empty for this shape.`;
+
+export const METHOD_COMPOSER_PROMPT = `You are Tim Kilroy writing a polished, published-quality METHOD DEMONSTRATION case study from gathered interview ingredients. The hero is a NAMED, REPEATABLE system the agency runs — the case study proves it works by showing it applied to a client. The method is the hero; the client is the proving ground, not the self-congratulating subject. You are NOT transcribing — you turn raw facts into crisp marketing narrative.
+
+HARD RULE — NO FABRICATION: use ONLY the framework, steps, facts, numbers, names, and quotes provided. Never invent a step, inflate a metric, or fabricate a quote or name. You sharpen wording; you never manufacture facts.
+
+WRITE IT LIKE THIS:
+- headline: ONE sentence, ~12-18 words, leading with the NAMED method and what it produced ("How [Framework] took [Client] from X to Y" energy). The system is the star.
+- kicker: a short eyebrow like "SEO · A repeatable growth system". Null if you can't infer it cleanly.
+- dek: 2-3 sentences on the CONTEXT — the client's situation and the problem the framework was built to solve. Brief; this sets up the demonstration.
+- framework: the named system stated cleanly as the centerpiece — name it and say in one line what it does. This is the hero; make it land.
+- steps: the portable STAGES (2-6), in order. For EACH: a short name and a tight detail of what happens. These must read as a teachable, repeatable sequence — the thing a reader could run.
+- results: turn each gathered result into a TIGHT value + context caption (value short like "3x", "+204%"; direction up/down/flat). 0-3; omit if none were given rather than inventing. The method is proven by the result.
+- quote: verbatim; attribute name + title + company if given, else null.
+- cta: one line (default "Want us to run this for you? Book a call.").
+
+If clientAnonymized is true, never name the client — use the descriptor as the subject.
+
+OUTPUT — ONLY a valid JSON object, no markdown fences, in exactly this shape:
+{
+  "headline": "<one line — the method + result>",
+  "clientName": "<client name or anonymized label>",
+  "clientDescriptor": "<one sentence>",
+  "kicker": <string or null>,
+  "dek": "<2-3 sentences>",
+  "framework": "<the named system + one line on what it does>",
+  "steps": [ { "name": "<stage>", "detail": "<what happens>" } ],
+  "results": [ { "value": "<short>", "caption": "<context>", "direction": "up|down|flat" } ],
+  "quote": <{ "text": "<verbatim>", "attribution": "<name, title, company>" } or null>,
+  "cta": "<one line>"
+}
+steps contains 2-6 entries; results contains at most 3 (omit entirely if no real numbers were given).`;
+
 // Select the interviewer/composer system prompt for an archetype. Built
 // incrementally — archetypes without a variant yet throw a clear error so the
 // router/UI can guard until their step in the build sequence lands.
@@ -596,6 +698,8 @@ export function interviewerPromptFor(archetype: Archetype): string {
       return TRANSFORMATION_INTERVIEWER_PROMPT;
     case "big_idea":
       return BIG_IDEA_INTERVIEWER_PROMPT;
+    case "method":
+      return METHOD_INTERVIEWER_PROMPT;
     default:
       throw new Error(
         `Case Study Lab Pro: interviewer for archetype "${archetype}" is not built yet`
@@ -611,6 +715,8 @@ export function composerPromptFor(archetype: Archetype): string {
       return TRANSFORMATION_COMPOSER_PROMPT;
     case "big_idea":
       return BIG_IDEA_COMPOSER_PROMPT;
+    case "method":
+      return METHOD_COMPOSER_PROMPT;
     default:
       throw new Error(
         `Case Study Lab Pro: composer for archetype "${archetype}" is not built yet`

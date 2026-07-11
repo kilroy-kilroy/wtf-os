@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   parseTransformationCaseStudy,
   parseBigIdeaCaseStudy,
+  parseMethodCaseStudy,
 } from "@/lib/case-study-lab/pro-compose";
 
 const draft = {
@@ -109,5 +110,54 @@ describe("parseBigIdeaCaseStudy", () => {
   it("requires the insight (throws when absent)", () => {
     const { insight: _omit, ...noInsight } = bigIdea;
     expect(() => parseBigIdeaCaseStudy(JSON.stringify(noInsight))).toThrow();
+  });
+});
+
+const method = {
+  headline: "How Pain Point SEO took Leadfeeder from story content to compounding pipeline",
+  clientName: "Leadfeeder",
+  clientDescriptor: "A B2B website-visitor identification tool",
+  kicker: "SEO · A repeatable content system",
+  dek: "Their story-led content didn't compound. Traffic came and went with each post.",
+  framework: "Pain Point SEO — target buying-intent keywords over volume",
+  steps: [
+    { name: "Map pain points", detail: "Interview sales to surface buyer language" },
+    { name: "Buying-intent keywords", detail: "Prioritize bottom-funnel over volume" },
+    { name: "Ship & compound", detail: "Publish, interlink, and measure signups" },
+  ],
+  results: [{ value: "4x", caption: "signups from content", direction: "up" }],
+  quote: { text: "The traffic finally converted.", attribution: "CMO, Leadfeeder" },
+  cta: "Want us to run this for you? Book a call.",
+};
+
+describe("parseMethodCaseStudy", () => {
+  it("parses a full method draft with named steps", () => {
+    const cs = parseMethodCaseStudy(JSON.stringify(method));
+    expect(cs.framework).toMatch(/Pain Point SEO/);
+    expect(cs.steps).toHaveLength(3);
+    expect(cs.steps[0].name).toBe("Map pain points");
+    expect(cs.results[0].value).toBe("4x");
+  });
+
+  it("strips markdown code fences and caps steps at 6", () => {
+    const wrapped = "```json\n" + JSON.stringify(method) + "\n```";
+    expect(() => parseMethodCaseStudy(wrapped)).not.toThrow();
+    const many = parseMethodCaseStudy(
+      JSON.stringify({
+        ...method,
+        steps: [1, 2, 3, 4, 5, 6, 7].map((n) => ({ name: `s${n}`, detail: `d${n}` })),
+      })
+    );
+    expect(many.steps).toHaveLength(6);
+  });
+
+  it("requires the framework (throws when absent)", () => {
+    const { framework: _omit, ...noFramework } = method;
+    expect(() => parseMethodCaseStudy(JSON.stringify(noFramework))).toThrow();
+  });
+
+  it("tolerates a method with no results", () => {
+    const cs = parseMethodCaseStudy(JSON.stringify({ ...method, results: undefined }));
+    expect(cs.results).toEqual([]);
   });
 });

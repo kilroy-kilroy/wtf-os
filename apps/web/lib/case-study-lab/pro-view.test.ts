@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { buildTransformationView, buildBigIdeaView } from "@/lib/case-study-lab/view";
+import {
+  buildTransformationView,
+  buildBigIdeaView,
+  buildMethodView,
+} from "@/lib/case-study-lab/view";
 
 const result = {
   headline: "How Northwind went from unpositioned to category leader",
@@ -92,5 +96,43 @@ describe("buildBigIdeaView", () => {
     expect(v.insight).toMatch(/reframe/);
     expect(v.stats).toEqual([]);
     expect(v.manifestation).toBeNull();
+  });
+});
+
+const methodResult = {
+  headline: "How Pain Point SEO compounded Leadfeeder's pipeline",
+  clientName: "Leadfeeder",
+  clientDescriptor: "B2B visitor identification",
+  kicker: "SEO · System",
+  dek: "Story content didn't compound.",
+  framework: "Pain Point SEO",
+  steps: [
+    { name: "Map pain points", detail: "Interview sales" },
+    { name: "Ship & compound", detail: "Publish and interlink" },
+  ],
+  results: [{ value: "4x", caption: "signups", direction: "up" }],
+  quote: { text: "Traffic finally converted.", attribution: "CMO" },
+  cta: "Book a call.",
+};
+
+describe("buildMethodView", () => {
+  it("normalizes a stored method result into a view", () => {
+    const v = buildMethodView({ result: methodResult, accent: "#333333" });
+    expect(v.framework).toBe("Pain Point SEO");
+    expect(v.steps).toHaveLength(2);
+    expect(v.steps[0].name).toBe("Map pain points");
+    expect(v.stats[0].value).toBe("4x");
+  });
+
+  it("hides Powered-by under white_label and defaults the method CTA", () => {
+    expect(buildMethodView({ result: methodResult, white_label: true }).poweredByHref).toBeNull();
+    expect(buildMethodView({ result: {} }).cta).toMatch(/run this/i);
+  });
+
+  it("tolerates missing steps/results", () => {
+    const v = buildMethodView({ result: { framework: "A.R.T." } });
+    expect(v.framework).toBe("A.R.T.");
+    expect(v.steps).toEqual([]);
+    expect(v.stats).toEqual([]);
   });
 });

@@ -35,6 +35,14 @@ const PhaseSchema = z.object({
     .nullish()
     .transform((v) => v ?? null),
 });
+const FrameworkStepSchema = z.object({
+  name: z.string(),
+  // detail is gathered after the step name during the interview -> may be null.
+  detail: z
+    .string()
+    .nullish()
+    .transform((v) => v ?? null),
+});
 
 const ProSlotsSchema = z.object({
   clientName: z.string().nullable(),
@@ -64,6 +72,14 @@ const ProSlotsSchema = z.object({
     .string()
     .nullish()
     .transform((v) => v ?? null),
+  framework: z
+    .string()
+    .nullish()
+    .transform((v) => v ?? null),
+  frameworkSteps: z
+    .array(FrameworkStepSchema)
+    .nullish()
+    .transform((a) => (a ?? []).slice(0, 6)),
   results: z
     .array(ResultSchema)
     .nullish()

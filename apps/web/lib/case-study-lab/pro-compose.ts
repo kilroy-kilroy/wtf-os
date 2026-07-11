@@ -4,12 +4,14 @@ import {
   CASE_STUDY_MODEL,
   composerPromptFor,
   buildComposePrompt,
+  type Archetype,
   type ProCaseStudySlots,
   type TransformationCaseStudy,
   type BigIdeaCaseStudy,
   type MethodCaseStudy,
   type CraftCaseStudy,
 } from "@repo/prompts";
+import { composeCaseStudy } from "@/lib/case-study-lab/compose";
 
 const StatSchema = z.object({
   value: z.string(),
@@ -305,4 +307,26 @@ export async function composeCraft(input: {
     caption: parsed.assets[i]?.caption ?? a.caption ?? null,
   }));
   return { ...parsed, assets };
+}
+
+// Compose the right case-study shape for the chosen archetype. Returns the
+// archetype-specific object (stored as jsonb). proof reuses the free composer.
+export function composeByArchetype(
+  archetype: Archetype,
+  input: { slots: ProCaseStudySlots; clientName: string; clientAnonymized: boolean }
+): Promise<TransformationCaseStudy | BigIdeaCaseStudy | MethodCaseStudy | CraftCaseStudy | Awaited<ReturnType<typeof composeCaseStudy>>> {
+  switch (archetype) {
+    case "transformation":
+      return composeTransformation(input);
+    case "big_idea":
+      return composeBigIdea(input);
+    case "method":
+      return composeMethod(input);
+    case "craft":
+      return composeCraft(input);
+    case "proof":
+      return composeCaseStudy(input);
+    default:
+      throw new Error(`Case Study Lab Pro: no composer for archetype "${archetype}"`);
+  }
 }

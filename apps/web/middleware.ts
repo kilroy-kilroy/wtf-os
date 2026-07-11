@@ -2,7 +2,7 @@ import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
 // Routes that require authentication
-const PROTECTED_PREFIXES = ['/dashboard', '/client', '/admin', '/settings'];
+const PROTECTED_PREFIXES = ['/dashboard', '/client', '/admin', '/settings', '/case-study-lab-pro'];
 
 // Routes that authenticated users should be redirected away from
 // Pages that must be reachable WITHOUT a session even though they sit under a

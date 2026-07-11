@@ -111,6 +111,36 @@ describe("parseProInterviewTurn", () => {
     expect(t.slots.frameworkSteps[0].detail).toBeNull();
   });
 
+  it("carries Craft assets (url null pre-upload) and craftDecision, capping assets at 8", () => {
+    const nine = Array.from({ length: 9 }, (_, n) => ({ url: null, caption: `piece ${n}` }));
+    const t = parseProInterviewTurn(
+      JSON.stringify({
+        reply: "What was the key craft decision?",
+        slots: {
+          ...base,
+          craftDecision: "A custom variable typeface that flexes with the brand.",
+          assets: nine,
+        },
+        readyToGenerate: false,
+      })
+    );
+    expect(t.slots.assets).toHaveLength(8);
+    expect(t.slots.assets[0].url).toBeNull();
+    expect(t.slots.assets[0].caption).toBe("piece 0");
+    expect(t.slots.craftDecision).toMatch(/typeface/);
+  });
+
+  it("preserves an already-uploaded asset url through a turn", () => {
+    const t = parseProInterviewTurn(
+      JSON.stringify({
+        reply: "Great.",
+        slots: { ...base, assets: [{ url: "https://cdn.example.com/hero.png", caption: "Hero" }] },
+        readyToGenerate: false,
+      })
+    );
+    expect(t.slots.assets[0].url).toBe("https://cdn.example.com/hero.png");
+  });
+
   it("strips markdown code fences before parsing", () => {
     const wrapped =
       "```json\n" +

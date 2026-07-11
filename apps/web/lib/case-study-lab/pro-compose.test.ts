@@ -3,7 +3,10 @@ import {
   parseTransformationCaseStudy,
   parseBigIdeaCaseStudy,
   parseMethodCaseStudy,
+  parseCraftCaseStudy,
+  composeCraft,
 } from "@/lib/case-study-lab/pro-compose";
+import { EMPTY_PRO_SLOTS } from "@repo/prompts";
 
 const draft = {
   headline: "How Northwind went from an unpositioned $2M tool to an $11M category leader",
@@ -159,5 +162,57 @@ describe("parseMethodCaseStudy", () => {
   it("tolerates a method with no results", () => {
     const cs = parseMethodCaseStudy(JSON.stringify({ ...method, results: undefined }));
     expect(cs.results).toEqual([]);
+  });
+});
+
+const craft = {
+  headline: "A living identity system for the Guggenheim, built on a custom typeface",
+  clientName: "Guggenheim",
+  clientDescriptor: "A global network of modern-art museums",
+  kicker: "Brand Identity · Cultural",
+  dek: "Four museums, four visual languages, one name — with nothing tying them together.",
+  craftDecision: "A single custom typeface engineered to unify every venue and medium.",
+  assets: [
+    { url: "https://cdn.example.com/1.png", caption: "The wordmark" },
+    { url: "https://cdn.example.com/2.png", caption: "Signage system" },
+  ],
+  results: [],
+  quote: null,
+  cta: "Want work like this? Book a call.",
+};
+
+describe("parseCraftCaseStudy", () => {
+  it("parses a craft draft with a captioned asset gallery", () => {
+    const cs = parseCraftCaseStudy(JSON.stringify(craft));
+    expect(cs.craftDecision).toMatch(/typeface/);
+    expect(cs.assets).toHaveLength(2);
+    expect(cs.assets[0].caption).toBe("The wordmark");
+    expect(cs.results).toEqual([]);
+  });
+
+  it("requires headline/dek/craftDecision (throws when craftDecision absent)", () => {
+    const { craftDecision: _omit, ...bad } = craft;
+    expect(() => parseCraftCaseStudy(JSON.stringify(bad))).toThrow();
+  });
+
+  it("tolerates assets with a missing url (reconciled later in composeCraft)", () => {
+    const cs = parseCraftCaseStudy(JSON.stringify({ ...craft, assets: [{ caption: "no url yet" }] }));
+    expect(cs.assets[0].url).toBe("");
+    expect(cs.assets[0].caption).toBe("no url yet");
+  });
+});
+
+describe("composeCraft guardrail", () => {
+  it("rejects when no asset has been uploaded (no url), before any model call", async () => {
+    const slots = { ...EMPTY_PRO_SLOTS, assets: [{ url: null, caption: "described but not uploaded" }] };
+    await expect(
+      composeCraft({ slots, clientName: "Guggenheim", clientAnonymized: false })
+    ).rejects.toThrow(/at least one uploaded piece/i);
+  });
+
+  it("rejects when the assets list is empty", async () => {
+    await expect(
+      composeCraft({ slots: EMPTY_PRO_SLOTS, clientName: "X", clientAnonymized: false })
+    ).rejects.toThrow(/the work is the proof/i);
   });
 });

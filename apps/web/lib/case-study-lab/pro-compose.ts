@@ -8,6 +8,7 @@ import {
   type TransformationCaseStudy,
   type BigIdeaCaseStudy,
   type MethodCaseStudy,
+  type CraftCaseStudy,
 } from "@repo/prompts";
 
 const StatSchema = z.object({
@@ -209,4 +210,99 @@ export async function composeMethod(input: {
     });
     throw new Error("Couldn't compose the method story — please try again");
   }
+}
+
+const CraftAssetSchema = z.object({
+  // The model echoes urls; may be missing/blank. Authoritative urls are
+  // re-attached from the slots in composeCraft, so tolerate anything here.
+  url: z
+    .string()
+    .nullish()
+    .transform((v) => v ?? ""),
+  caption: z
+    .string()
+    .nullish()
+    .transform((v) => v ?? null),
+});
+
+const CraftSchema = z.object({
+  headline: z.string(),
+  clientName: z.string(),
+  clientDescriptor: z.string(),
+  kicker: z
+    .string()
+    .nullish()
+    .transform((v) => v ?? null),
+  dek: z.string(),
+  craftDecision: z.string(),
+  assets: z
+    .array(CraftAssetSchema)
+    .nullish()
+    .transform((a) => a ?? []),
+  results: z
+    .array(StatSchema)
+    .nullish()
+    .transform((a) => (a ?? []).slice(0, 3)),
+  quote: z.object({ text: z.string(), attribution: z.string() }).nullable(),
+  cta: z.string(),
+});
+
+export function parseCraftCaseStudy(text: string): CraftCaseStudy {
+  const cleaned = text
+    .replace(/^```(?:json)?\s*\n?/i, "")
+    .replace(/\n?```\s*$/i, "")
+    .trim();
+  return CraftSchema.parse(JSON.parse(cleaned)) as CraftCaseStudy;
+}
+
+export async function composeCraft(input: {
+  slots: ProCaseStudySlots;
+  clientName: string;
+  clientAnonymized: boolean;
+}): Promise<CraftCaseStudy> {
+  // Guardrail (spec): a Craft Showcase without shown work has no hero — block
+  // generation before spending a model call. The work IS the proof.
+  const uploaded = input.slots.assets.filter((a) => !!a.url);
+  if (uploaded.length === 0) {
+    throw new Error(
+      "Craft Showcase needs at least one uploaded piece of work — the work is the proof."
+    );
+  }
+
+  const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
+  const response = await anthropic.messages.create({
+    model: CASE_STUDY_MODEL,
+    max_tokens: 4000,
+    system: composerPromptFor("craft"),
+    messages: [
+      {
+        role: "user",
+        content: buildComposePrompt({
+          slots: input.slots,
+          clientName: input.clientName,
+          clientAnonymized: input.clientAnonymized,
+        }),
+      },
+    ],
+  });
+  const text = response.content[0]?.type === "text" ? response.content[0].text : "";
+  let parsed: CraftCaseStudy;
+  try {
+    parsed = parseCraftCaseStudy(text);
+  } catch (e) {
+    console.error("[case-study-lab] craft compose parse failed", {
+      stopReason: response.stop_reason,
+      error: e instanceof Error ? e.message : String(e),
+      rawHead: text.slice(0, 800),
+    });
+    throw new Error("Couldn't compose the craft showcase — please try again");
+  }
+
+  // Re-attach authoritative urls from the uploaded slots (never trust the model
+  // with a url), keeping the model's sharpened captions by position.
+  const assets = uploaded.map((a, i) => ({
+    url: a.url as string,
+    caption: parsed.assets[i]?.caption ?? a.caption ?? null,
+  }));
+  return { ...parsed, assets };
 }

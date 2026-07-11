@@ -344,3 +344,90 @@ export function buildMethodView(report: {
     poweredByHref: report.white_label ? null : POWERED_BY_HREF,
   };
 }
+
+// ── Case Study Lab Pro: Craft Showcase view ─────────────────────────────────
+// The shown work is the hero (a captioned gallery), with the brief and the key
+// craft decision framing it. Only assets with a valid image url render.
+
+export interface CraftView {
+  accent: string;
+  agencyLogoUrl: string | null;
+  agencyName: string | null;
+  clientLogoUrl: string | null;
+  clientName: string;
+  clientDescriptor: string;
+  kicker: string | null;
+  dek: string | null;
+  headline: string;
+  craftDecision: string | null;
+  assets: { url: string; caption: string | null }[];
+  stats: { value: string; caption: string; direction: "up" | "down" | "flat" }[];
+  quote: { text: string; attribution: string } | null;
+  cta: string;
+  ctaHref: string | null;
+  poweredByHref: string | null;
+}
+
+export function buildCraftView(report: {
+  agency_brand?: AgencyBrand | null;
+  agency_url?: string | null;
+  client_logo_url?: string | null;
+  agency_logo_url?: string | null;
+  agency_name?: string | null;
+  accent?: string | null;
+  cta_url?: string | null;
+  white_label?: boolean | null;
+  result: any; // stored JSON — typed loosely on purpose
+}): CraftView {
+  const colors = report.agency_brand?.colors ?? [];
+  const scraped = colors.find((c) => HEX.test(c)) ?? colors[0];
+  const accent =
+    (report.accent && HEX.test(report.accent) ? report.accent : undefined) ?? scraped ?? DEFAULT_ACCENT;
+
+  const r = report.result ?? {};
+
+  // Only render assets that carry a safe http(s) image url.
+  const assets = Array.isArray(r.assets)
+    ? r.assets
+        .filter((a: any) => a && typeof a === "object")
+        .map((a: any) => ({ url: safeUrl(a.url), caption: typeof a.caption === "string" ? a.caption : null }))
+        .filter((a: any): a is { url: string; caption: string | null } => a.url !== null)
+        .slice(0, 8)
+    : [];
+
+  const stats = Array.isArray(r.results)
+    ? r.results
+        .filter((st: any) => st && typeof st === "object")
+        .slice(0, 3)
+        .map((st: any) =>
+          "caption" in st
+            ? { value: String(st.value ?? ""), caption: String(st.caption ?? ""), direction: (st.direction ?? "up") as "up" | "down" | "flat" }
+            : { value: String(st.value ?? ""), caption: String(st.label ?? ""), direction: "up" as const }
+        )
+    : [];
+
+  const q = r.quote;
+  const quote =
+    q && typeof q === "object" && typeof q.text === "string" && typeof q.attribution === "string"
+      ? { text: q.text, attribution: q.attribution }
+      : null;
+
+  return {
+    accent,
+    agencyLogoUrl: report.agency_logo_url ?? null,
+    agencyName: report.agency_name ?? null,
+    clientLogoUrl: report.client_logo_url ?? null,
+    clientName: String(r.clientName ?? ""),
+    clientDescriptor: String(r.clientDescriptor ?? ""),
+    kicker: typeof r.kicker === "string" ? r.kicker : null,
+    dek: typeof r.dek === "string" ? r.dek : null,
+    headline: String(r.headline ?? ""),
+    craftDecision: typeof r.craftDecision === "string" ? r.craftDecision : null,
+    assets,
+    stats,
+    quote,
+    cta: String(r.cta ?? "Want work like this? Book a call."),
+    ctaHref: safeUrl(report.cta_url) ?? safeUrl(report.agency_url),
+    poweredByHref: report.white_label ? null : POWERED_BY_HREF,
+  };
+}

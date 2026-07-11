@@ -3,6 +3,7 @@ import {
   buildTransformationView,
   buildBigIdeaView,
   buildMethodView,
+  buildCraftView,
 } from "@/lib/case-study-lab/view";
 
 const result = {
@@ -133,6 +134,44 @@ describe("buildMethodView", () => {
     const v = buildMethodView({ result: { framework: "A.R.T." } });
     expect(v.framework).toBe("A.R.T.");
     expect(v.steps).toEqual([]);
+    expect(v.stats).toEqual([]);
+  });
+});
+
+const craftResult = {
+  headline: "A living identity for the Guggenheim",
+  clientName: "Guggenheim",
+  clientDescriptor: "Global art museums",
+  kicker: "Brand · Cultural",
+  dek: "Four venues, one name.",
+  craftDecision: "A custom unifying typeface.",
+  assets: [
+    { url: "https://cdn.example.com/1.png", caption: "The wordmark" },
+    { url: "not-a-url", caption: "dropped — unsafe url" },
+    { url: "javascript:alert(1)", caption: "dropped — xss" },
+  ],
+  results: [],
+  quote: null,
+  cta: "Book a call.",
+};
+
+describe("buildCraftView", () => {
+  it("renders only assets with a safe http(s) url", () => {
+    const v = buildCraftView({ result: craftResult, accent: "#111111" });
+    expect(v.assets).toHaveLength(1);
+    expect(v.assets[0].url).toBe("https://cdn.example.com/1.png");
+    expect(v.assets[0].caption).toBe("The wordmark");
+    expect(v.craftDecision).toMatch(/typeface/);
+  });
+
+  it("hides Powered-by under white_label and defaults the craft CTA", () => {
+    expect(buildCraftView({ result: craftResult, white_label: true }).poweredByHref).toBeNull();
+    expect(buildCraftView({ result: {} }).cta).toMatch(/work like this/i);
+  });
+
+  it("tolerates a result with no assets at all", () => {
+    const v = buildCraftView({ result: { headline: "x" } });
+    expect(v.assets).toEqual([]);
     expect(v.stats).toEqual([]);
   });
 });

@@ -43,6 +43,17 @@ const FrameworkStepSchema = z.object({
     .nullish()
     .transform((v) => v ?? null),
 });
+const AssetSchema = z.object({
+  // url is attached by the upload UI and is null until then.
+  url: z
+    .string()
+    .nullish()
+    .transform((v) => v ?? null),
+  caption: z
+    .string()
+    .nullish()
+    .transform((v) => v ?? null),
+});
 
 const ProSlotsSchema = z.object({
   clientName: z.string().nullable(),
@@ -80,6 +91,14 @@ const ProSlotsSchema = z.object({
     .array(FrameworkStepSchema)
     .nullish()
     .transform((a) => (a ?? []).slice(0, 6)),
+  assets: z
+    .array(AssetSchema)
+    .nullish()
+    .transform((a) => (a ?? []).slice(0, 8)),
+  craftDecision: z
+    .string()
+    .nullish()
+    .transform((v) => v ?? null),
   results: z
     .array(ResultSchema)
     .nullish()

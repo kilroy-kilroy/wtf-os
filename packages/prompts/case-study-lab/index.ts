@@ -289,3 +289,81 @@ ${input.rawWin}
 
 Respond with the JSON object described in your instructions.`;
 }
+
+// ── Case Study Lab Pro: the scorer / coach ──────────────────────────────────
+// Net-new (see the Pro design spec). A third AI pass AFTER compose: grades the
+// draft 1-10 against its archetype's data-backed recipe and returns the missing
+// ingredients as plain-language coaching keyed to real benchmarks from the
+// 72-study set. Free makes a case study; Pro tells you why it will/won't convert.
+
+export type ScoreBand = "needs_work" | "fair" | "strong" | "exceptional";
+
+export interface ScorerSuggestion {
+  ingredient: string; // short name of what's weak/missing, e.g. "business metric"
+  coaching: string; // the plain-language, benchmark-backed nudge
+  slot: string | null; // which interview slot to reopen for a one-click fix
+}
+
+export interface ScoreResult {
+  score: number; // 1-10
+  band: ScoreBand; // derived from score, for consistent UI treatment
+  missing: string[]; // recipe ingredients absent from the draft
+  suggestions: ScorerSuggestion[]; // ranked coaching, most impactful first
+}
+
+// Deterministic band from score so the UI never disagrees with the number.
+export function scoreBand(score: number): ScoreBand {
+  if (score <= 4) return "needs_work";
+  if (score <= 6) return "fair";
+  if (score <= 8) return "strong";
+  return "exceptional";
+}
+
+export const ARCHETYPE_SCORER_PROMPT = `You are the quality coach for Case Study Lab Pro. You grade a finished case-study draft against its archetype's proven recipe and tell the owner exactly what would make it convert better — grounded in real benchmarks from 72 top agency case studies. You never invent facts: you flag thin or missing proof, you never manufacture it.
+
+You are given the draft's ARCHETYPE and its content. Each archetype has a HERO element and a component recipe — how often each element appears in great studies of that shape (from the 72-study set):
+
+- proof (Proof Machine) — HERO: the result, in numbers. Recipe: marketing metric 94%, business metric 65%, timeline 71%, quote 41%, before/after 41%. A proof study with no hard number is broken.
+- transformation (Transformation Story) — HERO: an arc over time. Recipe: marketing metric 88%, business metric 62%, timeline 88%, quote 62%, before/after 62%, heavy visuals 50%. Highest-scoring shape (avg 7.5) — needs distinct phases and a clear before→after, or it's just a Proof study.
+- big_idea (Big Idea) — HERO: a one-sentence strategic reframe. Recipe: the insight (required), marketing metric 48%, business metric 30%, quote 35%, before/after 22%, heavy visuals 61%. Weakest shape for B2B buyers — bolt on a number.
+- craft (Craft Showcase) — HERO: the work itself, shown. Recipe: heavy visuals 100%, business metric 0%, timeline 25%. Lowest-scoring shape (avg 5.9); the risk is a beautiful page a buying committee can't act on.
+- method (Method Demonstration) — HERO: a named, repeatable framework. Recipe: the named framework (required), marketing metric 75%, before/after 56%, timeline 56%, business metric 19%.
+
+GRADING (integer 1-10). Anchor to the data: the 72-study average is 6.6. A draft that hits its archetype's full recipe with a strong hero lands 7-8; a complete, vivid draft carrying both metric types and a quote lands 9-10; missing the hero element or all proof lands 3-4.
+- The HERO element is worth the most. A proof with no number, a big_idea with no articulable insight, a method with no named framework, a craft with no shown work, or a transformation with no phases/arc — each caps the score low no matter how polished.
+- Reward completeness against the recipe; penalize missing high-frequency elements.
+
+BENCHMARK NUDGES (apply when relevant):
+- Both a marketing AND a business metric present → studies with both score 7.5 vs 6.4 without. If only one type is present, this is the single highest-leverage add.
+- Client quote: only 36% of studied pages had one — the cheapest credibility available; flag when absent.
+- Before/after: only 38% show one — high-leverage when the win supports it.
+- Craft with no business outcome → the lowest-converting shape for a B2B economic buyer; urge one real business number.
+- Big Idea alone for a B2B buyer → add a Proof layer.
+
+NO FABRICATION: assess only what is in the draft. If proof is missing, say it is missing and coach the owner to add the REAL number — never suggest inventing one.
+
+For each weakness, produce a suggestion naming the ingredient, the benchmark-backed coaching in plain language, and the interview SLOT to reopen so the fix is one click. Slots you may reference: results (metrics), quote, beforeState (before/after), issues (the approach/process), insight (the big idea), phases (the transformation arc), framework (the method), assets (craft visuals), teamCredit.
+
+OUTPUT — respond with ONLY a valid JSON object, no markdown fences, in exactly this shape:
+{
+  "score": <integer 1-10>,
+  "missing": [ "<recipe ingredient absent from this draft>" ],
+  "suggestions": [
+    { "ingredient": "<short name>", "coaching": "<plain-language, benchmark-backed nudge>", "slot": "<slot name or null>" }
+  ]
+}
+List the most impactful suggestion first. Return at most 5 suggestions.`;
+
+export function buildScorerPrompt(input: {
+  archetype: Archetype;
+  draft: string;
+}): string {
+  return `Grade this case-study draft against its archetype's recipe.
+
+ARCHETYPE: ${input.archetype}
+
+DRAFT (the case-study content, or the facts it is built from):
+${input.draft}
+
+Respond with the JSON object described in your instructions.`;
+}

@@ -1,0 +1,86 @@
+import Anthropic from "@anthropic-ai/sdk";
+import { z } from "zod";
+import {
+  CASE_STUDY_MODEL,
+  composerPromptFor,
+  buildComposePrompt,
+  type ProCaseStudySlots,
+  type TransformationCaseStudy,
+} from "@repo/prompts";
+
+const StatSchema = z.object({
+  value: z.string(),
+  caption: z.string(),
+  direction: z.enum(["up", "down", "flat"]).catch("up"),
+});
+
+const TransformationPhaseSchema = z.object({
+  label: z.string(),
+  detail: z.string(),
+  timeframe: z
+    .string()
+    .nullish()
+    .transform((v) => v ?? null),
+});
+
+const TransformationSchema = z.object({
+  headline: z.string(),
+  clientName: z.string(),
+  clientDescriptor: z.string(),
+  kicker: z
+    .string()
+    .nullish()
+    .transform((v) => v ?? null),
+  dek: z.string(),
+  startingState: z.string(),
+  phases: z.array(TransformationPhaseSchema).transform((a) => a.slice(0, 5)),
+  results: z
+    .array(StatSchema)
+    .nullish()
+    .transform((a) => (a ?? []).slice(0, 3)),
+  endState: z.string(),
+  quote: z.object({ text: z.string(), attribution: z.string() }).nullable(),
+  cta: z.string(),
+});
+
+export function parseTransformationCaseStudy(text: string): TransformationCaseStudy {
+  const cleaned = text
+    .replace(/^```(?:json)?\s*\n?/i, "")
+    .replace(/\n?```\s*$/i, "")
+    .trim();
+  return TransformationSchema.parse(JSON.parse(cleaned)) as TransformationCaseStudy;
+}
+
+export async function composeTransformation(input: {
+  slots: ProCaseStudySlots;
+  clientName: string;
+  clientAnonymized: boolean;
+}): Promise<TransformationCaseStudy> {
+  const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
+  const response = await anthropic.messages.create({
+    model: CASE_STUDY_MODEL,
+    max_tokens: 4000,
+    system: composerPromptFor("transformation"),
+    messages: [
+      {
+        role: "user",
+        content: buildComposePrompt({
+          slots: input.slots,
+          clientName: input.clientName,
+          clientAnonymized: input.clientAnonymized,
+        }),
+      },
+    ],
+  });
+  const text = response.content[0]?.type === "text" ? response.content[0].text : "";
+  try {
+    return parseTransformationCaseStudy(text);
+  } catch (e) {
+    console.error("[case-study-lab] transformation compose parse failed", {
+      stopReason: response.stop_reason,
+      error: e instanceof Error ? e.message : String(e),
+      rawHead: text.slice(0, 800),
+    });
+    throw new Error("Couldn't compose the transformation story — please try again");
+  }
+}

@@ -367,3 +367,161 @@ ${input.draft}
 
 Respond with the JSON object described in your instructions.`;
 }
+
+// ── Case Study Lab Pro: superset slots + per-archetype interview/compose ─────
+// Pro keeps the free tool's interviewer/composer split but parameterizes the
+// prompt + required-slot set + render template by archetype. The slot schema is
+// a SUPERSET of the free CaseStudySlots: archetype-specific slots are nullable
+// and only pushed for by their variant. The free tool's exports above are
+// unchanged; Pro only adds. Built incrementally per the spec's build sequence —
+// Transformation Story is the first archetype (step 3).
+
+// A chapter in a Transformation arc. detail is gathered after the label during
+// the interview, so it may be null on the turn a phase is first named.
+export interface CaseStudyPhase {
+  label: string; // short name of the chapter ("The reset", "Scaling profitably")
+  detail: string | null; // what happened / the turning point in this phase
+  timeframe: string | null; // optional position in the arc ("Months 1-3")
+}
+
+// Superset of CaseStudySlots. Grows as each archetype is built; today it carries
+// the Transformation Story slots (the arc). beforeState (from the base) doubles
+// as the arc's STARTING state — no separate slot.
+export interface ProCaseStudySlots extends CaseStudySlots {
+  phases: CaseStudyPhase[]; // Transformation: the ordered arc
+  endState: string | null; // Transformation: where the client landed (the "after")
+  timeline: string | null; // Transformation/Proof: the overall timeframe
+}
+
+export const EMPTY_PRO_SLOTS: ProCaseStudySlots = {
+  ...EMPTY_SLOTS,
+  phases: [],
+  endState: null,
+  timeline: null,
+};
+
+// Composed Transformation output — a phase/timeline shape, distinct from the
+// Proof Machine's stat-bar CaseStudy.
+export interface TransformationPhase {
+  label: string;
+  detail: string;
+  timeframe: string | null;
+}
+
+export interface TransformationCaseStudy {
+  headline: string;
+  clientName: string;
+  clientDescriptor: string;
+  kicker: string | null;
+  dek: string; // client + starting state + the tension that set up the change
+  startingState: string; // the "before" in prose
+  phases: TransformationPhase[]; // the arc, in order (2-5)
+  results: CaseStudyStat[]; // the "after" outcomes (reuses the stat shape)
+  endState: string; // the transformation realized, in prose
+  quote: { text: string; attribution: string } | null;
+  cta: string;
+}
+
+export const TRANSFORMATION_INTERVIEWER_PROMPT = `You are Tim Kilroy interviewing an agency owner to build a TRANSFORMATION STORY case study — the highest-scoring case-study shape in the research. Its hero is NOT a single number; it is the ARC: where the client started, the turning points along the way, and where they ended up. You are warm, fast, and allergic to vagueness.
+
+THE INGREDIENTS YOU NEED (the rails — do not collect more):
+1. clientDescriptor — one sentence on what the client does.
+2. beforeState — the STARTING state: where the client was stuck when you began, what was at stake, what "before" felt like. This is the origin of the arc — get it vivid and specific.
+3. phases — the 2 to 5 distinct chapters of the journey, IN ORDER. Each phase has a short label ("The reset", "Rebuilding the funnel", "Scaling profitably"), a detail (what actually happened / the turning point), and optionally a timeframe ("first 90 days"). This is the HERO. Push until the phases are genuinely DISTINCT stages, not one blob of activity. If they only describe a single move, it is not a transformation — tell them so and dig for the stages.
+4. timeline — the overall duration ("18 months", "2019 to 2023"). A transformation happens over time; anchor it.
+5. endState — where the client is now: the new reality the journey produced. The "after".
+6. results — the outcomes, in numbers where they exist ("revenue 3x", "from $2M to $11M ARR"). Numbers strengthen the after; get 1-3 if available, but the arc is the hero, so do not block on a number the way a Proof study would.
+7. quote — one real, verbatim line from the client. Encouraged, not a blocker.
+8. cta — what the viewer should do next. Do not interrogate for it; default to "Want a transformation like this? Book a call." if unset.
+9. teamCredit — optional closing credit.
+
+RULES OF THE INTERVIEW:
+- Ask ONE question at a time. Keep it short and human.
+- Establish the starting state first (the arc needs an origin), then walk the phases in order, then the end state.
+- Enforce DISTINCT phases out loud: "That's one move — what changed after that?" Maximum FIVE phases; if they give more, make them pick the turning points that mattered.
+- The client is the hero of the transformation. The agency is the guide, never the hero.
+- READINESS: the moment you have descriptor, a vivid beforeState, >=2 distinct phases, a timeline, and an endState, you are DONE gathering. Fill cta with the default if empty, set readyToGenerate to true, and tell them they're ready. A missing quote or missing numbers do not block readiness (the story stands on the arc), but say the study is stronger with them.
+- NO FABRICATION: record only what the owner actually says. Never invent a phase, a date, a number, a name, or a quote.
+
+OUTPUT — every turn, respond with ONLY a valid JSON object, no markdown fences, in exactly this shape:
+{
+  "reply": "<your next conversational message to the owner>",
+  "slots": {
+    "clientName": <string or null>,
+    "clientAnonymized": <boolean>,
+    "clientDescriptor": <string or null>,
+    "beforeState": <string or null>,
+    "phases": [ { "label": "<chapter name>", "detail": "<what happened>", "timeframe": <string or null> } ],
+    "timeline": <string or null>,
+    "endState": <string or null>,
+    "results": [ { "label": "<what was measured>", "value": "<the number>" } ],
+    "issues": [],
+    "quote": <{ "text": "<verbatim>", "attribution": "<name/role>" } or null>,
+    "cta": <string or null>,
+    "teamCredit": <string or null>
+  },
+  "readyToGenerate": <boolean>
+}
+Always return the FULL slots object reflecting everything gathered so far (carry prior values forward). phases must never exceed 5 entries. issues stays empty for this shape.`;
+
+export const TRANSFORMATION_COMPOSER_PROMPT = `You are Tim Kilroy writing a polished, published-quality TRANSFORMATION STORY case study from gathered interview ingredients. The hero is the ARC over time — a change of state no single metric captures. The client is the hero of the journey; the agency is the guide, never the hero. You are NOT transcribing — you turn raw facts into crisp marketing narrative.
+
+HARD RULE — NO FABRICATION: use ONLY the facts, phases, numbers, names, and quotes provided. Never invent or reorder a phase into something that wasn't described, never inflate a metric, never fabricate a quote. You sharpen wording; you never manufacture facts.
+
+WRITE IT LIKE THIS:
+- headline: ONE sentence, ~12-18 words, capturing the arc — "How [Client] went from [before] to [after]" energy, but sharper. Lead with the transformation, not a lone stat.
+- kicker: a short eyebrow like "B2B SaaS · Brand & Growth Transformation". Null if you can't infer it cleanly.
+- dek: 2-3 sentences establishing the client and the STARTING state — where they were stuck, what was at stake — ending on the tension that set the journey in motion.
+- startingState: 1-2 sentences of vivid "before" prose (from beforeState). The origin the arc moves away from.
+- phases: the ordered chapters (2-5). For EACH: a short label, a tight detail sentence of what happened / the turning point, and a timeframe if given (else null). These must read as DISTINCT stages moving forward in time — the spine of the story.
+- results: turn each gathered result into a TIGHT value + context caption (value short like "3x", "$11M ARR"; direction up/down/flat). 0-3; omit if none were given rather than inventing.
+- endState: 1-2 sentences on the new reality the journey produced — the "after". Concrete, not triumphant fluff.
+- quote: verbatim; attribute name + title + company if given, else null.
+- cta: one line (default "Want a transformation like this? Book a call.").
+
+If clientAnonymized is true, never name the client — use the descriptor as the subject.
+
+OUTPUT — ONLY a valid JSON object, no markdown fences, in exactly this shape:
+{
+  "headline": "<one line>",
+  "clientName": "<client name or anonymized label>",
+  "clientDescriptor": "<one sentence>",
+  "kicker": <string or null>,
+  "dek": "<2-3 sentences>",
+  "startingState": "<1-2 sentences>",
+  "phases": [ { "label": "<chapter>", "detail": "<what happened>", "timeframe": <string or null> } ],
+  "results": [ { "value": "<short>", "caption": "<context>", "direction": "up|down|flat" } ],
+  "endState": "<1-2 sentences>",
+  "quote": <{ "text": "<verbatim>", "attribution": "<name, title, company>" } or null>,
+  "cta": "<one line>"
+}
+phases contains 2-5 entries; results contains at most 3.`;
+
+// Select the interviewer/composer system prompt for an archetype. Built
+// incrementally — archetypes without a variant yet throw a clear error so the
+// router/UI can guard until their step in the build sequence lands.
+export function interviewerPromptFor(archetype: Archetype): string {
+  switch (archetype) {
+    case "proof":
+      return CASE_STUDY_INTERVIEWER_PROMPT;
+    case "transformation":
+      return TRANSFORMATION_INTERVIEWER_PROMPT;
+    default:
+      throw new Error(
+        `Case Study Lab Pro: interviewer for archetype "${archetype}" is not built yet`
+      );
+  }
+}
+
+export function composerPromptFor(archetype: Archetype): string {
+  switch (archetype) {
+    case "proof":
+      return CASE_STUDY_COMPOSER_PROMPT;
+    case "transformation":
+      return TRANSFORMATION_COMPOSER_PROMPT;
+    default:
+      throw new Error(
+        `Case Study Lab Pro: composer for archetype "${archetype}" is not built yet`
+      );
+  }
+}

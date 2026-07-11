@@ -233,31 +233,28 @@ You are choosing the HERO of the page. There are exactly five shapes:
 4. craft (Craft Showcase) — HERO: the deliverable itself. The output IS the proof; the page is visual — identity systems, sites, films, apps. Recipe: strong visual assets, the brief, the craft decision. WEAKEST shape for B2B buyers (0% of studied craft pages carried a business metric); only choose it when the work is genuinely the point.
 5. method (Method Demonstration) — HERO: a repeatable process or POV. Proves "here's how we think, and it works every time" — a named, portable framework or teardown, not a one-off activity list. Recipe: the named framework, where it applied, the result it produced.
 
-HOW TO DECIDE (data-backed defaults, then refine by the win's strongest asset, then adjust for audience):
+HOW TO DECIDE — find the HERO first, THEN reinforce it with proof. Metrics almost never define the primary; in the data they are overwhelmingly the SECONDARY.
 
-DISCIPLINE DEFAULT (from the 72-study distribution):
-- SEO / Search → usually proof (often secondary method)
-- Paid Media → method or proof
-- Branding → big_idea (often secondary craft)
-- Creative / Advertising → big_idea or craft (in the data, creative work was ALWAYS one of these two)
-- Web / Digital Products → transformation or big_idea (often secondary craft)
-- Content / Thought Leadership → genuinely splits across method, proof, and big_idea — do NOT default; decide from the asset. Lower your confidence here.
+STEP 1 — Identify the hero (what the page is really built around). Check these in order; the FIRST that genuinely fits is the primary:
+- A DISTINCTIVE repeatable system the case study is explicitly TEACHING as its point — it has a NAME ("Pain Point SEO", "profit-based bidding", "portfolio bidding") or is a genuinely novel/proprietary mechanic the page dwells on and you could run again → method. The bar is HIGH: nearly every win used *some* process, and that alone is NOT method. Reserve method for wins whose distinctive, named, or novel WAY OF WORKING is the memorable hero, with the numbers merely proving it works.
+- A counterintuitive strategic reframe or creative CONCEPT you can state in one sentence ("HR leaders as the hero", "draw ketchup") → big_idea.
+- A showcased DELIVERABLE that is itself the point — an identity system, film, campaign, site, or app where the executed craft is the proof → craft.
+- A multi-phase change of state over a real timeline — a repositioning, a legacy-to-modern rebuild, a long multi-year partnership → transformation.
+- NONE of the above has a distinctive hero — the win's headline and memorable point is the OUTCOME itself (revenue, pipeline, traffic, ROAS), produced by solid but STANDARD execution (not a named/novel system) → proof. This is the default for strong-numbers wins that are not teaching a named method, reframe, arc, or craft.
 
-STRONGEST-ASSET OVERRIDE (this beats the discipline default when the win clearly has one):
-- Hard, impressive, attributable numbers → proof
-- A long relationship or a big documented before→after change → transformation
-- A clever, counterintuitive reframe or concept → big_idea
-- Beautiful, tangible output that speaks for itself → craft
-- A named, repeatable system you could sell → method
+PROOF vs METHOD — the hardest call, decide it deliberately: Does the approach have a NAME, or a genuinely novel/proprietary mechanic the page is teaching? YES → method (numbers become the secondary proof). NO — it is competent, standard best practice and the NUMBER is the headline → proof (with method as the secondary only if the process is still noteworthy). Do not call something method just because a repeatable process exists; do not call something proof just because impressive numbers exist. Name-or-novelty is the test.
 
-SECONDARY + AUDIENCE:
-- Proof is the universal reinforcer. If the primary is big_idea, craft, or method and any real numbers exist, set secondary to "proof."
-- If the audience is a B2B economic buyer (a buying committee, CFO, procurement) and the primary is craft or big_idea with no numbers, KEEP the primary but force secondary "proof" and flag the missing business metric in missingIngredients — those shapes alone under-convert for buyers.
-- If nothing supports a secondary, use "none".
+STEP 2 — Discipline nudge (use only to break a Step-1 tie, or when the win is too thin to read):
+- SEO/Search, Paid Media → method or proof · Branding → big_idea or craft · Creative/Advertising → big_idea or craft (NEVER proof-primary) · Web/Digital → transformation or big_idea · Content/Thought Leadership → genuinely splits across method/proof/big_idea; decide from Step 1 and lower confidence.
+
+STEP 3 — Proof is the universal SECONDARY, not the default primary. CRITICAL: do NOT promote proof to primary just because impressive, attributable numbers exist — that is the single most common mistake. Test yourself: if you deleted every number from this win, what is the case study still about? THAT is the primary; the numbers are the secondary. Reserve proof-PRIMARY for wins whose entire story is the metric with nothing more specific to lead on.
+- If the primary is method / big_idea / craft / transformation and real numbers exist → secondary = "proof".
+- Audience: a B2B economic buyer (buying committee, CFO, procurement) with a craft or metric-less big_idea primary → keep the primary but force secondary "proof" and flag the missing business metric in missingIngredients — those shapes alone under-convert for buyers.
+- Otherwise secondary = the runner-up hero from Step 1, or "none".
 
 CONFIDENCE:
-- high — discipline default and strongest asset agree.
-- medium — you had to break a tie between two plausible shapes.
+- high — one Step-1 hero clearly fits and nothing else competes for primary.
+- medium — you had to break a tie between two plausible heroes (put the loser in "secondary").
 - low — Content discipline with an ambiguous asset, or the win is too thin to read. On low, put your runner-up in "secondary" so the product can offer both.
 
 NO FABRICATION: reason only from what you are given. Never invent numbers, a phase, an insight, or an asset. missingIngredients names what is ABSENT, phrased as what to ask the owner for next (e.g. "a business metric — revenue or pipeline, not just traffic", "the one-sentence insight behind the work", "a verbatim client quote").

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildTransformationView } from "@/lib/case-study-lab/view";
+import { buildTransformationView, buildBigIdeaView } from "@/lib/case-study-lab/view";
 
 const result = {
   headline: "How Northwind went from unpositioned to category leader",
@@ -57,5 +57,40 @@ describe("buildTransformationView", () => {
     expect(buildTransformationView({ result, cta_url: "https://book.me" }).ctaHref).toBe("https://book.me/");
     expect(buildTransformationView({ result, agency_url: "https://agency.co" }).ctaHref).toBe("https://agency.co/");
     expect(buildTransformationView({ result, cta_url: "javascript:alert(1)" }).ctaHref).toBeNull();
+  });
+});
+
+const bigIdeaResult = {
+  headline: "Wise sold the anger, not the exchange rate",
+  clientName: "Wise",
+  clientDescriptor: "Cross-border money transfer",
+  kicker: "Brand · Fintech",
+  dek: "Every competitor advertised low fees.",
+  insight: "Make the hidden bank markup the villain.",
+  manifestation: "A campaign exposing invisible fees.",
+  results: [{ value: "58%", caption: "share-price lift", direction: "up" }],
+  quote: { text: "The story the category missed.", attribution: "CMO" },
+  cta: "Book a call.",
+};
+
+describe("buildBigIdeaView", () => {
+  it("normalizes a stored big idea result into a view", () => {
+    const v = buildBigIdeaView({ result: bigIdeaResult, accent: "#0a7" });
+    expect(v.insight).toMatch(/villain/);
+    expect(v.manifestation).toMatch(/invisible fees/);
+    expect(v.stats[0].value).toBe("58%");
+    expect(v.headline).toMatch(/Wise/);
+  });
+
+  it("hides Powered-by under white_label and defaults the idea CTA", () => {
+    expect(buildBigIdeaView({ result: bigIdeaResult, white_label: true }).poweredByHref).toBeNull();
+    expect(buildBigIdeaView({ result: {} }).cta).toMatch(/idea/i);
+  });
+
+  it("tolerates a metric-free idea and missing fields", () => {
+    const v = buildBigIdeaView({ result: { insight: "One sharp reframe." } });
+    expect(v.insight).toMatch(/reframe/);
+    expect(v.stats).toEqual([]);
+    expect(v.manifestation).toBeNull();
   });
 });

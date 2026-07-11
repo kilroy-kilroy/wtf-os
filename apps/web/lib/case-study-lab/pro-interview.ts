@@ -56,6 +56,14 @@ const ProSlotsSchema = z.object({
     .string()
     .nullish()
     .transform((v) => v ?? null),
+  insight: z
+    .string()
+    .nullish()
+    .transform((v) => v ?? null),
+  manifestation: z
+    .string()
+    .nullish()
+    .transform((v) => v ?? null),
   results: z
     .array(ResultSchema)
     .nullish()

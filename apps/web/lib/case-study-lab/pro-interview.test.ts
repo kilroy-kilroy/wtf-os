@@ -55,13 +55,31 @@ describe("parseProInterviewTurn", () => {
     expect(t.slots.phases).toHaveLength(5);
   });
 
-  it("defaults omitted superset slots (no phases/endState/timeline)", () => {
+  it("defaults omitted superset slots (no phases/endState/timeline/insight/manifestation)", () => {
     const t = parseProInterviewTurn(
       JSON.stringify({ reply: "ok", slots: base, readyToGenerate: false })
     );
     expect(t.slots.phases).toEqual([]);
     expect(t.slots.endState).toBeNull();
     expect(t.slots.timeline).toBeNull();
+    expect(t.slots.insight).toBeNull();
+    expect(t.slots.manifestation).toBeNull();
+  });
+
+  it("carries the Big Idea insight and manifestation through", () => {
+    const t = parseProInterviewTurn(
+      JSON.stringify({
+        reply: "Love it — how did that idea show up?",
+        slots: {
+          ...base,
+          insight: "Sell the feeling of arrival, not the logistics of moving.",
+          manifestation: "A campaign built entirely around the first night in a new home.",
+        },
+        readyToGenerate: false,
+      })
+    );
+    expect(t.slots.insight).toMatch(/feeling of arrival/);
+    expect(t.slots.manifestation).toMatch(/first night/);
   });
 
   it("strips markdown code fences before parsing", () => {

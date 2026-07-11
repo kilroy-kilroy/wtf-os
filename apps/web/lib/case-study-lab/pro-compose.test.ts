@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { parseTransformationCaseStudy } from "@/lib/case-study-lab/pro-compose";
+import {
+  parseTransformationCaseStudy,
+  parseBigIdeaCaseStudy,
+} from "@/lib/case-study-lab/pro-compose";
 
 const draft = {
   headline: "How Northwind went from an unpositioned $2M tool to an $11M category leader",
@@ -62,5 +65,49 @@ describe("parseTransformationCaseStudy", () => {
       JSON.stringify({ ...draft, phases: [{ label: "x", detail: "y", timeframe: null }] })
     );
     expect(cs.phases[0].timeframe).toBeNull();
+  });
+});
+
+const bigIdea = {
+  headline: "Wise sold the anger, not the exchange rate",
+  clientName: "Wise",
+  clientDescriptor: "A cross-border money-transfer service",
+  kicker: "Brand & Creative · Fintech",
+  dek: "Every competitor advertised low fees. The category was a race to the same claim.",
+  insight: "Make the hidden bank markup the villain, not the price the hero.",
+  manifestation: "A campaign that exposed the invisible fees banks bury in the exchange rate.",
+  results: [{ value: "58%", caption: "share-price lift", direction: "up" }],
+  quote: { text: "They found the story the whole category had missed.", attribution: "CMO, Wise" },
+  cta: "Want an idea like this? Book a call.",
+};
+
+describe("parseBigIdeaCaseStudy", () => {
+  it("parses a full big idea draft", () => {
+    const cs = parseBigIdeaCaseStudy(JSON.stringify(bigIdea));
+    expect(cs.insight).toMatch(/villain/);
+    expect(cs.manifestation).toMatch(/invisible fees/);
+    expect(cs.results[0].value).toBe("58%");
+  });
+
+  it("strips markdown code fences", () => {
+    const wrapped = "```json\n" + JSON.stringify(bigIdea) + "\n```";
+    expect(() => parseBigIdeaCaseStudy(wrapped)).not.toThrow();
+  });
+
+  it("tolerates a metric-free idea (results omitted) and caps results at 3", () => {
+    const noResults = parseBigIdeaCaseStudy(JSON.stringify({ ...bigIdea, results: undefined }));
+    expect(noResults.results).toEqual([]);
+    const many = parseBigIdeaCaseStudy(
+      JSON.stringify({
+        ...bigIdea,
+        results: [1, 2, 3, 4].map((n) => ({ value: `${n}x`, caption: `c${n}`, direction: "up" })),
+      })
+    );
+    expect(many.results).toHaveLength(3);
+  });
+
+  it("requires the insight (throws when absent)", () => {
+    const { insight: _omit, ...noInsight } = bigIdea;
+    expect(() => parseBigIdeaCaseStudy(JSON.stringify(noInsight))).toThrow();
   });
 });

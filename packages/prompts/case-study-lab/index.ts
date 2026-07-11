@@ -187,3 +187,105 @@ ${JSON.stringify(input.slots)}
 
 Respond with the JSON object described in your instructions.`;
 }
+
+// ── Case Study Lab Pro: the archetype router ────────────────────────────────
+// Net-new IP (see docs/superpowers/specs/2026-07-11-case-study-lab-pro-design.md).
+// Runs ONCE before the interview: picks the best-fit case-study shape for a win
+// so the interviewer/composer variant and required-slot set can be selected by it.
+// Data-backed by the 72-study labeled set (docs/research/agency-case-studies-72-labeled.csv).
+
+// The five case-study shapes, keyed by the HERO of the page.
+export type Archetype =
+  | "proof" // Proof Machine — the result / numbers are the hero
+  | "transformation" // Transformation Story — an arc over time is the hero
+  | "big_idea" // Big Idea — a strategic reframe / concept is the hero
+  | "craft" // Craft Showcase — the deliverable itself is the hero
+  | "method"; // Method Demonstration — a repeatable process / POV is the hero
+
+export const ARCHETYPES: Archetype[] = [
+  "proof",
+  "transformation",
+  "big_idea",
+  "craft",
+  "method",
+];
+
+export interface RouterOutput {
+  archetype: Archetype;
+  // The supporting shape to layer in. "none" if the primary stands alone.
+  // Proof is the #1 secondary in the data (29/72) — the universal reinforcer.
+  secondary: Archetype | "none";
+  confidence: "low" | "medium" | "high";
+  // One plain-language sentence the user sees on the recommendation card.
+  why: string;
+  // The slots this archetype needs that the raw win seems to be missing —
+  // becomes the interviewer's opening priorities. Grounded, never invented.
+  missingIngredients: string[];
+}
+
+export const ARCHETYPE_ROUTER_PROMPT = `You are the archetype router for Case Study Lab Pro. Given an agency's discipline and a rough description of one client win, you pick the BEST-FIT case-study shape — the structure that will make this specific win most persuasive — plus a supporting shape and the ingredients still missing.
+
+You are choosing the HERO of the page. There are exactly five shapes:
+
+1. proof (Proof Machine) — HERO: the result, in numbers. Big attributable outcomes up top (revenue, pipeline, traffic, CPA, ROAS). Needs hard, defensible numbers. Recipe: marketing metric (near-universal), a business metric, a timeframe, before/after.
+2. transformation (Transformation Story) — HERO: an arc over time. A change of state no single metric captures — a repositioning, a legacy-to-modern shift, a long multi-phase partnership. Recipe: a clear starting state, distinct phases/turning points across a timeline, before→after, an end state, a quote. (Highest-scoring, most complete shape in the data.)
+3. big_idea (Big Idea) — HERO: a strategic reframe or creative concept. Leads with the THOUGHT, not the numbers — a positioning pivot or a concept is the reason it worked ("HR leaders as the hero," "draw ketchup," "Pain Point SEO"). Metrics optional/secondary. Recipe: an articulable insight in one sentence, the tension it resolved, how it showed up.
+4. craft (Craft Showcase) — HERO: the deliverable itself. The output IS the proof; the page is visual — identity systems, sites, films, apps. Recipe: strong visual assets, the brief, the craft decision. WEAKEST shape for B2B buyers (0% of studied craft pages carried a business metric); only choose it when the work is genuinely the point.
+5. method (Method Demonstration) — HERO: a repeatable process or POV. Proves "here's how we think, and it works every time" — a named, portable framework or teardown, not a one-off activity list. Recipe: the named framework, where it applied, the result it produced.
+
+HOW TO DECIDE (data-backed defaults, then refine by the win's strongest asset, then adjust for audience):
+
+DISCIPLINE DEFAULT (from the 72-study distribution):
+- SEO / Search → usually proof (often secondary method)
+- Paid Media → method or proof
+- Branding → big_idea (often secondary craft)
+- Creative / Advertising → big_idea or craft (in the data, creative work was ALWAYS one of these two)
+- Web / Digital Products → transformation or big_idea (often secondary craft)
+- Content / Thought Leadership → genuinely splits across method, proof, and big_idea — do NOT default; decide from the asset. Lower your confidence here.
+
+STRONGEST-ASSET OVERRIDE (this beats the discipline default when the win clearly has one):
+- Hard, impressive, attributable numbers → proof
+- A long relationship or a big documented before→after change → transformation
+- A clever, counterintuitive reframe or concept → big_idea
+- Beautiful, tangible output that speaks for itself → craft
+- A named, repeatable system you could sell → method
+
+SECONDARY + AUDIENCE:
+- Proof is the universal reinforcer. If the primary is big_idea, craft, or method and any real numbers exist, set secondary to "proof."
+- If the audience is a B2B economic buyer (a buying committee, CFO, procurement) and the primary is craft or big_idea with no numbers, KEEP the primary but force secondary "proof" and flag the missing business metric in missingIngredients — those shapes alone under-convert for buyers.
+- If nothing supports a secondary, use "none".
+
+CONFIDENCE:
+- high — discipline default and strongest asset agree.
+- medium — you had to break a tie between two plausible shapes.
+- low — Content discipline with an ambiguous asset, or the win is too thin to read. On low, put your runner-up in "secondary" so the product can offer both.
+
+NO FABRICATION: reason only from what you are given. Never invent numbers, a phase, an insight, or an asset. missingIngredients names what is ABSENT, phrased as what to ask the owner for next (e.g. "a business metric — revenue or pipeline, not just traffic", "the one-sentence insight behind the work", "a verbatim client quote").
+
+OUTPUT — respond with ONLY a valid JSON object, no markdown fences, in exactly this shape:
+{
+  "archetype": "proof|transformation|big_idea|craft|method",
+  "secondary": "proof|transformation|big_idea|craft|method|none",
+  "confidence": "low|medium|high",
+  "why": "<one plain sentence the agency owner will read on the recommendation card>",
+  "missingIngredients": [ "<ingredient this shape needs that the win seems to lack>" ]
+}`;
+
+export function buildRouterPrompt(input: {
+  discipline: string;
+  rawWin: string;
+  audience?: string | null;
+}): string {
+  return `Classify this client win into its best-fit case-study shape.
+
+AGENCY DISCIPLINE / SERVICE:
+${input.discipline || "(not given)"}
+
+WHO WILL READ THIS CASE STUDY:
+${input.audience?.trim() || "(not specified)"}
+
+THE WIN (what happened, in the owner's words / rough notes):
+${input.rawWin}
+
+Respond with the JSON object described in your instructions.`;
+}

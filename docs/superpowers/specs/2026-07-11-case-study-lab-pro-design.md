@@ -2,7 +2,7 @@
 
 **Date:** 2026-07-11
 **Status:** Draft for review
-**Working name:** Case Study Lab Pro (route slug `/case-study-lab-pro`)
+**Name (locked):** Case Study Lab Pro (route slug `/case-study-lab-pro`)
 **Builds on (does not supersede):**
 - `docs/superpowers/specs/2026-06-27-case-study-lab-design.md` (the shipped free tool)
 - `docs/superpowers/specs/2026-07-09-case-study-lab-cobranding-design.md` (co-branded header)
@@ -287,8 +287,7 @@ metrics from analytics · the optional client-side interview branch · non-Engli
 
 ## Open items
 
-- Final route slug / product name ("Case Study Lab Pro" vs a distinct brand).
-- Pricing tier placement (alongside the $29 Labs vs Robot-Tim $395 vs DemandOS).
+- Pricing: **TBD** — tier placement alongside the $29 Labs vs Robot-Tim $395 vs DemandOS.
 - Whether the free tool should tease the router ("this looks like a Big Idea story — Pro can
   tell it that way") as an upgrade prompt.
 - Whether the wall lives on the agency's domain (custom domain) or a hosted subpath in v1.

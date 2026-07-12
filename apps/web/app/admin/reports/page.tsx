@@ -139,6 +139,19 @@ interface RobotTimReport {
   createdAt: string;
 }
 
+interface CaseStudyReport {
+  id: string;
+  userId: string | null;
+  userName: string;
+  userEmail: string;
+  agencyName: string | null;
+  hostname: string;
+  agencyUrl: string;
+  clientName: string | null;
+  status: string;
+  createdAt: string;
+}
+
 interface ReportsData {
   agencies: AgencyData[];
   inferredAgencies?: AgencyData[];
@@ -152,11 +165,12 @@ interface ReportsData {
     bizDev: BizDevReport[];
     wahWah: WahWahReport[];
     robotTim: RobotTimReport[];
+    caseStudyLab: CaseStudyReport[];
   };
 }
 
 type TabType = 'agency' | 'user' | 'product';
-type ProductFilter = 'all' | 'callLabLite' | 'callLabPro' | 'callLabInstant' | 'discoveryLite' | 'discoveryPro' | 'assessments' | 'visibilityLab' | 'bizDev' | 'wahWah' | 'robotTim';
+type ProductFilter = 'all' | 'callLabLite' | 'callLabPro' | 'callLabInstant' | 'discoveryLite' | 'discoveryPro' | 'assessments' | 'visibilityLab' | 'bizDev' | 'wahWah' | 'robotTim' | 'caseStudyLab';
 
 const PRODUCT_LABELS: Record<string, string> = {
   callLabInstant: 'Call Lab Instant',
@@ -169,6 +183,7 @@ const PRODUCT_LABELS: Record<string, string> = {
   bizDev: 'BD Hire Readiness',
   wahWah: 'Wah-Wah Detector',
   robotTim: 'Robot-Tim Positioning Engine',
+  caseStudyLab: 'Case Study Lab',
 };
 
 const PRODUCT_COLORS: Record<string, string> = {
@@ -182,6 +197,7 @@ const PRODUCT_COLORS: Record<string, string> = {
   bizDev: '#c45a3b',
   wahWah: '#D75A3F',
   robotTim: '#D75A3F',
+  caseStudyLab: '#10b981',
 };
 
 // ============================================
@@ -915,6 +931,7 @@ function ProductView({
     { key: 'bizDev', label: 'BD Hire Readiness' },
     { key: 'wahWah', label: 'Wah-Wah Detector' },
     { key: 'robotTim', label: 'Robot-Tim' },
+    { key: 'caseStudyLab', label: 'Case Study Lab' },
   ];
 
   const showCallLab = selectedProduct === 'all' || selectedProduct === 'callLabLite' || selectedProduct === 'callLabPro';
@@ -925,6 +942,7 @@ function ProductView({
   const showBizDev = selectedProduct === 'all' || selectedProduct === 'bizDev';
   const showWahWah = selectedProduct === 'all' || selectedProduct === 'wahWah';
   const showRobotTim = selectedProduct === 'all' || selectedProduct === 'robotTim';
+  const showCaseStudy = selectedProduct === 'all' || selectedProduct === 'caseStudyLab';
 
   const callLabReports = useMemo(() => {
     // Merge call_lab_reports with pro/lite call_scores into one Call Lab view
@@ -988,23 +1006,35 @@ function ProductView({
     return sortReports(applyUserFilter(withScore as any));
   }, [data.reports.robotTim, sortReports, applyUserFilter]);
 
+  const caseStudyReports = useMemo(() => {
+    return sortReports(applyUserFilter(data.reports.caseStudyLab || []));
+  }, [data.reports.caseStudyLab, sortReports, applyUserFilter]);
+
   return (
     <div>
-      {/* Product selector tabs */}
-      <div className="flex gap-1 mb-4 bg-slate-800/50 rounded-xl p-1 flex-wrap">
-        {productTabs.map((tab) => (
-          <button
-            key={tab.key}
-            onClick={() => onProductChange(tab.key)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-              selectedProduct === tab.key
-                ? 'bg-[#00D4FF] text-slate-900'
-                : 'text-slate-400 hover:text-white'
-            }`}
+      {/* Product selector dropdown */}
+      <div className="mb-4">
+        <label htmlFor="product-select" className="sr-only">Filter by product</label>
+        <div className="relative inline-block">
+          <select
+            id="product-select"
+            value={selectedProduct}
+            onChange={(e) => onProductChange(e.target.value as ProductFilter)}
+            className="appearance-none bg-slate-800/50 border border-slate-700/50 rounded-xl text-white text-sm font-medium pl-4 pr-10 py-2.5 focus:border-[#00D4FF] focus:ring-0 focus:outline-none cursor-pointer hover:border-slate-600"
           >
-            {tab.label}
-          </button>
-        ))}
+            {productTabs.map((tab) => (
+              <option key={tab.key} value={tab.key} className="bg-slate-800 text-white">
+                {tab.label}
+              </option>
+            ))}
+          </select>
+          <svg
+            className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"
+            fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+          </svg>
+        </div>
       </div>
 
       {/* Active filter indicator */}
@@ -1317,6 +1347,51 @@ function ProductView({
         </div>
       )}
 
+      {/* Case Study Lab table */}
+      {showCaseStudy && caseStudyReports.length > 0 && (
+        <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4 mb-4">
+          <h3 className="text-sm font-bold text-white mb-3">
+            Case Study Lab
+            <span className="text-slate-500 font-normal ml-2">({caseStudyReports.length})</span>
+          </h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-600/50">
+                  <SortHeader field="clientName">Client</SortHeader>
+                  <SortHeader field="hostname">Agency Site</SortHeader>
+                  <SortHeader field="userName">User</SortHeader>
+                  <SortHeader field="agencyName">Agency</SortHeader>
+                  <SortHeader field="status">Status</SortHeader>
+                  <SortHeader field="createdAt">Date</SortHeader>
+                  <th className="py-2 text-left text-slate-500 text-xs"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {caseStudyReports.map((r: any) => (
+                  <tr key={r.id} className="border-b border-slate-700/30">
+                    <td className="py-2 pr-4 text-white text-xs font-medium">{r.clientName || '-'}</td>
+                    <td className="py-2 pr-4 text-slate-300 text-xs">{r.hostname || '-'}</td>
+                    <td className="py-2 pr-4 text-xs">
+                      <span className="text-white">{r.userName}</span>
+                      {r.userEmail && <span className="text-slate-600 ml-1 text-[10px]">{r.userEmail}</span>}
+                    </td>
+                    <td className="py-2 pr-4 text-slate-500 text-xs">{r.agencyName || '-'}</td>
+                    <td className="py-2 pr-4">
+                      <span className="text-[10px] font-medium uppercase px-1.5 py-0.5 rounded" style={{ color: r.status === 'complete' ? '#22c55e' : '#94a3b8', backgroundColor: r.status === 'complete' ? '#22c55e20' : '#94a3b820' }}>
+                        {r.status}
+                      </span>
+                    </td>
+                    <td className="py-2 pr-4 text-slate-500 text-xs">{formatTimeAgo(r.createdAt)}</td>
+                    <td className="py-2"><ReportLink href={`/case-study-lab/r/${r.id}`}>View</ReportLink></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
       {/* Assessments table */}
       {showAssessments && assessmentReports.length > 0 && (
         <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4 mb-4">
@@ -1446,6 +1521,9 @@ function ProductView({
       )}
       {showRobotTim && robotTimReports.length === 0 && selectedProduct !== 'all' && (
         <EmptyState message="No Robot-Tim reports found" />
+      )}
+      {showCaseStudy && caseStudyReports.length === 0 && selectedProduct !== 'all' && (
+        <EmptyState message="No Case Study Lab reports found" />
       )}
       {showAssessments && assessmentReports.length === 0 && selectedProduct !== 'all' && (
         <EmptyState message="No assessments found" />
@@ -1637,6 +1715,7 @@ export default function AdminReportsPage() {
             <span style={{ color: '#a855f7' }}>{data.reports.visibility?.filter((r: any) => r.version !== 'pro').length || 0} Visibility</span>
             <span style={{ color: '#f59e0b' }}>{totalAssessments} Assessment</span>
             <span style={{ color: '#c45a3b' }}>{totalBizDev} BD Readiness</span>
+            <span style={{ color: '#10b981' }}>{data.reports.caseStudyLab?.length || 0} Case Study</span>
           </div>
         </div>
         <div className="flex gap-2">

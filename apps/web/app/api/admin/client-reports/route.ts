@@ -60,6 +60,7 @@ export async function GET(request: NextRequest) {
       bizDevResult,
       wahWahResult,
       robotTimResult,
+      caseStudyResult,
     ] = await Promise.all([
       (supabase as any)
         .from('agencies')
@@ -113,6 +114,11 @@ export async function GET(request: NextRequest) {
         .select('id, site_url, email, status, crawl, created_at')
         .order('created_at', { ascending: false })
         .limit(1000),
+      (supabase as any)
+        .from('case_study_lab_reports')
+        .select('id, user_id, email, agency_url, agency_name, client_name, client_anonymized, status, created_at')
+        .order('created_at', { ascending: false })
+        .limit(1000),
     ]);
 
     const agencies = agenciesResult.data || [];
@@ -126,6 +132,7 @@ export async function GET(request: NextRequest) {
     const bizDevAssessments = bizDevResult.data || [];
     const wahWahReports = wahWahResult.data || [];
     const robotTimReports = robotTimResult.data || [];
+    const caseStudyReports = caseStudyResult.data || [];
 
     // Log query errors for debugging (queries fail silently with (supabase as any))
     if (callLabResult.error) console.error('[Admin Reports] call_lab_reports query error:', callLabResult.error);
@@ -459,6 +466,22 @@ export async function GET(request: NextRequest) {
             siteUrl: r.site_url,
             status: r.status,
             crawl: r.crawl,
+            createdAt: r.created_at,
+          };
+        }),
+        caseStudyLab: caseStudyReports.map((r: any) => {
+          let hostname = r.agency_url;
+          try { hostname = new URL(r.agency_url).hostname; } catch { /* keep raw url */ }
+          return {
+            id: r.id,
+            userId: r.user_id,
+            userName: r.user_id ? getUserName(r.user_id) : (r.email || 'Anonymous'),
+            userEmail: r.user_id ? getUserEmail(r.user_id) : (r.email || ''),
+            agencyName: r.agency_name || getAgencyNameForUser(r.user_id),
+            hostname,
+            agencyUrl: r.agency_url,
+            clientName: r.client_anonymized ? '(anonymized)' : (r.client_name || null),
+            status: r.status,
             createdAt: r.created_at,
           };
         }),

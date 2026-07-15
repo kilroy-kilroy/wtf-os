@@ -5,8 +5,10 @@ import { getSupabaseServerClient } from '@/lib/supabase-server';
 import { format } from "date-fns";
 import Link from "next/link";
 import { ConsolePanel, ConsoleHeading, CallLabProReport } from "@/components/console";
+import { ConsoleMarkdownRenderer } from "@/components/console/ConsoleMarkdownRenderer";
 import { PatternTag } from "@/components/pattern-tag";
 import { DiscoveryBriefLink } from "./discovery-brief-link";
+import { isLiteMarkdownReport } from "@/lib/call-lab/report-format";
 
 interface CallReport {
   id: string;
@@ -510,6 +512,11 @@ export default async function CallReportPage({
   // Try to extract Pro JSON report first
   const proJsonReport = extractProReport(finalReport.full_report);
   const markdownContent = !proJsonReport ? extractMarkdown(finalReport.full_report) : null;
+  // Lite reports (call_scores.markdown_response) use WHAT WORKED / WHAT TO WATCH
+  // headers that the Pro-specific CallLabProReport parser can't read — it would
+  // drop everything but the executive summary. Route those to a general
+  // markdown renderer so the full report shows.
+  const isLiteMarkdown = markdownContent ? isLiteMarkdownReport(markdownContent) : false;
 
   return (
     <div className="min-h-screen bg-black py-12 px-4">
@@ -542,8 +549,11 @@ export default async function CallReportPage({
           {/* Pro JSON Report (rich structured format) */}
           {proJsonReport ? (
             <ProJsonReportView report={proJsonReport} />
+          ) : markdownContent && isLiteMarkdown ? (
+            /* Lite Markdown Report — render faithfully with general markdown renderer */
+            <ConsoleMarkdownRenderer content={markdownContent} />
           ) : markdownContent ? (
-            /* Markdown Report */
+            /* Pro Markdown Report */
             <CallLabProReport content={markdownContent} />
           ) : (
             <>

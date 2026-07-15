@@ -5,4 +5,5 @@ export { ConsoleInput } from './ConsoleInput';
 export { SalesOSHeader } from './SalesOSHeader';
 export { ConsoleMarkdownRenderer } from './ConsoleMarkdownRenderer';
 export { CallLabProReport } from './CallLabProReport';
+export { CallLabLiteReport } from './CallLabLiteReport';
 export { LoadingTerminal } from './LoadingTerminal';

@@ -4,8 +4,7 @@ import { createClient } from '@/lib/supabase-auth-server';
 import { getSupabaseServerClient } from '@/lib/supabase-server';
 import { format } from "date-fns";
 import Link from "next/link";
-import { ConsolePanel, ConsoleHeading, CallLabProReport } from "@/components/console";
-import { ConsoleMarkdownRenderer } from "@/components/console/ConsoleMarkdownRenderer";
+import { ConsolePanel, ConsoleHeading, CallLabProReport, CallLabLiteReport } from "@/components/console";
 import { PatternTag } from "@/components/pattern-tag";
 import { DiscoveryBriefLink } from "./discovery-brief-link";
 import { isLiteMarkdownReport } from "@/lib/call-lab/report-format";
@@ -550,8 +549,8 @@ export default async function CallReportPage({
           {proJsonReport ? (
             <ProJsonReportView report={proJsonReport} />
           ) : markdownContent && isLiteMarkdown ? (
-            /* Lite Markdown Report — render faithfully with general markdown renderer */
-            <ConsoleMarkdownRenderer content={markdownContent} />
+            /* Lite Markdown Report — styled header + faithful markdown body */
+            <CallLabLiteReport content={markdownContent} />
           ) : markdownContent ? (
             /* Pro Markdown Report */
             <CallLabProReport content={markdownContent} />

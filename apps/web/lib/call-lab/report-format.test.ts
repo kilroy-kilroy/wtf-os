@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { isLiteMarkdownReport } from "./report-format";
+import { isLiteMarkdownReport, parseLiteReportHeader } from "./report-format";
 
 // A trimmed sample of the real Lite markdown emitted for call_scores rows
 // (version "lite"). Headers: WHAT WORKED / WHAT TO WATCH / ONE MOVE TO LEVEL UP
@@ -69,5 +69,34 @@ describe("isLiteMarkdownReport", () => {
 
   it("returns false for markdown that matches neither format (leaves existing behavior untouched)", () => {
     expect(isLiteMarkdownReport("# Some other doc\n\nJust prose.")).toBe(false);
+  });
+});
+
+describe("parseLiteReportHeader", () => {
+  it("extracts the top-matter fields", () => {
+    const h = parseLiteReportHeader(LITE_MARKDOWN);
+    expect(h.call).toBe("Glidecoat (Paul + James Payson)");
+    expect(h.duration).toBe("~40 minutes");
+    expect(h.score).toBe(6);
+    expect(h.effectiveness).toBe("Medium");
+    expect(h.dynamicsProfile).toBe("High-Prep, Soft-Exit");
+  });
+
+  it("strips the four label lines from the body but keeps the intro + sections", () => {
+    const { body } = parseLiteReportHeader(LITE_MARKDOWN);
+    expect(body).not.toMatch(/\*\*Call:\*\*/);
+    expect(body).not.toMatch(/\*\*Duration:\*\*/);
+    expect(body).not.toMatch(/\*\*Score:\*\*/);
+    expect(body).not.toMatch(/\*\*Dynamics Profile:\*\*/);
+    // Intro paragraph and section headers survive.
+    expect(body).toMatch(/Don came in with real homework done/);
+    expect(body).toMatch(/## WHAT WORKED/);
+    expect(body).toMatch(/## BOTTOM LINE/);
+  });
+
+  it("handles a decimal score and missing effectiveness", () => {
+    const h = parseLiteReportHeader("**Score:** 7.5/10\n\n## WHAT WORKED\n\nx");
+    expect(h.score).toBe(7.5);
+    expect(h.effectiveness).toBe("");
   });
 });

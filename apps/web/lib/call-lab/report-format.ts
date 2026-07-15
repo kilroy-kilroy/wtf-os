@@ -22,3 +22,43 @@ export function isLiteMarkdownReport(markdown: string | null | undefined): boole
   // Lite reports are identified by their WHAT WORKED / WHAT TO WATCH headers.
   return /^#{1,3}\s*WHAT WORKED\b/im.test(markdown) || /^#{1,3}\s*WHAT TO WATCH\b/im.test(markdown);
 }
+
+export interface LiteReportHeader {
+  call: string;
+  duration: string;
+  score: number | null;
+  effectiveness: string;
+  dynamicsProfile: string;
+  /** The markdown with the four top-matter label lines stripped out. */
+  body: string;
+}
+
+/**
+ * Split the Lite markdown top matter (the `**Call:** / **Duration:** /
+ * **Score:** / **Dynamics Profile:**` lines) out into structured fields so the
+ * report page can render a styled header card, and return the remaining
+ * markdown (intro paragraph + all sections) for the general renderer.
+ */
+export function parseLiteReportHeader(markdown: string): LiteReportHeader {
+  const grab = (re: RegExp) => markdown.match(re)?.[1]?.trim() ?? "";
+
+  const call = grab(/\*\*Call:\*\*\s*([^\n]+)/i);
+  const duration = grab(/\*\*Duration:\*\*\s*([^\n]+)/i);
+  const scoreLine = grab(/\*\*Score:\*\*\s*([^\n]+)/i);
+  const dynamicsProfile = grab(/\*\*Dynamics Profile:\*\*\s*([^\n]+)/i);
+
+  const scoreNum = scoreLine.match(/(\d+(?:\.\d+)?)\s*\/\s*10/);
+  const score = scoreNum ? parseFloat(scoreNum[1]) : null;
+  const effectiveness = scoreLine.match(/Effectiveness:\s*([^\n|]+)/i)?.[1]?.trim() ?? "";
+
+  // Strip only the four known label lines; keep the intro paragraph and the
+  // rest of the report for the markdown renderer.
+  const body = markdown
+    .replace(/^[ \t]*\*\*Call:\*\*[^\n]*\n?/im, "")
+    .replace(/^[ \t]*\*\*Duration:\*\*[^\n]*\n?/im, "")
+    .replace(/^[ \t]*\*\*Score:\*\*[^\n]*\n?/im, "")
+    .replace(/^[ \t]*\*\*Dynamics Profile:\*\*[^\n]*\n?/im, "")
+    .replace(/^\s+/, "");
+
+  return { call, duration, score, effectiveness, dynamicsProfile, body };
+}

@@ -16,7 +16,11 @@ SET program_ids = ARRAY(
   SELECT DISTINCT x
   FROM unnest(COALESCE(c.program_ids, '{}'::uuid[]) || (SELECT ids FROM agency)) AS x
 )
-WHERE c.content_type = 'session';
+WHERE c.content_type = 'session'
+  -- Safety guard: if neither agency slug resolved (ids IS NULL), the array union
+  -- above would collapse program_ids to '{}', which under RLS means world-visible.
+  -- Skip the update entirely in that case rather than over-expose sessions.
+  AND (SELECT ids FROM agency) IS NOT NULL;
 
 UPDATE users
 SET is_admin = true

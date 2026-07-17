@@ -77,9 +77,16 @@ export default function ClientContentPage() {
     loadContent();
   }, [router, supabase]);
 
-  const filtered = filterType === 'all'
+  const scoped = filterType === 'all'
     ? content
     : content.filter(c => c.content_type === filterType);
+
+  // Office-hours archive (the `session` view): order by upload date, newest first.
+  // Other content keeps its curated `sort_order` from the query.
+  const filtered = filterType === 'session'
+    ? [...scoped].sort((a, b) =>
+        (b.published_at || b.created_at || '').localeCompare(a.published_at || a.created_at || ''))
+    : scoped;
 
   const types = ['all', ...new Set(content.map(c => c.content_type))];
 

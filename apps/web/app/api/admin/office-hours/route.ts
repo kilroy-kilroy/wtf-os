@@ -15,7 +15,7 @@ export async function GET() {
     .select('*')
     .eq('content_type', 'session')
     .eq('published', true)
-    .order('sort_order', { ascending: true });
+    .order('published_at', { ascending: false });
 
   return NextResponse.json({ sessions: data ?? [] });
 }

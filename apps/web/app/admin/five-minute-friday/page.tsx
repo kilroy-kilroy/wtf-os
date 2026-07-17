@@ -24,7 +24,7 @@ export default function AdminFiveMinuteFridayPage() {
   const [selectedFriday, setSelectedFriday] = useState<FridaySubmission | null>(null);
   const [responseText, setResponseText] = useState('');
   const [responding, setResponding] = useState(false);
-  const [filter, setFilter] = useState<'all' | 'needs_response'>('needs_response');
+  const [filter, setFilter] = useState<'all' | 'needs_response'>('all');
 
   useEffect(() => {
     loadFridays();

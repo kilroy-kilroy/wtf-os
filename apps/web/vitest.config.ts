@@ -11,7 +11,7 @@ export default defineConfig({
     },
   },
   test: {
-    include: ["lib/wah-wah/**/*.test.ts", "lib/contracts/**/*.test.ts", "lib/slack.test.ts", "lib/discovery-target.test.ts", "lib/client-documents/**/*.test.ts", "lib/case-study-lab/**/*.test.ts", "components/case-study-lab/**/*.test.ts", "lib/robot-tim/**/*.test.ts", "lib/timeline/**/*.test.ts", "lib/call-lab/**/*.test.ts"],
+    include: ["lib/wah-wah/**/*.test.ts", "lib/contracts/**/*.test.ts", "lib/slack.test.ts", "lib/discovery-target.test.ts", "lib/client-documents/**/*.test.ts", "lib/case-study-lab/**/*.test.ts", "components/case-study-lab/**/*.test.ts", "lib/robot-tim/**/*.test.ts", "lib/timeline/**/*.test.ts", "lib/call-lab/**/*.test.ts", "lib/client-content/**/*.test.ts"],
     environment: "node",
   },
 });

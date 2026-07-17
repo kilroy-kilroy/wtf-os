@@ -32,6 +32,11 @@ export default function ClientContentPage() {
   const supabase = createClient();
 
   useEffect(() => {
+    const t = new URLSearchParams(window.location.search).get('type');
+    if (t) setFilterType(t);
+  }, []);
+
+  useEffect(() => {
     async function loadContent() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.push('/client/login'); return; }
@@ -162,7 +167,7 @@ export default function ClientContentPage() {
                       {selectedItem.content_url && (
                         <div className="pt-4 border-t border-[#333333]">
                           <a
-                            href={selectedItem.content_url}
+                            href={`/api/client/content/${selectedItem.id}/transcript`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="inline-flex items-center gap-2 text-sm text-[#00D4FF] hover:underline"

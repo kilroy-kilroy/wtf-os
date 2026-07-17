@@ -48,7 +48,30 @@ export default function ClientContentPage() {
         .eq('published', true)
         .order('sort_order', { ascending: true });
 
-      setContent(data || []);
+      let rows = data || [];
+
+      // Admins have no enrollment, so RLS hides program-scoped sessions from them.
+      // Pull the full office-hours archive via the admin endpoint and merge it in.
+      const { data: userRow } = await supabase
+        .from('users')
+        .select('is_admin')
+        .eq('id', user.id)
+        .single();
+
+      if (userRow?.is_admin) {
+        try {
+          const res = await fetch('/api/admin/office-hours');
+          if (res.ok) {
+            const { sessions } = await res.json();
+            const seen = new Set(rows.map((r) => r.id));
+            rows = [...rows, ...sessions.filter((s: { id: string }) => !seen.has(s.id))];
+          }
+        } catch {
+          /* non-fatal: fall back to RLS-visible content */
+        }
+      }
+
+      setContent(rows);
       setLoading(false);
     }
     loadContent();

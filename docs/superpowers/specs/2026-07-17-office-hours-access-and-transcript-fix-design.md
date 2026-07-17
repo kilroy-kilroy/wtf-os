@@ -39,15 +39,15 @@ Four related gaps around session content (Five Minute Friday, 1:1 sessions, offi
 ### Part 1 — Restore admin access to 5MF + 1:1 / office-hours review
 
 1. **Add `/admin/sessions` to the admin sidebar** (`apps/web/app/admin/layout.tsx` `NAV_LINKS`) — e.g. label "Sessions".
-2. **Convert `/api/admin/sessions/*` auth** (`route.ts`, `publish/route.ts`, `regenerate/route.ts`) from the manual `ADMIN_API_KEY` Bearer check to the **`is_admin` session gate** — same pattern as `/api/admin/five-minute-friday/route.ts` (read the session user, look up `users.is_admin`, 403 otherwise). Keep `ADMIN_API_KEY` acceptance as a fallback **only if** an external caller depends on it (audit first; default is to remove it).
+2. **Convert `/api/admin/sessions/*` auth** (`route.ts`, `publish/route.ts`, `regenerate/route.ts`) from the manual `ADMIN_API_KEY` Bearer check to the **`is_admin` session gate** — same pattern as `/api/admin/five-minute-friday/route.ts` (read the session user, look up `users.is_admin`, 403 otherwise). **Remove the `ADMIN_API_KEY` path entirely** — confirmed nothing external depends on it.
 3. **Remove the API-key entry box** from `apps/web/app/admin/sessions/page.tsx`; the page loads directly for a logged-in admin (drop the `sessionStorage` `admin_api_key` flow and the `Authorization: Bearer` headers on its fetches).
 4. **Five Minute Friday page:** default the view to **"All"** (or make the toggle clearly show answered history). Small change in `apps/web/app/admin/five-minute-friday/page.tsx`.
-5. **Verify** `tim@timkilroy.com` has `users.is_admin = true` (data check; fix if not).
+5. **Ensure both `tim@timkilroy.com` and `tk@timkilroy.com` have `users.is_admin = true`** (data update).
 
 ### Part 2 — Office-hours group scoping (Agency Studio + Studio+)
 
 1. **Backfill existing office-hours rows.** For every `client_content` row with `content_type='session'`, ensure `program_ids` contains **both** the `agency-studio` and `agency-studio-plus` program IDs (union, don't clobber). A one-off SQL migration.
-   - **Scope guard:** target sessions currently pointed at an agency program or with empty `program_ids`. **Open question for Tim:** were any office hours run specifically for SalesOS / DemandOS programs? If so, the backfill must not add agency access to those. Default assumption: office hours are an agency-tier artifact; confirm before running.
+   - **No scope guard needed:** confirmed office hours have only ever been run for Agency Studio, so every session row is safe to make visible to both agency tiers.
 2. **Going forward:** when publishing an office-hours session (`publish/route.ts`, office-hours branch), include **both** agency program IDs in `program_ids` (instead of the single selected program) — or add a note/UI making multi-program targeting explicit. Recommendation: for office hours specifically, always write both agency IDs.
 
 ### Part 3 — Surfacing + Tim's client-style access
@@ -94,7 +94,8 @@ Four related gaps around session content (Five Minute Friday, 1:1 sessions, offi
 - **Part 3:** the `/client/documents` "Office Hours →" card lands on the session-filtered Resource Library; Tim (admin) sees the fully-populated archive.
 - **Part 4:** as a member and as admin, "Download Call Transcript" downloads the VTT (200, not "object not found"); a logged-out or non-entitled user is rejected (401/403).
 
-## Open questions for Tim
+## Resolved decisions
 
-1. Were any office hours run specifically for **SalesOS / DemandOS** programs (not agency)? If yes, the Part 2 backfill must exclude them.
-2. Should the `ADMIN_API_KEY` Bearer path on the sessions API be **removed entirely**, or kept as a fallback for any external/automation caller?
+1. Office hours have only ever been run for **Agency Studio** — the Part 2 backfill applies to every session row, no program exclusions.
+2. Nothing external depends on `ADMIN_API_KEY` — it is **removed entirely** from the sessions API.
+3. Both **`tim@timkilroy.com` and `tk@timkilroy.com`** must be set to `is_admin = true`.

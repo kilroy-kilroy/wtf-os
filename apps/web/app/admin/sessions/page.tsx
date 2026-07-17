@@ -54,8 +54,6 @@ interface DraftSession {
 }
 
 export default function AdminSessionsPage() {
-  const [apiKey, setApiKey] = useState('');
-  const [authed, setAuthed] = useState(false);
   const [view, setView] = useState<ViewState>('list');
   const [sessions, setSessions] = useState<SessionListItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -76,29 +74,14 @@ export default function AdminSessionsPage() {
   const [regenerating, setRegenerating] = useState<string | null>(null);
 
   useEffect(() => {
-    const stored = sessionStorage.getItem('admin_api_key');
-    if (stored) {
-      setApiKey(stored);
-      setAuthed(true);
-      loadSessions(stored);
-      loadEnrollments(stored);
-    }
+    loadSessions();
+    loadEnrollments();
   }, []);
 
-  function handleAuth(e: React.FormEvent) {
-    e.preventDefault();
-    sessionStorage.setItem('admin_api_key', apiKey);
-    setAuthed(true);
-    loadSessions(apiKey);
-    loadEnrollments(apiKey);
-  }
-
-  async function loadSessions(key: string) {
+  async function loadSessions() {
     setLoading(true);
     try {
-      const res = await fetch('/api/admin/sessions', {
-        headers: { Authorization: `Bearer ${key}` },
-      });
+      const res = await fetch('/api/admin/sessions');
       if (res.ok) {
         const data = await res.json();
         setSessions(data.sessions || []);
@@ -109,11 +92,9 @@ export default function AdminSessionsPage() {
     setLoading(false);
   }
 
-  async function loadEnrollments(key: string) {
+  async function loadEnrollments() {
     try {
-      const res = await fetch('/api/admin/clients', {
-        headers: { Authorization: `Bearer ${key}` },
-      });
+      const res = await fetch('/api/admin/clients');
       if (res.ok) {
         const data = await res.json();
         const enrollmentList: Enrollment[] = (data.clients || []).map((c: any) => ({
@@ -147,7 +128,6 @@ export default function AdminSessionsPage() {
 
       const res = await fetch('/api/admin/sessions', {
         method: 'POST',
-        headers: { Authorization: `Bearer ${apiKey}` },
         body: formData,
       });
 
@@ -188,7 +168,6 @@ export default function AdminSessionsPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
           transcript: draft.parsed_transcript,
@@ -218,7 +197,6 @@ export default function AdminSessionsPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
           type: draft.type,
@@ -236,7 +214,7 @@ export default function AdminSessionsPage() {
         setView('list');
         setFile(null);
         setTargetId('');
-        await loadSessions(apiKey);
+        await loadSessions();
       } else {
         const err = await res.json();
         alert(`Error: ${err.error || 'Publish failed'}`);
@@ -245,27 +223,6 @@ export default function AdminSessionsPage() {
       alert('Publish failed');
     }
     setPublishing(false);
-  }
-
-  // ── Auth gate ──
-  if (!authed) {
-    return (
-      <div className="min-h-screen bg-black text-white flex items-center justify-center p-6">
-        <form onSubmit={handleAuth} className="max-w-md w-full space-y-4">
-          <h1 className="text-2xl font-anton uppercase text-[#E51B23]">Admin: Sessions</h1>
-          <input
-            type="password"
-            value={apiKey}
-            onChange={(e) => setApiKey(e.target.value)}
-            placeholder="Admin API Key"
-            className="w-full bg-black border border-[#333333] text-white px-4 py-3 focus:border-[#E51B23] focus:outline-none"
-          />
-          <button type="submit" className="w-full bg-[#E51B23] text-white py-3 font-anton uppercase">
-            Access
-          </button>
-        </form>
-      </div>
-    );
   }
 
   // ── Review view ──

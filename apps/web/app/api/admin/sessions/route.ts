@@ -2,19 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabase-server';
 import { parseVttContent, titleFromFilename, isVttFile } from '@/lib/vtt';
 import { generateSessionContent } from '@/lib/session-ai';
-
-function verifyAuth(request: NextRequest): boolean {
-  const authHeader = request.headers.get('authorization');
-  const apiKey = authHeader?.replace('Bearer ', '');
-  return apiKey === process.env.ADMIN_API_KEY;
-}
+import { requireAdmin } from '@/lib/contracts/require-admin';
 
 // POST /api/admin/sessions
 // Upload a VTT file, parse it, generate synopsis + teaching via AI.
 // Returns draft content for review (does NOT publish yet).
 export async function POST(request: NextRequest) {
-  if (!verifyAuth(request)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!(await requireAdmin())) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
   try {
@@ -123,9 +118,9 @@ export async function POST(request: NextRequest) {
 }
 
 // GET /api/admin/sessions — List all sessions (from both tables)
-export async function GET(request: NextRequest) {
-  if (!verifyAuth(request)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+export async function GET(_request: NextRequest) {
+  if (!(await requireAdmin())) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
   try {

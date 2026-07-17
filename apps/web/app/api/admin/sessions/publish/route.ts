@@ -2,18 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabase-server';
 import { alertDocumentShared } from '@/lib/slack';
 import { sendEvent } from '@/lib/loops';
-
-function verifyAuth(request: NextRequest): boolean {
-  const authHeader = request.headers.get('authorization');
-  const apiKey = authHeader?.replace('Bearer ', '');
-  return apiKey === process.env.ADMIN_API_KEY;
-}
+import { requireAdmin } from '@/lib/contracts/require-admin';
 
 // POST /api/admin/sessions/publish
 // Publish a reviewed session to the appropriate table.
 export async function POST(request: NextRequest) {
-  if (!verifyAuth(request)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!(await requireAdmin())) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
   try {
@@ -122,15 +117,15 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json({ success: true, documents: docs, count: docs.length, errors });
     } else if (type === 'office-hours') {
-      // Resolve program slug to ID
-      const { data: program } = await supabase
+      // Office hours are an Agency Studio artifact — always visible to both agency tiers.
+      const { data: agencyPrograms } = await supabase
         .from('client_programs')
         .select('id')
-        .eq('slug', target_id)
-        .single();
+        .in('slug', ['agency-studio', 'agency-studio-plus']);
 
-      if (!program) {
-        return NextResponse.json({ error: 'Program not found' }, { status: 404 });
+      const programIds = (agencyPrograms ?? []).map((p) => p.id);
+      if (programIds.length === 0) {
+        return NextResponse.json({ error: 'Agency programs not found' }, { status: 404 });
       }
 
       const { data: content, error } = await supabase
@@ -140,7 +135,7 @@ export async function POST(request: NextRequest) {
           content_type: 'session',
           content_body: contentBody,
           content_url: vtt_url,
-          program_ids: [program.id],
+          program_ids: programIds,
           published: true,
           published_at: new Date().toISOString(),
           sort_order: 0,
@@ -153,11 +148,11 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Database error' }, { status: 500 });
       }
 
-      // Notify all clients enrolled in the target program
+      // Notify all clients enrolled in either agency program.
       const { data: enrollments } = await supabase
         .from('client_enrollments')
         .select('user_id')
-        .eq('program_id', program.id)
+        .in('program_id', programIds)
         .eq('status', 'active');
 
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.timkilroy.com';

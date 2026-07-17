@@ -1,17 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateSessionContent } from '@/lib/session-ai';
-
-function verifyAuth(request: NextRequest): boolean {
-  const authHeader = request.headers.get('authorization');
-  const apiKey = authHeader?.replace('Bearer ', '');
-  return apiKey === process.env.ADMIN_API_KEY;
-}
+import { requireAdmin } from '@/lib/contracts/require-admin';
 
 // POST /api/admin/sessions/regenerate
 // Re-generate synopsis and/or teaching from transcript text.
 export async function POST(request: NextRequest) {
-  if (!verifyAuth(request)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!(await requireAdmin())) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
   try {

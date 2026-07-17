@@ -137,6 +137,24 @@ export default function ClientDocumentsPage() {
           </div>
         )}
 
+        <a
+          href="/client/content?type=session"
+          className="block border border-[#333333] hover:border-[#E51B23] transition-colors p-4 mb-6"
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-[10px] uppercase tracking-wider text-[#666666] mb-1">
+                Group Sessions
+              </div>
+              <div className="font-bold text-white text-sm">Office Hours</div>
+              <div className="text-[#999999] text-xs mt-1">
+                Watch or read every office-hours session in the Resource Library
+              </div>
+            </div>
+            <span className="text-[#E51B23] text-lg">&rarr;</span>
+          </div>
+        </a>
+
         {/* Documents list */}
         {filtered.length === 0 ? (
           <div className="text-center py-16">

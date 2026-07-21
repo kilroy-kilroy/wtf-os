@@ -190,7 +190,7 @@ export default function ExampleDiscoveryProReportPage() {
 
         {/* Report - Same renderer as actual Discovery Lab Pro reports */}
         <ConsolePanel>
-          <ConsoleHeading level={1} variant="yellow" className="mb-6">
+          <ConsoleHeading level={1} as="h2" variant="yellow" className="mb-6">
             DISCOVERY LAB <span className="text-[#E51B23]">PRO</span> - CALL GUIDE
           </ConsoleHeading>
           <ConsoleMarkdownRenderer content={SYNTHETIC_PRO_REPORT} />

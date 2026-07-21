@@ -340,7 +340,7 @@ export default function ExampleProReportPage() {
 
         {/* Report - Same renderer as actual Call Lab Pro reports */}
         <ConsolePanel>
-          <ConsoleHeading level={1} variant="yellow" className="mb-6">
+          <ConsoleHeading level={1} as="h2" variant="yellow" className="mb-6">
             CALL LAB PRO - FULL INTELLIGENCE REPORT
           </ConsoleHeading>
           <ConsoleMarkdownRenderer content={SYNTHETIC_PRO_REPORT} />

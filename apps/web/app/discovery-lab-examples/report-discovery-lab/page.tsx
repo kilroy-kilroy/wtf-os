@@ -120,7 +120,7 @@ export default function ExampleDiscoveryReportPage() {
 
         {/* Report - Same renderer as actual Discovery Lab reports */}
         <ConsolePanel>
-          <ConsoleHeading level={1} variant="yellow" className="mb-6">
+          <ConsoleHeading level={1} as="h2" variant="yellow" className="mb-6">
             YOUR DISCOVERY LAB CALL GUIDE
           </ConsoleHeading>
           <ConsoleMarkdownRenderer content={SYNTHETIC_REPORT} />

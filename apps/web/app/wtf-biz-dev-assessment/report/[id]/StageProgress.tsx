@@ -14,9 +14,15 @@ export function StageProgress({ stage }: { stage: Stage }) {
       <p className="font-poppins text-xs uppercase tracking-[0.25em] text-muted-foreground mb-3">
         You are at stage {current.index} of 3
       </p>
-      <h1 className="font-anton uppercase leading-[0.95] tracking-tight text-foreground text-[clamp(2.5rem,7vw,5rem)] mb-3">
+      {/*
+        Deliberately NOT an <h1>: the report markdown below always opens with
+        "# You are at the [Stage] stage." (enforced by the synthesis prompt),
+        which is the page's real h1. This is the status readout for the stage
+        widget, so it stays a styled div to keep one h1 per page.
+      */}
+      <div className="font-anton uppercase leading-[0.95] tracking-tight text-foreground text-[clamp(2.5rem,7vw,5rem)] mb-3">
         {current.label}
-      </h1>
+      </div>
       <p className="font-poppins text-lg md:text-xl text-brand-ink italic max-w-2xl">
         &ldquo;{current.tagline}&rdquo;
       </p>

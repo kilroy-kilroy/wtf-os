@@ -2,7 +2,13 @@ import React from 'react';
 
 interface ConsoleHeadingProps {
   children: React.ReactNode;
+  /** Visual scale only. Defaults the rendered tag unless `as` overrides it. */
   level?: 1 | 2 | 3;
+  /**
+   * Semantic tag override. Use when a heading needs level-1 sizing but the page
+   * already has its own <h1> (a page may only ever have one).
+   */
+  as?: 'h1' | 'h2' | 'h3' | 'h4';
   variant?: 'white' | 'yellow' | 'mixed';
   className?: string;
 }
@@ -10,6 +16,7 @@ interface ConsoleHeadingProps {
 export function ConsoleHeading({
   children,
   level = 1,
+  as,
   variant = 'white',
   className = ''
 }: ConsoleHeadingProps) {
@@ -27,7 +34,7 @@ export function ConsoleHeading({
     mixed: 'text-white'
   };
 
-  const Tag = `h${level}` as keyof JSX.IntrinsicElements;
+  const Tag = (as ?? `h${level}`) as keyof JSX.IntrinsicElements;
 
   return (
     <Tag className={`${baseStyles} ${sizeStyles[level]} ${colorStyles[variant]} ${className}`}>

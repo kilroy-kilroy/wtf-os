@@ -1,13 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@repo/db/client';
+import { requireAdminRequest } from '@/lib/contracts/require-admin';
 
 export async function GET(request: NextRequest) {
   try {
-    // Simple API key auth - set ADMIN_API_KEY in your environment
-    const authHeader = request.headers.get('authorization');
-    const apiKey = process.env.ADMIN_API_KEY;
-
-    if (apiKey && authHeader !== `Bearer ${apiKey}`) {
+    if (!(await requireAdminRequest(request))) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

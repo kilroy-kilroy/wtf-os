@@ -316,14 +316,12 @@ function ReportLink({ href, children }: { href: string; children: React.ReactNod
 function AgencyView({
   data,
   search,
-  apiKey,
   onNavigateToUser,
   onNavigateToProduct,
   onAgencyRenamed,
 }: {
   data: ReportsData;
   search: string;
-  apiKey: string;
   onNavigateToUser: (userId: string) => void;
   onNavigateToProduct: (product: ProductFilter, userId?: string) => void;
   onAgencyRenamed: (agencyId: string, newName: string) => void;
@@ -342,7 +340,6 @@ function AgencyView({
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey}`,
         },
         body: JSON.stringify({ name: agencyNameInput.trim() }),
       });
@@ -1539,39 +1536,11 @@ function ProductView({
 // AUTH GATE
 // ============================================
 
-function AuthGate({ onAuth }: { onAuth: (key: string) => void }) {
-  const [key, setKey] = useState('');
-
-  return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-8 w-full max-w-sm">
-        <h1 className="text-xl font-bold text-white mb-4">Admin Reports</h1>
-        <input
-          type="password"
-          value={key}
-          onChange={(e) => setKey(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && key && onAuth(key)}
-          placeholder="API Key"
-          className="w-full px-4 py-3 bg-slate-700/50 border-2 border-slate-600 rounded-xl text-white placeholder-slate-500 focus:border-[#00D4FF] focus:ring-0 focus:outline-none text-sm mb-4"
-          autoFocus
-        />
-        <button
-          onClick={() => key && onAuth(key)}
-          className="w-full py-3 rounded-xl bg-[#00D4FF] text-slate-900 font-bold text-sm"
-        >
-          Enter
-        </button>
-      </div>
-    </div>
-  );
-}
-
 // ============================================
 // MAIN PAGE
 // ============================================
 
 export default function AdminReportsPage() {
-  const [apiKey, setApiKey] = useState<string | null>(null);
   const [data, setData] = useState<ReportsData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -1581,24 +1550,14 @@ export default function AdminReportsPage() {
   const [filterUserId, setFilterUserId] = useState<string | null>(null);
   const [highlightUserId, setHighlightUserId] = useState<string | null>(null);
 
-  // Persist key in sessionStorage
-  useEffect(() => {
-    const stored = sessionStorage.getItem('admin_api_key');
-    if (stored) setApiKey(stored);
-  }, []);
-
-  const fetchData = useCallback(async (key: string) => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch('/api/admin/client-reports', {
-        headers: { Authorization: `Bearer ${key}` },
-      });
-      if (res.status === 401) {
-        setError('Invalid API key');
-        setApiKey(null);
-        sessionStorage.removeItem('admin_api_key');
-        document.cookie = 'admin_api_key=; path=/; max-age=0';
+      // Session cookie authenticates this request (admin is_admin gated by middleware).
+      const res = await fetch('/api/admin/client-reports');
+      if (res.status === 401 || res.status === 403) {
+        setError('Not authorized. Make sure you are signed in as an admin.');
         return;
       }
       const json = await res.json();
@@ -1611,13 +1570,8 @@ export default function AdminReportsPage() {
   }, []);
 
   useEffect(() => {
-    if (apiKey) {
-      sessionStorage.setItem('admin_api_key', apiKey);
-      // Set cookie for server component access (admin assessment viewing)
-      document.cookie = `admin_api_key=${apiKey}; path=/; max-age=${60 * 60 * 24}; SameSite=Lax`;
-      fetchData(apiKey);
-    }
-  }, [apiKey, fetchData]);
+    fetchData();
+  }, [fetchData]);
 
   // Cross-tab navigation handlers
   const navigateToUser = (userId: string) => {
@@ -1644,10 +1598,6 @@ export default function AdminReportsPage() {
     }
   };
 
-  if (!apiKey) {
-    return <AuthGate onAuth={setApiKey} />;
-  }
-
   if (loading && !data) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -1661,7 +1611,7 @@ export default function AdminReportsPage() {
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <p className="text-red-400 mb-4">{error}</p>
-          <button onClick={() => fetchData(apiKey)} className="text-[#00D4FF] text-sm font-medium">
+          <button onClick={() => fetchData()} className="text-[#00D4FF] text-sm font-medium">
             Retry
           </button>
         </div>
@@ -1720,17 +1670,11 @@ export default function AdminReportsPage() {
         </div>
         <div className="flex gap-2">
           <button
-            onClick={() => fetchData(apiKey)}
+            onClick={() => fetchData()}
             disabled={loading}
             className="px-4 py-2 rounded-lg bg-slate-700 text-slate-300 text-sm font-medium hover:bg-slate-600 disabled:opacity-50"
           >
             {loading ? 'Refreshing...' : 'Refresh'}
-          </button>
-          <button
-            onClick={() => { sessionStorage.removeItem('admin_api_key'); document.cookie = 'admin_api_key=; path=/; max-age=0'; setApiKey(null); }}
-            className="px-4 py-2 rounded-lg bg-slate-800 text-slate-500 text-sm hover:text-slate-300"
-          >
-            Logout
           </button>
         </div>
       </div>
@@ -1768,7 +1712,6 @@ export default function AdminReportsPage() {
         <AgencyView
           data={data}
           search={search}
-          apiKey={apiKey}
           onNavigateToUser={navigateToUser}
           onNavigateToProduct={navigateToProduct}
           onAgencyRenamed={(agencyId, newName) => {

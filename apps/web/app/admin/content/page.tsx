@@ -25,8 +25,6 @@ const TYPE_COLORS: Record<ContentType, string> = {
 };
 
 export default function AdminContentPage() {
-  const [apiKey, setApiKey] = useState('');
-  const [authed, setAuthed] = useState(false);
   const [content, setContent] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
@@ -44,20 +42,13 @@ export default function AdminContentPage() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    const stored = sessionStorage.getItem('admin_api_key');
-    if (stored) {
-      setApiKey(stored);
-      setAuthed(true);
-      loadContent(stored);
-    }
+    loadContent();
   }, []);
 
-  async function loadContent(key: string) {
+  async function loadContent() {
     setLoading(true);
     try {
-      const res = await fetch('/api/client/content', {
-        headers: { Authorization: `Bearer ${key}` },
-      });
+      const res = await fetch('/api/client/content');
       if (res.ok) {
         const data = await res.json();
         setContent(data.content || []);
@@ -66,13 +57,6 @@ export default function AdminContentPage() {
       console.error('Failed to load content:', err);
     }
     setLoading(false);
-  }
-
-  function handleAuth(e: React.FormEvent) {
-    e.preventDefault();
-    sessionStorage.setItem('admin_api_key', apiKey);
-    setAuthed(true);
-    loadContent(apiKey);
   }
 
   function resetForm() {
@@ -129,7 +113,6 @@ export default function AdminContentPage() {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${apiKey}`,
           },
           body: JSON.stringify(payload),
         });
@@ -140,7 +123,6 @@ export default function AdminContentPage() {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${apiKey}`,
           },
           body: JSON.stringify(payload),
         });
@@ -148,7 +130,7 @@ export default function AdminContentPage() {
 
       if (res.ok) {
         resetForm();
-        await loadContent(apiKey);
+        await loadContent();
       } else {
         const err = await res.json();
         alert(`Error: ${err.error || err.message || 'Save failed'}`);
@@ -166,12 +148,11 @@ export default function AdminContentPage() {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey}`,
         },
         body: JSON.stringify({ id }),
       });
       if (res.ok) {
-        await loadContent(apiKey);
+        await loadContent();
       } else {
         alert('Failed to delete content');
       }
@@ -186,7 +167,6 @@ export default function AdminContentPage() {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey}`,
         },
         body: JSON.stringify({ id: item.id, published: !item.published }),
       });
@@ -217,7 +197,6 @@ export default function AdminContentPage() {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${apiKey}`,
           },
           body: JSON.stringify({ id: item.id, sort_order: adjacentOrder }),
         }),
@@ -225,12 +204,11 @@ export default function AdminContentPage() {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${apiKey}`,
           },
           body: JSON.stringify({ id: adjacent.id, sort_order: itemOrder }),
         }),
       ]);
-      await loadContent(apiKey);
+      await loadContent();
     } catch (err) {
       console.error('Failed to reorder:', err);
     }
@@ -239,27 +217,6 @@ export default function AdminContentPage() {
   function toggleProgram(slug: string) {
     setFormPrograms(prev =>
       prev.includes(slug) ? prev.filter(s => s !== slug) : [...prev, slug]
-    );
-  }
-
-  // ---- Auth gate ----
-  if (!authed) {
-    return (
-      <div className="min-h-screen bg-black text-white flex items-center justify-center p-6">
-        <form onSubmit={handleAuth} className="max-w-md w-full space-y-4">
-          <h1 className="text-2xl font-anton uppercase text-[#E51B23]">Admin: Content Library</h1>
-          <input
-            type="password"
-            value={apiKey}
-            onChange={(e) => setApiKey(e.target.value)}
-            placeholder="Admin API Key"
-            className="w-full bg-black border border-[#333333] text-white px-4 py-3 focus:border-[#E51B23] focus:outline-none"
-          />
-          <button type="submit" className="w-full bg-[#E51B23] text-white py-3 font-anton uppercase">
-            Access
-          </button>
-        </form>
-      </div>
     );
   }
 

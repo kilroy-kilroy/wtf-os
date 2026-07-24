@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@repo/db/client';
+import { requireAdminRequest } from '@/lib/contracts/require-admin';
 
 // Free email providers — users with these domains won't be auto-grouped
 const FREE_EMAIL_DOMAINS = new Set([
@@ -32,16 +33,13 @@ function domainToAgencyName(domain: string): string {
  *
  * Returns agencies, users, and all reports for the admin reports page.
  * Now includes domain-inferred agencies for unassigned users.
- * Auth: ADMIN_API_KEY bearer token
+ * Auth: admin session (is_admin) or ADMIN_API_KEY bearer token
  *
  * GET /api/admin/client-reports
  */
 export async function GET(request: NextRequest) {
   try {
-    const authHeader = request.headers.get('authorization');
-    const apiKey = process.env.ADMIN_API_KEY;
-
-    if (apiKey && authHeader !== `Bearer ${apiKey}`) {
+    if (!(await requireAdminRequest(request))) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

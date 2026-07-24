@@ -44,9 +44,6 @@ const PROGRAMS = [
 ];
 
 export default function AdminClientsPage() {
-  const [apiKey, setApiKey] = useState('');
-  const [authed, setAuthed] = useState(false);
-  const [authError, setAuthError] = useState<string | null>(null);
   const [clients, setClients] = useState<ClientRow[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -76,46 +73,25 @@ export default function AdminClientsPage() {
   const docFileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const stored = sessionStorage.getItem('admin_api_key');
-    if (stored) {
-      setApiKey(stored);
-      setAuthed(true);
-      loadClients(stored);
-    }
+    loadClients();
   }, []);
 
-  async function loadClients(key: string) {
+  async function loadClients() {
     setLoading(true);
     try {
-      const res = await fetch('/api/admin/clients', {
-        headers: { Authorization: `Bearer ${key}` },
-      });
+      const res = await fetch('/api/admin/clients');
       if (res.ok) {
         const data = await res.json();
         setClients(data.clients || []);
       } else if (res.status === 401 || res.status === 403) {
-        // Stale/wrong key — evict it so it can't silently re-fail on reload,
-        // and bounce back to the auth form with a visible message.
-        sessionStorage.removeItem('admin_api_key');
-        setAuthed(false);
-        setAuthError('Invalid or expired admin key. Please re-enter it.');
+        console.error('Not authorized to view clients.');
       } else {
-        // Transient server/network failure — keep the (valid) key, surface it.
-        setAuthError(`Failed to load clients (${res.status}). Try again.`);
+        console.error(`Failed to load clients (${res.status}).`);
       }
     } catch (err) {
       console.error(err);
-      setAuthError('Network error loading clients. Try again.');
     }
     setLoading(false);
-  }
-
-  function handleAuth(e: React.FormEvent) {
-    e.preventDefault();
-    setAuthError(null);
-    sessionStorage.setItem('admin_api_key', apiKey);
-    setAuthed(true);
-    loadClients(apiKey);
   }
 
   async function handleInvite(e: React.FormEvent) {
@@ -126,7 +102,6 @@ export default function AdminClientsPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
           email: inviteEmail,
@@ -140,7 +115,7 @@ export default function AdminClientsPage() {
         setInviteStatus('Invite sent successfully!');
         setInviteEmail('');
         setInviteName('');
-        loadClients(apiKey);
+        loadClients();
       } else {
         const err = await res.json();
         setInviteStatus(`Error: ${err.error || err.message}`);
@@ -157,7 +132,6 @@ export default function AdminClientsPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey}`,
         },
         body: JSON.stringify({ enrollment_id: enrollmentId }),
       });
@@ -180,7 +154,6 @@ export default function AdminClientsPage() {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey}`,
         },
         body: JSON.stringify({ user_id: client.user_id, [field]: value }),
       });
@@ -211,7 +184,6 @@ export default function AdminClientsPage() {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey}`,
         },
         body: JSON.stringify({ user_id: client.user_id, enrollment_id: client.id, status: newStatus }),
       });
@@ -238,7 +210,6 @@ export default function AdminClientsPage() {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
           user_id: client.user_id,
@@ -270,9 +241,7 @@ export default function AdminClientsPage() {
   async function loadDocuments(enrollmentId: string) {
     setLoadingDocs(enrollmentId);
     try {
-      const res = await fetch(`/api/admin/documents?enrollment_id=${enrollmentId}`, {
-        headers: { Authorization: `Bearer ${apiKey}` },
-      });
+      const res = await fetch(`/api/admin/documents?enrollment_id=${enrollmentId}`);
       if (res.ok) {
         const data = await res.json();
         setDocuments(prev => ({ ...prev, [enrollmentId]: data.documents || [] }));
@@ -300,7 +269,6 @@ export default function AdminClientsPage() {
         formData.append('category', docCategory);
         res = await fetch('/api/admin/documents', {
           method: 'POST',
-          headers: { Authorization: `Bearer ${apiKey}` },
           body: formData,
         });
       } else {
@@ -308,7 +276,6 @@ export default function AdminClientsPage() {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${apiKey}`,
           },
           body: JSON.stringify({
             enrollment_id: enrollmentId,
@@ -347,7 +314,6 @@ export default function AdminClientsPage() {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey}`,
         },
         body: JSON.stringify({ document_id: docId }),
       });
@@ -359,31 +325,6 @@ export default function AdminClientsPage() {
     } catch (err) {
       alert('Failed to delete document');
     }
-  }
-
-  if (!authed) {
-    return (
-      <div className="min-h-screen bg-black text-white flex items-center justify-center p-6">
-        <form onSubmit={handleAuth} className="max-w-md w-full space-y-4">
-          <h1 className="text-2xl font-anton uppercase text-[#E51B23]">Admin: Client Management</h1>
-          {authError && (
-            <p className="text-sm text-[#E51B23] border border-[#E51B23]/40 bg-[#E51B23]/10 px-4 py-2">
-              {authError}
-            </p>
-          )}
-          <input
-            type="password"
-            value={apiKey}
-            onChange={(e) => setApiKey(e.target.value)}
-            placeholder="Admin API Key"
-            className="w-full bg-black border border-[#333333] text-white px-4 py-3 focus:border-[#E51B23] focus:outline-none"
-          />
-          <button type="submit" className="w-full bg-[#E51B23] text-white py-3 font-anton uppercase">
-            Access
-          </button>
-        </form>
-      </div>
-    );
   }
 
   return (

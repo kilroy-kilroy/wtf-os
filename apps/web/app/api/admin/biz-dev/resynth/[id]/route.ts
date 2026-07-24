@@ -4,15 +4,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@repo/db/client';
 import { runModel, retryWithBackoff, type AssessmentAnswers, type ScoreResult } from '@repo/utils';
 import { BIZ_DEV_SYSTEM_PROMPT, buildBizDevUserPrompt } from '@repo/prompts';
+import { requireAdminRequest } from '@/lib/contracts/require-admin';
 
 interface RouteContext {
   params: Promise<{ id: string }>;
-}
-
-function verifyAuth(request: NextRequest): boolean {
-  const authHeader = request.headers.get('authorization');
-  const apiKey = authHeader?.replace('Bearer ', '');
-  return Boolean(apiKey && apiKey === process.env.ADMIN_API_KEY);
 }
 
 /**
@@ -22,7 +17,7 @@ function verifyAuth(request: NextRequest): boolean {
  * or stuck in 'pending') without forcing the user to retake the assessment.
  */
 export async function POST(request: NextRequest, ctx: RouteContext) {
-  if (!verifyAuth(request)) {
+  if (!(await requireAdminRequest(request))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabase-server';
 import { onClientInvited, onClientPasswordReset } from '@/lib/loops';
+import { requireAdminRequest } from '@/lib/contracts/require-admin';
 
 // Admin-only: Resend a working self-service link for an existing enrollment.
 // If the invite is still pending, re-send the activation link; otherwise the
@@ -8,9 +9,7 @@ import { onClientInvited, onClientPasswordReset } from '@/lib/loops';
 // (No Supabase magic links — same own-token flow as invite/route.ts.)
 export async function POST(request: NextRequest) {
   try {
-    const authHeader = request.headers.get('authorization');
-    const apiKey = authHeader?.replace('Bearer ', '');
-    if (apiKey !== process.env.ADMIN_API_KEY) {
+    if (!(await requireAdminRequest(request))) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

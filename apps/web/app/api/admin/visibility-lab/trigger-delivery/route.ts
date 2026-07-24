@@ -4,6 +4,7 @@ import { onVisibilityReportGenerated, onVisibilityProReportGenerated } from '@/l
 import { addVisibilityLabSubscriber } from '@/lib/beehiiv';
 import { copperSyncLead, PRO_ACV, COPPER_STAGES } from '@/lib/copper';
 import { getArchetypeForLoops } from '@/lib/growth-quadrant';
+import { requireAdminRequest } from '@/lib/contracts/require-admin';
 
 // Admin-only: Manually (re)trigger delivery for an existing Visibility Lab report.
 // Re-fires the Loops email event and re-adds the user to the Beehiiv list.
@@ -11,9 +12,7 @@ import { getArchetypeForLoops } from '@/lib/growth-quadrant';
 // (e.g. the original delivery hooks failed or were skipped).
 export async function POST(request: NextRequest) {
   try {
-    const authHeader = request.headers.get('authorization');
-    const apiKey = authHeader?.replace('Bearer ', '');
-    if (apiKey !== process.env.ADMIN_API_KEY) {
+    if (!(await requireAdminRequest(request))) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

@@ -1,16 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabase-server';
-
-function verifyAuth(request: NextRequest): boolean {
-  const authHeader = request.headers.get('authorization');
-  const apiKey = authHeader?.replace('Bearer ', '');
-  return apiKey === process.env.ADMIN_API_KEY;
-}
+import { requireAdminRequest } from '@/lib/contracts/require-admin';
 
 // GET /api/admin/roadmaps?enrollment_id=xxx
 // Returns all roadmaps, or filtered by enrollment_id
 export async function GET(request: NextRequest) {
-  if (!verifyAuth(request)) {
+  if (!(await requireAdminRequest(request))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -45,7 +40,7 @@ export async function GET(request: NextRequest) {
 // Upload a roadmap file for a client
 // Expects multipart form data: file, enrollment_id, title (optional), description (optional)
 export async function POST(request: NextRequest) {
-  if (!verifyAuth(request)) {
+  if (!(await requireAdminRequest(request))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -123,7 +118,7 @@ export async function POST(request: NextRequest) {
 // DELETE /api/admin/roadmaps
 // Body: { roadmap_id }
 export async function DELETE(request: NextRequest) {
-  if (!verifyAuth(request)) {
+  if (!(await requireAdminRequest(request))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

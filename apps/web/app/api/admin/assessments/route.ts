@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@repo/db/client';
+import { requireAdminRequest } from '@/lib/contracts/require-admin';
 
 /**
  * Admin API: Product Intelligence
@@ -23,10 +24,7 @@ type Product = 'call-lab' | 'call-lab-pro' | 'discovery-lab' | 'discovery-lab-pr
 
 export async function GET(request: NextRequest) {
   try {
-    const authHeader = request.headers.get('authorization');
-    const apiKey = process.env.ADMIN_API_KEY;
-
-    if (apiKey && authHeader !== `Bearer ${apiKey}`) {
+    if (!(await requireAdminRequest(request))) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

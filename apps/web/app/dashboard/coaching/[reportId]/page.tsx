@@ -1,5 +1,5 @@
 import { redirect, notFound } from "next/navigation";
-import { cookies } from "next/headers";
+import { requireAdmin } from "@/lib/contracts/require-admin";
 import { createClient } from '@/lib/supabase-auth-server';
 import { getSupabaseServerClient } from '@/lib/supabase-server';
 import { format } from "date-fns";
@@ -85,9 +85,7 @@ export default async function CoachingReportPage({
 
   // Admin bypass: validate cookie against env var
   if (admin === '1') {
-    const cookieStore = await cookies();
-    const adminKey = cookieStore.get('admin_api_key')?.value;
-    if (adminKey && adminKey === process.env.ADMIN_API_KEY) {
+    if (await requireAdmin()) {
       const adminSupabase = getSupabaseServerClient();
       const { data } = await (adminSupabase as any)
         .from('coaching_reports')

@@ -1,5 +1,5 @@
 import { redirect, notFound } from 'next/navigation';
-import { cookies } from 'next/headers';
+import { requireAdmin } from '@/lib/contracts/require-admin';
 import { getSupabaseServerClient } from '@/lib/supabase-server';
 import Link from 'next/link';
 import { ConsolePanel, ConsoleHeading, ConsoleMarkdownRenderer } from '@/components/console';
@@ -35,9 +35,7 @@ export default async function DiscoveryReportPage({
 
   // Admin bypass: validate cookie against env var
   if (admin === '1') {
-    const cookieStore = await cookies();
-    const adminKey = cookieStore.get('admin_api_key')?.value;
-    if (adminKey && adminKey === process.env.ADMIN_API_KEY) {
+    if (await requireAdmin()) {
       const adminSupabase = getSupabaseServerClient();
       const { data } = await (adminSupabase as any)
         .from('discovery_briefs')

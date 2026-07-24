@@ -1,20 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@repo/db/client';
+import { requireAdminRequest } from '@/lib/contracts/require-admin';
 
 /**
  * Admin Dashboard API
  *
  * Returns all metrics for the admin dashboard in a single call.
- * Auth: ADMIN_API_KEY bearer token
+ * Auth: admin session (is_admin) or ADMIN_API_KEY bearer token
  *
  * GET /api/admin/dashboard
  */
 export async function GET(request: NextRequest) {
   try {
-    const authHeader = request.headers.get('authorization');
-    const apiKey = process.env.ADMIN_API_KEY;
-
-    if (apiKey && authHeader !== `Bearer ${apiKey}`) {
+    if (!(await requireAdminRequest(request))) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

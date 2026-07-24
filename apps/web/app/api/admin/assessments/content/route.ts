@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@repo/db/client';
 import { runModel } from '@repo/utils';
+import { requireAdminRequest } from '@/lib/contracts/require-admin';
 
 /**
  * Admin API: Generate Content from Assessment Data
@@ -17,10 +18,7 @@ import { runModel } from '@repo/utils';
  */
 export async function POST(request: NextRequest) {
   try {
-    const authHeader = request.headers.get('authorization');
-    const apiKey = process.env.ADMIN_API_KEY;
-
-    if (apiKey && authHeader !== `Bearer ${apiKey}`) {
+    if (!(await requireAdminRequest(request))) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

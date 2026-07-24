@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabase-server';
 import { alertDocumentShared } from '@/lib/slack';
 import { sendEvent } from '@/lib/loops';
+import { requireAdminRequest } from '@/lib/contracts/require-admin';
 
 async function notifyEnrolledClients(
   supabase: ReturnType<typeof getSupabaseServerClient>,
@@ -47,9 +48,7 @@ async function notifyEnrolledClients(
 // Admin-only: Manage client content
 export async function POST(request: NextRequest) {
   try {
-    const authHeader = request.headers.get('authorization');
-    const apiKey = authHeader?.replace('Bearer ', '');
-    if (apiKey !== process.env.ADMIN_API_KEY) {
+    if (!(await requireAdminRequest(request))) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -110,9 +109,7 @@ export async function POST(request: NextRequest) {
 // Admin-only: List all content
 export async function GET(request: NextRequest) {
   try {
-    const authHeader = request.headers.get('authorization');
-    const apiKey = authHeader?.replace('Bearer ', '');
-    if (apiKey !== process.env.ADMIN_API_KEY) {
+    if (!(await requireAdminRequest(request))) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -135,9 +132,7 @@ export async function GET(request: NextRequest) {
  */
 export async function PATCH(request: NextRequest) {
   try {
-    const authHeader = request.headers.get('authorization');
-    const apiKey = authHeader?.replace('Bearer ', '');
-    if (apiKey !== process.env.ADMIN_API_KEY) {
+    if (!(await requireAdminRequest(request))) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -215,9 +210,7 @@ export async function PATCH(request: NextRequest) {
  */
 export async function DELETE(request: NextRequest) {
   try {
-    const authHeader = request.headers.get('authorization');
-    const apiKey = authHeader?.replace('Bearer ', '');
-    if (apiKey !== process.env.ADMIN_API_KEY) {
+    if (!(await requireAdminRequest(request))) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

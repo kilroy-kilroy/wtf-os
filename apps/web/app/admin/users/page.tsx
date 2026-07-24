@@ -35,28 +35,19 @@ const TYPE_COLORS: Record<string, string> = {
 };
 
 export default function AdminUsersPage() {
-  const [apiKey, setApiKey] = useState('');
-  const [authed, setAuthed] = useState(false);
   const [users, setUsers] = useState<AdminUserRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<'all' | 'client' | 'user' | 'lead'>('all');
 
   useEffect(() => {
-    const stored = sessionStorage.getItem('admin_api_key');
-    if (stored) {
-      setApiKey(stored);
-      setAuthed(true);
-      loadUsers(stored);
-    }
+    loadUsers();
   }, []);
 
-  async function loadUsers(key: string) {
+  async function loadUsers() {
     setLoading(true);
     try {
-      const res = await fetch('/api/admin/users', {
-        headers: { Authorization: `Bearer ${key}` },
-      });
+      const res = await fetch('/api/admin/users');
       if (res.ok) {
         const data = await res.json();
         setUsers(data.users || []);
@@ -65,13 +56,6 @@ export default function AdminUsersPage() {
       console.error(err);
     }
     setLoading(false);
-  }
-
-  function handleAuth(e: React.FormEvent) {
-    e.preventDefault();
-    sessionStorage.setItem('admin_api_key', apiKey);
-    setAuthed(true);
-    loadUsers(apiKey);
   }
 
   const filteredUsers = users.filter((user) => {
@@ -91,26 +75,6 @@ export default function AdminUsersPage() {
     user: users.filter((u) => u.type === 'user').length,
     lead: users.filter((u) => u.type === 'lead').length,
   };
-
-  if (!authed) {
-    return (
-      <div className="min-h-screen bg-black text-white flex items-center justify-center p-6">
-        <form onSubmit={handleAuth} className="max-w-md w-full space-y-4">
-          <h1 className="text-2xl font-anton uppercase text-[#E51B23]">Admin: User Directory</h1>
-          <input
-            type="password"
-            value={apiKey}
-            onChange={(e) => setApiKey(e.target.value)}
-            placeholder="Admin API Key"
-            className="w-full bg-black border border-[#333333] text-white px-4 py-3 focus:border-[#E51B23] focus:outline-none"
-          />
-          <button type="submit" className="w-full bg-[#E51B23] text-white py-3 font-anton uppercase">
-            Access
-          </button>
-        </form>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-black text-white p-6 md:p-8">

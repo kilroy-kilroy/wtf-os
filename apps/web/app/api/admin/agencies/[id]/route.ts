@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabase-server';
+import { requireAdminRequest } from '@/lib/contracts/require-admin';
 
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const authHeader = request.headers.get('authorization');
-  const apiKey = process.env.ADMIN_API_KEY;
-  if (!apiKey || authHeader !== `Bearer ${apiKey}`) {
+  if (!(await requireAdminRequest(request))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

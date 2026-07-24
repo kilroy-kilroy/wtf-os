@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase-auth-server';
 import { getSupabaseServerClient } from '@/lib/supabase-server';
 import { redirect, notFound } from 'next/navigation';
-import { cookies } from 'next/headers';
+import { requireAdmin } from '@/lib/contracts/require-admin';
 import Link from 'next/link';
 import { FollowUpQuestionsSection, LTVSection } from './FollowUpSection';
 import ReportEngagementFooter from '@/components/ReportEngagementFooter';
@@ -233,9 +233,7 @@ export default async function ResultsPage({
 
   // Admin bypass: validate cookie against env var
   if (admin === '1') {
-    const cookieStore = await cookies();
-    const adminKey = cookieStore.get('admin_api_key')?.value;
-    if (adminKey && adminKey === process.env.ADMIN_API_KEY) {
+    if (await requireAdmin()) {
       const adminSupabase = getSupabaseServerClient();
       const { data, error } = await adminSupabase
         .from('assessments')

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabase-server';
 import { mostRecent } from '@/lib/last-active';
+import { requireAdminRequest } from '@/lib/contracts/require-admin';
 
 // Free email providers — users with these domains won't be grouped into agencies
 const FREE_EMAIL_DOMAINS = new Set([
@@ -30,9 +31,7 @@ function domainToAgencyName(domain: string): string {
 }
 
 export async function GET(request: NextRequest) {
-  const authHeader = request.headers.get('authorization');
-  const apiKey = process.env.ADMIN_API_KEY;
-  if (!apiKey || authHeader !== `Bearer ${apiKey}`) {
+  if (!(await requireAdminRequest(request))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

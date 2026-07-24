@@ -3,17 +3,12 @@ import { getSupabaseServerClient } from '@/lib/supabase-server';
 import { alertDocumentShared } from '@/lib/slack';
 import { sendEvent } from '@/lib/loops';
 import { validateAdminDocPayload } from '@/lib/client-documents/admin-validate';
-
-function verifyAuth(request: NextRequest): boolean {
-  const authHeader = request.headers.get('authorization');
-  const apiKey = authHeader?.replace('Bearer ', '');
-  return apiKey === process.env.ADMIN_API_KEY;
-}
+import { requireAdminRequest } from '@/lib/contracts/require-admin';
 
 // GET /api/admin/documents?enrollment_id=xxx
 // Returns all documents for a given enrollment, ordered by created_at desc
 export async function GET(request: NextRequest) {
-  if (!verifyAuth(request)) {
+  if (!(await requireAdminRequest(request))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -51,7 +46,7 @@ export async function GET(request: NextRequest) {
 // Create a document for a client enrollment.
 // Accepts multipart/form-data (file upload) or application/json (link / text).
 export async function POST(request: NextRequest) {
-  if (!verifyAuth(request)) {
+  if (!(await requireAdminRequest(request))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -209,7 +204,7 @@ export async function POST(request: NextRequest) {
 // DELETE /api/admin/documents
 // Body: { document_id }
 export async function DELETE(request: NextRequest) {
-  if (!verifyAuth(request)) {
+  if (!(await requireAdminRequest(request))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

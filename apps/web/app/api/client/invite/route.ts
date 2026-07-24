@@ -2,13 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabase-server';
 import { onClientInvited } from '@/lib/loops';
 import { findAuthUserByEmail } from '@/lib/auth-admin';
+import { requireAdminRequest } from '@/lib/contracts/require-admin';
 
 // Admin-only: Create a client invite and send onboarding email
 export async function POST(request: NextRequest) {
   try {
-    const authHeader = request.headers.get('authorization');
-    const apiKey = authHeader?.replace('Bearer ', '');
-    if (apiKey !== process.env.ADMIN_API_KEY) {
+    if (!(await requireAdminRequest(request))) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -140,9 +139,7 @@ export async function POST(request: NextRequest) {
 // GET: List all invites (admin)
 export async function GET(request: NextRequest) {
   try {
-    const authHeader = request.headers.get('authorization');
-    const apiKey = authHeader?.replace('Bearer ', '');
-    if (apiKey !== process.env.ADMIN_API_KEY) {
+    if (!(await requireAdminRequest(request))) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

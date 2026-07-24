@@ -2,14 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseServerClient } from '@/lib/supabase-server'
 import { generateShareToken } from '@/lib/client-documents/share-token'
 import { validateShareDocPayload } from '@/lib/client-documents/share-validate'
-
-function verifyAuth(request: NextRequest): boolean {
-  const apiKey = request.headers.get('authorization')?.replace('Bearer ', '')
-  return apiKey === process.env.ADMIN_API_KEY
-}
+import { requireAdminRequest } from '@/lib/contracts/require-admin'
 
 export async function POST(request: NextRequest) {
-  if (!verifyAuth(request)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!(await requireAdminRequest(request))) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   try {
     const body = await request.json()
     const title: string | null = body.title || null

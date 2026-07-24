@@ -20,7 +20,6 @@ type AdminResponse = {
 export default function AdminDemandosIntakePage() {
   const params = useParams<{ enrollmentId: string }>();
   const enrollmentId = params.enrollmentId;
-  const [apiKey, setApiKey] = useState('');
   const [data, setData] = useState<AdminResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -29,9 +28,7 @@ export default function AdminDemandosIntakePage() {
     setLoading(true);
     setErr(null);
     try {
-      const res = await fetch(`/api/admin/demandos-intake/${enrollmentId}`, {
-        headers: { Authorization: `Bearer ${apiKey}` },
-      });
+      const res = await fetch(`/api/admin/demandos-intake/${enrollmentId}`);
       const body = await res.json();
       if (!res.ok) { setErr(body.error ?? 'Failed'); return; }
       setData(body);
@@ -44,18 +41,10 @@ export default function AdminDemandosIntakePage() {
     return (
       <div className="min-h-screen bg-slate-950 text-white p-8">
         <h1 className="text-xl font-bold mb-4">DemandOS Intake — Admin View</h1>
-        <p className="text-sm text-slate-400 mb-4">Enter admin API key:</p>
         <div className="flex gap-2 max-w-md">
-          <input
-            type="password"
-            value={apiKey}
-            onChange={(e) => setApiKey(e.target.value)}
-            placeholder="ADMIN_API_KEY"
-            className="flex-1 bg-slate-900 border border-slate-700 px-3 py-2 text-sm"
-          />
           <button
             onClick={load}
-            disabled={!apiKey || loading}
+            disabled={loading}
             className="bg-[#E51B23] px-4 py-2 text-sm font-bold disabled:opacity-50"
           >
             {loading ? 'Loading…' : 'Load'}

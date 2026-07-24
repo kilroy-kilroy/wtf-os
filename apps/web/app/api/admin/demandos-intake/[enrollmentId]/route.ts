@@ -1,6 +1,7 @@
 // apps/web/app/api/admin/demandos-intake/[enrollmentId]/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabase-server';
+import { requireAdminRequest } from '@/lib/contracts/require-admin';
 
 const BUCKET = 'client-documents';
 const SIGNED_URL_TTL_SECONDS = 60 * 60; // 1 hour
@@ -9,9 +10,7 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ enrollmentId: string }> }
 ) {
-  const authHeader = request.headers.get('authorization');
-  const apiKey = authHeader?.replace('Bearer ', '');
-  if (!apiKey || apiKey !== process.env.ADMIN_API_KEY) {
+  if (!(await requireAdminRequest(request))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

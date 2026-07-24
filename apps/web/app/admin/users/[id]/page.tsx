@@ -180,8 +180,6 @@ export default function AdminUserProfilePage() {
   const params = useParams();
   const id = params?.id as string;
 
-  const [apiKey, setApiKey] = useState('');
-  const [authed, setAuthed] = useState(false);
   const [profile, setProfile] = useState<ProfileResponse | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -193,20 +191,13 @@ export default function AdminUserProfilePage() {
   const [orgSearchResults, setOrgSearchResults] = useState<Array<{ id: string; name: string; website: string | null; primary_domain: string | null }>>([]);
 
   useEffect(() => {
-    const stored = sessionStorage.getItem('admin_api_key');
-    if (stored) {
-      setApiKey(stored);
-      setAuthed(true);
-      loadProfile(stored);
-    }
-  }, []);
+    loadProfile();
+  }, [id]);
 
-  async function loadProfile(key: string) {
+  async function loadProfile() {
     setLoading(true);
     try {
-      const res = await fetch(`/api/admin/users/${id}`, {
-        headers: { Authorization: `Bearer ${key}` },
-      });
+      const res = await fetch(`/api/admin/users/${id}`);
       if (res.ok) {
         const data = await res.json();
         setProfile(data);
@@ -217,13 +208,6 @@ export default function AdminUserProfilePage() {
     setLoading(false);
   }
 
-  function handleAuth(e: React.FormEvent) {
-    e.preventDefault();
-    sessionStorage.setItem('admin_api_key', apiKey);
-    setAuthed(true);
-    loadProfile(apiKey);
-  }
-
   // ─── PATCH helpers ──────────────────────────────────────────────────────────
 
   async function patchUser(body: Record<string, unknown>) {
@@ -231,7 +215,6 @@ export default function AdminUserProfilePage() {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify(body),
     });
@@ -298,7 +281,7 @@ export default function AdminUserProfilePage() {
 
     // If org was just created, reload to get full org data
     if (field.startsWith('org.') && !profile.org) {
-      loadProfile(apiKey);
+      loadProfile();
       return;
     }
 
@@ -349,7 +332,7 @@ export default function AdminUserProfilePage() {
     const ok = await patchUser(patchBody);
     if (!ok) return;
     if (!profile.org) {
-      loadProfile(apiKey);
+      loadProfile();
       return;
     }
     setProfile((prev) => {
@@ -362,9 +345,7 @@ export default function AdminUserProfilePage() {
     setOrgSearchQuery(query);
     if (query.length < 2) { setOrgSearchResults([]); return; }
     try {
-      const res = await fetch(`/api/admin/orgs/search?q=${encodeURIComponent(query)}`, {
-        headers: { Authorization: `Bearer ${apiKey}` },
-      });
+      const res = await fetch(`/api/admin/orgs/search?q=${encodeURIComponent(query)}`);
       if (res.ok) {
         const data = await res.json();
         setOrgSearchResults(data.orgs || []);
@@ -378,7 +359,7 @@ export default function AdminUserProfilePage() {
     setOrgSearchOpen(false);
     setOrgSearchQuery('');
     setOrgSearchResults([]);
-    loadProfile(apiKey);
+    loadProfile();
   }
 
   // ─── Reusable inline edit render ─────────────────────────────────────────────
@@ -415,28 +396,6 @@ export default function AdminUserProfilePage() {
       >
         {value || placeholder}
       </span>
-    );
-  }
-
-  // ─── Auth gate ────────────────────────────────────────────────────────────────
-
-  if (!authed) {
-    return (
-      <div className="min-h-screen bg-black text-white flex items-center justify-center p-6">
-        <form onSubmit={handleAuth} className="max-w-md w-full space-y-4">
-          <h1 className="text-2xl font-anton uppercase text-[#E51B23]">Admin: User Profile</h1>
-          <input
-            type="password"
-            value={apiKey}
-            onChange={(e) => setApiKey(e.target.value)}
-            placeholder="Admin API Key"
-            className="w-full bg-black border border-[#333] text-white px-4 py-3 focus:border-[#E51B23] focus:outline-none"
-          />
-          <button type="submit" className="w-full bg-[#E51B23] text-white py-3 font-anton uppercase">
-            Access
-          </button>
-        </form>
-      </div>
     );
   }
 

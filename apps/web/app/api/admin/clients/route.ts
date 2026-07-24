@@ -1,16 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabase-server';
 import { onProUpgrade } from '@/lib/loops';
-
-function verifyAuth(request: NextRequest): boolean {
-  const authHeader = request.headers.get('authorization');
-  const apiKey = authHeader?.replace('Bearer ', '');
-  return apiKey === process.env.ADMIN_API_KEY;
-}
+import { requireAdminRequest } from '@/lib/contracts/require-admin';
 
 export async function GET(request: NextRequest) {
   try {
-    if (!verifyAuth(request)) {
+    if (!(await requireAdminRequest(request))) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -87,7 +82,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
-  if (!verifyAuth(request)) {
+  if (!(await requireAdminRequest(request))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

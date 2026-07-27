@@ -3,6 +3,9 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { getSubscriptionStatus } from '@/lib/subscription';
 import ChangePasswordButton from '@/components/ChangePasswordButton';
+import ManageBillingButton from '@/components/ManageBillingButton';
+import { getSupabaseServerClient } from '@/lib/supabase-server';
+import { resolveBillingCustomerId } from '@/lib/billing-portal';
 import { FirefliesIntegration } from '@/components/FirefliesIntegration';
 import { ZoomIntegration } from '@/components/ZoomIntegration';
 
@@ -40,6 +43,16 @@ export default async function SettingsPage() {
 
   const planName = activeProducts.length > 0 ? activeProducts.join(' + ') : 'Free';
   const isPro = subscriptionStatus.hasCallLabPro || subscriptionStatus.hasDiscoveryLabPro;
+
+  // Pro access doesn't imply a Stripe customer — admin grants and agency plans
+  // both produce Pro users with nothing to manage. Check for a real customer so
+  // we don't hand them a button that can only fail.
+  const hasBillingAccount = isPro
+    ? (await resolveBillingCustomerId(getSupabaseServerClient(), {
+        userId: user.id,
+        email: user.email,
+      })) !== null
+    : false;
 
   return (
     <div className="min-h-screen bg-black py-8 px-4 text-white">
@@ -184,18 +197,22 @@ export default async function SettingsPage() {
                   <label className="block text-xs text-[#666] uppercase tracking-wider mb-2">
                     Payment Method
                   </label>
-                  <a
-                    href="https://billing.stripe.com/p/login/test" // Replace with actual Stripe portal URL
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 border border-[#333] rounded px-4 py-2 text-white hover:border-[#E51B23] transition text-sm"
-                  >
-                    Manage in Stripe
-                    <span className="text-[#666]">→</span>
-                  </a>
-                  <p className="text-xs text-[#666] mt-1">
-                    Update payment method, view invoices, or cancel subscription.
-                  </p>
+                  {hasBillingAccount ? (
+                    <ManageBillingButton />
+                  ) : (
+                    <p className="text-sm text-[#B3B3B3]">
+                      Your access isn&apos;t billed through Stripe
+                      {subscriptionStatus.source === 'team' ? ' — it comes with your team plan' : ''}
+                      , so there&apos;s nothing to manage here.{' '}
+                      <a
+                        href="mailto:support@salesos.com"
+                        className="text-[#FFDE59] hover:underline"
+                      >
+                        Contact support
+                      </a>{' '}
+                      with any billing questions.
+                    </p>
+                  )}
                 </div>
               </>
             )}

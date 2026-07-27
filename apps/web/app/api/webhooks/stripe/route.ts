@@ -56,9 +56,24 @@ export async function POST(request: NextRequest) {
     case 'checkout.session.completed': {
       const session = event.data.object as Stripe.Checkout.Session
 
+      // `customer_email` is only set when we passed it into the Checkout Session
+      // ourselves. The server-component checkout pages (app/*/checkout/page.tsx)
+      // don't, so Stripe collects the address itself and files it under
+      // `customer_details.email`, leaving `customer_email` null. Reading only the
+      // former wrote blank emails on those rows, which orphaned the subscription
+      // (nothing could look it up by email) and skipped every downstream
+      // integration below, all of which are gated on having an address.
+      // Normalised because every reader (getSubscriptionStatus,
+      // resolveBillingCustomerId) looks up by lowercased email, so a row stored
+      // with the casing Stripe happened to capture would never match.
+      const customerEmail =
+        (session.customer_email || session.customer_details?.email)
+          ?.toLowerCase()
+          .trim() || null
+
       console.log('Checkout completed:', {
         sessionId: session.id,
-        customerEmail: session.customer_email,
+        customerEmail,
         customerId: session.customer,
         priceType: session.metadata?.priceType,
         subscriptionId: session.subscription,
@@ -70,7 +85,7 @@ export async function POST(request: NextRequest) {
         const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.timkilroy.com'
         const siteUrl = session.metadata.site_url as string
         const firstName = (session.metadata.first_name as string) || null
-        const email = session.customer_email || null
+        const email = customerEmail || null
 
         try {
           const existing = await getSessionByStripe(session.id)
@@ -112,11 +127,11 @@ export async function POST(request: NextRequest) {
 
           // Try to find existing user by email
           let userId = null
-          if (session.customer_email) {
+          if (customerEmail) {
             const { data: user } = await supabase
               .from('users')
               .select('id')
-              .eq('email', session.customer_email)
+              .eq('email', customerEmail)
               .single()
             userId = user?.id || null
           }
@@ -128,7 +143,7 @@ export async function POST(request: NextRequest) {
               stripe_customer_id: session.customer as string,
               stripe_subscription_id: subscription.id,
               user_id: userId,
-              customer_email: session.customer_email || '',
+              customer_email: customerEmail || '',
               plan_type: session.metadata?.priceType || 'solo',
               product: session.metadata?.product || 'discovery-lab-pro',
               status: subscription.status,
@@ -155,26 +170,26 @@ export async function POST(request: NextRequest) {
 
             // Slack alert
             alertNewSubscription(
-              session.customer_email || 'unknown',
+              customerEmail || 'unknown',
               product,
               planType
             );
 
             // Fire Loops event for Pro upgrade (product-aware)
-            if (session.customer_email) {
-              await onProUpgrade(session.customer_email, planType as 'solo' | 'team', product).catch(err => {
+            if (customerEmail) {
+              await onProUpgrade(customerEmail, planType as 'solo' | 'team', product).catch(err => {
                 console.error('Failed to send Loops Pro upgrade event:', err);
               });
 
               // Fire dedicated GrowthOS bundle event for welcome series
               if (product === 'growth-bundle') {
-                await onGrowthOSBundlePurchased(session.customer_email, planType as 'solo' | 'team').catch(err => {
+                await onGrowthOSBundlePurchased(customerEmail, planType as 'solo' | 'team').catch(err => {
                   console.error('Failed to send GrowthOS bundle Loops event:', err);
                 });
               }
 
               // Add to Beehiiv newsletter as Pro subscriber
-              await addProSubscriber(session.customer_email, product).catch(err => {
+              await addProSubscriber(customerEmail, product).catch(err => {
                 console.error('Failed to add Beehiiv Pro subscriber:', err);
               });
 
@@ -190,7 +205,7 @@ export async function POST(request: NextRequest) {
               const copperValue = product.includes('bundle') ? BUNDLE_ACV : PRO_ACV;
 
               copperCloseDeal({
-                email: session.customer_email!,
+                email: customerEmail,
                 productName: copperProductName,
                 monetaryValue: copperValue,
                 note: `Purchased ${copperProductName} (${planType} plan) — Subscription: ${subscription.id}`,

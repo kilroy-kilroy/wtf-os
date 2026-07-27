@@ -58,9 +58,12 @@ export function selectBillingCustomerId(
 ): string | null {
   if (!rows?.length) return null
 
+  // Only real Stripe ids. Some rows carry sentinels like `internal_admin` for
+  // comped access, which Stripe would reject with resource_missing — better to
+  // report "not billed through Stripe" than to offer a button that always fails.
   const candidates = rows
     .map((row) => ({ ...row, customerId: row.stripe_customer_id?.trim() || '' }))
-    .filter((row) => row.customerId.length > 0)
+    .filter((row) => row.customerId.startsWith('cus_'))
 
   if (!candidates.length) return null
 

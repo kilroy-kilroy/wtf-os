@@ -65,6 +65,21 @@ describe('selectBillingCustomerId', () => {
     ).toBe('cus_padded')
   })
 
+  it('ignores non-Stripe sentinel ids used for comped access', () => {
+    expect(
+      selectBillingCustomerId([{ stripe_customer_id: 'internal_admin', status: 'active' }])
+    ).toBeNull()
+  })
+
+  it('picks the real customer over a sentinel on a better-ranked row', () => {
+    expect(
+      selectBillingCustomerId([
+        { stripe_customer_id: 'internal_admin', status: 'active' },
+        { stripe_customer_id: 'cus_real', status: 'canceled' },
+      ])
+    ).toBe('cus_real')
+  })
+
   it('tolerates missing and unparseable created_at values', () => {
     expect(
       selectBillingCustomerId([

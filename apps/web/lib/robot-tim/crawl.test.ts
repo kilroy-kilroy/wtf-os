@@ -45,15 +45,45 @@ describe("crawlSite Apify budget", () => {
   // guarantee is verifiable by inspection — crawlSite has no top-level catch, and the
   // route that calls it is what records the reason and alerts.
 
+  // Pages must clear MIN_SCORABLE_CHARS to be scored at all, so fixtures carry real bulk.
+  const body = (hero: string) => [hero, "We help owner-led agencies. ".repeat(20)].join("\n");
+
   it("scores pages and keeps homepage text on a successful crawl", async () => {
     mockRunApifyActor.mockResolvedValue([
-      { url: "https://example.com/", title: "Home", text: "hero copy here" },
-      { url: "https://example.com/about", title: "About", text: "about copy" },
+      { url: "https://example.com/", metadata: { title: "Home" }, text: body("hero copy here") },
+      { url: "https://example.com/about", metadata: { title: "About" }, text: body("about copy") },
     ]);
 
     const crawl = await crawlSite("https://example.com");
     expect(crawl.pages).toHaveLength(2);
-    expect(crawl.homepageText).toBe("hero copy here");
+    expect(crawl.homepageText.startsWith("hero copy here")).toBe(true);
     expect(crawl.error).toBeUndefined();
+  });
+
+  it("reads the title from metadata, where the crawler actually puts it", async () => {
+    mockRunApifyActor.mockResolvedValue([
+      { url: "https://example.com/", title: null, metadata: { title: "Real Title" }, text: body("hero") },
+    ]);
+    // Top-level `title` comes back null; reading only it scored every page with an empty
+    // title, meta and h1, which is what flattened the scores across a whole site.
+    expect((await crawlSite("https://example.com")).pages[0].title).toBe("Real Title");
+  });
+
+  it("carries a copy excerpt so synthesis can quote the page", async () => {
+    mockRunApifyActor.mockResolvedValue([
+      { url: "https://example.com/", metadata: { title: "Home" }, text: body("hero copy here") },
+    ]);
+    const page = (await crawlSite("https://example.com")).pages[0];
+    expect(page.excerpt).toContain("hero copy here");
+  });
+
+  it("skips a page that is only furniture instead of scoring the noise", async () => {
+    mockRunApifyActor.mockResolvedValue([
+      { url: "https://example.com/", metadata: { title: "Home" }, text: body("hero") },
+      // Real case: /sales-os reduced to a title plus a cookie table, yet scored highest.
+      { url: "https://example.com/thin", metadata: { title: "Thin" }, text: "Just a title line" },
+    ]);
+    const crawl = await crawlSite("https://example.com");
+    expect(crawl.pages.map((p) => p.url)).toEqual(["https://example.com/"]);
   });
 });

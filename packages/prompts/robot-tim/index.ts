@@ -190,23 +190,46 @@ Respond with ONLY a valid JSON object, no markdown fences, in exactly this shape
   "beforeHero": "<the current homepage hero, pulled from the crawled homepage text, verbatim or lightly trimmed>",
   "afterHero": "<the rewritten hero in the founder's real voice, built from the Spine>",
   "punchList": [
-    { "url": "<page url>", "fixes": ["<specific fix 1>", "<specific fix 2>"] }
+    { "url": "<page url>", "fixes": ["<specific fix>", "<specific fix>", "..."] }
   ]
-}`;
+}
+
+Punch list rules:
+- Every page below arrives with its real copy. Ground each fix in a line that page actually
+  says — quote or name the phrase you are fixing. Never infer a page's content from its URL.
+- Give a page as many fixes as its copy earns: two when it is nearly right, four or five when
+  it is a mess. Do not pad every page to the same count; an even two-per-page across a whole
+  site is the tell that you are writing from the slug instead of the copy.
+- Lead with the specific line that is wrong, then the fix. "Wah-wah 22" is not an opening —
+  the score is context you were given, not an observation you made.
+- The homepage is the one page every visitor sees; give it the most.`;
 
 export function buildMakeoverPrompt(
   spine: unknown,
   homepageText: string,
-  crawlSummary: { url: string; score: number }[]
+  crawlSummary: { url: string; score: number; title?: string; excerpt?: string }[]
 ): string {
-  const pages = crawlSummary.map((p) => `- ${p.url} (wah-wah score ${p.score})`).join("\n");
+  // Previously this sent only `url (score)`, so the model was asked to map the gap between
+  // the founder's words and "what each page says" without ever being shown what any page
+  // said — it extrapolated from the slug and returned two lookalike fixes per page.
+  const pages = crawlSummary
+    .map((p) =>
+      [
+        `### ${p.url} (wah-wah score ${p.score})`,
+        p.title ? `TITLE: ${p.title}` : null,
+        p.excerpt ? `COPY:\n${p.excerpt}` : "COPY: (not captured)",
+      ]
+        .filter(Boolean)
+        .join("\n")
+    )
+    .join("\n\n");
   return `THE NARRATIVE SPINE (JSON):
 ${JSON.stringify(spine, null, 2)}
 
 THE HOMEPAGE, AS IT READS TODAY:
 ${homepageText.slice(0, 6000)}
 
-OTHER PAGES CRAWLED (with their wah-wah scores):
+EVERY OTHER PAGE CRAWLED — score, title, and what the page actually says:
 ${pages}`;
 }
 
@@ -214,9 +237,11 @@ export const NODE7_SYSTEM_PROMPT = `${GUARDRAILS}
 
 This is Node 7 — Rip Me Apart. Read the assembled positioning back as the skeptical, busy, been-burned-before prospect. Poke every soft spot, but frame each one as a FIX, never a failure. End on the ladder to the human version.
 
+Find at least five. This is the section the buyer opened to see whether you would flatter them, so a short list reads as a robot that could not be bothered. Go after the Spine and the rewritten hero specifically — the claim that could be said by any agency, the promise with no consequence attached, the line that is true but unprovable. Name the exact sentence you are attacking.
+
 Respond with ONLY a valid JSON object, no markdown fences, in exactly this shape:
 {
-  "punchList": ["<soft spot 1, framed as a fix>", "<soft spot 2>", "<soft spot 3>"],
+  "punchList": ["<soft spot, framed as a fix>", "<soft spot>", "<soft spot>", "<soft spot>", "<soft spot>"],
   "ladder": "This is the starter. It is real, and it is yours. But you built it talking to a robot version of me, and the robot can only take you so far. The actual Spine, installed across your site, your content, and your sales, is the work the human version does. When you are ready for that, you know where to find me."
 }`;
 

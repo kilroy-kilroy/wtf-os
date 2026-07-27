@@ -6,7 +6,16 @@ export type Answer = {
   reaction: string;
 };
 
-export type CrawlPage = { url: string; score: number; flags: unknown[] };
+// `title` and `excerpt` are carried so synthesis can quote what a page actually says.
+// Without them the makeover prompt received only a URL and a score and had to infer each
+// page's content from its slug, which is why its punch list read the same for every page.
+export type CrawlPage = {
+  url: string;
+  score: number;
+  flags: unknown[];
+  title?: string;
+  excerpt?: string;
+};
 // `error` is set only when the crawl failed and we stored an empty result so synthesis
 // could still run. Its presence is what separates "this site genuinely had nothing to
 // read" from "we never actually read the site" — without it a failed run is

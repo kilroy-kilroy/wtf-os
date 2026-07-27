@@ -38,7 +38,14 @@ export async function generateSpine(answers: Answer[]): Promise<Spine> {
 }
 
 export async function generateMakeover(spine: Spine, crawl: Crawl): Promise<Makeover> {
-  const summary = crawl.pages.map((p) => ({ url: p.url, score: p.score }));
+  // Carry the title and copy excerpt through — projecting down to { url, score } here is
+  // what left the makeover writing a page-by-page critique it had never read.
+  const summary = crawl.pages.map((p) => ({
+    url: p.url,
+    score: p.score,
+    title: p.title,
+    excerpt: p.excerpt,
+  }));
   const raw = await run(MAKEOVER_SYSTEM_PROMPT, buildMakeoverPrompt(spine, crawl.homepageText, summary));
   try {
     return MakeoverSchema.parse(JSON.parse(stripFences(raw)));

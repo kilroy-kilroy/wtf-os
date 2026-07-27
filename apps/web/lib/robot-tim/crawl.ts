@@ -20,7 +20,11 @@ export async function crawlSite(url: string): Promise<Crawl> {
       maxCrawlDepth: 2,
       excludeUrlGlobs: ["**/*.pdf", "**/*.zip", "**/blog/**", "**/careers/**", "**/jobs/**"],
     },
-    { timeoutSecs: 120 }
+    // A real 10-page crawl measured ~140s on timkilroy.com, so the old 120s budget
+    // hung up on a run that was about to succeed — on every site of any size. The
+    // route allows 300s total; 210s here leaves room for the per-page Opus scoring
+    // that runs after the crawl returns.
+    { timeoutSecs: 120, pollTimeoutSecs: 210 }
   )) as ApifyPage[];
 
   const startHost = new URL(start).hostname;

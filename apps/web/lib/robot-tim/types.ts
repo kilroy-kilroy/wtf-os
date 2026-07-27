@@ -7,7 +7,11 @@ export type Answer = {
 };
 
 export type CrawlPage = { url: string; score: number; flags: unknown[] };
-export type Crawl = { pages: CrawlPage[]; homepageText: string };
+// `error` is set only when the crawl failed and we stored an empty result so synthesis
+// could still run. Its presence is what separates "this site genuinely had nothing to
+// read" from "we never actually read the site" — without it a failed run is
+// indistinguishable from a successful one downstream.
+export type Crawl = { pages: CrawlPage[]; homepageText: string; error?: string };
 
 export type Spine = {
   whoFor: string;

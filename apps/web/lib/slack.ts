@@ -165,6 +165,35 @@ export function alertBizDevReportGenerated(
   );
 }
 
+/**
+ * A Robot-Tim buyer paid for a site teardown and we could not read their site. The run
+ * still completes on the interview alone, so nothing else in the system reports this —
+ * without an alert it stays invisible until the customer complains.
+ */
+export function alertRobotTimCrawlFailed(sessionId: string, siteUrl: string, detail: string): void {
+  sendSlackAlert({
+    text:
+      `:rotating_light: *Robot-Tim crawl failed* — paid run is completing with NO site data.\n` +
+      `Site: ${siteUrl}\nSession: ${process.env.NEXT_PUBLIC_APP_URL || 'https://app.timkilroy.com'}/robot-tim/${sessionId}\n` +
+      `Detail: \`${detail}\``,
+    color: 'danger',
+  }).catch(err => console.error('[Slack] Robot-Tim crawl alert failed:', err));
+}
+
+/**
+ * Puppeteer/Chromium could not launch, so a branded HTML report silently downgraded to
+ * the plain React-PDF fallback. The request still returns 200, which is exactly why this
+ * went unnoticed in production for weeks.
+ */
+export function alertPdfFallbackUsed(product: string, detail: string): void {
+  sendSlackAlert({
+    text:
+      `:warning: *PDF fell back to React-PDF* — ${product} served the unbranded layout because Chromium failed to launch.\n` +
+      `Detail: \`${detail}\``,
+    color: 'warning',
+  }).catch(err => console.error('[Slack] PDF fallback alert failed:', err));
+}
+
 export function alertBrightDataAuthExpired(detail: string): void {
   sendSlackAlert({
     text: `:rotating_light: *BrightData token expired or invalid* — Discovery Lab Pro LinkedIn/SERP sources are failing.\nDetail: \`${detail}\`\nUpdate \`BRIGHT_DATA_API\` in Vercel.`,

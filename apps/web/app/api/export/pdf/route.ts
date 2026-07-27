@@ -14,6 +14,7 @@ import {
   htmlToPdf,
 } from '@repo/pdf';
 import React from 'react';
+import { alertPdfFallbackUsed } from '@/lib/slack';
 
 // Allow up to 60s for PDF generation (Puppeteer can be slow)
 export const maxDuration = 60;
@@ -97,6 +98,12 @@ export async function POST(request: NextRequest) {
         pdfBuffer = await htmlToPdf(html);
       } catch (puppeteerError) {
         console.error('Puppeteer PDF generation failed, falling back to React PDF:', puppeteerError);
+        // This path still returns 200 with a usable (but unbranded) PDF, which is why a
+        // broken Chromium survived unnoticed in production. Make the downgrade audible.
+        alertPdfFallbackUsed(
+          `${product}/${tier}`,
+          puppeteerError instanceof Error ? puppeteerError.message.split('\n')[0] : 'Unknown error'
+        );
 
         // Fallback to legacy React PDF approach
         try {

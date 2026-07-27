@@ -214,14 +214,20 @@ interface ApifyDatasetResponse {
 export async function runApifyActor(
   actorId: string,
   input: Record<string, unknown>,
-  options: { timeoutSecs?: number; waitForFinish?: boolean } = {}
+  options: { timeoutSecs?: number; waitForFinish?: boolean; pollTimeoutSecs?: number } = {}
 ): Promise<unknown[]> {
   const apiKey = process.env.APIFY_API_KEY;
   if (!apiKey) {
     throw new Error('APIFY_API_KEY is not set');
   }
 
-  const { timeoutSecs = 60, waitForFinish = true } = options;
+  // `timeoutSecs` is forwarded in the actor INPUT below, where most actors simply
+  // ignore it — it is not Apify's run timeout (that would be a ?timeout= query param).
+  // It used to double as our client-side poll budget too, which meant "how long may the
+  // actor run" and "how long will we wait" were forced to be the same number: we hung up
+  // at exactly the moment the actor was still working. `pollTimeoutSecs` separates them.
+  // Defaults to `timeoutSecs` so existing callers keep their current behaviour.
+  const { timeoutSecs = 60, waitForFinish = true, pollTimeoutSecs = timeoutSecs } = options;
 
   // Start the actor run
   const runResponse = await fetch(
@@ -253,7 +259,7 @@ export async function runApifyActor(
   // Poll for completion
   let status = runData.data.status;
   let attempts = 0;
-  const maxAttempts = timeoutSecs / 2;
+  const maxAttempts = Math.ceil(pollTimeoutSecs / 2);
 
   while (status === 'RUNNING' || status === 'READY') {
     await new Promise((resolve) => setTimeout(resolve, 2000));
@@ -266,7 +272,9 @@ export async function runApifyActor(
     attempts++;
 
     if (attempts >= maxAttempts) {
-      throw new Error('Apify actor timed out');
+      throw new Error(
+        `Apify actor ${actorId} still ${status} after ${pollTimeoutSecs}s — gave up waiting`
+      );
     }
   }
 

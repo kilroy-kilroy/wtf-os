@@ -207,9 +207,12 @@ interface ApifyRunResponse {
   };
 }
 
-interface ApifyDatasetResponse {
-  items: unknown[];
-}
+// Apify's GET /v2/datasets/{id}/items responds with a BARE JSON ARRAY, not an envelope.
+// This was previously typed as `{ items: unknown[] }` and read as `data.items || []`,
+// which is `undefined || []` against an array — so every call silently resolved to zero
+// results no matter how much the actor actually scraped. Kept as a union so the unwrap
+// below stays honest about both shapes.
+type ApifyDatasetResponse = unknown[] | { items?: unknown[] };
 
 export async function runApifyActor(
   actorId: string,
@@ -289,7 +292,16 @@ export async function runApifyActor(
   );
   const datasetData: ApifyDatasetResponse = await datasetResponse.json();
 
-  return datasetData.items || [];
+  return unwrapApifyDataset(datasetData);
+}
+
+/**
+ * The dataset endpoint returns a bare array; tolerate an `{ items }` envelope too so a
+ * future API change cannot silently reintroduce the "always empty" failure.
+ */
+export function unwrapApifyDataset(payload: ApifyDatasetResponse): unknown[] {
+  if (Array.isArray(payload)) return payload;
+  return payload?.items ?? [];
 }
 
 /**

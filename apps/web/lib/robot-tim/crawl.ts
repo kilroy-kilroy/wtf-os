@@ -19,6 +19,22 @@ type ApifyPage = {
 /** How much cleaned copy travels to synthesis per page so it can quote real lines. */
 const EXCERPT_CHARS = 1200;
 
+/**
+ * Supplying this REPLACES the actor's own default strip-list, so the usual furniture has
+ * to be repeated here alongside the consent widgets.
+ *
+ * Consent tooling is injected client-side — it is absent from the served HTML and only
+ * appears once the crawler renders the page — so it cannot be excluded by anything we do
+ * after the fact without also risking real copy.
+ */
+const REMOVE_SELECTOR = [
+  "nav, footer, script, style, noscript, svg",
+  '[role="navigation"], [role="dialog"], [aria-modal="true"]',
+  "#cookiescript_injected, .cky-consent-container, .cky-modal",
+  '[class*="cookie" i], [id*="cookie" i]',
+  '[class*="consent" i], [id*="consent" i]',
+].join(", ");
+
 // Apify fetches up to ~10 pages of clean text; each is scored with the Detector
 // engine (lexicon seed + Opus verdict). The homepage's raw text is kept for the
 // makeover's before-hero. Per-page failures are skipped, never fatal.
@@ -31,6 +47,14 @@ export async function crawlSite(url: string): Promise<Crawl> {
       maxCrawlPages: 10,
       maxCrawlDepth: 2,
       excludeUrlGlobs: ["**/*.pdf", "**/*.zip", "**/blog/**", "**/careers/**", "**/jobs/**"],
+      // The actor defaults to a Readability-style extractor built for articles. Marketing
+      // pages routinely have no <main> or <article> (timkilroy.com has neither), so it
+      // falls back to whichever block looks densest — which on a consented page is the
+      // cookie-preferences table. /sales-os came back as a title plus 53 mentions of
+      // "cookie" and none of its actual copy. Taking the full text and removing the
+      // furniture ourselves recovered 13,550 clean characters from that same page.
+      htmlTransformer: "none",
+      removeElementsCssSelector: REMOVE_SELECTOR,
     },
     // A real 10-page crawl measured ~140s on timkilroy.com, so the old 120s budget
     // hung up on a run that was about to succeed — on every site of any size. The

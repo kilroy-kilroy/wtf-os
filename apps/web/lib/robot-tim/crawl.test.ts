@@ -29,6 +29,22 @@ describe("crawlSite Apify budget", () => {
     expect(options.pollTimeoutSecs).toBeGreaterThan(OBSERVED_REAL_CRAWL_SECS);
   });
 
+  it("takes the full page text instead of the article extractor", async () => {
+    mockRunApifyActor.mockResolvedValue([]);
+    await crawlSite("https://example.com");
+    const [, input] = mockRunApifyActor.mock.calls[0];
+    // The default Readability-style transformer needs an article container. Marketing
+    // pages often have no <main>/<article>, so it latched onto the cookie modal and
+    // returned a title plus a cookie table instead of the copy.
+    expect(input.htmlTransformer).toBe("none");
+    expect(input.removeElementsCssSelector).toMatch(/cookie/i);
+    expect(input.removeElementsCssSelector).toMatch(/consent/i);
+    // Supplying the selector replaces the actor's own defaults, so the ordinary page
+    // furniture has to still be listed.
+    expect(input.removeElementsCssSelector).toMatch(/\bnav\b/);
+    expect(input.removeElementsCssSelector).toMatch(/\bfooter\b/);
+  });
+
   it("does not tie the wait budget to the actor timeout", async () => {
     mockRunApifyActor.mockResolvedValue([]);
     await crawlSite("https://example.com");

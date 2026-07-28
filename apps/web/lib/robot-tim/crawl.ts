@@ -56,46 +56,65 @@ export async function crawlSite(url: string): Promise<Crawl> {
       htmlTransformer: "none",
       removeElementsCssSelector: REMOVE_SELECTOR,
     },
-    // A real 10-page crawl measured ~140s on timkilroy.com, so the old 120s budget
-    // hung up on a run that was about to succeed — on every site of any size. The
-    // route allows 300s total; 210s here leaves room for the per-page Opus scoring
-    // that runs after the crawl returns.
-    { timeoutSecs: 120, pollTimeoutSecs: 210 }
+    // Observed run times for this same 10-page crawl vary widely (72s, 93s, 115s, 139s,
+    // 175s, and one over 210s), so no fixed budget is safe on its own. Wait 240s, and if
+    // the actor is still going, take whatever pages have already landed rather than
+    // discarding a crawl the customer paid for. The route allows 300s; scoring below runs
+    // concurrently so it needs seconds, not the minute the old sequential loop took.
+    { timeoutSecs: 120, pollTimeoutSecs: 240, salvagePartialOnTimeout: true }
   )) as ApifyPage[];
 
   const startHost = new URL(start).hostname;
-  const pages: CrawlPage[] = [];
   let homepageText = "";
 
-  for (const item of items) {
-    const pageUrl = item.url ?? start;
-    const body = stripConsentBlock(item.text ?? "").slice(0, 12000);
-    if (!body) continue;
+  const candidates = items
+    .map((item) => {
+      const pageUrl = item.url ?? start;
+      const body = stripConsentBlock(item.text ?? "").slice(0, 12000);
+      // Scoring a page that is really just a title and cookie furniture produces a
+      // confident number about nothing — that is how a page with 59 characters of copy
+      // came back as the most generic on the site. Leave it out rather than invent a score.
+      if (!body || !hasEnoughContent(body)) return null;
+      return {
+        pageUrl,
+        body,
+        title: item.metadata?.title ?? item.title ?? "",
+        metaDescription: item.metadata?.description ?? "",
+      };
+    })
+    .filter((c): c is NonNullable<typeof c> => c !== null);
 
-    // Scoring a page that is really just a title and cookie furniture produces a
-    // confident number about nothing — that is how a page with 59 characters of copy
-    // came back as the most generic on the site. Leave it out rather than invent a score.
-    if (!hasEnoughContent(body)) continue;
-
-    const title = item.metadata?.title ?? item.title ?? "";
-    const metaDescription = item.metadata?.description ?? "";
-    const h1 = heroLineOf(body);
-
+  for (const c of candidates) {
     try {
-      if (!homepageText && new URL(pageUrl).hostname === startHost) homepageText = body;
-      const hits = findLexiconHits([title, metaDescription, body].join("\n"));
-      const analysis = await analyzeCopy({ title, metaDescription, h1, bodyText: body }, hits);
-      pages.push({
-        url: pageUrl,
-        score: analysis.score,
-        flags: analysis.flags,
-        title,
-        excerpt: body.slice(0, EXCERPT_CHARS),
-      });
+      if (!homepageText && new URL(c.pageUrl).hostname === startHost) homepageText = c.body;
     } catch {
-      // skip a page that fails to analyze; the crawl still succeeds
+      // a malformed page URL must not abort the crawl
     }
   }
+
+  // Scored concurrently: these are independent per-page model calls, and running them in
+  // series spent close to a minute of the route's budget for no reason.
+  const scored = await Promise.all(
+    candidates.map(async (c): Promise<CrawlPage | null> => {
+      try {
+        const hits = findLexiconHits([c.title, c.metaDescription, c.body].join("\n"));
+        const analysis = await analyzeCopy(
+          { title: c.title, metaDescription: c.metaDescription, h1: heroLineOf(c.body), bodyText: c.body },
+          hits
+        );
+        return {
+          url: c.pageUrl,
+          score: analysis.score,
+          flags: analysis.flags,
+          title: c.title,
+          excerpt: c.body.slice(0, EXCERPT_CHARS),
+        };
+      } catch {
+        return null; // skip a page that fails to analyze; the crawl still succeeds
+      }
+    })
+  );
+  const pages = scored.filter((p): p is CrawlPage => p !== null);
 
   if (!homepageText && items[0]?.text) homepageText = stripConsentBlock(items[0].text).slice(0, 12000);
   return { pages, homepageText };

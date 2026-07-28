@@ -217,7 +217,12 @@ type ApifyDatasetResponse = unknown[] | { items?: unknown[] };
 export async function runApifyActor(
   actorId: string,
   input: Record<string, unknown>,
-  options: { timeoutSecs?: number; waitForFinish?: boolean; pollTimeoutSecs?: number } = {}
+  options: {
+    timeoutSecs?: number;
+    waitForFinish?: boolean;
+    pollTimeoutSecs?: number;
+    salvagePartialOnTimeout?: boolean;
+  } = {}
 ): Promise<unknown[]> {
   const apiKey = process.env.APIFY_API_KEY;
   if (!apiKey) {
@@ -230,7 +235,12 @@ export async function runApifyActor(
   // actor run" and "how long will we wait" were forced to be the same number: we hung up
   // at exactly the moment the actor was still working. `pollTimeoutSecs` separates them.
   // Defaults to `timeoutSecs` so existing callers keep their current behaviour.
-  const { timeoutSecs = 60, waitForFinish = true, pollTimeoutSecs = timeoutSecs } = options;
+  const {
+    timeoutSecs = 60,
+    waitForFinish = true,
+    pollTimeoutSecs = timeoutSecs,
+    salvagePartialOnTimeout = false,
+  } = options;
 
   // Start the actor run
   const runResponse = await fetch(
@@ -275,6 +285,14 @@ export async function runApifyActor(
     attempts++;
 
     if (attempts >= maxAttempts) {
+      // Giving up waiting is not the same as having nothing. The actor keeps running on
+      // Apify's side and writes to its dataset incrementally, so by the time we stop
+      // waiting most of the pages are usually already there. Callers that would rather
+      // have a partial crawl than a failed one can take what has landed.
+      if (salvagePartialOnTimeout) {
+        const partial = await fetchDataset(runData.data.defaultDatasetId, apiKey);
+        if (partial.length > 0) return partial;
+      }
       throw new Error(
         `Apify actor ${actorId} still ${status} after ${pollTimeoutSecs}s — gave up waiting`
       );
@@ -285,14 +303,13 @@ export async function runApifyActor(
     throw new Error(`Apify actor failed with status: ${status}`);
   }
 
-  // Get the dataset
-  const datasetId = runData.data.defaultDatasetId;
-  const datasetResponse = await fetch(
-    `https://api.apify.com/v2/datasets/${datasetId}/items?token=${apiKey}`
-  );
-  const datasetData: ApifyDatasetResponse = await datasetResponse.json();
+  return fetchDataset(runData.data.defaultDatasetId, apiKey);
+}
 
-  return unwrapApifyDataset(datasetData);
+async function fetchDataset(datasetId: string, apiKey: string): Promise<unknown[]> {
+  const res = await fetch(`https://api.apify.com/v2/datasets/${datasetId}/items?token=${apiKey}`);
+  const data: ApifyDatasetResponse = await res.json();
+  return unwrapApifyDataset(data);
 }
 
 /**

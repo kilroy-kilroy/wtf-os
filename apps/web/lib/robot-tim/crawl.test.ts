@@ -29,6 +29,17 @@ describe("crawlSite Apify budget", () => {
     expect(options.pollTimeoutSecs).toBeGreaterThan(OBSERVED_REAL_CRAWL_SECS);
   });
 
+  it("keeps a partial crawl rather than discarding one that ran long", async () => {
+    mockRunApifyActor.mockResolvedValue([]);
+    await crawlSite("https://example.com");
+
+    const [, , options] = mockRunApifyActor.mock.calls[0];
+    // Run times for the same crawl ranged 72s-210s+ in production, so no fixed budget is
+    // safe. The actor keeps writing to its dataset after we stop waiting; taking what
+    // landed beats shipping a paid run with no site data.
+    expect(options.salvagePartialOnTimeout).toBe(true);
+  });
+
   it("takes the full page text instead of the article extractor", async () => {
     mockRunApifyActor.mockResolvedValue([]);
     await crawlSite("https://example.com");

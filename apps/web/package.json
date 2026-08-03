@@ -19,7 +19,7 @@
     "@supabase/ssr": "^0.10.0",
     "@supabase/supabase-js": "^2.46.1",
     "@tailwindcss/typography": "^0.5.19",
-    "@vercel/analytics": "^1.6.1",
+    "@vercel/analytics": "^2.0.1",
     "@vercel/functions": "^3.4.3",
     "cheerio": "^1.2.0",
     "class-variance-authority": "^0.7.0",

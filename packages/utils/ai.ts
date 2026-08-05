@@ -204,10 +204,23 @@ export async function runModel(
   const safeSystemPrompt = ensureWellFormed(systemPrompt);
   const safeUserPrompt = ensureWellFormed(userPrompt);
 
-  if (config.provider === 'anthropic') {
-    return runAnthropic(config, safeSystemPrompt, safeUserPrompt, timeoutMs);
-  } else {
-    return runOpenAI(config, safeSystemPrompt, safeUserPrompt, timeoutMs);
+  try {
+    return config.provider === 'anthropic'
+      ? await runAnthropic(config, safeSystemPrompt, safeUserPrompt, timeoutMs)
+      : await runOpenAI(config, safeSystemPrompt, safeUserPrompt, timeoutMs);
+  } catch (error) {
+    // Stamp which provider failed so describeModelError can name it without an
+    // instanceof check against a possibly-duplicated SDK copy. Annotate in place
+    // rather than wrapping: retryWithBackoff sniffs error.message, and callers
+    // already catch the SDK's own error type.
+    if (error && typeof error === 'object' && !('provider' in error)) {
+      Object.defineProperty(error, 'provider', {
+        value: config.provider,
+        enumerable: false,
+        configurable: true,
+      });
+    }
+    throw error;
   }
 }
 
@@ -309,6 +322,58 @@ async function runOpenAI(
       output: completion.usage?.completion_tokens || 0,
     },
   };
+}
+
+/**
+ * Turn a provider SDK error into one sentence an operator can act on.
+ *
+ * Anthropic and OpenAI report account-level problems — exhausted credits, a
+ * revoked key, a rate limit — as ordinary failed requests carrying a precise
+ * explanation. Routes that let those bubble into a generic "Internal server
+ * error" discard that explanation, so whoever clicked the button has to go read
+ * deploy logs to discover the account just needs topping up.
+ *
+ * Deliberately duck-typed rather than `instanceof Anthropic.APIError`: this
+ * monorepo resolves two different copies of each SDK (root vs apps/web), so an
+ * identity check silently fails whenever the throwing copy isn't the checking
+ * copy. Shape is stable across both versions; module identity is not.
+ *
+ * Returns null when the error isn't a recognizable provider error, letting
+ * callers fall back to their own generic handling.
+ */
+export function describeModelError(error: unknown): string | null {
+  if (!error || typeof error !== 'object') return null;
+
+  const status = (error as { status?: unknown }).status;
+  if (typeof status !== 'number') return null;
+
+  const body = (error as { error?: unknown }).error;
+  // Anthropic nests { type: 'error', error: { type, message } }; OpenAI is flat.
+  const nested = (body as { error?: { message?: unknown } } | undefined)?.error;
+  const detail =
+    typeof nested?.message === 'string'
+      ? nested.message
+      : typeof (body as { message?: unknown } | undefined)?.message === 'string'
+        ? ((body as { message: string }).message)
+        : null;
+
+  // runModel tags the provider on the way out; fall back to a neutral noun.
+  const tagged = (error as { provider?: unknown }).provider;
+  const provider = tagged === 'anthropic' ? 'Anthropic' : tagged === 'openai' ? 'OpenAI' : 'The AI provider';
+
+  if (detail && /credit balance|billing|quota|insufficient funds/i.test(detail)) {
+    return `${provider} is out of credits, so the AI step could not run. Add credits in the ${provider} console and retry — your upload was not saved.`;
+  }
+  if (status === 401 || status === 403) {
+    return `${provider} rejected the API key (${status}). Check the key configured for this environment.`;
+  }
+  if (status === 429) {
+    return `${provider} rate limit reached. Wait a moment and retry.`;
+  }
+  if (status >= 500) {
+    return `${provider} is having an outage (${status}). Retry shortly.`;
+  }
+  return `${provider} rejected the request (${status})${detail ? `: ${detail}` : ''}`;
 }
 
 /**

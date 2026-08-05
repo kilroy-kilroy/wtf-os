@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateSessionContent } from '@/lib/session-ai';
 import { requireAdmin } from '@/lib/contracts/require-admin';
+import { describeModelError } from '@repo/utils';
 
 // POST /api/admin/sessions/regenerate
 // Re-generate synopsis and/or teaching from transcript text.
@@ -30,6 +31,12 @@ export async function POST(request: NextRequest) {
     }
   } catch (error) {
     console.error('[Sessions] Regenerate error:', error);
+    // Provider failures (out of credits, rate limit, bad key) are actionable —
+    // report them instead of collapsing everything into a generic 500.
+    const providerError = describeModelError(error);
+    if (providerError) {
+      return NextResponse.json({ error: providerError }, { status: 502 });
+    }
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

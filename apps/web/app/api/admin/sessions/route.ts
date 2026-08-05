@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabase-server';
 import { parseVttContent, titleFromFilename, isVttFile } from '@/lib/vtt';
 import { generateSessionContent } from '@/lib/session-ai';
+import { describeModelError } from '@repo/utils';
 import { requireAdmin } from '@/lib/contracts/require-admin';
 
 // POST /api/admin/sessions
@@ -98,7 +99,29 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate synopsis + teaching via AI
-    const aiResult = await generateSessionContent(parsedTranscript, type, clientName);
+    let aiResult;
+    try {
+      aiResult = await generateSessionContent(parsedTranscript, type, clientName);
+    } catch (aiError) {
+      // The transcript is already in Storage, but only a successful generate
+      // produces the draft that carries `storagePath` forward — on this path the
+      // object is unreachable forever. Remove it so an outage (or an empty credit
+      // balance) doesn't litter the bucket once per retry.
+      const { error: cleanupError } = await supabase.storage
+        .from('client-documents')
+        .remove([storagePath]);
+      if (cleanupError) {
+        console.error('[Sessions] Orphan cleanup failed for', storagePath, cleanupError);
+      }
+
+      console.error('[Sessions] AI generation failed:', aiError);
+      // Surface the provider's own explanation — "out of credits" is something the
+      // admin can act on immediately, unlike a generic 500.
+      return NextResponse.json(
+        { error: describeModelError(aiError) ?? 'AI generation failed. Check server logs.' },
+        { status: 502 }
+      );
+    }
 
     const title = titleOverride || titleFromFilename(file.name);
 

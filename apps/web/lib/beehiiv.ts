@@ -346,7 +346,16 @@ export async function addProSubscriber(
   });
 }
 
-/** Add a Call Vault contributor to Agency Inner Circle. */
+/**
+ * Add a Call Vault contributor to Agency Inner Circle.
+ *
+ * The utm values follow the same conventions as every helper above:
+ * hyphenated source slugs (`call-vault`, not `call_vault`), and the shared
+ * `agency-inner-circle` campaign used by the other two AIC helpers
+ * (addAssessmentSubscriber, addProspectShareSubscriber). Beehiiv accepts any
+ * string for these, so a drifted value never errors — it just lands the
+ * contributor outside the segment this helper exists to put them in.
+ */
 export async function addCallVaultSubscriber(
   email: string,
   agencyName?: string,
@@ -355,9 +364,9 @@ export async function addCallVaultSubscriber(
   return addSubscriber({
     email,
     first_name: firstName || undefined,
-    utm_source: 'call_vault',
-    utm_medium: 'product',
-    utm_campaign: 'call_vault_contribution',
+    utm_source: 'call-vault',
+    utm_medium: 'lead-magnet',
+    utm_campaign: 'agency-inner-circle',
     custom_fields: agencyName ? [{ name: 'company', value: agencyName }] : undefined,
   });
 }

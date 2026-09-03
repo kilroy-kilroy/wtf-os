@@ -71,12 +71,22 @@ export function classifyFile(
  * each segment still blocks every real traversal shape (`<id>/../evil/f.mp3`,
  * `../<id>/f.mp3`) while allowing dots inside a filename segment — a segment of
  * `...` is fine, it is not a traversal token.
+ *
+ * An EMPTY segment is rejected for the same reason: `<id>//evil/f.mp3` and
+ * `<id>/call-abc//f.mp3` are not paths this code ever constructs (every
+ * legitimate path is `<uuid>/<uuid>/<uuid>-<sanitized name>`, and
+ * `sanitizeFileName` can never emit a `/`), so an empty segment only ever
+ * arrives from a hand-crafted client payload. It is not an escape today — the
+ * path still sits under the contributor prefix — but this function is the
+ * single guard on a client-supplied storage path, and how a doubled slash
+ * normalizes is a property of whatever storage layer sits downstream, not of
+ * anything checked here. Reject the shape rather than depend on that.
  */
 export function ownsStoragePath(storagePath: string, contributorId: string): boolean {
   // Reject paths with characters outside the safe allowlist
   if (!/^[A-Za-z0-9._/-]+$/.test(storagePath)) return false;
   const segments = storagePath.split('/');
-  if (segments.some((segment) => segment === '..')) return false;
+  if (segments.some((segment) => segment === '..' || segment === '')) return false;
   return segments.length > 1 && segments[0] === contributorId;
 }
 

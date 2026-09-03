@@ -153,9 +153,17 @@ export async function getSigningUserIds(requestId: string): Promise<FirmaRecipie
     .sort((a, b) => (a.order ?? Number.MAX_SAFE_INTEGER) - (b.order ?? Number.MAX_SAFE_INTEGER));
 }
 
-/** Build the embedded signing URL for a recipient id. */
+/**
+ * Build the embedded signing URL for a recipient id.
+ *
+ * The id comes back from Firma, i.e. from a third party, and this URL is fed
+ * straight into an `iframe src` — so it is encoded rather than interpolated
+ * raw. A well-formed id is unaffected (it is URL-safe already); a malformed
+ * one can no longer smuggle `?`, `#`, or an extra path segment into the URL we
+ * hand the browser.
+ */
 export function embeddedSigningUrl(signingUserId: string): string {
-  return `https://app.firma.dev/signing/${signingUserId}`;
+  return `https://app.firma.dev/signing/${encodeURIComponent(signingUserId)}`;
 }
 
 export interface FirmaRequestState {

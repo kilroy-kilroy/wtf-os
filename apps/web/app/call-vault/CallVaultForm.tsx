@@ -95,7 +95,6 @@ export default function CallVaultForm({ resumeToken }: { resumeToken: string | n
 
   // Calls phase
   const [callIds, setCallIds] = useState<string[]>(() => [makeLocalId()]);
-  const [createdCount, setCreatedCount] = useState(0);
   const [submitBusy, setSubmitBusy] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
@@ -377,9 +376,13 @@ export default function CallVaultForm({ resumeToken }: { resumeToken: string | n
                   key={c.id}
                   className="rounded border border-[#333333] px-3 py-2 font-poppins text-sm text-[#B3B3B3]"
                 >
+                  {/* The stage stands in as the title when there is no label,
+                      so it is only repeated in the detail line when a real
+                      label took the title slot. */}
                   <span className="text-white">{c.label || labelFor(STAGES, c.stage)}</span>
                   {' — '}
-                  {labelFor(STAGES, c.stage)} &middot; {labelFor(OUTCOMES, c.outcome)} &middot;{' '}
+                  {c.label ? <>{labelFor(STAGES, c.stage)} &middot; </> : null}
+                  {labelFor(OUTCOMES, c.outcome)} &middot;{' '}
                   {labelFor(DEAL_SIZE_BANDS, c.dealSizeBand)}
                   {c.callDate ? ` · ${c.callDate}` : ''}
                   {' — '}
@@ -397,7 +400,6 @@ export default function CallVaultForm({ resumeToken }: { resumeToken: string | n
               sessionToken={sessionToken}
               canRemove={callIds.length > 1}
               onRemove={() => removeCall(id)}
-              onCallCreated={() => setCreatedCount((n) => n + 1)}
               onSessionExpired={handleSessionExpired}
             />
           ))}
@@ -424,7 +426,7 @@ export default function CallVaultForm({ resumeToken }: { resumeToken: string | n
         <ConsoleButton
           type="button"
           onClick={submitAll}
-          disabled={submitBusy || (createdCount === 0 && existingCalls.length === 0)}
+          disabled={submitBusy}
           fullWidth
         >
           {submitBusy ? 'Submitting…' : 'Submit for review'}

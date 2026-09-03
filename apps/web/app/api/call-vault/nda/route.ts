@@ -65,8 +65,17 @@ export async function POST(request: NextRequest) {
     const { data: template } = await db
       .from('contract_templates').select('id').eq('slug', CALL_VAULT_NDA_SLUG).single();
     if (!template) {
+      // The caller here is an anonymous contributor, so the operator-facing
+      // remedy ("run the seed script") is logged, not returned. They get the
+      // same copy as the other failure branch: the NDA is optional, and a
+      // missing template must not read like their submission is broken.
+      console.error(
+        `[call-vault] NDA template not seeded — no contract_templates row with slug "${CALL_VAULT_NDA_SLUG}". ` +
+          'Run scripts/seed-call-vault-nda.ts.',
+      );
       return NextResponse.json(
-        { error: 'NDA template not seeded — run scripts/seed-call-vault-nda.ts' }, { status: 500 },
+        { error: 'Could not prepare the NDA. You can skip it and still contribute.' },
+        { status: 500 },
       );
     }
 

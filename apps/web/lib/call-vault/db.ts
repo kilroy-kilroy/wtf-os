@@ -279,6 +279,39 @@ export async function createCall(contributorId: string, meta: CallMeta): Promise
   return data.id;
 }
 
+/**
+ * Overwrite a call's contributor-supplied dimensions.
+ *
+ * These five fields are the whole reason the intake asks for anything at all:
+ * stage, outcome, deal size and date cannot be recovered from a transcript
+ * later, so a contributor has to stay able to correct them after the row
+ * exists (the row is created on their first file upload, before they have
+ * necessarily finished picking).
+ *
+ * `notes` is deliberately NOT written here even though `CallMeta` carries it.
+ * The public form never collects notes, so `validateCallMeta` resolves it to
+ * null on every request from that form — writing it would silently erase any
+ * note added elsewhere on each metadata edit. Callers pass a full `CallMeta`;
+ * the `Omit` in the signature is what makes the omission deliberate rather
+ * than accidental.
+ */
+export async function updateCall(
+  callId: string, meta: Omit<CallMeta, 'notes'>,
+): Promise<void> {
+  const db = getSupabaseServerClient();
+  const { error } = await db
+    .from('call_vault_calls')
+    .update({
+      stage: meta.stage,
+      outcome: meta.outcome,
+      deal_size_band: meta.dealSizeBand,
+      call_date: meta.callDate,
+      label: meta.label,
+    })
+    .eq('id', callId);
+  if (error) throw new Error(`updateCall failed: ${error.message}`);
+}
+
 /** Verify the call belongs to this contributor before issuing an upload URL. */
 export async function callBelongsTo(callId: string, contributorId: string): Promise<boolean> {
   const db = getSupabaseServerClient();

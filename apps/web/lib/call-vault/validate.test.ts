@@ -84,6 +84,16 @@ describe('ownsStoragePath', () => {
     expect(ownsStoragePath(`../${id}/f.mp3`, id)).toBe(false);
   });
 
+  it('rejects an empty path segment', () => {
+    // Not an escape (still under the contributor prefix), but a shape this
+    // code never constructs — so it only arrives hand-crafted, and how a
+    // doubled slash normalizes belongs to the storage layer, not to us.
+    expect(ownsStoragePath(`${id}//evil/f.mp3`, id)).toBe(false);
+    expect(ownsStoragePath(`${id}/call-abc//f.mp3`, id)).toBe(false);
+    expect(ownsStoragePath(`${id}/call-abc/f.mp3/`, id)).toBe(false);
+    expect(ownsStoragePath(`/${id}/call-abc/f.mp3`, id)).toBe(false);
+  });
+
   it('still rejects percent-encoded, backslash, and null-byte cases', () => {
     expect(ownsStoragePath(`${id}/%2e%2e/other/f.mp3`, id)).toBe(false);
     expect(ownsStoragePath(`${id}/%2E%2E/other/f.mp3`, id)).toBe(false);

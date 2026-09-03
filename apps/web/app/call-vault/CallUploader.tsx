@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ConsoleInput } from '@/components/console';
 import { STAGES, OUTCOMES, DEAL_SIZE_BANDS } from '@/lib/call-vault/vocabularies';
 import { classifyFile, MAX_FILE_BYTES, MAX_FILES_PER_CALL } from '@/lib/call-vault/validate';
@@ -12,7 +12,16 @@ import { LabeledSelect } from './CallVaultForm';
 const ACCEPTED_EXTENSIONS =
   '.txt,.md,.docx,.pdf,.rtf,.csv,.vtt,.srt,.mp3,.m4a,.wav,.aac,.ogg,.flac';
 
+/** Debounce for the fields a contributor TYPES into (label, date). A `<select>`
+ * change is a discrete commit, not a keystroke, so those save immediately —
+ * which also keeps the window in which an unsaved edit could be lost to a
+ * Submit click down to the free-text fields, where a blur flush covers it. */
+const SAVE_DEBOUNCE_MS = 600;
+
 type UploadStatus = 'queued' | 'uploading' | 'committing' | 'done' | 'error';
+
+/** Quiet indicator for the metadata autosave. Never gates an upload. */
+type SaveState = 'idle' | 'saving' | 'saved' | 'error';
 
 interface FileEntry {
   localId: string;
@@ -33,6 +42,32 @@ interface CallMeta {
   dealSizeBand: string;
   callDate: string;
   label: string;
+}
+
+const EMPTY_META: CallMeta = { stage: '', outcome: '', dealSizeBand: '', callDate: '', label: '' };
+
+/** Wire shape for both POST /calls and PATCH /calls/[callId]: empty string is
+ * "not answered", which the server stores as NULL. */
+function metaPayload(meta: CallMeta) {
+  return {
+    stage: meta.stage || null,
+    outcome: meta.outcome || null,
+    dealSizeBand: meta.dealSizeBand || null,
+    callDate: meta.callDate || null,
+    label: meta.label.trim() || null,
+  };
+}
+
+/** Compares what a save would send, not the raw fields — so re-blurring an
+ * untouched label never fires a redundant PATCH. */
+function sameMeta(a: CallMeta, b: CallMeta): boolean {
+  return (
+    a.stage === b.stage &&
+    a.outcome === b.outcome &&
+    a.dealSizeBand === b.dealSizeBand &&
+    a.callDate === b.callDate &&
+    a.label.trim() === b.label.trim()
+  );
 }
 
 function makeLocalId(): string {
@@ -65,51 +100,59 @@ export default function CallUploader({
   sessionToken,
   canRemove,
   onRemove,
-  onCallCreated,
   onSessionExpired,
 }: {
   sessionToken: string;
   canRemove: boolean;
   onRemove: () => void;
-  onCallCreated: () => void;
   /** Called on any 401 from this call's requests — the parent clears the
    * stale token and moves the whole form to its expired-session state. */
   onSessionExpired: () => void;
 }) {
-  const [meta, setMeta] = useState<CallMeta>({
-    stage: '',
-    outcome: '',
-    dealSizeBand: '',
-    callDate: '',
-    label: '',
-  });
+  const [meta, setMeta] = useState<CallMeta>(EMPTY_META);
   const [callId, setCallId] = useState<string | null>(null);
   const [createError, setCreateError] = useState<string | null>(null);
+  const [saveState, setSaveState] = useState<SaveState>('idle');
   const [files, setFiles] = useState<FileEntry[]>([]);
-  const callIdPromiseRef = useRef<Promise<string | null> | null>(null);
 
-  // Lazily creates the call row on the server, at most once. `overrides`
-  // carries the just-changed metadata field so a field's own onChange can
-  // trigger creation without waiting for React to re-render (state set in the
-  // same handler hasn't landed yet when this runs).
+  const callIdPromiseRef = useRef<Promise<string | null> | null>(null);
+  // Refs, not state, because the autosave machinery runs from timers and
+  // promise callbacks that would otherwise close over a stale render.
+  const callIdRef = useRef<string | null>(null);
+  const metaRef = useRef<CallMeta>(EMPTY_META);
+  /** The last metadata the server is known to hold. Null until the row exists. */
+  const savedMetaRef = useRef<CallMeta | null>(null);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const savingRef = useRef(false);
+  const dirtyRef = useRef(false);
+
+  useEffect(
+    () => () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    },
+    [],
+  );
+
+  // Creates the call row on the server, at most once. Called from the FIRST
+  // FILE the contributor adds — never from a metadata change. A call with no
+  // file is nothing to review, and creating one the moment a select moved is
+  // what used to freeze the remaining dimensions at NULL forever.
+  //
+  // `overrides` is kept for callers that need to create with metadata that
+  // hasn't landed in state yet; today the file path passes nothing and the
+  // current `meta` snapshot is used.
   function ensureCallId(overrides?: Partial<CallMeta>): Promise<string | null> {
-    if (callId) return Promise.resolve(callId);
+    if (callIdRef.current) return Promise.resolve(callIdRef.current);
     if (callIdPromiseRef.current) return callIdPromiseRef.current;
 
-    const snapshot = { ...meta, ...overrides };
+    const snapshot = { ...metaRef.current, ...overrides };
     const promise = (async () => {
       setCreateError(null);
       try {
         const res = await fetch('/api/call-vault/calls', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'x-call-vault-session': sessionToken },
-          body: JSON.stringify({
-            stage: snapshot.stage || null,
-            outcome: snapshot.outcome || null,
-            dealSizeBand: snapshot.dealSizeBand || null,
-            callDate: snapshot.callDate || null,
-            label: snapshot.label || null,
-          }),
+          body: JSON.stringify(metaPayload(snapshot)),
         });
         if (res.status === 401) {
           onSessionExpired();
@@ -117,8 +160,12 @@ export default function CallUploader({
         }
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Could not add that call');
+        callIdRef.current = data.callId as string;
+        savedMetaRef.current = snapshot;
         setCallId(data.callId);
-        onCallCreated();
+        // Anything the contributor changed while the POST was in flight is not
+        // in `snapshot` — reconcile it now. No-ops when nothing changed.
+        void runSave();
         return data.callId as string;
       } catch (err) {
         setCreateError(err instanceof Error ? err.message : 'Could not add that call');
@@ -131,11 +178,79 @@ export default function CallUploader({
     return promise;
   }
 
-  function handleMetaChange(field: keyof CallMeta, value: string) {
-    setMeta((prev) => ({ ...prev, [field]: value }));
-    if (!callId && value) {
-      ensureCallId({ [field]: value });
+  /** PATCH the current metadata onto an existing row. Serialised against
+   * itself (a save that arrives mid-flight sets `dirtyRef` and runs after)
+   * so two overlapping writes can never land out of order. */
+  async function runSave(): Promise<void> {
+    const id = callIdRef.current;
+    if (!id) return; // no row yet — creation will carry the metadata
+    if (savingRef.current) {
+      dirtyRef.current = true;
+      return;
     }
+    const snapshot = metaRef.current;
+    if (savedMetaRef.current && sameMeta(savedMetaRef.current, snapshot)) return;
+
+    savingRef.current = true;
+    setSaveState('saving');
+    try {
+      const res = await fetch(`/api/call-vault/calls/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'x-call-vault-session': sessionToken },
+        body: JSON.stringify(metaPayload(snapshot)),
+      });
+      if (res.status === 401) {
+        // Same handler as every other session-gated request on this page. Drop
+        // any queued follow-up save too: the token is dead, so a retry would
+        // only 401 again against a form that is already unmounting.
+        dirtyRef.current = false;
+        onSessionExpired();
+        return;
+      }
+      if (!res.ok) {
+        setSaveState('error');
+        return;
+      }
+      savedMetaRef.current = snapshot;
+      setSaveState('saved');
+    } catch {
+      // A failed metadata save is never fatal and never blocks an upload —
+      // the indicator says so and the next edit retries.
+      setSaveState('error');
+    } finally {
+      savingRef.current = false;
+      if (dirtyRef.current) {
+        dirtyRef.current = false;
+        void runSave();
+      }
+    }
+  }
+
+  function scheduleSave() {
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => {
+      saveTimerRef.current = null;
+      void runSave();
+    }, SAVE_DEBOUNCE_MS);
+  }
+
+  function flushSave() {
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = null;
+    }
+    void runSave();
+  }
+
+  function handleMetaChange(field: keyof CallMeta, value: string) {
+    const next = { ...metaRef.current, [field]: value };
+    metaRef.current = next;
+    setMeta(next);
+    if (!callIdRef.current) return; // nothing to PATCH until the first file
+    // Selects commit once per choice; typed fields wait out the debounce so
+    // the label never fires a request per keystroke.
+    if (field === 'label' || field === 'callDate') scheduleSave();
+    else flushSave();
   }
 
   function updateFile(localId: string, patch: Partial<FileEntry>) {
@@ -250,16 +365,21 @@ export default function CallUploader({
     setFiles((prev) => prev.filter((f) => f.localId !== localId));
   }
 
-  const locked = !!callId;
+  // The row exists server-side from here on. It still gates "Remove" — there
+  // is no DELETE route, so dropping the card would orphan a real call (and
+  // its files) that submission would then include. It does NOT gate the
+  // metadata fields: those stay editable, which is the whole point of the
+  // PATCH route.
+  const created = !!callId;
   const atFileCap = files.filter((f) => f.status !== 'error').length >= MAX_FILES_PER_CALL;
 
   return (
     <div className="rounded-lg border border-[#333333] bg-[#111111] p-5">
       <div className="flex items-center justify-between">
         <h3 className="font-anton uppercase tracking-wide text-lg text-white">
-          {locked ? 'Call' : 'New call'}
+          {created ? 'Call' : 'New call'}
         </h3>
-        {canRemove && !locked && (
+        {canRemove && !created && (
           <button
             type="button"
             onClick={onRemove}
@@ -277,7 +397,6 @@ export default function CallUploader({
           onChange={(v) => handleMetaChange('stage', v)}
           options={STAGES}
           placeholder="Select…"
-          disabled={locked}
         />
         <LabeledSelect
           label="Outcome"
@@ -285,7 +404,6 @@ export default function CallUploader({
           onChange={(v) => handleMetaChange('outcome', v)}
           options={OUTCOMES}
           placeholder="Select…"
-          disabled={locked}
         />
         <LabeledSelect
           label="Deal size"
@@ -293,28 +411,39 @@ export default function CallUploader({
           onChange={(v) => handleMetaChange('dealSizeBand', v)}
           options={DEAL_SIZE_BANDS}
           placeholder="Select…"
-          disabled={locked}
         />
         <ConsoleInput
           label="Call date"
           type="date"
           value={meta.callDate}
-          disabled={locked}
           onChange={(e) => handleMetaChange('callDate', (e.target as HTMLInputElement).value)}
+          onBlur={() => flushSave()}
         />
       </div>
       <div className="mt-4">
         <ConsoleInput
           label="Label (optional)"
           value={meta.label}
-          disabled={locked}
           onChange={(e) => handleMetaChange('label', (e.target as HTMLInputElement).value)}
+          onBlur={() => flushSave()}
           placeholder="e.g. Discovery call with Acme"
         />
       </div>
-      {locked && (
-        <p className="mt-2 font-poppins text-xs text-[#808080]">
-          Details are locked in now that this call has been saved.
+      <p className="mt-2 font-poppins text-xs text-[#808080]">
+        These four details can&apos;t be worked out from a recording later, and you can change
+        them any time before you submit.
+      </p>
+      {created && saveState !== 'idle' && (
+        <p
+          role="status"
+          className={`mt-1 font-poppins text-xs ${
+            saveState === 'error' ? 'text-[#E51B23]' : 'text-[#808080]'
+          }`}
+        >
+          {saveState === 'saving' && 'Saving…'}
+          {saveState === 'saved' && 'Details saved ✓'}
+          {saveState === 'error' &&
+            "Couldn't save those details. Your files are fine — change any field to try again."}
         </p>
       )}
       {createError && (

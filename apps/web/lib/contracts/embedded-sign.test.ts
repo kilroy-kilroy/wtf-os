@@ -8,7 +8,9 @@ vi.mock('@/lib/firma', () => ({
   createSigningRequest: (...a: unknown[]) => createSigningRequest(...a),
   sendSigningRequest: (...a: unknown[]) => sendSigningRequest(...a),
   getSigningUserIds: (...a: unknown[]) => getSigningUserIds(...a),
-  embeddedSigningUrl: (id: string) => `https://app.firma.dev/signing/${id}`,
+  // Mirrors the real implementation, encoding included — a mock that drifted
+  // from it would quietly stop testing what ships.
+  embeddedSigningUrl: (id: string) => `https://app.firma.dev/signing/${encodeURIComponent(id)}`,
   getRequest: vi.fn(),
   shouldApplyStatus: vi.fn(),
 }));

@@ -29,8 +29,14 @@ create table if not exists public.call_vault_contributors (
   session_token             text,
   session_token_expires_at  timestamptz,
 
-  -- Single-use emailed resume link (lib/access-tokens.ts contract).
-  access_token              text,
+  -- Single-use emailed resume link (lib/access-tokens.ts contract, which
+  -- specifies `access_token text unique`). The uniqueness matters: the resume
+  -- route does .eq('access_token', token).maybeSingle(), which THROWS rather
+  -- than returning null if two rows ever shared a token. Postgres allows
+  -- multiple NULLs under a UNIQUE constraint, so the many contributors with no
+  -- live token are unaffected. The partial index below stays — it is what
+  -- keeps the lookup cheap.
+  access_token              text unique,
   access_token_expires_at   timestamptz,
   access_token_used_at      timestamptz,
 

@@ -268,6 +268,42 @@ export async function getEmbeddedSigningUrl(
   };
 }
 
+/**
+ * Get-or-generate: return the signing URL for a contract, generating its
+ * envelope if one doesn't exist yet.
+ *
+ * A contract can be attached to a contributor (e.g. Call Vault's
+ * `nda_contract_id`) before it has a Firma envelope, and the FIRST attempt to
+ * generate one can fail — PDF render, storage upload, missing
+ * template/signers, or a Firma error. `generateForEmbeddedSign`'s catch
+ * resets the contract's `status` back to `'draft'` on failure but leaves
+ * `firma_request_id` null, so the attach is not undone. That "attached but
+ * never generated" state must be RECOVERABLE, not terminal: retrying must
+ * retry generation on this same contract row (no second contract, no
+ * orphan), while a contract that already has an envelope must only ever be
+ * read, never regenerated or re-sent.
+ *
+ * `generateForEmbeddedSign`'s own atomic `draft -> sending` claim still
+ * guards this: two concurrent retries on the same still-ungenerated contract
+ * can't both create envelopes, since only one can win that claim.
+ */
+export async function ensureEmbeddedSigningUrl(
+  contractId: string,
+): Promise<{ requestId: string; signingUserId: string; signingUrl: string }> {
+  const db = getSupabaseServerClient();
+  const { data: contract } = await db
+    .from('contracts').select('firma_request_id').eq('id', contractId).maybeSingle();
+  if (!contract) throw new Error(`contract ${contractId} not found`);
+
+  if (contract.firma_request_id) {
+    // Envelope already exists — pure read, no writes, no billing.
+    return getEmbeddedSigningUrl(contractId);
+  }
+  // No envelope yet (first attempt, or a first attempt that failed before
+  // creating one) — (re)generate it on this same contract row.
+  return generateForEmbeddedSign(contractId);
+}
+
 /** Poll-backup: pull current state from Firma and persist it (incl. signed PDF). */
 export async function syncStatus(contractId: string): Promise<ContractStatus> {
   const db = getSupabaseServerClient();

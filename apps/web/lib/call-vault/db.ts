@@ -235,10 +235,41 @@ export async function commitFile(input: {
   return data.id;
 }
 
-export async function attachNda(contributorId: string, contractId: string): Promise<void> {
+/**
+ * Attach a newly-created NDA contract to a contributor, as a compare-and-swap
+ * on `nda_contract_id` still being null. Two simultaneous first-time NDA
+ * requests can each create their own contract row before either calls this;
+ * without the `.is('nda_contract_id', null)` guard, both writes would land
+ * and both callers would go on to generate their own (paid) Firma envelope.
+ * With it, only one write can succeed.
+ *
+ * Returns the EFFECTIVE contract id, which the caller must use instead of the
+ * `contractId` it passed in — it may have lost the race, in which case the
+ * winner's id (already attached) is returned instead, and the caller's own
+ * freshly-created contract is simply abandoned as an unused draft (harmless:
+ * no envelope was ever generated for it, so nothing was billed).
+ */
+export async function attachNda(contributorId: string, contractId: string): Promise<string> {
   const db = getSupabaseServerClient();
-  await db.from('call_vault_contributors')
-    .update({ nda_contract_id: contractId }).eq('id', contributorId);
+  const { data } = await db
+    .from('call_vault_contributors')
+    .update({ nda_contract_id: contractId })
+    .eq('id', contributorId)
+    .is('nda_contract_id', null)
+    .select('nda_contract_id')
+    .maybeSingle();
+  if (data) return contractId; // we won the race
+
+  // Someone else already attached a contract — use theirs.
+  const { data: existing } = await db
+    .from('call_vault_contributors')
+    .select('nda_contract_id')
+    .eq('id', contributorId)
+    .maybeSingle();
+  if (!existing?.nda_contract_id) {
+    throw new Error(`attachNda: lost the race but no nda_contract_id found for contributor ${contributorId}`);
+  }
+  return existing.nda_contract_id;
 }
 
 export async function saveNdaParty(

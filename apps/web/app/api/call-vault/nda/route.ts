@@ -7,12 +7,13 @@
 // the contributor signs without leaving the page.
 //
 // Idempotent by contributor state: already signed -> no envelope is reopened;
-// an envelope already in flight -> its existing signing URL is re-derived via
-// getEmbeddedSigningUrl rather than minting a second (paid) envelope; only a
-// contributor with neither reaches the create path below.
+// a contract already attached (whether or not it has a Firma envelope yet) ->
+// ensureEmbeddedSigningUrl reuses it, generating on that same row only if
+// generation never actually succeeded, rather than minting a second (paid)
+// envelope; only a contributor with neither reaches the create path below.
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabase-server';
-import { createContract, generateForEmbeddedSign, getEmbeddedSigningUrl } from '@/lib/contracts/service';
+import { createContract, ensureEmbeddedSigningUrl } from '@/lib/contracts/service';
 import { CALL_VAULT_NDA_SLUG, CALL_VAULT_NDA_NAME } from '@/lib/call-vault/nda-template';
 import { attachNda, saveNdaParty } from '@/lib/call-vault/db';
 import { contributorFromRequest } from '@/lib/call-vault/session';
@@ -31,7 +32,12 @@ export async function POST(request: NextRequest) {
   }
   if (contributor.nda_contract_id) {
     try {
-      const { signingUrl } = await getEmbeddedSigningUrl(contributor.nda_contract_id);
+      // ensureEmbeddedSigningUrl (not the read-only getEmbeddedSigningUrl):
+      // a contract can be attached here with no envelope yet if a PRIOR
+      // attempt failed after attachNda but before generateForEmbeddedSign
+      // completed — that state must be recoverable on this same contract
+      // row, not a permanent dead end.
+      const { signingUrl } = await ensureEmbeddedSigningUrl(contributor.nda_contract_id);
       return NextResponse.json({ contractId: contributor.nda_contract_id, signingUrl });
     } catch (err) {
       console.error('[call-vault] NDA re-fetch failed:', err);
@@ -84,10 +90,18 @@ export async function POST(request: NextRequest) {
       createdBy: null, // public flow — no admin user; contracts.created_by is nullable
     });
 
-    await attachNda(contributor.id, contractId);
+    // attachNda is a compare-and-swap: two concurrent first-time requests can
+    // each reach this line with their OWN freshly-created contract, but only
+    // one attach can win. The effective id below may therefore be the OTHER
+    // request's contract, not the one just created here — always use the
+    // returned id, never `contractId` directly. If we lost, our own contract
+    // is simply abandoned as an unused draft: harmless, since
+    // ensureEmbeddedSigningUrl (and therefore any Firma envelope / billing)
+    // never runs on it. Do not "clean it up" — that would reintroduce the race.
+    const effectiveContractId = await attachNda(contributor.id, contractId);
 
-    const { signingUrl } = await generateForEmbeddedSign(contractId);
-    return NextResponse.json({ contractId, signingUrl });
+    const { signingUrl } = await ensureEmbeddedSigningUrl(effectiveContractId);
+    return NextResponse.json({ contractId: effectiveContractId, signingUrl });
   } catch (err) {
     // The NDA is optional — a Firma or PDF-rendering outage must never block
     // a contributor from continuing without it.

@@ -236,6 +236,38 @@ export async function generateForEmbeddedSign(
   }
 }
 
+/**
+ * Re-derive the embedded signing URL for an envelope `generateForEmbeddedSign`
+ * already created, WITHOUT touching status or creating anything new.
+ *
+ * Exists so a contributor who reloads the page or double-clicks "sign" gets
+ * their EXISTING envelope back instead of `generateForEmbeddedSign` minting a
+ * second one — `generateForEmbeddedSign`'s atomic claim requires
+ * `status='draft'`, which the first call already advanced past, so re-calling
+ * it throws rather than being safe to retry.
+ */
+export async function getEmbeddedSigningUrl(
+  contractId: string,
+): Promise<{ requestId: string; signingUserId: string; signingUrl: string }> {
+  const db = getSupabaseServerClient();
+  const { data: contract } = await db
+    .from('contracts').select('firma_request_id').eq('id', contractId).maybeSingle();
+  if (!contract?.firma_request_id) {
+    throw new Error('contract has no Firma request — cannot re-derive a signing URL');
+  }
+
+  const requestId = contract.firma_request_id as string;
+  const recipients = await getSigningUserIds(requestId);
+  const first = recipients[0];
+  if (!first) throw new Error('Firma returned no recipient for the signing request');
+
+  return {
+    requestId,
+    signingUserId: first.id,
+    signingUrl: embeddedSigningUrl(first.id),
+  };
+}
+
 /** Poll-backup: pull current state from Firma and persist it (incl. signed PDF). */
 export async function syncStatus(contractId: string): Promise<ContractStatus> {
   const db = getSupabaseServerClient();

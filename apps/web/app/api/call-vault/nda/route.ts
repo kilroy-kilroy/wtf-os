@@ -5,9 +5,14 @@
 // generateForEmbeddedSign in lib/contracts/service.ts. Sending would email the
 // envelope and spend a paid Firma credit; the whole point of this flow is that
 // the contributor signs without leaving the page.
+//
+// Idempotent by contributor state: already signed -> no envelope is reopened;
+// an envelope already in flight -> its existing signing URL is re-derived via
+// getEmbeddedSigningUrl rather than minting a second (paid) envelope; only a
+// contributor with neither reaches the create path below.
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabase-server';
-import { createContract, generateForEmbeddedSign } from '@/lib/contracts/service';
+import { createContract, generateForEmbeddedSign, getEmbeddedSigningUrl } from '@/lib/contracts/service';
 import { CALL_VAULT_NDA_SLUG, CALL_VAULT_NDA_NAME } from '@/lib/call-vault/nda-template';
 import { attachNda, saveNdaParty } from '@/lib/call-vault/db';
 import { contributorFromRequest } from '@/lib/call-vault/session';
@@ -17,6 +22,25 @@ export const maxDuration = 60; // PDF render + Firma round trip
 export async function POST(request: NextRequest) {
   const contributor = await contributorFromRequest(request);
   if (!contributor) return NextResponse.json({ error: 'Session expired' }, { status: 401 });
+
+  // Idempotency, ahead of everything else: a signed NDA must never be
+  // reopened, and a reload/double-click on an in-progress NDA must never
+  // mint a second paid Firma envelope — hand back the existing one instead.
+  if (contributor.nda_signed_at) {
+    return NextResponse.json({ alreadySigned: true });
+  }
+  if (contributor.nda_contract_id) {
+    try {
+      const { signingUrl } = await getEmbeddedSigningUrl(contributor.nda_contract_id);
+      return NextResponse.json({ contractId: contributor.nda_contract_id, signingUrl });
+    } catch (err) {
+      console.error('[call-vault] NDA re-fetch failed:', err);
+      return NextResponse.json(
+        { error: 'Could not prepare the NDA. You can skip it and still contribute.' },
+        { status: 500 },
+      );
+    }
+  }
 
   const { legalName, address } = (await request.json().catch(() => ({}))) as {
     legalName?: string; address?: string;

@@ -256,17 +256,31 @@ export async function markNdaSigned(contributorId: string): Promise<void> {
     .update({ nda_signed_at: new Date().toISOString() }).eq('id', contributorId);
 }
 
+/**
+ * Flip a contributor to `submitted`, as a compare-and-swap on `status='draft'`
+ * rather than an unconditional update. Two near-simultaneous submits (a
+ * double-click, two tabs) can both read `status: 'draft'` from their own
+ * session before either write lands; without the `.eq('status', 'draft')`
+ * guard both would also both flip the row and both look like "I did it",
+ * causing the route to fan out (thank-you email, Copper lead, Slack alert)
+ * twice. Only one request's update can match a still-`draft` row, so a
+ * `null` return means someone else already submitted — the caller must treat
+ * that exactly like the fast-path guard: acknowledge success, but do not fire
+ * the fan-out again.
+ */
 export async function markSubmitted(contributorId: string): Promise<{
   email: string; name: string; agencyName: string | null; callCount: number; ndaSigned: boolean;
-}> {
+} | null> {
   const db = getSupabaseServerClient();
   const { data, error } = await db
     .from('call_vault_contributors')
     .update({ status: 'submitted', submitted_at: new Date().toISOString() })
     .eq('id', contributorId)
+    .eq('status', 'draft')
     .select('email, name, agency_name, nda_signed_at')
-    .single();
-  if (error || !data) throw new Error(`markSubmitted failed: ${error?.message}`);
+    .maybeSingle();
+  if (error) throw new Error(`markSubmitted failed: ${error.message}`);
+  if (!data) return null; // already submitted — do not fire the fan-out
 
   return {
     email: data.email,

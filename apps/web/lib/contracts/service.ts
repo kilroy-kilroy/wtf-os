@@ -20,7 +20,7 @@ export interface CreateContractInput {
   fieldValues: Record<string, string>;
   sowHtml: string;
   signers: FirmaSigner[];
-  createdBy: string;
+  createdBy: string | null;
 }
 
 /** Persist a draft contract + its signers. */

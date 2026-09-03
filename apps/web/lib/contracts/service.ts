@@ -7,6 +7,7 @@ import { combineMergedHtml } from './template-engine';
 import { renderContractPdf } from './contract-pdf';
 import {
   createSigningRequest, sendSigningRequest, getRequest, shouldApplyStatus,
+  getSigningUserIds, embeddedSigningUrl,
   type FirmaSigner, type ContractStatus,
 } from '@/lib/firma';
 
@@ -144,6 +145,91 @@ export async function generateAndSend(contractId: string): Promise<void> {
   } catch (err) {
     await db.from('contracts').update({
       status: 'draft', last_error: err instanceof Error ? err.message : String(err),
+      updated_at: new Date().toISOString(),
+    }).eq('id', contractId);
+    throw err;
+  }
+}
+
+/**
+ * Generate the PDF, create a Firma envelope, and return a URL the signer can be
+ * shown in an iframe — WITHOUT sending it.
+ *
+ * This is the Call Vault path. `sendSigningRequest` is deliberately never
+ * called: sending would email an envelope and spend a credit, and the entire
+ * point of the flow is that the contributor signs inline without waiting.
+ *
+ * Mirrors generateAndSend's safety properties: an atomic draft->sending claim so
+ * concurrent callers can't create two envelopes, and the Firma request id
+ * persisted before we return so a crash leaves a correlatable id.
+ */
+export async function generateForEmbeddedSign(
+  contractId: string,
+): Promise<{ requestId: string; signingUserId: string; signingUrl: string }> {
+  const db = getSupabaseServerClient();
+
+  const { data: claimed } = await db
+    .from('contracts')
+    .update({ status: 'sending', last_error: null, updated_at: new Date().toISOString() })
+    .eq('id', contractId)
+    .eq('status', 'draft')
+    .select('id, template_id, sow_template_id, title, field_values, sow_html, firma_request_id')
+    .maybeSingle();
+  if (!claimed) throw new Error('contract is not in draft — cannot generate for embedded signing');
+
+  try {
+    let requestId = claimed.firma_request_id as string | null;
+
+    if (!requestId) {
+      const { data: template } = await db
+        .from('contract_templates').select('body_html').eq('id', claimed.template_id).single();
+      if (!template) throw new Error('template not found');
+
+      const { data: signers } = await db
+        .from('contract_signers').select('*').eq('contract_id', contractId).order('sign_order');
+      if (!signers?.length) throw new Error('no signers');
+
+      const mergedHtml = combineMergedHtml(template.body_html, null, claimed.field_values, claimed.sow_html);
+      const pdf = await renderContractPdf(mergedHtml);
+
+      const up = await db.storage.from(BUCKET).upload(`${contractId}/contract.pdf`, pdf, {
+        contentType: 'application/pdf', upsert: true,
+      });
+      if (up.error) throw new Error(`pdf upload failed: ${up.error.message}`);
+
+      const firmaSigners: FirmaSigner[] = signers.map((s) => ({
+        role: s.role as 'client' | 'counter', name: s.name, email: s.email, order: s.sign_order,
+      }));
+
+      const created = await createSigningRequest(
+        pdf, firmaSigners, claimed.title,
+        { initials: mergedHtml.includes('{{init_') },
+      );
+      requestId = created.requestId;
+
+      // Persist BEFORE returning — a crash after this point is recoverable.
+      await db.from('contracts').update({
+        merged_html: mergedHtml,
+        pdf_path: `${contractId}/contract.pdf`,
+        firma_request_id: requestId,
+        status: 'sent',
+        updated_at: new Date().toISOString(),
+      }).eq('id', contractId);
+    }
+
+    const recipients = await getSigningUserIds(requestId!);
+    const first = recipients[0];
+    if (!first) throw new Error('Firma returned no recipient for the signing request');
+
+    return {
+      requestId: requestId!,
+      signingUserId: first.id,
+      signingUrl: embeddedSigningUrl(first.id),
+    };
+  } catch (err) {
+    await db.from('contracts').update({
+      status: 'draft',
+      last_error: err instanceof Error ? err.message : String(err),
       updated_at: new Date().toISOString(),
     }).eq('id', contractId);
     throw err;

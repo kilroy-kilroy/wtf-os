@@ -118,6 +118,46 @@ export async function sendSigningRequest(requestId: string): Promise<void> {
   await firmaFetch(`/signing-requests/${requestId}/send`, { method: 'POST' });
 }
 
+export interface FirmaRecipient {
+  id: string;
+  email?: string;
+  order?: number;
+}
+
+/**
+ * List a signing request's recipients so an embedded signing URL can be built:
+ * `https://app.firma.dev/signing/<id>`.
+ *
+ * Only the `id` field is confirmed by the docs; `order` and `email` may be
+ * absent, so callers must match defensively (order first, then email) exactly
+ * as createSigningRequest does. Results are sorted by order when present so
+ * `[0]` is the first signer for single-signer envelopes.
+ *
+ * No `/send` is required before these ids resolve — that is what lets an
+ * embedded flow avoid sending an envelope by email at all.
+ */
+export async function getSigningUserIds(requestId: string): Promise<FirmaRecipient[]> {
+  const res = await firmaFetch(`/signing-requests/${requestId}/users`);
+  const body = await res.json();
+  const rows: Array<Record<string, unknown>> = Array.isArray(body)
+    ? body
+    : (body?.results ?? body?.users ?? body?.recipients ?? []);
+
+  return rows
+    .filter((r) => typeof r?.id === 'string' && r.id)
+    .map((r) => ({
+      id: r.id as string,
+      email: typeof r.email === 'string' ? r.email : undefined,
+      order: typeof r.order === 'number' ? r.order : undefined,
+    }))
+    .sort((a, b) => (a.order ?? Number.MAX_SAFE_INTEGER) - (b.order ?? Number.MAX_SAFE_INTEGER));
+}
+
+/** Build the embedded signing URL for a recipient id. */
+export function embeddedSigningUrl(signingUserId: string): string {
+  return `https://app.firma.dev/signing/${signingUserId}`;
+}
+
 export interface FirmaRequestState {
   status: ContractStatus;
   signedPdf?: Buffer;

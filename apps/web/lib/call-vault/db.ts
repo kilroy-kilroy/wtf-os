@@ -69,6 +69,23 @@ export async function startContributor(
   return { contributorId: data.id, sessionToken: session.session_token };
 }
 
+/**
+ * Look up an existing contributor by email, without creating or touching a
+ * session. Used by /start to detect a returning contributor BEFORE any
+ * session is minted for them — email ownership is never verified inline, so
+ * a known email must go through the emailed resume-link path instead of
+ * getting a fresh session handed back in the response.
+ */
+export async function findContributorIdByEmail(email: string): Promise<string | null> {
+  const db = getSupabaseServerClient();
+  const { data } = await db
+    .from('call_vault_contributors')
+    .select('id')
+    .eq('email', email)
+    .maybeSingle();
+  return data?.id ?? null;
+}
+
 /** Resolve an anonymous session token to its contributor, or null if invalid/expired. */
 export async function resolveSession(sessionToken: string): Promise<ContributorRow | null> {
   if (!sessionToken) return null;
@@ -155,6 +172,23 @@ export async function signUpload(
   const { data, error } = await db.storage.from(CALL_VAULT_BUCKET).createSignedUploadUrl(storagePath);
   if (error || !data) throw new Error(`signUpload failed: ${error?.message}`);
   return { storagePath, uploadUrl: data.signedUrl, token: data.token };
+}
+
+/**
+ * Count objects actually sitting in storage under this call's prefix, as
+ * opposed to `countFiles`, which counts committed DB rows. A client can call
+ * `sign` repeatedly and never `commit`, leaving `countFiles` at 0 forever
+ * while pushing unlimited objects into the bucket — this is the guard against
+ * that. Fails open to 0 on a storage error rather than throwing, since this is
+ * a secondary cap check and must never itself take the route down.
+ */
+export async function countStoredObjects(contributorId: string, callId: string): Promise<number> {
+  const db = getSupabaseServerClient();
+  const { data, error } = await db.storage
+    .from(CALL_VAULT_BUCKET)
+    .list(`${contributorId}/${callId}`);
+  if (error) return 0;
+  return data?.length ?? 0;
 }
 
 export async function commitFile(input: {

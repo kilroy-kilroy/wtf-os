@@ -969,3 +969,27 @@ export async function onCallVaultSubmitted(args: {
     },
   });
 }
+
+/**
+ * Fire when /start sees an email that already has a contributor row.
+ *
+ * /start never mints a session for a known email inline (that would let
+ * anyone hijack a contributor's row just by knowing their email address), so
+ * instead it mints a single-use resume link and emails it here. Unlike
+ * `onCallVaultSubmitted`, this does NOT call `createOrUpdateContact` — the
+ * contact already exists from their original submission.
+ */
+export async function onCallVaultResumeLink(args: {
+  email: string;
+  firstName: string;
+  resumeUrl: string;
+}): Promise<{ success: boolean; error?: string }> {
+  return sendEvent({
+    email: args.email,
+    eventName: 'call_vault_resume_link',
+    eventProperties: {
+      firstName: args.firstName || '',
+      resumeUrl: args.resumeUrl,
+    },
+  });
+}

@@ -6,8 +6,8 @@
 // The browser PUTs directly to Supabase Storage between the two, so a 200MB
 // recording never passes through a Vercel function.
 import { NextRequest, NextResponse } from 'next/server';
-import { classifyFile, MAX_FILE_BYTES, MAX_FILES_PER_CALL } from '@/lib/call-vault/validate';
-import { signUpload, commitFile, callBelongsTo, countFiles } from '@/lib/call-vault/db';
+import { classifyFile, ownsStoragePath, MAX_FILE_BYTES, MAX_FILES_PER_CALL } from '@/lib/call-vault/validate';
+import { signUpload, commitFile, callBelongsTo, countFiles, countStoredObjects } from '@/lib/call-vault/db';
 import { contributorFromRequest } from '@/lib/call-vault/session';
 
 export async function POST(request: NextRequest) {
@@ -39,7 +39,16 @@ export async function POST(request: NextRequest) {
   }
 
   if (mode === 'sign') {
-    if ((await countFiles(callId)) >= MAX_FILES_PER_CALL) {
+    // Cap on BOTH what's committed in the DB and what's actually sitting in
+    // storage under this call. `countFiles` alone only counts committed rows,
+    // so a client that signs repeatedly and never commits would keep that
+    // count at 0 forever while pushing unlimited 200MB objects into the
+    // bucket with no DB trace — `countStoredObjects` closes that gap.
+    const [committed, stored] = await Promise.all([
+      countFiles(callId),
+      countStoredObjects(contributor.id, callId),
+    ]);
+    if (committed >= MAX_FILES_PER_CALL || stored >= MAX_FILES_PER_CALL) {
       return NextResponse.json(
         { error: `Up to ${MAX_FILES_PER_CALL} files per call` }, { status: 400 },
       );
@@ -56,6 +65,28 @@ export async function POST(request: NextRequest) {
     if (!storagePath) {
       return NextResponse.json({ error: 'storagePath is required' }, { status: 400 });
     }
+    // Same cap as `sign`, enforced again here: without this, a client can
+    // sign once and then POST `commit` repeatedly (with distinct storagePaths
+    // it already has signed URLs for, or by re-committing) to create
+    // unbounded rows for one call.
+    if ((await countFiles(callId)) >= MAX_FILES_PER_CALL) {
+      return NextResponse.json(
+        { error: `Up to ${MAX_FILES_PER_CALL} files per call` }, { status: 400 },
+      );
+    }
+    // Ownership is checked explicitly here (not just inferred from whatever
+    // error message `commitFile` happens to throw) so that a future wording
+    // change inside commitFile can't silently downgrade a security rejection
+    // into a generic 500. `commitFile` still re-checks this itself as
+    // defence in depth.
+    if (!ownsStoragePath(storagePath, contributor.id)) {
+      console.error('[call-vault] commit rejected: storagePath does not belong to contributor', {
+        contributorId: contributor.id,
+        callId,
+        storagePath,
+      });
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
     try {
       const fileId = await commitFile({
         contributorId: contributor.id,
@@ -68,10 +99,8 @@ export async function POST(request: NextRequest) {
       });
       return NextResponse.json({ fileId });
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'commit failed';
-      const status = message.includes('does not belong') ? 403 : 500;
-      if (status === 500) console.error('[call-vault] commitFile failed:', err);
-      return NextResponse.json({ error: status === 403 ? 'Forbidden' : 'Could not save that file' }, { status });
+      console.error('[call-vault] commitFile failed:', err);
+      return NextResponse.json({ error: 'Could not save that file' }, { status: 500 });
     }
   }
 

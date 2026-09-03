@@ -8,8 +8,11 @@ export async function POST(request: NextRequest) {
   const contributor = await contributorFromRequest(request);
   if (!contributor) return NextResponse.json({ error: 'Session expired' }, { status: 401 });
 
-  const body = await request.json().catch(() => ({}));
-  const parsed = validateCallMeta(body ?? {});
+  const body = await request.json().catch(() => null);
+  if (!body || typeof body !== 'object') {
+    return NextResponse.json({ error: 'Invalid body' }, { status: 400 });
+  }
+  const parsed = validateCallMeta(body);
   if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
 
   if ((await countCalls(contributor.id)) >= MAX_CALLS_PER_CONTRIBUTOR) {

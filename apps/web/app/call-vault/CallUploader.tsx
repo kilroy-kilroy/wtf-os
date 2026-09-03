@@ -66,11 +66,15 @@ export default function CallUploader({
   canRemove,
   onRemove,
   onCallCreated,
+  onSessionExpired,
 }: {
   sessionToken: string;
   canRemove: boolean;
   onRemove: () => void;
   onCallCreated: () => void;
+  /** Called on any 401 from this call's requests — the parent clears the
+   * stale token and moves the whole form to its expired-session state. */
+  onSessionExpired: () => void;
 }) {
   const [meta, setMeta] = useState<CallMeta>({
     stage: '',
@@ -107,6 +111,10 @@ export default function CallUploader({
             label: snapshot.label || null,
           }),
         });
+        if (res.status === 401) {
+          onSessionExpired();
+          return null;
+        }
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Could not add that call');
         setCallId(data.callId);
@@ -151,6 +159,10 @@ export default function CallUploader({
           sizeBytes: file.size,
         }),
       });
+      if (signRes.status === 401) {
+        onSessionExpired();
+        return;
+      }
       const signData = await signRes.json();
       if (!signRes.ok) throw new Error(signData.error || 'Could not start that upload');
 
@@ -169,6 +181,10 @@ export default function CallUploader({
           sizeBytes: file.size,
         }),
       });
+      if (commitRes.status === 401) {
+        onSessionExpired();
+        return;
+      }
       const commitData = await commitRes.json();
       if (!commitRes.ok) throw new Error(commitData.error || 'Could not save that file');
 
@@ -301,7 +317,11 @@ export default function CallUploader({
           Details are locked in now that this call has been saved.
         </p>
       )}
-      {createError && <p className="mt-2 font-poppins text-sm text-[#E51B23]">{createError}</p>}
+      {createError && (
+        <p role="alert" className="mt-2 font-poppins text-sm text-[#E51B23]">
+          {createError}
+        </p>
+      )}
 
       <div className="mt-5">
         <label
@@ -343,7 +363,9 @@ export default function CallUploader({
               <div className="min-w-0 flex-1">
                 <div className="truncate font-poppins text-sm text-white">{f.file.name}</div>
                 {f.status === 'error' ? (
-                  <div className="font-poppins text-xs text-[#E51B23]">{f.error}</div>
+                  <div role="alert" className="font-poppins text-xs text-[#E51B23]">
+                    {f.error}
+                  </div>
                 ) : f.status === 'done' ? (
                   <div className="font-poppins text-xs text-[#22c55e]">Uploaded ✓</div>
                 ) : (

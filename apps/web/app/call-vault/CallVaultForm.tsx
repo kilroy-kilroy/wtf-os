@@ -2,14 +2,16 @@
 
 import { useEffect, useState } from 'react';
 import { ConsolePanel, ConsoleHeading, ConsoleInput, ConsoleButton } from '@/components/console';
-import { SERVICES, REVENUE_BANDS, type Option } from '@/lib/call-vault/vocabularies';
+import {
+  SERVICES, REVENUE_BANDS, STAGES, OUTCOMES, DEAL_SIZE_BANDS, labelFor, type Option,
+} from '@/lib/call-vault/vocabularies';
 import { MAX_CALLS_PER_CONTRIBUTOR } from '@/lib/call-vault/validate';
 import CallUploader from './CallUploader';
 import NdaModal from './NdaModal';
 
 export const SESSION_STORAGE_KEY = 'call-vault-session';
 
-type Phase = 'restoring' | 'about' | 'resumeSent' | 'calls' | 'done';
+type Phase = 'restoring' | 'about' | 'resumeSent' | 'calls' | 'expired' | 'done';
 
 interface ContributorProfile {
   name: string;
@@ -17,6 +19,19 @@ interface ContributorProfile {
   agencyName: string | null;
   agencyUrl: string | null;
   targetClient: string | null;
+}
+
+/** A previously-saved call, returned read-only by /resume so a returning
+ * contributor can see what they already have instead of discovering the
+ * 10-call cap as a bare 400 on an 11th blank card. */
+interface ExistingCall {
+  id: string;
+  stage: string | null;
+  outcome: string | null;
+  dealSizeBand: string | null;
+  callDate: string | null;
+  label: string | null;
+  fileCount: number;
 }
 
 /** A `<select>` styled to match ConsoleInput's look — there is no ConsoleSelect. */
@@ -64,6 +79,7 @@ export default function CallVaultForm({ resumeToken }: { resumeToken: string | n
   const [ndaSigned, setNdaSigned] = useState(false);
   const [ndaOpen, setNdaOpen] = useState(false);
   const [resumeError, setResumeError] = useState<string | null>(null);
+  const [existingCalls, setExistingCalls] = useState<ExistingCall[]>([]);
 
   // About-you fields
   const [name, setName] = useState('');
@@ -109,6 +125,13 @@ export default function CallVaultForm({ resumeToken }: { resumeToken: string | n
           targetClient: data.contributor.targetClient,
         });
         setNdaSigned(!!data.contributor.ndaSigned);
+        const calls: ExistingCall[] = Array.isArray(data.calls) ? data.calls : [];
+        setExistingCalls(calls);
+        // If the contributor is already at (or somehow over) the cap, don't
+        // start them off with a blank card they can't use.
+        if (calls.length >= MAX_CALLS_PER_CONTRIBUTOR) {
+          setCallIds([]);
+        }
         setPhase('calls');
       } catch (err) {
         if (cancelled) return;
@@ -143,6 +166,20 @@ export default function CallVaultForm({ resumeToken }: { resumeToken: string | n
 
   function toggleService(value: string) {
     setServices((prev) => (prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]));
+  }
+
+  // Shared 401 handler: on any expired/invalid session (from /calls, /files,
+  // /nda, /nda/confirm, or /submit), drop the stale token everywhere it lives
+  // and move to a dedicated terminal state rather than leaving a dead-end
+  // "Session expired" line sitting next to still-disabled controls.
+  function handleSessionExpired() {
+    setSessionToken(null);
+    try {
+      sessionStorage.removeItem(SESSION_STORAGE_KEY);
+    } catch {
+      // ignore — nothing else to clean up if storage isn't available
+    }
+    setPhase('expired');
   }
 
   async function submitAbout(e: React.FormEvent) {
@@ -191,6 +228,7 @@ export default function CallVaultForm({ resumeToken }: { resumeToken: string | n
         targetClient: targetClient || null,
       });
       setNdaSigned(false);
+      setExistingCalls([]);
       setPhase('calls');
     } catch (err) {
       setAboutError(err instanceof Error ? err.message : 'Something broke');
@@ -199,8 +237,10 @@ export default function CallVaultForm({ resumeToken }: { resumeToken: string | n
     }
   }
 
+  const totalCalls = existingCalls.length + callIds.length;
+
   function addCall() {
-    setCallIds((ids) => (ids.length >= MAX_CALLS_PER_CONTRIBUTOR ? ids : [...ids, makeLocalId()]));
+    setCallIds((ids) => (existingCalls.length + ids.length >= MAX_CALLS_PER_CONTRIBUTOR ? ids : [...ids, makeLocalId()]));
   }
 
   function removeCall(id: string) {
@@ -216,6 +256,10 @@ export default function CallVaultForm({ resumeToken }: { resumeToken: string | n
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-call-vault-session': sessionToken },
       });
+      if (res.status === 401) {
+        handleSessionExpired();
+        return;
+      }
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Could not complete your submission');
       setPhase('done');
@@ -248,6 +292,38 @@ export default function CallVaultForm({ resumeToken }: { resumeToken: string | n
     );
   }
 
+  if (phase === 'expired') {
+    return (
+      <ConsolePanel className="text-center">
+        <ConsoleHeading level={2} variant="yellow" className="normal-case">
+          Session timed out
+        </ConsoleHeading>
+        <p role="alert" className="mt-3 font-poppins text-[#B3B3B3]">
+          Your session expired. Any calls you already uploaded are safely saved &mdash; nothing is
+          lost. Enter your email again below and we&apos;ll send you a link to pick up right where
+          you left off.
+        </p>
+        <ConsoleButton
+          type="button"
+          className="mt-5"
+          onClick={() => {
+            if (profile) {
+              setName(profile.name);
+              setEmail(profile.email);
+              setAgencyName(profile.agencyName ?? '');
+              setAgencyUrl(profile.agencyUrl ?? '');
+              setTargetClient(profile.targetClient ?? '');
+            }
+            setAboutError(null);
+            setPhase('about');
+          }}
+        >
+          Back to start
+        </ConsoleButton>
+      </ConsolePanel>
+    );
+  }
+
   if (phase === 'done') {
     return (
       <ConsolePanel className="text-center">
@@ -267,7 +343,7 @@ export default function CallVaultForm({ resumeToken }: { resumeToken: string | n
     if (!sessionToken) {
       return (
         <ConsolePanel className="text-center">
-          <p className="font-poppins text-sm text-[#E51B23]">
+          <p role="alert" className="font-poppins text-sm text-[#E51B23]">
             We lost track of your session. Please refresh the page.
           </p>
         </ConsolePanel>
@@ -290,6 +366,30 @@ export default function CallVaultForm({ resumeToken }: { resumeToken: string | n
           )}
         </ConsolePanel>
 
+        {existingCalls.length > 0 && (
+          <ConsolePanel>
+            <h3 className="font-anton uppercase tracking-wide text-sm text-[#FFDE59]">
+              Calls you&apos;ve already saved ({existingCalls.length})
+            </h3>
+            <ul className="mt-3 flex flex-col gap-2">
+              {existingCalls.map((c) => (
+                <li
+                  key={c.id}
+                  className="rounded border border-[#333333] px-3 py-2 font-poppins text-sm text-[#B3B3B3]"
+                >
+                  <span className="text-white">{c.label || labelFor(STAGES, c.stage)}</span>
+                  {' — '}
+                  {labelFor(STAGES, c.stage)} &middot; {labelFor(OUTCOMES, c.outcome)} &middot;{' '}
+                  {labelFor(DEAL_SIZE_BANDS, c.dealSizeBand)}
+                  {c.callDate ? ` · ${c.callDate}` : ''}
+                  {' — '}
+                  {c.fileCount} file{c.fileCount === 1 ? '' : 's'}
+                </li>
+              ))}
+            </ul>
+          </ConsolePanel>
+        )}
+
         <div className="flex flex-col gap-6">
           {callIds.map((id) => (
             <CallUploader
@@ -298,6 +398,7 @@ export default function CallVaultForm({ resumeToken }: { resumeToken: string | n
               canRemove={callIds.length > 1}
               onRemove={() => removeCall(id)}
               onCallCreated={() => setCreatedCount((n) => n + 1)}
+              onSessionExpired={handleSessionExpired}
             />
           ))}
         </div>
@@ -306,17 +407,26 @@ export default function CallVaultForm({ resumeToken }: { resumeToken: string | n
           type="button"
           variant="ghost"
           onClick={addCall}
-          disabled={callIds.length >= MAX_CALLS_PER_CONTRIBUTOR}
+          disabled={totalCalls >= MAX_CALLS_PER_CONTRIBUTOR}
           fullWidth
         >
-          {callIds.length >= MAX_CALLS_PER_CONTRIBUTOR
+          {totalCalls >= MAX_CALLS_PER_CONTRIBUTOR
             ? `Call limit reached (${MAX_CALLS_PER_CONTRIBUTOR})`
             : '+ Add another call'}
         </ConsoleButton>
 
-        {submitError && <p className="font-poppins text-sm text-[#E51B23]">{submitError}</p>}
+        {submitError && (
+          <p role="alert" className="font-poppins text-sm text-[#E51B23]">
+            {submitError}
+          </p>
+        )}
 
-        <ConsoleButton type="button" onClick={submitAll} disabled={submitBusy || createdCount === 0} fullWidth>
+        <ConsoleButton
+          type="button"
+          onClick={submitAll}
+          disabled={submitBusy || (createdCount === 0 && existingCalls.length === 0)}
+          fullWidth
+        >
           {submitBusy ? 'Submitting…' : 'Submit for review'}
         </ConsoleButton>
 
@@ -329,6 +439,10 @@ export default function CallVaultForm({ resumeToken }: { resumeToken: string | n
               setNdaOpen(false);
             }}
             onClose={() => setNdaOpen(false)}
+            onSessionExpired={() => {
+              setNdaOpen(false);
+              handleSessionExpired();
+            }}
           />
         )}
       </div>
@@ -338,7 +452,11 @@ export default function CallVaultForm({ resumeToken }: { resumeToken: string | n
   return (
     <ConsolePanel>
       <form onSubmit={submitAbout} className="flex flex-col gap-5">
-        {resumeError && <p className="font-poppins text-sm text-[#E51B23]">{resumeError}</p>}
+        {resumeError && (
+          <p role="alert" className="font-poppins text-sm text-[#E51B23]">
+            {resumeError}
+          </p>
+        )}
 
         <ConsoleInput
           label="Your name"
@@ -421,7 +539,11 @@ export default function CallVaultForm({ resumeToken }: { resumeToken: string | n
           </span>
         </label>
 
-        {aboutError && <p className="font-poppins text-sm text-[#E51B23]">{aboutError}</p>}
+        {aboutError && (
+          <p role="alert" className="font-poppins text-sm text-[#E51B23]">
+            {aboutError}
+          </p>
+        )}
 
         <ConsoleButton type="submit" disabled={aboutBusy} fullWidth>
           {aboutBusy ? 'Starting…' : 'Continue'}

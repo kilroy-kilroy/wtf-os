@@ -131,6 +131,55 @@ export async function countCalls(contributorId: string): Promise<number> {
   return count ?? 0;
 }
 
+export interface ContributorCallSummary {
+  id: string;
+  stage: string | null;
+  outcome: string | null;
+  dealSizeBand: string | null;
+  callDate: string | null;
+  label: string | null;
+  fileCount: number;
+}
+
+/**
+ * Read-only summary of a contributor's existing calls, for the resume flow —
+ * so a contributor who already saved calls before their session expired sees
+ * them instead of discovering the 10-call cap as a bare 400 on an 11th blank
+ * card. One query for the calls, one query for all their files (filtered to
+ * those call ids), counted in JS — never one query per call.
+ */
+export async function listCallsForContributor(contributorId: string): Promise<ContributorCallSummary[]> {
+  const db = getSupabaseServerClient();
+  const { data: calls, error } = await db
+    .from('call_vault_calls')
+    .select('id, stage, outcome, deal_size_band, call_date, label, created_at')
+    .eq('contributor_id', contributorId)
+    .order('created_at', { ascending: true });
+  if (error) throw new Error(`listCallsForContributor failed: ${error.message}`);
+  if (!calls || calls.length === 0) return [];
+
+  const callIds = calls.map((c) => c.id);
+  const { data: files } = await db
+    .from('call_vault_files')
+    .select('call_id')
+    .in('call_id', callIds);
+
+  const fileCounts = new Map<string, number>();
+  for (const f of files ?? []) {
+    fileCounts.set(f.call_id, (fileCounts.get(f.call_id) ?? 0) + 1);
+  }
+
+  return calls.map((c) => ({
+    id: c.id,
+    stage: c.stage,
+    outcome: c.outcome,
+    dealSizeBand: c.deal_size_band,
+    callDate: c.call_date,
+    label: c.label,
+    fileCount: fileCounts.get(c.id) ?? 0,
+  }));
+}
+
 /** Abuse control: how many contributors this IP has created since `sinceIso`. */
 export async function countRecentByIp(ip: string, sinceIso: string): Promise<number> {
   const db = getSupabaseServerClient();

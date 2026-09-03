@@ -10,6 +10,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabase-server';
 import { randomBytes } from 'node:crypto';
+import { listCallsForContributor } from '@/lib/call-vault/db';
 
 const SESSION_TTL_MS = 24 * 60 * 60 * 1000;
 
@@ -53,6 +54,17 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'That link has expired' }, { status: 401 });
   }
 
+  // Read-only summary of what this contributor already saved, so the UI can
+  // show it instead of the contributor re-discovering the 10-call cap as a
+  // bare 400 on an 11th blank card. Additive to the response — `contributor`
+  // and `sessionToken` keep their existing shape either way. Resume has
+  // already succeeded by this point (the session was minted above), so a
+  // failure reading this summary must not fail the whole request.
+  const calls = await listCallsForContributor(row.id).catch((err) => {
+    console.error('[call-vault] resume: listCallsForContributor failed:', err);
+    return [];
+  });
+
   return NextResponse.json({
     sessionToken,
     contributor: {
@@ -65,5 +77,6 @@ export async function GET(request: NextRequest) {
       targetClient: row.target_client,
       ndaSigned: !!row.nda_signed_at,
     },
+    calls,
   });
 }

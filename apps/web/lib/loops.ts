@@ -924,3 +924,48 @@ export async function onProspectDocShared(args: {
     },
   });
 }
+
+// ============================================
+// CALL VAULT EVENTS
+// ============================================
+
+/**
+ * Fire when a Call Vault contributor submits their calls.
+ *
+ * The Loops automation for `call_vault_submitted` is built in the Loops
+ * dashboard — firing this event does not by itself send mail. The thank-you
+ * email should carry `bookingUrl` (review call) and `resumeUrl` (add more calls).
+ */
+export async function onCallVaultSubmitted(args: {
+  email: string;
+  firstName: string;
+  agencyName?: string;
+  callCount: number;
+  ndaSigned: boolean;
+  resumeUrl: string;
+}): Promise<{ success: boolean; error?: string }> {
+  const bookingUrl =
+    process.env.NEXT_PUBLIC_CALL_VAULT_BOOKING_URL || 'https://meet.timkilroy.com/sales-call-survey';
+
+  await createOrUpdateContact({
+    email: args.email,
+    firstName: args.firstName || undefined,
+    source: 'call_vault',
+    subscribed: true,
+    userGroup: 'call_vault_contributor',
+    companyName: args.agencyName,
+  });
+
+  return sendEvent({
+    email: args.email,
+    eventName: 'call_vault_submitted',
+    eventProperties: {
+      firstName: args.firstName || '',
+      agencyName: args.agencyName || '',
+      callCount: args.callCount,
+      ndaSigned: args.ndaSigned,
+      bookingUrl,
+      resumeUrl: args.resumeUrl,
+    },
+  });
+}

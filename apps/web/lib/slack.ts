@@ -96,6 +96,7 @@ export function alertReportGenerated(
     'wah-wah': 'Wah-Wah Detector',
     'case-study': 'Case Study Lab',
     'robot-tim': 'Robot-Tim Positioning Engine',
+    'call-vault': 'Call Vault',
   };
   const label = productLabels[product] || product;
 

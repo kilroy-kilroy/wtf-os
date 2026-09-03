@@ -345,3 +345,19 @@ export async function addProSubscriber(
     custom_fields: [{ name: 'product', value: product }],
   });
 }
+
+/** Add a Call Vault contributor to Agency Inner Circle. */
+export async function addCallVaultSubscriber(
+  email: string,
+  agencyName?: string,
+  firstName?: string
+): Promise<{ success: boolean; id?: string; error?: string }> {
+  return addSubscriber({
+    email,
+    first_name: firstName || undefined,
+    utm_source: 'call_vault',
+    utm_medium: 'product',
+    utm_campaign: 'call_vault_contribution',
+    custom_fields: agencyName ? [{ name: 'company', value: agencyName }] : undefined,
+  });
+}

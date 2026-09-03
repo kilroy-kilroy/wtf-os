@@ -108,6 +108,41 @@ export function isSessionExpired(expiresAt: string | null | undefined, now = new
   return t <= now.getTime();
 }
 
+/**
+ * Should /start mint and email a fresh resume link for a known contributor?
+ *
+ * A resume token carries a 24h TTL. If one is already live (not used, not
+ * expired) AND was minted within roughly the last hour (its expiry is more
+ * than 23h out), sending another would just re-mint the token and invalidate
+ * the link the contributor already has, for no benefit — so this returns
+ * false only in that narrow window. This is the sole throttle on the
+ * known-email branch of /start (which sits outside the per-IP rate limit,
+ * since it never creates a contributor row): it bounds resume emails to
+ * roughly one per contributor per hour, and stops a hammering loop from
+ * permanently denying a contributor their own resume path by repeatedly
+ * invalidating the token before they can use it.
+ *
+ * Fails toward SENDING (true) on any null/unparseable input — a contributor
+ * who can't get a link is worse than one extra email.
+ */
+export function shouldSendResumeLink(
+  accessTokenExpiresAt: string | null,
+  accessTokenUsedAt: string | null,
+  now = new Date(),
+): boolean {
+  if (accessTokenUsedAt) return true;
+  if (!accessTokenExpiresAt) return true;
+  const expiresAtMs = Date.parse(accessTokenExpiresAt);
+  if (Number.isNaN(expiresAtMs)) return true;
+
+  const nowMs = now.getTime();
+  const isLive = expiresAtMs > nowMs;
+  if (!isLive) return true;
+
+  const mintedRecently = expiresAtMs - nowMs > 23 * 60 * 60 * 1000;
+  return !mintedRecently;
+}
+
 export interface AboutYou {
   name: string;
   email: string;

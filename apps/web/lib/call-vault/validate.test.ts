@@ -6,6 +6,7 @@ import {
   validateAboutYou,
   validateCallMeta,
   isSessionExpired,
+  shouldSendResumeLink,
   MAX_FILE_BYTES,
 } from '@/lib/call-vault/validate';
 
@@ -187,6 +188,34 @@ describe('isSessionExpired', () => {
 
   it('treats an unparseable expiry as expired', () => {
     expect(isSessionExpired('not-a-date', now)).toBe(true);
+  });
+});
+
+describe('shouldSendResumeLink', () => {
+  const now = new Date('2026-09-03T12:00:00Z');
+
+  it('sends when there is no token at all', () => {
+    expect(shouldSendResumeLink(null, null, now)).toBe(true);
+  });
+
+  it('sends when the existing token was already used', () => {
+    expect(shouldSendResumeLink('2026-09-04T11:00:00Z', '2026-09-03T10:00:00Z', now)).toBe(true);
+  });
+
+  it('sends when the existing token has expired', () => {
+    expect(shouldSendResumeLink('2026-09-03T11:00:00Z', null, now)).toBe(true);
+  });
+
+  it('withholds when a live token was minted about 5 minutes ago (expiry ~23h55m out)', () => {
+    expect(shouldSendResumeLink('2026-09-04T11:55:00Z', null, now)).toBe(false);
+  });
+
+  it('sends when a live token was minted about 2 hours ago (expiry ~22h out)', () => {
+    expect(shouldSendResumeLink('2026-09-04T10:00:00Z', null, now)).toBe(true);
+  });
+
+  it('sends when the expiry is unparseable — never fail toward silence', () => {
+    expect(shouldSendResumeLink('not-a-date', null, now)).toBe(true);
   });
 });
 

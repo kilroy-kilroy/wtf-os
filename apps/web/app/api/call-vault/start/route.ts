@@ -1,8 +1,8 @@
 // apps/web/app/api/call-vault/start/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { waitUntil } from '@vercel/functions';
-import { validateAboutYou } from '@/lib/call-vault/validate';
-import { startContributor, countRecentByIp, findContributorIdByEmail } from '@/lib/call-vault/db';
+import { validateAboutYou, shouldSendResumeLink } from '@/lib/call-vault/validate';
+import { startContributor, countRecentByIp, findContributorForResume } from '@/lib/call-vault/db';
 import { mintAccessToken } from '@/lib/access-tokens';
 import { onCallVaultResumeLink } from '@/lib/loops';
 
@@ -49,28 +49,42 @@ export async function POST(request: NextRequest) {
     // victim's email could POST it here and receive a live session bound to
     // the victim's existing row. Known emails are routed to a single-use
     // resume link sent to that address instead, which only its owner can act
-    // on. Within THIS branch the response is deliberately uniform — always
-    // `{ resumeEmailed: true }` at 200, never surfacing whether the mint or
-    // the outbound email actually succeeded — so a caller probing this branch
-    // can't distinguish "known email, link sent" from "known email, send
-    // failed". (A caller can still tell a known email from a brand-new one by
-    // the differing response shape below; that distinction is inherent to a
-    // new contributor needing real credentials back to proceed, and is a
-    // known residual side-channel — flagged to the coordinator rather than
-    // silently accepted.)
-    const existingId = await findContributorIdByEmail(parsed.value.email);
-    if (existingId) {
-      const token = await mintAccessToken(existingId, { table: 'call_vault_contributors' });
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.timkilroy.com';
-      const resumeUrl = `${appUrl}/call-vault?token=${token}`;
-      const firstName = parsed.value.name.trim().split(/\s+/)[0] || '';
+    // on. `findContributorForResume` fails CLOSED (throws) on a lookup error,
+    // so a transient DB hiccup can never be misread as "email is new" and fall
+    // through to minting a session for someone else's row.
+    const existing = await findContributorForResume(parsed.value.email);
+    if (existing) {
+      // The known-email branch sits outside the per-IP rate limit above (it
+      // never creates a contributor row, so `countRecentByIp` can't see it),
+      // so it needs its own throttle or a hammering loop could both spam a
+      // contributor's inbox and, by re-minting `access_token` on every call,
+      // permanently invalidate the resume link before they can use it. A
+      // live token minted within roughly the last hour means "don't bother" —
+      // skip minting and sending entirely, but still answer uniformly below.
+      if (shouldSendResumeLink(existing.accessTokenExpiresAt, existing.accessTokenUsedAt)) {
+        // Minting and the resumeUrl it feeds are wrapped in their own
+        // try/catch so a mint failure can never surface as a different
+        // status/body than a successful send — the branch answers uniformly
+        // either way (see the return below).
+        try {
+          const token = await mintAccessToken(existing.id, { table: 'call_vault_contributors' });
+          const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.timkilroy.com';
+          const resumeUrl = `${appUrl}/call-vault?token=${token}`;
+          const firstName = parsed.value.name.trim().split(/\s+/)[0] || '';
 
-      waitUntil(
-        onCallVaultResumeLink({ email: parsed.value.email, firstName, resumeUrl }).catch((err) =>
-          console.error('[call-vault] resume link email failed:', err),
-        ),
-      );
+          waitUntil(
+            onCallVaultResumeLink({ email: parsed.value.email, firstName, resumeUrl }).catch((err) =>
+              console.error('[call-vault] resume link email failed:', err),
+            ),
+          );
+        } catch (err) {
+          console.error('[call-vault] resume token mint failed:', err);
+        }
+      }
 
+      // Deliberately uniform: this branch always returns exactly this body at
+      // 200, whether a link was just minted and queued for sending, withheld
+      // because one is already live, or the mint itself failed above.
       return NextResponse.json({ resumeEmailed: true });
     }
 

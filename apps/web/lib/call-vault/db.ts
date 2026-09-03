@@ -69,21 +69,41 @@ export async function startContributor(
   return { contributorId: data.id, sessionToken: session.session_token };
 }
 
+export interface ContributorResumeState {
+  id: string;
+  accessTokenExpiresAt: string | null;
+  accessTokenUsedAt: string | null;
+}
+
 /**
  * Look up an existing contributor by email, without creating or touching a
  * session. Used by /start to detect a returning contributor BEFORE any
  * session is minted for them — email ownership is never verified inline, so
  * a known email must go through the emailed resume-link path instead of
- * getting a fresh session handed back in the response.
+ * getting a fresh session handed back in the response. Also returns the
+ * current resume-token state so the route can decide whether a fresh link is
+ * even warranted (see `shouldSendResumeLink` in ./validate) instead of
+ * re-minting — and so invalidating — one on every call.
+ *
+ * Fails CLOSED: a Supabase error throws rather than returning null, matching
+ * `resolveSession`'s posture in this file. Returning null on a transient
+ * error would make the route treat a known email as brand-new and hand back
+ * a live session for it — the exact takeover this lookup exists to prevent.
  */
-export async function findContributorIdByEmail(email: string): Promise<string | null> {
+export async function findContributorForResume(email: string): Promise<ContributorResumeState | null> {
   const db = getSupabaseServerClient();
-  const { data } = await db
+  const { data, error } = await db
     .from('call_vault_contributors')
-    .select('id')
+    .select('id, access_token_expires_at, access_token_used_at')
     .eq('email', email)
     .maybeSingle();
-  return data?.id ?? null;
+  if (error) throw new Error(`findContributorForResume failed: ${error.message}`);
+  if (!data) return null;
+  return {
+    id: data.id,
+    accessTokenExpiresAt: data.access_token_expires_at,
+    accessTokenUsedAt: data.access_token_used_at,
+  };
 }
 
 /** Resolve an anonymous session token to its contributor, or null if invalid/expired. */

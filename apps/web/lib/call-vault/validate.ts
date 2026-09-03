@@ -57,10 +57,14 @@ export function classifyFile(
 
 /**
  * Guard for commit + download: the path must sit directly under this
- * contributor's own uuid prefix. Rejects traversal (`../`) and prefix collision
- * (`<id>-evil/`), which a naive `startsWith(id)` would let through.
+ * contributor's own uuid prefix. Rejects traversal (`../`, percent-encoded `%2e%2e`),
+ * prefix collision (`<id>-evil/`), and any unsafe characters (backslashes, null bytes,
+ * unicode tricks). Legitimate paths are constructed server-side as `<uuid>/<uuid>/<uuid>-<filename>`
+ * with sanitized filenames, so all safe paths contain only [A-Za-z0-9._/-].
  */
 export function ownsStoragePath(storagePath: string, contributorId: string): boolean {
+  // Reject paths with characters outside the safe allowlist
+  if (!/^[A-Za-z0-9._/-]+$/.test(storagePath)) return false;
   if (storagePath.includes('..')) return false;
   const segments = storagePath.split('/');
   return segments.length > 1 && segments[0] === contributorId;

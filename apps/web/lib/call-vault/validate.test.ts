@@ -56,6 +56,21 @@ describe('ownsStoragePath', () => {
     expect(ownsStoragePath(`${id}-evil/f.mp3`, id)).toBe(false);
     expect(ownsStoragePath(`x/${id}/f.mp3`, id)).toBe(false);
   });
+
+  it('rejects percent-encoded traversal attempts', () => {
+    expect(ownsStoragePath(`${id}/%2e%2e/other/f.mp3`, id)).toBe(false);
+    expect(ownsStoragePath(`${id}/%2E%2E/other/f.mp3`, id)).toBe(false);
+    expect(ownsStoragePath(`${id}/.%2e/other/f.mp3`, id)).toBe(false);
+  });
+
+  it('rejects unsafe characters (backslash, null byte, etc)', () => {
+    expect(ownsStoragePath(`${id}/sub\\..\\f.mp3`, id)).toBe(false);
+    expect(ownsStoragePath(`${id}/file\x00.mp3`, id)).toBe(false);
+  });
+
+  it('still accepts valid paths under the contributor prefix', () => {
+    expect(ownsStoragePath(`${id}/call-abc/file.mp3`, id)).toBe(true);
+  });
 });
 
 describe('validateAboutYou', () => {

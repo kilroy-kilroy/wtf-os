@@ -180,6 +180,66 @@ export async function listCallsForContributor(contributorId: string): Promise<Co
   }));
 }
 
+export interface AdminCallFile {
+  id: string;
+  fileName: string;
+  kind: string;
+  sizeBytes: number | null;
+}
+
+export interface AdminCallDetail {
+  id: string;
+  stage: string | null;
+  outcome: string | null;
+  dealSizeBand: string | null;
+  callDate: string | null;
+  label: string | null;
+  notes: string | null;
+  files: AdminCallFile[];
+}
+
+/**
+ * Full per-call detail for the admin review page: like `listCallsForContributor`
+ * above, but including `notes` and the actual files (not just a count) since the
+ * admin detail page renders each file as a download link. Same shape: one query
+ * for the calls, one query for all their files, joined in JS with a Map — never
+ * one query per call.
+ */
+export async function listCallsForAdmin(contributorId: string): Promise<AdminCallDetail[]> {
+  const db = getSupabaseServerClient();
+  const { data: calls, error } = await db
+    .from('call_vault_calls')
+    .select('id, stage, outcome, deal_size_band, call_date, label, notes, created_at')
+    .eq('contributor_id', contributorId)
+    .order('created_at', { ascending: true });
+  if (error) throw new Error(`listCallsForAdmin failed: ${error.message}`);
+  if (!calls || calls.length === 0) return [];
+
+  const callIds = calls.map((c) => c.id);
+  const { data: files } = await db
+    .from('call_vault_files')
+    .select('id, call_id, file_name, kind, size_bytes')
+    .in('call_id', callIds);
+
+  const filesByCall = new Map<string, AdminCallFile[]>();
+  for (const f of files ?? []) {
+    const list = filesByCall.get(f.call_id) ?? [];
+    list.push({ id: f.id, fileName: f.file_name, kind: f.kind, sizeBytes: f.size_bytes });
+    filesByCall.set(f.call_id, list);
+  }
+
+  return calls.map((c) => ({
+    id: c.id,
+    stage: c.stage,
+    outcome: c.outcome,
+    dealSizeBand: c.deal_size_band,
+    callDate: c.call_date,
+    label: c.label,
+    notes: c.notes,
+    files: filesByCall.get(c.id) ?? [],
+  }));
+}
+
 /** Abuse control: how many contributors this IP has created since `sinceIso`. */
 export async function countRecentByIp(ip: string, sinceIso: string): Promise<number> {
   const db = getSupabaseServerClient();

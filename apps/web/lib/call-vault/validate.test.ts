@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   classifyFile,
   ownsStoragePath,
+  sanitizeFileName,
   validateAboutYou,
   validateCallMeta,
   isSessionExpired,
@@ -70,6 +71,44 @@ describe('ownsStoragePath', () => {
 
   it('still accepts valid paths under the contributor prefix', () => {
     expect(ownsStoragePath(`${id}/call-abc/file.mp3`, id)).toBe(true);
+  });
+
+  it('accepts a legitimate filename containing two consecutive dots', () => {
+    expect(ownsStoragePath(`${id}/call-abc/uuid-notes..txt`, id)).toBe(true);
+    expect(ownsStoragePath(`${id}/call-abc/uuid-call...mp3`, id)).toBe(true);
+  });
+
+  it('still blocks a `..` path segment even with the exact-segment check', () => {
+    expect(ownsStoragePath(`${id}/../evil/f.mp3`, id)).toBe(false);
+    expect(ownsStoragePath(`../${id}/f.mp3`, id)).toBe(false);
+  });
+
+  it('still rejects percent-encoded, backslash, and null-byte cases', () => {
+    expect(ownsStoragePath(`${id}/%2e%2e/other/f.mp3`, id)).toBe(false);
+    expect(ownsStoragePath(`${id}/%2E%2E/other/f.mp3`, id)).toBe(false);
+    expect(ownsStoragePath(`${id}/.%2e/other/f.mp3`, id)).toBe(false);
+    expect(ownsStoragePath(`${id}/sub\\..\\f.mp3`, id)).toBe(false);
+    expect(ownsStoragePath(`${id}/file\x00.mp3`, id)).toBe(false);
+  });
+});
+
+describe('sanitizeFileName', () => {
+  it('replaces spaces and slashes with underscores', () => {
+    expect(sanitizeFileName('my call/notes.txt')).toBe('my_call_notes.txt');
+    expect(sanitizeFileName('my call/notes.txt')).not.toMatch(/\//);
+  });
+
+  it('preserves consecutive dots', () => {
+    expect(sanitizeFileName('notes..txt')).toBe('notes..txt');
+  });
+
+  it('agrees with ownsStoragePath: a sanitized filename never produces a path it rejects', () => {
+    const id = '11111111-1111-1111-1111-111111111111';
+    const callId = 'call-abc';
+    const dangerous = 'Acme call..transcript.txt';
+    const safeName = sanitizeFileName(dangerous);
+    const storagePath = `${id}/${callId}/uuid-${safeName}`;
+    expect(ownsStoragePath(storagePath, id)).toBe(true);
   });
 });
 

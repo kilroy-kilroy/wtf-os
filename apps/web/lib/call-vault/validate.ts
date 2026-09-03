@@ -57,17 +57,41 @@ export function classifyFile(
 
 /**
  * Guard for commit + download: the path must sit directly under this
- * contributor's own uuid prefix. Rejects traversal (`../`, percent-encoded `%2e%2e`),
- * prefix collision (`<id>-evil/`), and any unsafe characters (backslashes, null bytes,
- * unicode tricks). Legitimate paths are constructed server-side as `<uuid>/<uuid>/<uuid>-<filename>`
- * with sanitized filenames, so all safe paths contain only [A-Za-z0-9._/-].
+ * contributor's own uuid prefix. Rejects traversal (a `..` path segment,
+ * percent-encoded `%2e%2e`), prefix collision (`<id>-evil/`), and any unsafe
+ * characters (backslashes, null bytes, unicode tricks). Legitimate paths are
+ * constructed server-side as `<uuid>/<uuid>/<uuid>-<filename>` with sanitized
+ * filenames (see `sanitizeFileName`), so all safe paths contain only
+ * [A-Za-z0-9._/-].
+ *
+ * The traversal check matches `..` as an EXACT path segment, not as a substring
+ * of the whole path: a substring test also rejects a legitimate filename that
+ * happens to contain two consecutive dots (e.g. "Acme call..transcript.txt"),
+ * failing a real upload for no visible reason. Splitting on `/` and comparing
+ * each segment still blocks every real traversal shape (`<id>/../evil/f.mp3`,
+ * `../<id>/f.mp3`) while allowing dots inside a filename segment — a segment of
+ * `...` is fine, it is not a traversal token.
  */
 export function ownsStoragePath(storagePath: string, contributorId: string): boolean {
   // Reject paths with characters outside the safe allowlist
   if (!/^[A-Za-z0-9._/-]+$/.test(storagePath)) return false;
-  if (storagePath.includes('..')) return false;
   const segments = storagePath.split('/');
+  if (segments.some((segment) => segment === '..')) return false;
   return segments.length > 1 && segments[0] === contributorId;
+}
+
+/**
+ * Sanitize a user-supplied filename for use as a storage path segment.
+ *
+ * Must stay in lockstep with `ownsStoragePath`'s traversal guard: dots are
+ * preserved (a filename may legitimately contain "..") but every other unsafe
+ * character is stripped, including `/`, so a filename can never inject an
+ * extra path segment. These two rules living apart — one only checking a
+ * substring, the other only sanitizing — is what let a legitimate double-dot
+ * filename get rejected as a traversal attempt; keep them tested side by side.
+ */
+export function sanitizeFileName(fileName: string): string {
+  return fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
 }
 
 /**

@@ -4,7 +4,7 @@
 import { randomBytes, randomUUID } from 'node:crypto';
 import { getSupabaseServerClient } from '@/lib/supabase-server';
 import type { AboutYou, CallMeta } from './validate';
-import { ownsStoragePath, isSessionExpired } from './validate';
+import { ownsStoragePath, isSessionExpired, sanitizeFileName } from './validate';
 
 export const CALL_VAULT_BUCKET = 'call-vault';
 
@@ -150,7 +150,7 @@ export async function signUpload(
   contributorId: string, callId: string, fileName: string,
 ): Promise<{ storagePath: string; uploadUrl: string; token: string }> {
   const db = getSupabaseServerClient();
-  const safeName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
+  const safeName = sanitizeFileName(fileName);
   const storagePath = `${contributorId}/${callId}/${randomUUID()}-${safeName}`;
   const { data, error } = await db.storage.from(CALL_VAULT_BUCKET).createSignedUploadUrl(storagePath);
   if (error || !data) throw new Error(`signUpload failed: ${error?.message}`);

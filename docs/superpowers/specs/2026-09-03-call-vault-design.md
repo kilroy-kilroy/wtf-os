@@ -262,8 +262,8 @@ is individually caught — a Loops or Copper hiccup never fails the contributor'
 - `alertReportGenerated()` → Slack
 - `copperSyncLead()` → Copper, stage LEAD, consistent with every other public tool
 
-`bookingUrl` comes from `NEXT_PUBLIC_CALL_VAULT_BOOKING_URL`; the Loops template may
-override it.
+`bookingUrl` comes from `NEXT_PUBLIC_CALL_VAULT_BOOKING_URL`, defaulting to
+`https://meet.timkilroy.com/sales-call-survey`; the Loops template may override it.
 
 **Manual follow-up required:** the Loops automation for `call_vault_submitted` must be
 built in the Loops dashboard. Firing the event does not by itself send mail. (Same
@@ -351,14 +351,15 @@ apps/web/lib/beehiiv.ts             + addCallVaultSubscriber
 
 ## Environment
 
-- `NEXT_PUBLIC_CALL_VAULT_BOOKING_URL` — review-call booking link (new; required)
+- `NEXT_PUBLIC_CALL_VAULT_BOOKING_URL` — review-call booking link (new; optional,
+  defaults to `https://meet.timkilroy.com/sales-call-survey`)
 - `FIRMA_ENV`, `FIRMA_API_KEY_TEST`, `FIRMA_API_KEY_LIVE`, `FIRMA_WEBHOOK_SECRET` — existing
 - `LOOPS_API_KEY`, `BEEHIIV_API_KEY`, `BEEHIIV_PUBLICATION_ID`, `SUPABASE_SERVICE_ROLE_KEY` — existing
 
 ## Open items for Tim
 
-1. **Booking URL** for `NEXT_PUBLIC_CALL_VAULT_BOOKING_URL`.
-2. **Loops automation** for `call_vault_submitted` — must be built in the dashboard.
-3. **Route name.** `/call-vault` is a placeholder; rename is a one-line change.
-4. **Firma env.** Ship against `FIRMA_ENV=test` (watermarked PDFs, no credits) and flip to
+1. **Loops automation** for `call_vault_submitted` — must be built in the dashboard.
+   Confirmed 2026-09-03: the app fires the event only; Tim wires the automation later.
+2. **Route name.** `/call-vault` is a placeholder; rename is a one-line change.
+3. **Firma env.** Ship against `FIRMA_ENV=test` (watermarked PDFs, no credits) and flip to
    `live` after an end-to-end signing pass.

@@ -2,10 +2,15 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const sendSigningRequest = vi.fn();
 const createSigningRequest = vi.fn();
+// The embedded path places fields by COORDINATE, not by text anchor — Firma's
+// anchor binder cannot read glyph advances from what react-pdf emits.
+const createSigningRequestWithFields = vi.fn();
 const getSigningUserIds = vi.fn();
 
 vi.mock('@/lib/firma', () => ({
   createSigningRequest: (...a: unknown[]) => createSigningRequest(...a),
+  createSigningRequestWithFields: (...a: unknown[]) => createSigningRequestWithFields(...a),
+  countPdfPages: () => 3,
   sendSigningRequest: (...a: unknown[]) => sendSigningRequest(...a),
   getSigningUserIds: (...a: unknown[]) => getSigningUserIds(...a),
   // Mirrors the real implementation, encoding included — a mock that drifted
@@ -17,6 +22,13 @@ vi.mock('@/lib/firma', () => ({
 
 vi.mock('@/lib/contracts/contract-pdf', () => ({
   renderContractPdf: vi.fn().mockResolvedValue(Buffer.from('%PDF-1.4 fake')),
+}));
+
+vi.mock('@repo/pdf', () => ({
+  SIGNATURE_LAYOUT: {
+    signature: { x: 10, y: 34, width: 34, height: 7 },
+    date: { x: 52, y: 34, width: 26, height: 7 },
+  },
 }));
 
 vi.mock('@/lib/contracts/template-engine', () => ({
@@ -63,6 +75,7 @@ describe('generateForEmbeddedSign', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     createSigningRequest.mockResolvedValue({ requestId: 'req-1', signerIds: { client: 'sig-1' } });
+    createSigningRequestWithFields.mockResolvedValue({ requestId: 'req-1', signerIds: { client: 'sig-1' } });
     getSigningUserIds.mockResolvedValue([{ id: 'rec-1', order: 1 }]);
   });
 
@@ -73,7 +86,9 @@ describe('generateForEmbeddedSign', () => {
 
   it('creates the envelope and returns the embedded signing URL', async () => {
     const out = await generateForEmbeddedSign('c1');
-    expect(createSigningRequest).toHaveBeenCalledOnce();
+    expect(createSigningRequestWithFields).toHaveBeenCalledOnce();
+    // Anchor-based creation must NOT be used on this path.
+    expect(createSigningRequest).not.toHaveBeenCalled();
     expect(out.requestId).toBe('req-1');
     expect(out.signingUserId).toBe('rec-1');
     expect(out.signingUrl).toBe('https://app.firma.dev/signing/rec-1');

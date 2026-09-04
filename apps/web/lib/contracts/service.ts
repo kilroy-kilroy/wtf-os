@@ -5,8 +5,10 @@
 import { getSupabaseServerClient } from '@/lib/supabase-server';
 import { combineMergedHtml } from './template-engine';
 import { renderContractPdf } from './contract-pdf';
+import { SIGNATURE_LAYOUT } from '@repo/pdf';
 import {
-  createSigningRequest, sendSigningRequest, getRequest, shouldApplyStatus,
+  createSigningRequest, createSigningRequestWithFields, countPdfPages,
+  sendSigningRequest, getRequest, shouldApplyStatus,
   getSigningUserIds, embeddedSigningUrl,
   type FirmaSigner, type ContractStatus,
 } from '@/lib/firma';
@@ -190,20 +192,38 @@ export async function generateForEmbeddedSign(
       if (!signers?.length) throw new Error('no signers');
 
       const mergedHtml = combineMergedHtml(template.body_html, null, claimed.field_values, claimed.sow_html);
-      const pdf = await renderContractPdf(mergedHtml);
+
+      const firmaSigners: FirmaSigner[] = signers.map((s) => ({
+        role: s.role as 'client' | 'counter', name: s.name, email: s.email, order: s.sign_order,
+      }));
+
+      // Coordinate placement, not text anchors. Firma's anchor binder cannot read
+      // glyph advances from anything react-pdf emits — see
+      // docs/firma-anchor-outage-2026-09.md. Fields go on a dedicated final page
+      // whose slot positions are fixed, so SIGNATURE_LAYOUT is the one source of
+      // truth for both what is drawn and what Firma is told.
+      const fv = (claimed.field_values ?? {}) as Record<string, string>;
+      const pdf = await renderContractPdf(mergedHtml, {
+        clientName: fv.client_legal_name || firmaSigners[0]?.name || 'Client',
+        counterName: 'For KLRY LLC',
+        counterTitle: 'Tim Kilroy, CEO',
+        effectiveDate: fv.effective_date || new Date().toLocaleDateString('en-US'),
+      });
 
       const up = await db.storage.from(BUCKET).upload(`${contractId}/contract.pdf`, pdf, {
         contentType: 'application/pdf', upsert: true,
       });
       if (up.error) throw new Error(`pdf upload failed: ${up.error.message}`);
 
-      const firmaSigners: FirmaSigner[] = signers.map((s) => ({
-        role: s.role as 'client' | 'counter', name: s.name, email: s.email, order: s.sign_order,
-      }));
-
-      const created = await createSigningRequest(
-        pdf, firmaSigners, claimed.title,
-        { initials: mergedHtml.includes('{{init_') },
+      const created = await createSigningRequestWithFields(
+        pdf,
+        firmaSigners,
+        {
+          page: countPdfPages(pdf), // the signature page is always last
+          signature: SIGNATURE_LAYOUT.signature,
+          date: SIGNATURE_LAYOUT.date,
+        },
+        claimed.title,
       );
       requestId = created.requestId;
 

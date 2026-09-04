@@ -164,7 +164,9 @@ function renderBlocks(parent: DomNode, keyBase: string): React.ReactNode[] {
   return elementChildren(parent).map((el, i) => renderBlock(el, `${keyBase}-${i}`));
 }
 
-function ContractDocument({ html, logo }: { html: string; logo?: Buffer }) {
+function ContractDocument({ html, logo, signaturePage }: {
+  html: string; logo?: Buffer; signaturePage?: SignaturePageSpec;
+}) {
   const $ = load(html);
   const body = ($('body').get(0) ?? $.root().get(0)) as unknown as DomNode;
   const blocks = renderBlocks(body, 'c');
@@ -188,14 +190,80 @@ function ContractDocument({ html, logo }: { html: string; logo?: Buffer }) {
         />
         {blocks}
       </Page>
+      {signaturePage ? <SignaturePage {...signaturePage} /> : null}
     </Document>
   );
 }
 
 /** Render merged contract HTML (+ optional logo bytes) to a PDF buffer. */
-export async function renderContractReport(html: string, logo?: Buffer): Promise<Buffer> {
+
+// ---------------------------------------------------------------------------
+// Coordinate signature page.
+//
+// Firma's anchor binder cannot read glyph advances from what react-pdf emits
+// (see docs/firma-anchor-outage-2026-09.md), so fields are placed by coordinate
+// instead of by searching for {{sig_*}} text. Coordinates only stay valid if the
+// signature block sits somewhere predictable — hence a dedicated final page with
+// absolutely positioned slots.
+//
+// These percentages are the single source of truth: the visual slots below and
+// the Firma `fields` payload are both derived from them, so they cannot drift.
+export const SIGNATURE_LAYOUT = {
+  /** Percent of page width/height, matching Firma's `position` units. */
+  signature: { x: 10, y: 34, width: 34, height: 7 },
+  date: { x: 52, y: 34, width: 26, height: 7 },
+} as const;
+
+/** A final page carrying only the execution block, so slot positions are fixed. */
+function SignaturePage({ clientName, counterName, counterTitle, effectiveDate }: {
+  clientName: string; counterName: string; counterTitle: string; effectiveDate: string;
+}) {
+  const pct = (n: number) => `${n}%`;
+  return (
+    <Page size="LETTER" style={styles.page} break>
+      <Text style={styles.h2}>Execution</Text>
+      <Text style={styles.p}>
+        IN WITNESS WHEREOF, the Parties have executed this Agreement as of the Effective Date.
+      </Text>
+
+      <Text style={{ position: 'absolute', left: pct(SIGNATURE_LAYOUT.signature.x), top: pct(SIGNATURE_LAYOUT.signature.y - 4), fontSize: 9, color: '#666' }}>
+        {clientName}
+      </Text>
+      <View style={{ position: 'absolute', left: pct(SIGNATURE_LAYOUT.signature.x), top: pct(SIGNATURE_LAYOUT.signature.y + SIGNATURE_LAYOUT.signature.height), width: pct(SIGNATURE_LAYOUT.signature.width), borderBottomWidth: 1, borderBottomColor: '#1a1a1a' }} />
+      <Text style={{ position: 'absolute', left: pct(SIGNATURE_LAYOUT.signature.x), top: pct(SIGNATURE_LAYOUT.signature.y + SIGNATURE_LAYOUT.signature.height + 1.5), fontSize: 8, color: '#666' }}>
+        Signature
+      </Text>
+
+      <View style={{ position: 'absolute', left: pct(SIGNATURE_LAYOUT.date.x), top: pct(SIGNATURE_LAYOUT.date.y + SIGNATURE_LAYOUT.date.height), width: pct(SIGNATURE_LAYOUT.date.width), borderBottomWidth: 1, borderBottomColor: '#1a1a1a' }} />
+      <Text style={{ position: 'absolute', left: pct(SIGNATURE_LAYOUT.date.x), top: pct(SIGNATURE_LAYOUT.date.y + SIGNATURE_LAYOUT.date.height + 1.5), fontSize: 8, color: '#666' }}>
+        Date
+      </Text>
+
+      <View style={{ position: 'absolute', left: pct(SIGNATURE_LAYOUT.signature.x), top: pct(SIGNATURE_LAYOUT.signature.y + 22) }}>
+        <Text style={{ fontSize: 9, color: '#666' }}>{counterName}</Text>
+        <Text style={{ marginTop: 10, fontSize: 11 }}>{counterTitle}</Text>
+        <Text style={{ fontSize: 9, color: '#666', marginTop: 2 }}>Signed {effectiveDate}</Text>
+      </View>
+    </Page>
+  );
+}
+
+export interface SignaturePageSpec {
+  clientName: string;
+  counterName: string;
+  counterTitle: string;
+  effectiveDate: string;
+}
+
+export async function renderContractReport(
+  html: string,
+  logo?: Buffer,
+  signaturePage?: SignaturePageSpec,
+): Promise<Buffer> {
   // Must happen before render: the embedded family is what gives the PDF real
-  // glyph advances, which is what lets an e-sign provider bind text anchors.
+  // outlines and widths rather than relying on standard-14 metrics.
   ensureFonts();
-  return renderToBuffer(React.createElement(ContractDocument, { html, logo }) as any);
+  return renderToBuffer(
+    React.createElement(ContractDocument, { html, logo, signaturePage }) as any,
+  );
 }

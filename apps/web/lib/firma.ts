@@ -113,6 +113,89 @@ export async function createSigningRequest(
   return { requestId: created.id, signerIds };
 }
 
+
+export interface FirmaFieldPlacement {
+  /** 1-based page the field sits on. */
+  page: number;
+  /** Percentages of page width/height, matching Firma's `position` units. */
+  signature: { x: number; y: number; width: number; height: number };
+  date: { x: number; y: number; width: number; height: number };
+}
+
+/**
+ * Create a draft signing request placing fields by COORDINATE rather than by
+ * matching {{sig_*}} text.
+ *
+ * Why this exists: as of 2026-09-04 Firma's anchor binder rejects everything
+ * this repo renders with "no glyph advances for font <id>" — including a PDF it
+ * accepted itself in June. Embedding a real font does not help, because
+ * react-pdf emits composite Type0/Identity-H faces. Coordinate placement needs
+ * no text extraction at all, so it sidesteps the whole problem. See
+ * docs/firma-anchor-outage-2026-09.md.
+ *
+ * Only meaningful when the signature block is at a predictable position — the
+ * renderer's dedicated signature page exists for exactly that reason.
+ */
+export async function createSigningRequestWithFields(
+  pdf: Buffer,
+  signers: FirmaSigner[],
+  placement: FirmaFieldPlacement,
+  name = 'Contract',
+): Promise<CreateSigningRequestResult> {
+  const recipients = signers.map((s) => {
+    const { first, last } = splitName(s.name);
+    return {
+      id: `temp_${s.role}`,
+      first_name: first,
+      last_name: last,
+      email: s.email,
+      designation: 'Signer',
+      order: s.order,
+    };
+  });
+
+  const fields = signers.flatMap((s) => [
+    {
+      type: 'signature',
+      page_number: placement.page,
+      recipient_id: `temp_${s.role}`,
+      position: placement.signature,
+      required: true,
+    },
+    {
+      type: 'date',
+      page_number: placement.page,
+      recipient_id: `temp_${s.role}`,
+      position: placement.date,
+      required: true,
+    },
+  ]);
+
+  const createRes = await firmaFetch('/signing-requests', {
+    method: 'POST',
+    body: JSON.stringify({ document: pdf.toString('base64'), name, recipients, fields }),
+  });
+  const created = await createRes.json();
+
+  const recipientsOut: Array<{ order?: number; email?: string; id?: string }> =
+    created.recipients ?? [];
+  const signerIds: Record<string, string> = {};
+  for (const s of signers) {
+    const match =
+      recipientsOut.find((r) => r.order === s.order) ??
+      recipientsOut.find((r) => r.email === s.email);
+    if (match?.id) signerIds[s.role] = match.id;
+  }
+
+  return { requestId: created.id, signerIds };
+}
+
+/** Count pages in a rendered PDF, for coordinate placement on the last page. */
+export function countPdfPages(pdf: Buffer): number {
+  const matches = pdf.toString('latin1').match(/\/Type\s*\/Page[^s]/g);
+  return matches ? matches.length : 1;
+}
+
 /** Send a previously-created draft signing request (triggers email delivery). */
 export async function sendSigningRequest(requestId: string): Promise<void> {
   await firmaFetch(`/signing-requests/${requestId}/send`, { method: 'POST' });

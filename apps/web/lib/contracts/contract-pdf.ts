@@ -5,7 +5,7 @@
 // the Next server bundle throws "Minified React error #31" in production, so it
 // must run from the package, alongside the app's other working react-pdf reports.
 
-import { renderContractReport } from '@repo/pdf';
+import { renderContractReport, type SignaturePageSpec } from '@repo/pdf';
 
 // Letterhead logo. Any file under apps/web/public/logos/ can be used — swap the
 // name here. Fetched from the app's own public URL so it doesn't need bundling.
@@ -29,7 +29,10 @@ async function loadLogo(): Promise<Buffer | undefined> {
  * Render the merged contract HTML to a PDF buffer. The HTML keeps Firma anchors
  * ({{sig_*}}, {{date_*}}, {{init_*}}) as literal selectable text for Firma to bind.
  */
-export async function renderContractPdf(mergedHtml: string): Promise<Buffer> {
+export async function renderContractPdf(
+  mergedHtml: string,
+  signaturePage?: SignaturePageSpec,
+): Promise<Buffer> {
   const logo = await loadLogo();
-  return renderContractReport(mergedHtml, logo);
+  return renderContractReport(mergedHtml, logo, signaturePage);
 }

@@ -10,6 +10,11 @@ import CallUploader from './CallUploader';
 import NdaModal from './NdaModal';
 
 export const SESSION_STORAGE_KEY = 'call-vault-session';
+// Companion flag to the session token. Not a credential — just UI state — so a
+// same-tab refresh does not forget that the NDA is already executed and hide
+// the contributor's download link. Server state is always authoritative: the
+// /nda route still answers {alreadySigned:true} regardless of what this says.
+const NDA_SIGNED_STORAGE_KEY = 'call-vault-nda-signed';
 
 type Phase = 'restoring' | 'about' | 'resumeSent' | 'calls' | 'expired' | 'done';
 
@@ -125,7 +130,7 @@ export default function CallVaultForm({ resumeToken }: { resumeToken: string | n
           agencyUrl: data.contributor.agencyUrl,
           targetClient: data.contributor.targetClient,
         });
-        setNdaSigned(!!data.contributor.ndaSigned);
+        markNdaSignedLocally(!!data.contributor.ndaSigned);
         const calls: ExistingCall[] = Array.isArray(data.calls) ? data.calls : [];
         setExistingCalls(calls);
         // If the contributor is already at (or somehow over) the cap, don't
@@ -149,6 +154,10 @@ export default function CallVaultForm({ resumeToken }: { resumeToken: string | n
     }
 
     try {
+      const storedNda = (() => {
+        try { return sessionStorage.getItem(NDA_SIGNED_STORAGE_KEY) === '1'; } catch { return false; }
+      })();
+      if (storedNda) setNdaSigned(true);
       const stored = sessionStorage.getItem(SESSION_STORAGE_KEY);
       if (stored) {
         setSessionToken(stored);
@@ -177,6 +186,7 @@ export default function CallVaultForm({ resumeToken }: { resumeToken: string | n
     setSessionToken(null);
     try {
       sessionStorage.removeItem(SESSION_STORAGE_KEY);
+      sessionStorage.removeItem(NDA_SIGNED_STORAGE_KEY);
     } catch {
       // ignore — nothing else to clean up if storage isn't available
     }
@@ -228,7 +238,7 @@ export default function CallVaultForm({ resumeToken }: { resumeToken: string | n
         agencyUrl: agencyUrl || null,
         targetClient: targetClient || null,
       });
-      setNdaSigned(false);
+      markNdaSignedLocally(false);
       setExistingCalls([]);
       setPhase('calls');
     } catch (err) {
@@ -323,6 +333,19 @@ export default function CallVaultForm({ resumeToken }: { resumeToken: string | n
         </ConsoleButton>
       </ConsolePanel>
     );
+  }
+
+
+  /** Set the signed flag and mirror it to sessionStorage so a refresh keeps it. */
+  function markNdaSignedLocally(signed: boolean) {
+    setNdaSigned(signed);
+    try {
+      if (signed) sessionStorage.setItem(NDA_SIGNED_STORAGE_KEY, '1');
+      else sessionStorage.removeItem(NDA_SIGNED_STORAGE_KEY);
+    } catch {
+      // sessionStorage unavailable (private mode) — the flag simply won't survive
+      // a refresh, which is the pre-existing behaviour, not a regression.
+    }
   }
 
   /**
@@ -496,7 +519,7 @@ export default function CallVaultForm({ resumeToken }: { resumeToken: string | n
             sessionToken={sessionToken}
             defaultLegalName={profile?.agencyName || profile?.name || ''}
             onSigned={() => {
-              setNdaSigned(true);
+              markNdaSignedLocally(true);
               setNdaOpen(false);
             }}
             onClose={() => setNdaOpen(false)}

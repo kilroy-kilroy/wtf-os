@@ -179,6 +179,11 @@ export async function createSigningRequestWithFields(
         recipient_id: `temp_${s.role}`,
         position: slots.date,
         required: true,
+        // Pre-fill with the day of signing. An execution date is not something
+        // a signer should be typing — it is the date they signed, which Firma
+        // already knows, and hand-entry is both an extra step and a chance to
+        // put the wrong date on an agreement.
+        date_signing_default: true,
       },
     ];
   });

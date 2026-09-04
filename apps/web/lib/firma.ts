@@ -114,33 +114,41 @@ export async function createSigningRequest(
 }
 
 
+export interface FirmaSlot { x: number; y: number; width: number; height: number }
+
 export interface FirmaFieldPlacement {
-  /** 1-based page the field sits on. */
+  /** 1-based page the fields sit on — the renderer puts them on the last page. */
   page: number;
-  /** Percentages of page width/height, matching Firma's `position` units. */
-  signature: { x: number; y: number; width: number; height: number };
-  date: { x: number; y: number; width: number; height: number };
+  /** Slot positions per signer role. A role with no entry gets no fields. */
+  byRole: Partial<Record<'client' | 'counter', { signature: FirmaSlot; date: FirmaSlot }>>;
 }
 
 /**
- * Create an ACTIVATED signing request placing fields by COORDINATE rather than
- * by matching {{sig_*}} text, without emailing the signer.
+ * Create an ACTIVATED signing request, placing fields by COORDINATE rather than
+ * by matching {{sig_*}} text.
  *
- * Why this exists: as of 2026-09-04 Firma's anchor binder rejects everything
+ * Why coordinates: as of 2026-09-04 Firma's anchor binder rejects everything
  * this repo renders with "no glyph advances for font <id>" — including a PDF it
- * accepted itself in June. Embedding a real font does not help, because
+ * accepted itself in June. Embedding a real font does not help either, because
  * react-pdf emits composite Type0/Identity-H faces. Coordinate placement needs
- * no text extraction at all, so it sidesteps the whole problem. See
- * docs/firma-anchor-outage-2026-09.md.
+ * no text extraction at all. See docs/firma-anchor-outage-2026-09.md.
  *
- * Only meaningful when the signature block is at a predictable position — the
- * renderer's dedicated signature page exists for exactly that reason.
+ * Why create-and-send: a plain draft's signing link is dead — app.firma.dev
+ * renders "Invalid Signing Link" and `status.sent` stays false. Activation is
+ * what makes the link live, and `settings.send_signing_email` decides whether
+ * the signer is also emailed about it:
+ *   notify:false — embedded signing; they are already looking at the document.
+ *   notify:true  — a contract you want the client to receive by email.
+ *
+ * Either way this consumes a Firma credit on live keys; activation is the
+ * billable event, not the notification.
  */
 export async function createSigningRequestWithFields(
   pdf: Buffer,
   signers: FirmaSigner[],
   placement: FirmaFieldPlacement,
   name = 'Contract',
+  opts: { notify?: boolean } = {},
 ): Promise<CreateSigningRequestResult> {
   const recipients = signers.map((s) => {
     const { first, last } = splitName(s.name);
@@ -154,35 +162,28 @@ export async function createSigningRequestWithFields(
     };
   });
 
-  const fields = signers.flatMap((s) => [
-    {
-      type: 'signature',
-      page_number: placement.page,
-      recipient_id: `temp_${s.role}`,
-      position: placement.signature,
-      required: true,
-    },
-    {
-      type: 'date',
-      page_number: placement.page,
-      recipient_id: `temp_${s.role}`,
-      position: placement.date,
-      required: true,
-    },
-  ]);
+  const fields = signers.flatMap((s) => {
+    const slots = placement.byRole[s.role];
+    if (!slots) return [];
+    return [
+      {
+        type: 'signature',
+        page_number: placement.page,
+        recipient_id: `temp_${s.role}`,
+        position: slots.signature,
+        required: true,
+      },
+      {
+        type: 'date',
+        page_number: placement.page,
+        recipient_id: `temp_${s.role}`,
+        position: slots.date,
+        required: true,
+      },
+    ];
+  });
+  if (!fields.length) throw new Error('no signature fields to place');
 
-  // create-and-send with send_signing_email:false — NOT a plain draft.
-  //
-  // A draft's signing link is dead: app.firma.dev renders "Invalid Signing Link"
-  // until the request is activated, and `status.sent` stays false. Activation
-  // normally means Firma emails the signer, which is the one thing this whole
-  // flow exists to avoid. `send_signing_email:false` activates the link and
-  // suppresses the email, which is exactly what an embedded signer needs — they
-  // are already looking at the document.
-  //
-  // This DOES consume a Firma credit (test keys excepted). That is the honest
-  // cost of a real executed agreement, and it is charged once per envelope —
-  // which is why the caller guards against creating a second one.
   const createRes = await firmaFetch('/signing-requests/create-and-send', {
     method: 'POST',
     body: JSON.stringify({
@@ -190,7 +191,7 @@ export async function createSigningRequestWithFields(
       name,
       recipients,
       fields,
-      settings: { send_signing_email: false },
+      settings: { send_signing_email: opts.notify === true },
     }),
   });
   const created = await createRes.json();

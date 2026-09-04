@@ -83,10 +83,10 @@ export async function generateAndSend(contractId: string): Promise<void> {
   if (!claimed) return; // not in draft (already sending/sent) — nothing to do
 
   try {
-    // Resume path: a prior attempt created the envelope but failed during send.
-    // Don't create a second one — just (re)send the existing request.
+    // Resume path: a prior attempt already created the envelope. Creation now
+    // activates and notifies in one call, so there is nothing left to send —
+    // re-sending would only email the client a second time. Just settle status.
     if (claimed.firma_request_id) {
-      await sendSigningRequest(claimed.firma_request_id);
       await db.from('contracts')
         .update({ status: 'sent', updated_at: new Date().toISOString() })
         .eq('id', contractId);
@@ -111,7 +111,18 @@ export async function generateAndSend(contractId: string): Promise<void> {
     if (!signers?.length) throw new Error('no signers');
 
     const mergedHtml = combineMergedHtml(template.body_html, sowBody, claimed.field_values, claimed.sow_html);
-    const pdf = await renderContractPdf(mergedHtml);
+
+    // Both parties sign a contract, so the signature page carries two live slots.
+    const fv = (claimed.field_values ?? {}) as Record<string, string>;
+    const clientSigner = signers.find((x) => x.role === 'client');
+    const counterSigner = signers.find((x) => x.role === 'counter');
+    const pdf = await renderContractPdf(mergedHtml, {
+      clientName: fv.client_company_name || clientSigner?.name || 'Client',
+      counterName: 'KLRY, LLC',
+      counterTitle: counterSigner?.name ? `${counterSigner.name}, CEO` : 'Tim Kilroy, CEO',
+      effectiveDate: fv.effective_date || new Date().toLocaleDateString('en-US'),
+      counterSigns: !!counterSigner,
+    });
 
     const pdfPath = `${contractId}/contract.pdf`;
     const up = await db.storage.from(BUCKET).upload(pdfPath, pdf, {
@@ -123,13 +134,22 @@ export async function generateAndSend(contractId: string): Promise<void> {
       role: s.role as 'client' | 'counter', name: s.name, email: s.email, order: s.sign_order,
     }));
 
-    // Only request per-page initials fields when the template actually carries
-    // the {{init_*}} anchors, so signature-only templates aren't given them.
-    const useInitials = mergedHtml.includes('{{init_');
+    // Coordinate placement, not {{sig_*}} anchors — Firma's anchor binder cannot
+    // read glyph advances from anything react-pdf emits. See
+    // docs/firma-anchor-outage-2026-09.md. NOTE: this also drops the per-page
+    // {{init_*}} initials, which were anchor-bound and therefore already broken;
+    // coordinate fields would need a slot per page to restore them.
+    const byRole: NonNullable<Parameters<typeof createSigningRequestWithFields>[2]>['byRole'] = {};
+    if (clientSigner) byRole.client = SIGNATURE_LAYOUT.client;
+    if (counterSigner) byRole.counter = SIGNATURE_LAYOUT.counter;
 
-    // Create the draft envelope, then persist its id BEFORE sending.
-    const { requestId, signerIds } = await createSigningRequest(
-      pdf, firmaSigners, claimed.title, { initials: useInitials },
+    // Creation activates AND emails the client in one call.
+    const { requestId, signerIds } = await createSigningRequestWithFields(
+      pdf,
+      firmaSigners,
+      { page: countPdfPages(pdf), byRole },
+      claimed.title,
+      { notify: true }, // a contract SHOULD reach the client by email
     );
     await db.from('contracts').update({
       merged_html: mergedHtml, pdf_path: pdfPath, firma_request_id: requestId,
@@ -140,7 +160,6 @@ export async function generateAndSend(contractId: string): Promise<void> {
       if (fid) await db.from('contract_signers').update({ firma_signer_id: fid }).eq('id', s.id);
     }
 
-    await sendSigningRequest(requestId);
     await db.from('contracts')
       .update({ status: 'sent', updated_at: new Date().toISOString() })
       .eq('id', contractId);
@@ -208,6 +227,7 @@ export async function generateForEmbeddedSign(
         counterName: 'For KLRY LLC',
         counterTitle: 'Tim Kilroy, CEO',
         effectiveDate: fv.effective_date || new Date().toLocaleDateString('en-US'),
+        counterSigns: false, // pre-executed — the point is nobody waits on a countersignature
       });
 
       const up = await db.storage.from(BUCKET).upload(`${contractId}/contract.pdf`, pdf, {
@@ -220,10 +240,10 @@ export async function generateForEmbeddedSign(
         firmaSigners,
         {
           page: countPdfPages(pdf), // the signature page is always last
-          signature: SIGNATURE_LAYOUT.signature,
-          date: SIGNATURE_LAYOUT.date,
+          byRole: { client: SIGNATURE_LAYOUT.client },
         },
         claimed.title,
+        { notify: false }, // embedded: they are already looking at the document
       );
       requestId = created.requestId;
 

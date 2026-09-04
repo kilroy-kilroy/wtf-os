@@ -78,3 +78,46 @@ permanently, which is worth doing even if Firma restores standard-14 support.
 The repro is unusually clean: their own previously-accepted artifact, unchanged,
 now rejected. Ask whether v1.32.0 dropped standard-14 metric support, and
 whether composite Type0/Identity-H fonts are expected to bind.
+
+
+---
+
+## Resolution (2026-09-04)
+
+Both paths now use coordinate placement and are verified against the live test
+API — 4 of 4 templates accepted, up from 0 of 4:
+
+```
+PASS  msa                     signers=2  pages=6
+PASS  sow                     signers=2  pages=2
+PASS  sow-agency-studio-plus  signers=2  pages=3
+PASS  call-vault-nda          signers=1  pages=6
+```
+
+Two things had to change, and only the first was predictable:
+
+1. **Coordinate fields instead of anchors.** A dedicated final signature page
+   carries absolutely positioned slots; `SIGNATURE_LAYOUT` in
+   `packages/pdf/contract-report.tsx` drives both what is drawn and what Firma is
+   told, so the two cannot drift.
+
+2. **`create-and-send`, not a draft.** A draft's signing link is dead —
+   app.firma.dev shows "Invalid Signing Link" and `status.sent` stays false. The
+   embeddable-signing guide implies no `/send` is needed; the API disagrees. This
+   only surfaced by driving the real iframe. `settings.send_signing_email`
+   decides whether the signer is also emailed:
+   - `false` for the embedded NDA — they are already looking at the document
+   - `true` for contracts — the client should receive it by email
+
+   Activation is the billable event, not the notification, so both consume a
+   credit on live keys.
+
+### Known loss
+
+Per-page `{{init_*}}` initials are gone. They were anchor-bound and therefore
+already broken; restoring them under coordinate placement needs one slot per
+page. Nothing depends on them today.
+
+### Still worth reporting
+
+The underlying anchor bug is unfixed on Firma's side. The repro above stands.

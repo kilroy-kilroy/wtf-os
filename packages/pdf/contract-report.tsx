@@ -208,17 +208,66 @@ function ContractDocument({ html, logo, signaturePage }: {
 //
 // These percentages are the single source of truth: the visual slots below and
 // the Firma `fields` payload are both derived from them, so they cannot drift.
+export interface SignatureSlot { x: number; y: number; width: number; height: number }
+
+/**
+ * Percent-of-page positions for every signature field, in Firma's `position`
+ * units. This is the single source of truth: the slots drawn on the page below
+ * and the coordinates sent to Firma both read from here, so they cannot drift.
+ *
+ * Two parties, stacked, on a page that carries nothing else — which is what
+ * keeps these numbers valid no matter how long the contract runs.
+ */
 export const SIGNATURE_LAYOUT = {
-  /** Percent of page width/height, matching Firma's `position` units. */
-  signature: { x: 10, y: 34, width: 34, height: 7 },
-  date: { x: 52, y: 34, width: 26, height: 7 },
+  client: {
+    signature: { x: 10, y: 30, width: 34, height: 7 },
+    date: { x: 52, y: 30, width: 26, height: 7 },
+  },
+  counter: {
+    signature: { x: 10, y: 58, width: 34, height: 7 },
+    date: { x: 52, y: 58, width: 26, height: 7 },
+  },
 } as const;
 
-/** A final page carrying only the execution block, so slot positions are fixed. */
-function SignaturePage({ clientName, counterName, counterTitle, effectiveDate }: {
-  clientName: string; counterName: string; counterTitle: string; effectiveDate: string;
+export interface SignaturePageSpec {
+  clientName: string;
+  counterName: string;
+  counterTitle: string;
+  effectiveDate: string;
+  /**
+   * true  — KLRY signs too, so its slot is a live Firma field (contracts).
+   * false — KLRY is pre-executed, rendered as typed text (the Call Vault NDA,
+   *         which exists precisely so nobody waits on a countersignature).
+   */
+  counterSigns: boolean;
+}
+
+const pct = (n: number) => `${n}%`;
+
+/** One party's ruled line, caption and party name, positioned absolutely. */
+function SlotMarks({ slot, dateSlot, party }: {
+  slot: SignatureSlot; dateSlot: SignatureSlot; party: string;
 }) {
-  const pct = (n: number) => `${n}%`;
+  return (
+    <>
+      <Text style={{ position: 'absolute', left: pct(slot.x), top: pct(slot.y - 4), fontSize: 9, color: '#666' }}>
+        {party}
+      </Text>
+      <View style={{ position: 'absolute', left: pct(slot.x), top: pct(slot.y + slot.height), width: pct(slot.width), borderBottomWidth: 1, borderBottomColor: '#1a1a1a' }} />
+      <Text style={{ position: 'absolute', left: pct(slot.x), top: pct(slot.y + slot.height + 1.5), fontSize: 8, color: '#666' }}>
+        Signature
+      </Text>
+      <View style={{ position: 'absolute', left: pct(dateSlot.x), top: pct(dateSlot.y + dateSlot.height), width: pct(dateSlot.width), borderBottomWidth: 1, borderBottomColor: '#1a1a1a' }} />
+      <Text style={{ position: 'absolute', left: pct(dateSlot.x), top: pct(dateSlot.y + dateSlot.height + 1.5), fontSize: 8, color: '#666' }}>
+        Date
+      </Text>
+    </>
+  );
+}
+
+/** A final page carrying only the execution block, so slot positions are fixed. */
+function SignaturePage({ clientName, counterName, counterTitle, effectiveDate, counterSigns }: SignaturePageSpec) {
+  const L = SIGNATURE_LAYOUT;
   return (
     <Page size="LETTER" style={styles.page} break>
       <Text style={styles.h2}>Execution</Text>
@@ -226,33 +275,19 @@ function SignaturePage({ clientName, counterName, counterTitle, effectiveDate }:
         IN WITNESS WHEREOF, the Parties have executed this Agreement as of the Effective Date.
       </Text>
 
-      <Text style={{ position: 'absolute', left: pct(SIGNATURE_LAYOUT.signature.x), top: pct(SIGNATURE_LAYOUT.signature.y - 4), fontSize: 9, color: '#666' }}>
-        {clientName}
-      </Text>
-      <View style={{ position: 'absolute', left: pct(SIGNATURE_LAYOUT.signature.x), top: pct(SIGNATURE_LAYOUT.signature.y + SIGNATURE_LAYOUT.signature.height), width: pct(SIGNATURE_LAYOUT.signature.width), borderBottomWidth: 1, borderBottomColor: '#1a1a1a' }} />
-      <Text style={{ position: 'absolute', left: pct(SIGNATURE_LAYOUT.signature.x), top: pct(SIGNATURE_LAYOUT.signature.y + SIGNATURE_LAYOUT.signature.height + 1.5), fontSize: 8, color: '#666' }}>
-        Signature
-      </Text>
+      <SlotMarks slot={L.client.signature} dateSlot={L.client.date} party={clientName} />
 
-      <View style={{ position: 'absolute', left: pct(SIGNATURE_LAYOUT.date.x), top: pct(SIGNATURE_LAYOUT.date.y + SIGNATURE_LAYOUT.date.height), width: pct(SIGNATURE_LAYOUT.date.width), borderBottomWidth: 1, borderBottomColor: '#1a1a1a' }} />
-      <Text style={{ position: 'absolute', left: pct(SIGNATURE_LAYOUT.date.x), top: pct(SIGNATURE_LAYOUT.date.y + SIGNATURE_LAYOUT.date.height + 1.5), fontSize: 8, color: '#666' }}>
-        Date
-      </Text>
-
-      <View style={{ position: 'absolute', left: pct(SIGNATURE_LAYOUT.signature.x), top: pct(SIGNATURE_LAYOUT.signature.y + 22) }}>
-        <Text style={{ fontSize: 9, color: '#666' }}>{counterName}</Text>
-        <Text style={{ marginTop: 10, fontSize: 11 }}>{counterTitle}</Text>
-        <Text style={{ fontSize: 9, color: '#666', marginTop: 2 }}>Signed {effectiveDate}</Text>
-      </View>
+      {counterSigns ? (
+        <SlotMarks slot={L.counter.signature} dateSlot={L.counter.date} party={counterName} />
+      ) : (
+        <View style={{ position: 'absolute', left: pct(L.counter.signature.x), top: pct(L.counter.signature.y) }}>
+          <Text style={{ fontSize: 9, color: '#666' }}>{counterName}</Text>
+          <Text style={{ marginTop: 10, fontSize: 11 }}>{counterTitle}</Text>
+          <Text style={{ fontSize: 9, color: '#666', marginTop: 2 }}>Signed {effectiveDate}</Text>
+        </View>
+      )}
     </Page>
   );
-}
-
-export interface SignaturePageSpec {
-  clientName: string;
-  counterName: string;
-  counterTitle: string;
-  effectiveDate: string;
 }
 
 export async function renderContractReport(

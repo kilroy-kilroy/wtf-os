@@ -11,7 +11,9 @@
 // native `fixed` prop (footer repeats on every page).
 
 import React from 'react';
-import { Document, Page, View, Text, Image, StyleSheet, renderToBuffer } from '@react-pdf/renderer';
+import { Document, Page, View, Text, Image, StyleSheet, Font, renderToBuffer } from '@react-pdf/renderer';
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 import { load } from 'cheerio';
 
 type DomNode = {
@@ -22,22 +24,80 @@ type DomNode = {
   attribs?: Record<string, string>;
 };
 
+
+// ---------------------------------------------------------------------------
+// Embedded contract font.
+//
+// WHY THIS EXISTS: react-pdf's default Times-Roman/Bold/Italic are PDF
+// "standard-14" fonts, which carry no /Widths array — every conformant reader is
+// expected to already know their metrics. As of 2026-09-04 Firma's anchor
+// binder no longer does, and rejects any such document with
+//   VALIDATION_ERROR: Anchor '{{sig_client}}': no glyph advances for font <id>
+// Verified by resubmitting a PDF Firma itself accepted in June 2026: rejected
+// today, byte-identical, with matching font dictionaries. So this is not a
+// regression in this repo — but embedding a real font removes the dependency on
+// any third party's standard-14 support, permanently.
+//
+// Tinos is metrically compatible with Times New Roman, so contracts render
+// essentially unchanged. SIL Open Font License — see public/fonts/OFL.txt.
+const FONT_FAMILY = 'Tinos';
+const FONT_FILES = {
+  regular: 'Tinos-Regular.ttf',
+  bold: 'Tinos-Bold.ttf',
+  italic: 'Tinos-Italic.ttf',
+} as const;
+
+/**
+ * Resolve a font to a local path when the file is on disk (dev, and any host
+ * that ships public/), else to the app's own public URL — the same approach
+ * loadLogo() already uses for the letterhead.
+ */
+function fontSrc(file: string): string {
+  // cwd differs by caller — apps/web under `next dev`, the repo root for scripts —
+  // so probe both rather than assuming one.
+  for (const dir of [
+    join(process.cwd(), 'public', 'fonts'),
+    join(process.cwd(), 'apps', 'web', 'public', 'fonts'),
+  ]) {
+    const local = join(dir, file);
+    if (existsSync(local)) return local;
+  }
+  const envUrl = process.env.NEXT_PUBLIC_APP_URL;
+  const base = envUrl && envUrl.startsWith('https://') ? envUrl : 'https://app.timkilroy.com';
+  return `${base}/fonts/${file}`;
+}
+
+let fontsRegistered = false;
+/** Register once per process; re-registering the same family is wasteful. */
+function ensureFonts(): void {
+  if (fontsRegistered) return;
+  Font.register({
+    family: FONT_FAMILY,
+    fonts: [
+      { src: fontSrc(FONT_FILES.regular), fontWeight: 'normal', fontStyle: 'normal' },
+      { src: fontSrc(FONT_FILES.bold), fontWeight: 'bold', fontStyle: 'normal' },
+      { src: fontSrc(FONT_FILES.italic), fontWeight: 'normal', fontStyle: 'italic' },
+    ],
+  });
+  fontsRegistered = true;
+}
+
 const styles = StyleSheet.create({
   page: {
     paddingTop: 70, paddingBottom: 56, paddingHorizontal: 60,
-    fontFamily: 'Times-Roman', fontSize: 11, lineHeight: 1.5, color: '#1a1a1a',
+    fontFamily: FONT_FAMILY, fontSize: 11, lineHeight: 1.5, color: '#1a1a1a',
   },
   header: { position: 'absolute', top: 26, left: 60, right: 60, flexDirection: 'row', justifyContent: 'flex-start' },
   logo: { height: 24, objectFit: 'contain' },
-  h1: { fontSize: 17, fontFamily: 'Times-Bold', textAlign: 'center', textTransform: 'uppercase', letterSpacing: 1, marginTop: 4, marginBottom: 14 },
-  h2: { fontSize: 12.5, fontFamily: 'Times-Bold', marginTop: 14, marginBottom: 5 },
-  h3: { fontSize: 11.5, fontFamily: 'Times-Bold', marginTop: 11, marginBottom: 4 },
+  h1: { fontSize: 17, fontFamily: FONT_FAMILY, fontWeight: 'bold', textAlign: 'center', textTransform: 'uppercase', letterSpacing: 1, marginTop: 4, marginBottom: 14 },
+  h2: { fontSize: 12.5, fontFamily: FONT_FAMILY, fontWeight: 'bold', marginTop: 14, marginBottom: 5 },
+  h3: { fontSize: 11.5, fontFamily: FONT_FAMILY, fontWeight: 'bold', marginTop: 11, marginBottom: 4 },
   p: { marginBottom: 7, textAlign: 'justify' },
   listItem: { flexDirection: 'row', marginBottom: 4, paddingLeft: 6 },
   listMarker: { width: 18 },
   listBody: { flex: 1, textAlign: 'justify' },
-  bold: { fontFamily: 'Times-Bold' },
-  italic: { fontFamily: 'Times-Italic' },
+  bold: { fontFamily: FONT_FAMILY, fontWeight: 'bold' },
+  italic: { fontFamily: FONT_FAMILY, fontStyle: 'italic' },
   sigBlock: { marginTop: 26 },
   initialsFooter: { position: 'absolute', bottom: 30, left: 60, right: 60, fontSize: 8, color: '#666', textAlign: 'right' },
   pageNumber: { position: 'absolute', bottom: 30, left: 60, fontSize: 8, color: '#999' },
@@ -104,7 +164,9 @@ function renderBlocks(parent: DomNode, keyBase: string): React.ReactNode[] {
   return elementChildren(parent).map((el, i) => renderBlock(el, `${keyBase}-${i}`));
 }
 
-function ContractDocument({ html, logo }: { html: string; logo?: Buffer }) {
+function ContractDocument({ html, logo, signaturePage }: {
+  html: string; logo?: Buffer; signaturePage?: SignaturePageSpec;
+}) {
   const $ = load(html);
   const body = ($('body').get(0) ?? $.root().get(0)) as unknown as DomNode;
   const blocks = renderBlocks(body, 'c');
@@ -128,11 +190,115 @@ function ContractDocument({ html, logo }: { html: string; logo?: Buffer }) {
         />
         {blocks}
       </Page>
+      {signaturePage ? <SignaturePage {...signaturePage} /> : null}
     </Document>
   );
 }
 
 /** Render merged contract HTML (+ optional logo bytes) to a PDF buffer. */
-export async function renderContractReport(html: string, logo?: Buffer): Promise<Buffer> {
-  return renderToBuffer(React.createElement(ContractDocument, { html, logo }) as any);
+
+// ---------------------------------------------------------------------------
+// Coordinate signature page.
+//
+// Firma's anchor binder cannot read glyph advances from what react-pdf emits
+// (see docs/firma-anchor-outage-2026-09.md), so fields are placed by coordinate
+// instead of by searching for {{sig_*}} text. Coordinates only stay valid if the
+// signature block sits somewhere predictable — hence a dedicated final page with
+// absolutely positioned slots.
+//
+// These percentages are the single source of truth: the visual slots below and
+// the Firma `fields` payload are both derived from them, so they cannot drift.
+export interface SignatureSlot { x: number; y: number; width: number; height: number }
+
+/**
+ * Percent-of-page positions for every signature field, in Firma's `position`
+ * units. This is the single source of truth: the slots drawn on the page below
+ * and the coordinates sent to Firma both read from here, so they cannot drift.
+ *
+ * Two parties, stacked, on a page that carries nothing else — which is what
+ * keeps these numbers valid no matter how long the contract runs.
+ */
+export const SIGNATURE_LAYOUT = {
+  client: {
+    signature: { x: 10, y: 30, width: 34, height: 7 },
+    date: { x: 52, y: 30, width: 26, height: 7 },
+  },
+  counter: {
+    signature: { x: 10, y: 58, width: 34, height: 7 },
+    date: { x: 52, y: 58, width: 26, height: 7 },
+  },
+} as const;
+
+export interface SignaturePageSpec {
+  clientName: string;
+  counterName: string;
+  counterTitle: string;
+  effectiveDate: string;
+  /**
+   * true  — KLRY signs too, so its slot is a live Firma field (contracts).
+   * false — KLRY is pre-executed, rendered as typed text (the Call Vault NDA,
+   *         which exists precisely so nobody waits on a countersignature).
+   */
+  counterSigns: boolean;
+}
+
+const pct = (n: number) => `${n}%`;
+
+/** One party's ruled line, caption and party name, positioned absolutely. */
+function SlotMarks({ slot, dateSlot, party }: {
+  slot: SignatureSlot; dateSlot: SignatureSlot; party: string;
+}) {
+  return (
+    <>
+      <Text style={{ position: 'absolute', left: pct(slot.x), top: pct(slot.y - 4), fontSize: 9, color: '#666' }}>
+        {party}
+      </Text>
+      <View style={{ position: 'absolute', left: pct(slot.x), top: pct(slot.y + slot.height), width: pct(slot.width), borderBottomWidth: 1, borderBottomColor: '#1a1a1a' }} />
+      <Text style={{ position: 'absolute', left: pct(slot.x), top: pct(slot.y + slot.height + 1.5), fontSize: 8, color: '#666' }}>
+        Signature
+      </Text>
+      <View style={{ position: 'absolute', left: pct(dateSlot.x), top: pct(dateSlot.y + dateSlot.height), width: pct(dateSlot.width), borderBottomWidth: 1, borderBottomColor: '#1a1a1a' }} />
+      <Text style={{ position: 'absolute', left: pct(dateSlot.x), top: pct(dateSlot.y + dateSlot.height + 1.5), fontSize: 8, color: '#666' }}>
+        Date
+      </Text>
+    </>
+  );
+}
+
+/** A final page carrying only the execution block, so slot positions are fixed. */
+function SignaturePage({ clientName, counterName, counterTitle, effectiveDate, counterSigns }: SignaturePageSpec) {
+  const L = SIGNATURE_LAYOUT;
+  return (
+    <Page size="LETTER" style={styles.page} break>
+      <Text style={styles.h2}>Execution</Text>
+      <Text style={styles.p}>
+        IN WITNESS WHEREOF, the Parties have executed this Agreement as of the Effective Date.
+      </Text>
+
+      <SlotMarks slot={L.client.signature} dateSlot={L.client.date} party={clientName} />
+
+      {counterSigns ? (
+        <SlotMarks slot={L.counter.signature} dateSlot={L.counter.date} party={counterName} />
+      ) : (
+        <View style={{ position: 'absolute', left: pct(L.counter.signature.x), top: pct(L.counter.signature.y) }}>
+          <Text style={{ fontSize: 9, color: '#666' }}>{counterName}</Text>
+          <Text style={{ marginTop: 10, fontSize: 11 }}>{counterTitle}</Text>
+          <Text style={{ fontSize: 9, color: '#666', marginTop: 2 }}>Signed {effectiveDate}</Text>
+        </View>
+      )}
+    </Page>
+  );
+}
+
+export async function renderContractReport(
+  html: string,
+  logo?: Buffer,
+  signaturePage?: SignaturePageSpec,
+): Promise<Buffer> {
+  // Must happen before render: the embedded family is what gives the PDF real
+  // outlines and widths rather than relying on standard-14 metrics.
+  ensureFonts();
+  return renderToBuffer(
+    React.createElement(ContractDocument, { html, logo, signaturePage }) as any,
+  );
 }

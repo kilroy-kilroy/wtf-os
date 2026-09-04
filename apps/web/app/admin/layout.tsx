@@ -12,6 +12,7 @@ const NAV_LINKS = [
   { href: '/admin/five-minute-friday', label: '5-Minute Friday', icon: '\u25C7' },
   { href: '/admin/sessions', label: 'Sessions', icon: '\u25C9' },
   { href: '/client/content?type=session', label: 'Office Hours', icon: '\u25C8' },
+  { href: '/admin/call-vault', label: 'Call Vault', icon: '\u25A5' },
   { href: '/admin/contracts', label: 'Contracts', icon: '\u25A4' },
   { href: '/admin/share-documents', label: 'Share-Links', icon: '\u25C8' },
 ];

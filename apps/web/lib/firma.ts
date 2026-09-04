@@ -113,9 +113,159 @@ export async function createSigningRequest(
   return { requestId: created.id, signerIds };
 }
 
+
+export interface FirmaSlot { x: number; y: number; width: number; height: number }
+
+export interface FirmaFieldPlacement {
+  /** 1-based page the fields sit on — the renderer puts them on the last page. */
+  page: number;
+  /** Slot positions per signer role. A role with no entry gets no fields. */
+  byRole: Partial<Record<'client' | 'counter', { signature: FirmaSlot; date: FirmaSlot }>>;
+}
+
+/**
+ * Create an ACTIVATED signing request, placing fields by COORDINATE rather than
+ * by matching {{sig_*}} text.
+ *
+ * Why coordinates: as of 2026-09-04 Firma's anchor binder rejects everything
+ * this repo renders with "no glyph advances for font <id>" — including a PDF it
+ * accepted itself in June. Embedding a real font does not help either, because
+ * react-pdf emits composite Type0/Identity-H faces. Coordinate placement needs
+ * no text extraction at all. See docs/firma-anchor-outage-2026-09.md.
+ *
+ * Why create-and-send: a plain draft's signing link is dead — app.firma.dev
+ * renders "Invalid Signing Link" and `status.sent` stays false. Activation is
+ * what makes the link live, and `settings.send_signing_email` decides whether
+ * the signer is also emailed about it:
+ *   notify:false — embedded signing; they are already looking at the document.
+ *   notify:true  — a contract you want the client to receive by email.
+ *
+ * Either way this consumes a Firma credit on live keys; activation is the
+ * billable event, not the notification.
+ */
+export async function createSigningRequestWithFields(
+  pdf: Buffer,
+  signers: FirmaSigner[],
+  placement: FirmaFieldPlacement,
+  name = 'Contract',
+  opts: { notify?: boolean } = {},
+): Promise<CreateSigningRequestResult> {
+  const recipients = signers.map((s) => {
+    const { first, last } = splitName(s.name);
+    return {
+      id: `temp_${s.role}`,
+      first_name: first,
+      last_name: last,
+      email: s.email,
+      designation: 'Signer',
+      order: s.order,
+    };
+  });
+
+  const fields = signers.flatMap((s) => {
+    const slots = placement.byRole[s.role];
+    if (!slots) return [];
+    return [
+      {
+        type: 'signature',
+        page_number: placement.page,
+        recipient_id: `temp_${s.role}`,
+        position: slots.signature,
+        required: true,
+      },
+      {
+        type: 'date',
+        page_number: placement.page,
+        recipient_id: `temp_${s.role}`,
+        position: slots.date,
+        required: true,
+      },
+    ];
+  });
+  if (!fields.length) throw new Error('no signature fields to place');
+
+  const createRes = await firmaFetch('/signing-requests/create-and-send', {
+    method: 'POST',
+    body: JSON.stringify({
+      document: pdf.toString('base64'),
+      name,
+      recipients,
+      fields,
+      settings: { send_signing_email: opts.notify === true },
+    }),
+  });
+  const created = await createRes.json();
+
+  const recipientsOut: Array<{ order?: number; email?: string; id?: string }> =
+    created.recipients ?? [];
+  const signerIds: Record<string, string> = {};
+  for (const s of signers) {
+    const match =
+      recipientsOut.find((r) => r.order === s.order) ??
+      recipientsOut.find((r) => r.email === s.email);
+    if (match?.id) signerIds[s.role] = match.id;
+  }
+
+  return { requestId: created.id, signerIds };
+}
+
+/** Count pages in a rendered PDF, for coordinate placement on the last page. */
+export function countPdfPages(pdf: Buffer): number {
+  const matches = pdf.toString('latin1').match(/\/Type\s*\/Page[^s]/g);
+  return matches ? matches.length : 1;
+}
+
 /** Send a previously-created draft signing request (triggers email delivery). */
 export async function sendSigningRequest(requestId: string): Promise<void> {
   await firmaFetch(`/signing-requests/${requestId}/send`, { method: 'POST' });
+}
+
+export interface FirmaRecipient {
+  id: string;
+  email?: string;
+  order?: number;
+}
+
+/**
+ * List a signing request's recipients so an embedded signing URL can be built:
+ * `https://app.firma.dev/signing/<id>`.
+ *
+ * Only the `id` field is confirmed by the docs; `order` and `email` may be
+ * absent, so callers must match defensively (order first, then email) exactly
+ * as createSigningRequest does. Results are sorted by order when present so
+ * `[0]` is the first signer for single-signer envelopes.
+ *
+ * No `/send` is required before these ids resolve — that is what lets an
+ * embedded flow avoid sending an envelope by email at all.
+ */
+export async function getSigningUserIds(requestId: string): Promise<FirmaRecipient[]> {
+  const res = await firmaFetch(`/signing-requests/${requestId}/users`);
+  const body = await res.json();
+  const rows: Array<Record<string, unknown>> = Array.isArray(body)
+    ? body
+    : (body?.results ?? body?.users ?? body?.recipients ?? []);
+
+  return rows
+    .filter((r) => typeof r?.id === 'string' && r.id)
+    .map((r) => ({
+      id: r.id as string,
+      email: typeof r.email === 'string' ? r.email : undefined,
+      order: typeof r.order === 'number' ? r.order : undefined,
+    }))
+    .sort((a, b) => (a.order ?? Number.MAX_SAFE_INTEGER) - (b.order ?? Number.MAX_SAFE_INTEGER));
+}
+
+/**
+ * Build the embedded signing URL for a recipient id.
+ *
+ * The id comes back from Firma, i.e. from a third party, and this URL is fed
+ * straight into an `iframe src` — so it is encoded rather than interpolated
+ * raw. A well-formed id is unaffected (it is URL-safe already); a malformed
+ * one can no longer smuggle `?`, `#`, or an extra path segment into the URL we
+ * hand the browser.
+ */
+export function embeddedSigningUrl(signingUserId: string): string {
+  return `https://app.firma.dev/signing/${encodeURIComponent(signingUserId)}`;
 }
 
 export interface FirmaRequestState {

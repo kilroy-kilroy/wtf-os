@@ -27,6 +27,14 @@ interface LoopsContact {
   // Custom properties for Client Portal
   enrolledProgram?: string;
   clientLoginUrl?: string;
+  /**
+   * Call Vault: 'yes' | 'no'. Duplicated onto the CONTACT because Loops can
+   * branch a workflow on contact properties but not on event properties — the
+   * event carries `ndaSigned` for template conditionals, this carries it for
+   * workflow splits. String rather than boolean so the dashboard renders it
+   * legibly in segment filters.
+   */
+  callVaultNdaSigned?: string;
 }
 
 interface LoopsEventPayload {
@@ -77,6 +85,7 @@ export async function createOrUpdateContact(contact: LoopsContact): Promise<{ su
         signupDate: contact.signupDate || new Date().toISOString(),
         enrolledProgram: contact.enrolledProgram,
         clientLoginUrl: contact.clientLoginUrl,
+        callVaultNdaSigned: contact.callVaultNdaSigned,
       }),
     });
 
@@ -921,6 +930,76 @@ export async function onProspectDocShared(args: {
       prospectName: args.prospectName || '',
       firstName,
       requiresApproval: args.requiresApproval,
+    },
+  });
+}
+
+// ============================================
+// CALL VAULT EVENTS
+// ============================================
+
+/**
+ * Fire when a Call Vault contributor submits their calls.
+ *
+ * The Loops automation for `call_vault_submitted` is built in the Loops
+ * dashboard — firing this event does not by itself send mail. The thank-you
+ * email should carry `bookingUrl` (review call) and `resumeUrl` (add more calls).
+ */
+export async function onCallVaultSubmitted(args: {
+  email: string;
+  firstName: string;
+  agencyName?: string;
+  callCount: number;
+  ndaSigned: boolean;
+  resumeUrl: string;
+}): Promise<{ success: boolean; error?: string }> {
+  const bookingUrl =
+    process.env.NEXT_PUBLIC_CALL_VAULT_BOOKING_URL || 'https://meet.timkilroy.com/sales-call-survey';
+
+  await createOrUpdateContact({
+    email: args.email,
+    firstName: args.firstName || undefined,
+    source: 'call_vault',
+    subscribed: true,
+    userGroup: 'call_vault_contributor',
+    companyName: args.agencyName,
+    callVaultNdaSigned: args.ndaSigned ? 'yes' : 'no',
+  });
+
+  return sendEvent({
+    email: args.email,
+    eventName: 'call_vault_submitted',
+    eventProperties: {
+      firstName: args.firstName || '',
+      agencyName: args.agencyName || '',
+      callCount: args.callCount,
+      ndaSigned: args.ndaSigned,
+      bookingUrl,
+      resumeUrl: args.resumeUrl,
+    },
+  });
+}
+
+/**
+ * Fire when /start sees an email that already has a contributor row.
+ *
+ * /start never mints a session for a known email inline (that would let
+ * anyone hijack a contributor's row just by knowing their email address), so
+ * instead it mints a single-use resume link and emails it here. Unlike
+ * `onCallVaultSubmitted`, this does NOT call `createOrUpdateContact` — the
+ * contact already exists from their original submission.
+ */
+export async function onCallVaultResumeLink(args: {
+  email: string;
+  firstName: string;
+  resumeUrl: string;
+}): Promise<{ success: boolean; error?: string }> {
+  return sendEvent({
+    email: args.email,
+    eventName: 'call_vault_resume_link',
+    eventProperties: {
+      firstName: args.firstName || '',
+      resumeUrl: args.resumeUrl,
     },
   });
 }

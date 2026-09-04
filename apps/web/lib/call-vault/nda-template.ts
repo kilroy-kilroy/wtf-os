@@ -8,6 +8,18 @@
 // No <table>: packages/pdf/contract-report.tsx handles h1-h4, p, ul, ol, div
 // only, so a table silently renders as nothing.
 
+// NOTE — as of 2026-09-04 Firma REJECTS every envelope generated from this
+// repo's PDF renderer with:
+//   Anchor '{{sig_client}}': no glyph advances for font <id>
+// This is NOT a fault in this template. Proven by resubmitting the exact PDF
+// Firma accepted in June 2026: it is rejected today with the same error, and the
+// font dictionaries of the accepted and rejected PDFs are identical
+// (Type1 / WinAnsiEncoding / no /Widths, PDF 1.3). Firma's parser changed and no
+// longer derives metrics for the standard-14 fonts.
+// Every template in contract_templates fails the same way, so the contract
+// generator is affected too — not just Call Vault.
+// Fix is to embed a real TTF (giving explicit glyph advances) in
+// packages/pdf/contract-report.tsx, or to have Firma restore standard-14 support.
 export const CALL_VAULT_NDA_SLUG = 'call-vault-nda';
 export const CALL_VAULT_NDA_NAME = 'Confidentiality and Data Use Agreement (Call Recordings and Transcripts)';
 
@@ -129,7 +141,7 @@ export const CALL_VAULT_NDA_HTML = `
      Title: ____________________<br/>
      Date: {{date_client}}</p>
   <p><strong>For KLRY LLC</strong><br/>
-     Signature: <em>Tim Kilroy</em><br/>
+     Signature: Tim Kilroy<br/>
      Name: Tim Kilroy<br/>
      Title: CEO<br/>
      Date: {{effective_date}}</p>

@@ -34,7 +34,6 @@ interface ExistingCall {
   stage: string | null;
   outcome: string | null;
   dealSizeBand: string | null;
-  callDate: string | null;
   label: string | null;
   fileCount: number;
 }
@@ -101,7 +100,12 @@ export default function CallVaultForm({ resumeToken }: { resumeToken: string | n
   const [aboutError, setAboutError] = useState<string | null>(null);
 
   // Calls phase
-  const [callIds, setCallIds] = useState<string[]>(() => [makeLocalId()]);
+  // Five blank rows up front: that is the number the page asks for, and an
+  // empty row costs nothing — a call row only reaches the server once a file
+  // is attached to it.
+  const [callIds, setCallIds] = useState<string[]>(
+    () => Array.from({ length: 5 }, () => makeLocalId()),
+  );
   const [submitBusy, setSubmitBusy] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
@@ -466,7 +470,6 @@ export default function CallVaultForm({ resumeToken }: { resumeToken: string | n
                   {c.label ? <>{labelFor(STAGES, c.stage)} &middot; </> : null}
                   {labelFor(OUTCOMES, c.outcome)} &middot;{' '}
                   {labelFor(DEAL_SIZE_BANDS, c.dealSizeBand)}
-                  {c.callDate ? ` · ${c.callDate}` : ''}
                   {' — '}
                   {c.fileCount} file{c.fileCount === 1 ? '' : 's'}
                 </li>
@@ -476,8 +479,9 @@ export default function CallVaultForm({ resumeToken }: { resumeToken: string | n
         )}
 
         <div className="flex flex-col gap-6">
-          {callIds.map((id) => (
+          {callIds.map((id, i) => (
             <CallUploader
+              index={existingCalls.length + i + 1}
               key={id}
               sessionToken={sessionToken}
               canRemove={callIds.length > 1}

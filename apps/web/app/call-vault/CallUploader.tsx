@@ -40,11 +40,10 @@ interface CallMeta {
   stage: string;
   outcome: string;
   dealSizeBand: string;
-  callDate: string;
   label: string;
 }
 
-const EMPTY_META: CallMeta = { stage: '', outcome: '', dealSizeBand: '', callDate: '', label: '' };
+const EMPTY_META: CallMeta = { stage: '', outcome: '', dealSizeBand: '', label: '' };
 
 /** Wire shape for both POST /calls and PATCH /calls/[callId]: empty string is
  * "not answered", which the server stores as NULL. */
@@ -53,7 +52,6 @@ function metaPayload(meta: CallMeta) {
     stage: meta.stage || null,
     outcome: meta.outcome || null,
     dealSizeBand: meta.dealSizeBand || null,
-    callDate: meta.callDate || null,
     label: meta.label.trim() || null,
   };
 }
@@ -65,7 +63,6 @@ function sameMeta(a: CallMeta, b: CallMeta): boolean {
     a.stage === b.stage &&
     a.outcome === b.outcome &&
     a.dealSizeBand === b.dealSizeBand &&
-    a.callDate === b.callDate &&
     a.label.trim() === b.label.trim()
   );
 }
@@ -98,11 +95,14 @@ function putWithProgress(url: string, file: File, onProgress: (pct: number) => v
 
 export default function CallUploader({
   sessionToken,
+  index,
   canRemove,
   onRemove,
   onSessionExpired,
 }: {
   sessionToken: string;
+  /** 1-based position, shown so five rows read as a numbered list. */
+  index: number;
   canRemove: boolean;
   onRemove: () => void;
   /** Called on any 401 from this call's requests — the parent clears the
@@ -249,7 +249,7 @@ export default function CallUploader({
     if (!callIdRef.current) return; // nothing to PATCH until the first file
     // Selects commit once per choice; typed fields wait out the debounce so
     // the label never fires a request per keystroke.
-    if (field === 'label' || field === 'callDate') scheduleSave();
+    if (field === 'label') scheduleSave();
     else flushSave();
   }
 
@@ -374,23 +374,26 @@ export default function CallUploader({
   const atFileCap = files.filter((f) => f.status !== 'error').length >= MAX_FILES_PER_CALL;
 
   return (
-    <div className="rounded-lg border border-[#333333] bg-[#111111] p-5">
+    <div className="rounded-lg border border-[#333333] bg-[#111111] px-4 py-3">
       <div className="flex items-center justify-between">
-        <h3 className="font-anton uppercase tracking-wide text-lg text-white">
-          {created ? 'Call' : 'New call'}
-        </h3>
+        <span className="font-anton uppercase tracking-wide text-xs text-[#808080]">
+          Call {index}
+        </span>
         {canRemove && !created && (
           <button
             type="button"
             onClick={onRemove}
-            className="font-poppins text-xs uppercase tracking-wider text-[#E51B23] hover:text-red-400"
+            className="font-poppins text-xs uppercase tracking-wider text-[#808080] hover:text-[#E51B23]"
           >
             Remove
           </button>
         )}
       </div>
 
-      <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+      {/* One call per line: three selects, a label, and one compact upload
+          control. Kept on a single row so five of these fit on screen without
+          scrolling, which is the number we actually ask people for. */}
+      <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-[1fr_1fr_1fr_1.4fr_auto] lg:items-end">
         <LabeledSelect
           label="Stage"
           value={meta.stage || null}
@@ -413,51 +416,17 @@ export default function CallUploader({
           placeholder="Select…"
         />
         <ConsoleInput
-          label="Call date"
-          type="date"
-          value={meta.callDate}
-          onChange={(e) => handleMetaChange('callDate', (e.target as HTMLInputElement).value)}
-          onBlur={() => flushSave()}
-        />
-      </div>
-      <div className="mt-4">
-        <ConsoleInput
           label="Label (optional)"
           value={meta.label}
           onChange={(e) => handleMetaChange('label', (e.target as HTMLInputElement).value)}
           onBlur={() => flushSave()}
           placeholder="e.g. Discovery call with Acme"
         />
-      </div>
-      <p className="mt-2 font-poppins text-xs text-[#808080]">
-        These four details can&apos;t be worked out from a recording later, and you can change
-        them any time before you submit.
-      </p>
-      {created && saveState !== 'idle' && (
-        <p
-          role="status"
-          className={`mt-1 font-poppins text-xs ${
-            saveState === 'error' ? 'text-[#E51B23]' : 'text-[#808080]'
-          }`}
-        >
-          {saveState === 'saving' && 'Saving…'}
-          {saveState === 'saved' && 'Details saved ✓'}
-          {saveState === 'error' &&
-            "Couldn't save those details. Your files are fine — change any field to try again."}
-        </p>
-      )}
-      {createError && (
-        <p role="alert" className="mt-2 font-poppins text-sm text-[#E51B23]">
-          {createError}
-        </p>
-      )}
-
-      <div className="mt-5">
         <label
-          className={`flex flex-col items-center justify-center gap-2 rounded border-2 border-dashed p-6 text-center transition-colors ${
+          className={`flex h-[42px] items-center justify-center gap-2 rounded border px-4 font-anton text-xs uppercase tracking-wider transition-colors ${
             atFileCap
-              ? 'cursor-not-allowed border-[#333333] opacity-50'
-              : 'cursor-pointer border-[#333333] hover:border-[#FFDE59]'
+              ? 'cursor-not-allowed border-[#333333] text-[#555555]'
+              : 'cursor-pointer border-[#FFDE59] text-[#FFDE59] hover:bg-[#FFDE59] hover:text-black'
           }`}
         >
           <input
@@ -471,16 +440,29 @@ export default function CallUploader({
               e.currentTarget.value = '';
             }}
           />
-          <span className="font-poppins text-sm text-[#B3B3B3]">
-            {atFileCap
-              ? `Up to ${MAX_FILES_PER_CALL} files per call`
-              : 'Drop recordings or transcripts here, or click to choose'}
-          </span>
-          <span className="font-poppins text-xs text-[#808080]">
-            Text or audio only &mdash; no video. Up to 200MB per file.
-          </span>
+          {files.length ? `+ Add more` : '+ Add files'}
         </label>
       </div>
+
+      {created && saveState !== 'idle' && (
+        <p
+          role="status"
+          className={`mt-1 font-poppins text-xs ${
+            saveState === 'error' ? 'text-[#E51B23]' : 'text-[#808080]'
+          }`}
+        >
+          {saveState === 'saving' && 'Saving…'}
+          {saveState === 'saved' && 'Saved ✓'}
+          {saveState === 'error' &&
+            "Couldn't save those details. Your files are fine — change any field to try again."}
+        </p>
+      )}
+      {createError && (
+        <p role="alert" className="mt-2 font-poppins text-sm text-[#E51B23]">
+          {createError}
+        </p>
+      )}
+
 
       {files.length > 0 && (
         <ul className="mt-4 flex flex-col gap-2">

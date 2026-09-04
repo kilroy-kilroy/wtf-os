@@ -211,14 +211,13 @@ export interface CallMeta {
   stage: string | null;
   outcome: string | null;
   dealSizeBand: string | null;
-  callDate: string | null;
   label: string | null;
   notes: string | null;
 }
 
 export function validateCallMeta(payload: {
   stage?: unknown; outcome?: unknown; dealSizeBand?: unknown;
-  callDate?: unknown; label?: unknown; notes?: unknown;
+  label?: unknown; notes?: unknown;
 }): Result<CallMeta> {
   const pick = (options: typeof STAGES, v: unknown, name: string): Result<string | null> => {
     if (v === undefined || v === null || v === '') return { ok: true, value: null };
@@ -238,10 +237,6 @@ export function validateCallMeta(payload: {
     return s || null;
   };
 
-  const callDate = str(payload.callDate);
-  if (callDate && !/^\d{4}-\d{2}-\d{2}$/.test(callDate)) {
-    return { ok: false, error: 'Call date must be YYYY-MM-DD' };
-  }
 
   return {
     ok: true,
@@ -249,7 +244,6 @@ export function validateCallMeta(payload: {
       stage: stage.value,
       outcome: outcome.value,
       dealSizeBand: dealSizeBand.value,
-      callDate,
       label: str(payload.label),
       notes: str(payload.notes),
     },

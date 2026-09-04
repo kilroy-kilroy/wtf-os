@@ -16,7 +16,7 @@ export default async function CallVaultPage({
 
   return (
     <div className="min-h-screen bg-black">
-      <main className="mx-auto flex max-w-2xl flex-col gap-8 px-4 py-16">
+      <main className="mx-auto flex max-w-4xl flex-col gap-8 px-4 py-16">
         <header className="space-y-3 text-center">
           <p className="font-anton uppercase tracking-widest text-[#B3B3B3] text-sm">
             The Call Vault
@@ -27,7 +27,6 @@ export default async function CallVaultPage({
           <p className="mx-auto max-w-xl font-poppins text-lg text-[#B3B3B3]">
             Share 3&ndash;5 sales calls &mdash; recordings, transcripts, whatever you have
             &mdash; and get an individualized improvement plan plus a 30-minute review call.
-            Sign an NDA right here if you want one, no email, no waiting.
           </p>
         </header>
         <CallVaultForm resumeToken={token ?? null} />

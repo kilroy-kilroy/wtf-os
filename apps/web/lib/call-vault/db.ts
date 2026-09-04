@@ -136,7 +136,6 @@ export interface ContributorCallSummary {
   stage: string | null;
   outcome: string | null;
   dealSizeBand: string | null;
-  callDate: string | null;
   label: string | null;
   fileCount: number;
 }
@@ -152,7 +151,7 @@ export async function listCallsForContributor(contributorId: string): Promise<Co
   const db = getSupabaseServerClient();
   const { data: calls, error } = await db
     .from('call_vault_calls')
-    .select('id, stage, outcome, deal_size_band, call_date, label, created_at')
+    .select('id, stage, outcome, deal_size_band, label, created_at')
     .eq('contributor_id', contributorId)
     .order('created_at', { ascending: true });
   if (error) throw new Error(`listCallsForContributor failed: ${error.message}`);
@@ -174,7 +173,6 @@ export async function listCallsForContributor(contributorId: string): Promise<Co
     stage: c.stage,
     outcome: c.outcome,
     dealSizeBand: c.deal_size_band,
-    callDate: c.call_date,
     label: c.label,
     fileCount: fileCounts.get(c.id) ?? 0,
   }));
@@ -192,7 +190,6 @@ export interface AdminCallDetail {
   stage: string | null;
   outcome: string | null;
   dealSizeBand: string | null;
-  callDate: string | null;
   label: string | null;
   notes: string | null;
   files: AdminCallFile[];
@@ -209,7 +206,7 @@ export async function listCallsForAdmin(contributorId: string): Promise<AdminCal
   const db = getSupabaseServerClient();
   const { data: calls, error } = await db
     .from('call_vault_calls')
-    .select('id, stage, outcome, deal_size_band, call_date, label, notes, created_at')
+    .select('id, stage, outcome, deal_size_band, label, notes, created_at')
     .eq('contributor_id', contributorId)
     .order('created_at', { ascending: true });
   if (error) throw new Error(`listCallsForAdmin failed: ${error.message}`);
@@ -233,7 +230,6 @@ export async function listCallsForAdmin(contributorId: string): Promise<AdminCal
     stage: c.stage,
     outcome: c.outcome,
     dealSizeBand: c.deal_size_band,
-    callDate: c.call_date,
     label: c.label,
     notes: c.notes,
     files: filesByCall.get(c.id) ?? [],
@@ -269,7 +265,6 @@ export async function createCall(contributorId: string, meta: CallMeta): Promise
       stage: meta.stage,
       outcome: meta.outcome,
       deal_size_band: meta.dealSizeBand,
-      call_date: meta.callDate,
       label: meta.label,
       notes: meta.notes,
     })
@@ -305,7 +300,6 @@ export async function updateCall(
       stage: meta.stage,
       outcome: meta.outcome,
       deal_size_band: meta.dealSizeBand,
-      call_date: meta.callDate,
       label: meta.label,
     })
     .eq('id', callId);

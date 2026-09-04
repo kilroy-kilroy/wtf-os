@@ -154,7 +154,6 @@ export default async function CallVaultContributorPage({ params }: { params: Pro
                   </p>
                   <p className="text-slate-500 text-xs mt-0.5">
                     {labelFor(STAGES, call.stage)} · {labelFor(OUTCOMES, call.outcome)} · {labelFor(DEAL_SIZE_BANDS, call.dealSizeBand)}
-                    {call.callDate ? ` · ${fmtDate(call.callDate)}` : ''}
                   </p>
                 </div>
               </div>

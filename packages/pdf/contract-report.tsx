@@ -11,7 +11,9 @@
 // native `fixed` prop (footer repeats on every page).
 
 import React from 'react';
-import { Document, Page, View, Text, Image, StyleSheet, renderToBuffer } from '@react-pdf/renderer';
+import { Document, Page, View, Text, Image, StyleSheet, Font, renderToBuffer } from '@react-pdf/renderer';
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 import { load } from 'cheerio';
 
 type DomNode = {
@@ -22,22 +24,80 @@ type DomNode = {
   attribs?: Record<string, string>;
 };
 
+
+// ---------------------------------------------------------------------------
+// Embedded contract font.
+//
+// WHY THIS EXISTS: react-pdf's default Times-Roman/Bold/Italic are PDF
+// "standard-14" fonts, which carry no /Widths array — every conformant reader is
+// expected to already know their metrics. As of 2026-09-04 Firma's anchor
+// binder no longer does, and rejects any such document with
+//   VALIDATION_ERROR: Anchor '{{sig_client}}': no glyph advances for font <id>
+// Verified by resubmitting a PDF Firma itself accepted in June 2026: rejected
+// today, byte-identical, with matching font dictionaries. So this is not a
+// regression in this repo — but embedding a real font removes the dependency on
+// any third party's standard-14 support, permanently.
+//
+// Tinos is metrically compatible with Times New Roman, so contracts render
+// essentially unchanged. SIL Open Font License — see public/fonts/OFL.txt.
+const FONT_FAMILY = 'Tinos';
+const FONT_FILES = {
+  regular: 'Tinos-Regular.ttf',
+  bold: 'Tinos-Bold.ttf',
+  italic: 'Tinos-Italic.ttf',
+} as const;
+
+/**
+ * Resolve a font to a local path when the file is on disk (dev, and any host
+ * that ships public/), else to the app's own public URL — the same approach
+ * loadLogo() already uses for the letterhead.
+ */
+function fontSrc(file: string): string {
+  // cwd differs by caller — apps/web under `next dev`, the repo root for scripts —
+  // so probe both rather than assuming one.
+  for (const dir of [
+    join(process.cwd(), 'public', 'fonts'),
+    join(process.cwd(), 'apps', 'web', 'public', 'fonts'),
+  ]) {
+    const local = join(dir, file);
+    if (existsSync(local)) return local;
+  }
+  const envUrl = process.env.NEXT_PUBLIC_APP_URL;
+  const base = envUrl && envUrl.startsWith('https://') ? envUrl : 'https://app.timkilroy.com';
+  return `${base}/fonts/${file}`;
+}
+
+let fontsRegistered = false;
+/** Register once per process; re-registering the same family is wasteful. */
+function ensureFonts(): void {
+  if (fontsRegistered) return;
+  Font.register({
+    family: FONT_FAMILY,
+    fonts: [
+      { src: fontSrc(FONT_FILES.regular), fontWeight: 'normal', fontStyle: 'normal' },
+      { src: fontSrc(FONT_FILES.bold), fontWeight: 'bold', fontStyle: 'normal' },
+      { src: fontSrc(FONT_FILES.italic), fontWeight: 'normal', fontStyle: 'italic' },
+    ],
+  });
+  fontsRegistered = true;
+}
+
 const styles = StyleSheet.create({
   page: {
     paddingTop: 70, paddingBottom: 56, paddingHorizontal: 60,
-    fontFamily: 'Times-Roman', fontSize: 11, lineHeight: 1.5, color: '#1a1a1a',
+    fontFamily: FONT_FAMILY, fontSize: 11, lineHeight: 1.5, color: '#1a1a1a',
   },
   header: { position: 'absolute', top: 26, left: 60, right: 60, flexDirection: 'row', justifyContent: 'flex-start' },
   logo: { height: 24, objectFit: 'contain' },
-  h1: { fontSize: 17, fontFamily: 'Times-Bold', textAlign: 'center', textTransform: 'uppercase', letterSpacing: 1, marginTop: 4, marginBottom: 14 },
-  h2: { fontSize: 12.5, fontFamily: 'Times-Bold', marginTop: 14, marginBottom: 5 },
-  h3: { fontSize: 11.5, fontFamily: 'Times-Bold', marginTop: 11, marginBottom: 4 },
+  h1: { fontSize: 17, fontFamily: FONT_FAMILY, fontWeight: 'bold', textAlign: 'center', textTransform: 'uppercase', letterSpacing: 1, marginTop: 4, marginBottom: 14 },
+  h2: { fontSize: 12.5, fontFamily: FONT_FAMILY, fontWeight: 'bold', marginTop: 14, marginBottom: 5 },
+  h3: { fontSize: 11.5, fontFamily: FONT_FAMILY, fontWeight: 'bold', marginTop: 11, marginBottom: 4 },
   p: { marginBottom: 7, textAlign: 'justify' },
   listItem: { flexDirection: 'row', marginBottom: 4, paddingLeft: 6 },
   listMarker: { width: 18 },
   listBody: { flex: 1, textAlign: 'justify' },
-  bold: { fontFamily: 'Times-Bold' },
-  italic: { fontFamily: 'Times-Italic' },
+  bold: { fontFamily: FONT_FAMILY, fontWeight: 'bold' },
+  italic: { fontFamily: FONT_FAMILY, fontStyle: 'italic' },
   sigBlock: { marginTop: 26 },
   initialsFooter: { position: 'absolute', bottom: 30, left: 60, right: 60, fontSize: 8, color: '#666', textAlign: 'right' },
   pageNumber: { position: 'absolute', bottom: 30, left: 60, fontSize: 8, color: '#999' },
@@ -134,5 +194,8 @@ function ContractDocument({ html, logo }: { html: string; logo?: Buffer }) {
 
 /** Render merged contract HTML (+ optional logo bytes) to a PDF buffer. */
 export async function renderContractReport(html: string, logo?: Buffer): Promise<Buffer> {
+  // Must happen before render: the embedded family is what gives the PDF real
+  // glyph advances, which is what lets an e-sign provider bind text anchors.
+  ensureFonts();
   return renderToBuffer(React.createElement(ContractDocument, { html, logo }) as any);
 }

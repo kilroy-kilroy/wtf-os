@@ -37,7 +37,7 @@ export default async function CallVaultPage({
             Tim Kilroy
           </a>
           . Your calls are used to build your plan and, in anonymized and aggregated form,
-          to sharpen advice for everyone &mdash; never shared identifiably without your say-so.
+          to sharpen advice for everyone. Never shared identifiably.
         </p>
       </main>
     </div>

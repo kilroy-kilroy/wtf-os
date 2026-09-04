@@ -27,6 +27,14 @@ interface LoopsContact {
   // Custom properties for Client Portal
   enrolledProgram?: string;
   clientLoginUrl?: string;
+  /**
+   * Call Vault: 'yes' | 'no'. Duplicated onto the CONTACT because Loops can
+   * branch a workflow on contact properties but not on event properties — the
+   * event carries `ndaSigned` for template conditionals, this carries it for
+   * workflow splits. String rather than boolean so the dashboard renders it
+   * legibly in segment filters.
+   */
+  callVaultNdaSigned?: string;
 }
 
 interface LoopsEventPayload {
@@ -77,6 +85,7 @@ export async function createOrUpdateContact(contact: LoopsContact): Promise<{ su
         signupDate: contact.signupDate || new Date().toISOString(),
         enrolledProgram: contact.enrolledProgram,
         clientLoginUrl: contact.clientLoginUrl,
+        callVaultNdaSigned: contact.callVaultNdaSigned,
       }),
     });
 
@@ -954,6 +963,7 @@ export async function onCallVaultSubmitted(args: {
     subscribed: true,
     userGroup: 'call_vault_contributor',
     companyName: args.agencyName,
+    callVaultNdaSigned: args.ndaSigned ? 'yes' : 'no',
   });
 
   return sendEvent({

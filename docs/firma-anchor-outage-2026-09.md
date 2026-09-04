@@ -121,3 +121,25 @@ page. Nothing depends on them today.
 ### Still worth reporting
 
 The underlying anchor bug is unfixed on Firma's side. The repro above stands.
+
+
+## Delivering the executed document (2026-09-04)
+
+Firma sends a completion email carrying the executed PDF **by default**, even
+with `settings.send_signing_email: false`. That setting suppresses only the
+signing INVITATION. Confirmed by signing a test envelope end to end and
+receiving the executed copy.
+
+So the contributor's copy is delivered by Firma, not by us. The in-app download
+button and `/api/call-vault/nda/file` were removed: `/download` refuses
+create-and-send envelopes (see above), so that button could only ever answer
+"still being prepared".
+
+If Firma later fixes `/download`, restoring it is a revert — `syncStatus` still
+attempts `getSignedPdf` on completion, so `contracts.signed_pdf_path` will start
+populating on its own and the admin link will work without further changes.
+
+Note for anyone probing the API: **unknown `settings` keys are silently accepted**.
+`send_completion_email`, `send_completed_email`, `notify_on_completion` and
+`allow_presigning_download` all returned 201. Acceptance proves nothing about
+whether a field is real.

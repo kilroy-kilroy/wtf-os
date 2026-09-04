@@ -32,6 +32,7 @@ export const STAGES: Option[] = [
   { value: 'pitch', label: 'Pitch / presentation' },
   { value: 'proposal', label: 'Proposal review' },
   { value: 'negotiation', label: 'Negotiation / closing' },
+  { value: 'client_onboarding', label: 'Client onboarding' },
   { value: 'renewal', label: 'Renewal / expansion' },
   { value: 'other', label: 'Other' },
 ];

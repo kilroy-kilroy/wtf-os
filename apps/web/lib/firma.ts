@@ -306,6 +306,44 @@ export async function getRequest(requestId: string): Promise<FirmaRequestState> 
   return { status, signedPdf };
 }
 
+
+/**
+ * Read a signing request's authoritative status.
+ *
+ * NOT the same source as getRequest(), which reads `/download`. For envelopes
+ * created via create-and-send, `/download` answers
+ *   {"error":"no_document_available","message":"Signing request has not been
+ *    sent yet"}
+ * even when this endpoint reports {"sent":true,"finished":true} — verified
+ * 2026-09-04 against a fully signed test envelope, and it does not resolve with
+ * time. So status decisions must come from here; `/download` is only ever a way
+ * to TRY to fetch the sealed PDF.
+ */
+export async function getRequestStatus(requestId: string): Promise<ContractStatus> {
+  const res = await firmaFetch(`/signing-requests/${requestId}`);
+  const body = await res.json();
+  const st = body?.status ?? {};
+  if (st.declined) return 'declined';
+  if (st.cancelled || st.expired) return 'voided';
+  if (st.finished) return 'completed';
+  if (st.sent) return 'sent';
+  return 'draft';
+}
+
+/** Best-effort fetch of the sealed PDF. Never throws — absence is normal. */
+export async function getSignedPdf(requestId: string): Promise<Buffer | undefined> {
+  try {
+    const res = await firmaFetch(`/signing-requests/${requestId}/download`);
+    const json = await res.json();
+    if (!json?.download_url) return undefined;
+    const dl = await fetch(json.download_url);
+    if (!dl.ok) return undefined;
+    return Buffer.from(await dl.arrayBuffer());
+  } catch {
+    return undefined;
+  }
+}
+
 /** Map a Firma webhook event `type` to our status, or null if untracked. */
 export function mapFirmaStatus(eventType: string): ContractStatus | null {
   switch (eventType) {

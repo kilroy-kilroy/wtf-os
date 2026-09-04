@@ -8,7 +8,7 @@ import { renderContractPdf } from './contract-pdf';
 import { SIGNATURE_LAYOUT } from '@repo/pdf';
 import {
   createSigningRequest, createSigningRequestWithFields, countPdfPages,
-  sendSigningRequest, getRequest, shouldApplyStatus,
+  sendSigningRequest, getRequestStatus, getSignedPdf, shouldApplyStatus,
   getSigningUserIds, embeddedSigningUrl,
   type FirmaSigner, type ContractStatus,
 } from '@/lib/firma';
@@ -352,17 +352,23 @@ export async function syncStatus(contractId: string): Promise<ContractStatus> {
   if (!contract?.firma_request_id) throw new Error('contract has no Firma request');
 
   const current = contract.status as ContractStatus;
-  const state = await getRequest(contract.firma_request_id);
+  // Status comes from the request endpoint, NOT /download: for create-and-send
+  // envelopes /download claims "has not been sent yet" even once signing has
+  // finished. See getRequestStatus.
+  const status = await getRequestStatus(contract.firma_request_id);
+  const signedPdf = status === 'completed'
+    ? await getSignedPdf(contract.firma_request_id)
+    : undefined;
 
   const update: Record<string, unknown> = { updated_at: new Date().toISOString() };
-  // The /download poll can only report coarse states (in_progress -> 'sent'), so
-  // never let it regress a richer status a webhook already advanced us to.
-  if (shouldApplyStatus(current, state.status)) update.status = state.status;
+  // Never regress a richer status a webhook already advanced us to.
+  if (shouldApplyStatus(current, status)) update.status = status;
 
-  // Store the signed PDF once, on first completion.
-  if (state.status === 'completed' && state.signedPdf && !contract.signed_pdf_path) {
+  // Store the sealed PDF once, on first completion. Its absence is not an
+  // error — Firma may not expose it for this envelope shape.
+  if (status === 'completed' && signedPdf && !contract.signed_pdf_path) {
     const signedPath = `${contractId}/signed.pdf`;
-    const up = await db.storage.from(BUCKET).upload(signedPath, state.signedPdf, {
+    const up = await db.storage.from(BUCKET).upload(signedPath, signedPdf, {
       contentType: 'application/pdf', upsert: true,
     });
     if (!up.error) update.signed_pdf_path = signedPath;

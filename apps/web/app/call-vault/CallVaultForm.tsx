@@ -77,6 +77,8 @@ export default function CallVaultForm({ resumeToken }: { resumeToken: string | n
   const [sessionToken, setSessionToken] = useState<string | null>(null);
   const [profile, setProfile] = useState<ContributorProfile | null>(null);
   const [ndaSigned, setNdaSigned] = useState(false);
+  const [ndaDownloading, setNdaDownloading] = useState(false);
+  const [ndaDownloadError, setNdaDownloadError] = useState<string | null>(null);
   const [ndaOpen, setNdaOpen] = useState(false);
   const [resumeError, setResumeError] = useState<string | null>(null);
   const [existingCalls, setExistingCalls] = useState<ExistingCall[]>([]);
@@ -323,6 +325,34 @@ export default function CallVaultForm({ resumeToken }: { resumeToken: string | n
     );
   }
 
+  /**
+   * Fetch a short-lived signed URL for this contributor's executed NDA and open
+   * it. Done as a POST rather than a plain link because the session lives in a
+   * header, not a cookie — see app/api/call-vault/nda/file/route.ts.
+   */
+  async function downloadNda() {
+    if (!sessionToken) return;
+    setNdaDownloadError(null);
+    setNdaDownloading(true);
+    try {
+      const res = await fetch('/api/call-vault/nda/file', {
+        method: 'POST',
+        headers: { 'x-call-vault-session': sessionToken },
+      });
+      if (res.status === 401) {
+        handleSessionExpired();
+        return;
+      }
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Could not fetch your signed NDA');
+      window.open(data.url as string, '_blank', 'noopener,noreferrer');
+    } catch (err) {
+      setNdaDownloadError(err instanceof Error ? err.message : 'Could not fetch your signed NDA');
+    } finally {
+      setNdaDownloading(false);
+    }
+  }
+
   if (phase === 'done') {
     return (
       <ConsolePanel className="text-center">
@@ -334,6 +364,18 @@ export default function CallVaultForm({ resumeToken }: { resumeToken: string | n
           your calls. We&apos;ll put together your individualized improvement plan and follow up
           to schedule your 30-minute review call.
         </p>
+        {ndaSigned && (
+          <div className="mt-5">
+            <ConsoleButton type="button" variant="secondary" onClick={downloadNda} disabled={ndaDownloading}>
+              {ndaDownloading ? 'Preparing…' : 'Download your signed NDA'}
+            </ConsoleButton>
+            {ndaDownloadError && (
+              <p role="alert" className="mt-2 font-poppins text-xs text-[#E51B23]">
+                {ndaDownloadError}
+              </p>
+            )}
+          </div>
+        )}
       </ConsolePanel>
     );
   }
@@ -352,7 +394,24 @@ export default function CallVaultForm({ resumeToken }: { resumeToken: string | n
       <div className="flex flex-col gap-6">
         <ConsolePanel>
           {ndaSigned ? (
-            <p className="font-poppins text-sm text-[#22c55e]">NDA signed ✓ &mdash; thank you.</p>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="font-poppins text-sm text-[#22c55e]">NDA signed ✓ &mdash; thank you.</p>
+                {ndaDownloadError && (
+                  <p role="alert" className="mt-1 font-poppins text-xs text-[#E51B23]">
+                    {ndaDownloadError}
+                  </p>
+                )}
+              </div>
+              <ConsoleButton
+                type="button"
+                variant="secondary"
+                onClick={downloadNda}
+                disabled={ndaDownloading}
+              >
+                {ndaDownloading ? 'Preparing…' : 'Download your copy'}
+              </ConsoleButton>
+            </div>
           ) : (
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <p className="font-poppins text-sm text-[#B3B3B3]">

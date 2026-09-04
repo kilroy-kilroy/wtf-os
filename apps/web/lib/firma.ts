@@ -123,8 +123,8 @@ export interface FirmaFieldPlacement {
 }
 
 /**
- * Create a draft signing request placing fields by COORDINATE rather than by
- * matching {{sig_*}} text.
+ * Create an ACTIVATED signing request placing fields by COORDINATE rather than
+ * by matching {{sig_*}} text, without emailing the signer.
  *
  * Why this exists: as of 2026-09-04 Firma's anchor binder rejects everything
  * this repo renders with "no glyph advances for font <id>" — including a PDF it
@@ -171,9 +171,27 @@ export async function createSigningRequestWithFields(
     },
   ]);
 
-  const createRes = await firmaFetch('/signing-requests', {
+  // create-and-send with send_signing_email:false — NOT a plain draft.
+  //
+  // A draft's signing link is dead: app.firma.dev renders "Invalid Signing Link"
+  // until the request is activated, and `status.sent` stays false. Activation
+  // normally means Firma emails the signer, which is the one thing this whole
+  // flow exists to avoid. `send_signing_email:false` activates the link and
+  // suppresses the email, which is exactly what an embedded signer needs — they
+  // are already looking at the document.
+  //
+  // This DOES consume a Firma credit (test keys excepted). That is the honest
+  // cost of a real executed agreement, and it is charged once per envelope —
+  // which is why the caller guards against creating a second one.
+  const createRes = await firmaFetch('/signing-requests/create-and-send', {
     method: 'POST',
-    body: JSON.stringify({ document: pdf.toString('base64'), name, recipients, fields }),
+    body: JSON.stringify({
+      document: pdf.toString('base64'),
+      name,
+      recipients,
+      fields,
+      settings: { send_signing_email: false },
+    }),
   });
   const created = await createRes.json();
 

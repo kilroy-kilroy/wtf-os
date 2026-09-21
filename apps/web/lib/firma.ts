@@ -364,6 +364,22 @@ export async function getRequestStatus(requestId: string): Promise<ContractStatu
   return 'draft';
 }
 
+/**
+ * Cancel (void) a signing request.
+ *
+ * Not in Firma's docs index — confirmed by probing on 2026-09-21, see
+ * docs/firma-api-notes.md §8.3. Takes an empty body.
+ *
+ * IMPORTANT: Firma emails every signer that the request was cancelled, and no
+ * flag was found to suppress it. Voiding is therefore visible to the client —
+ * callers should say so before they do it.
+ */
+export async function cancelSigningRequest(requestId: string): Promise<{ emailsSent: number }> {
+  const res = await firmaFetch(`/signing-requests/${requestId}/cancel`, { method: 'POST' });
+  const body = await res.json().catch(() => ({}));
+  return { emailsSent: Number(body?.emails_sent ?? 0) };
+}
+
 /** Best-effort fetch of the sealed PDF. Never throws — absence is normal. */
 export async function getSignedPdf(requestId: string): Promise<Buffer | undefined> {
   try {

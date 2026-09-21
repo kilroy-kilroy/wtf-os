@@ -33,6 +33,20 @@ export default function ContractActions({ id, status }: { id: string; status: st
     finally { setBusy(null); }
   }
 
+  async function voidContract() {
+    // Firma emails every signer on cancel and gives no way to suppress it, so
+    // say that plainly before doing it rather than after.
+    if (!confirm('Void this contract at Firma?\n\nEvery signer is emailed that it was cancelled — there is no way to suppress that. The signing link stops working immediately.')) return;
+    setBusy('Voiding…'); setError(null);
+    try {
+      const res = await fetch(`/api/contracts/${id}/void`, { method: 'POST' });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'void failed');
+      router.refresh();
+    } catch (e) { setError(e instanceof Error ? e.message : 'void failed'); }
+    finally { setBusy(null); }
+  }
+
   async function remove() {
     if (!confirm('Delete this contract? This cannot be undone.')) return;
     setBusy('Deleting…'); setError(null);
@@ -57,6 +71,12 @@ export default function ContractActions({ id, status }: { id: string; status: st
           <button onClick={refresh} disabled={!!busy}
             className="px-4 py-2 rounded bg-slate-700 text-white text-sm disabled:opacity-60">
             {busy === 'Refreshing status…' ? busy : 'Refresh status'}
+          </button>
+        )}
+        {isLive && (
+          <button onClick={voidContract} disabled={!!busy}
+            className="px-4 py-2 rounded border border-red-900 text-red-300 text-sm disabled:opacity-60">
+            {busy === 'Voiding…' ? busy : 'Void'}
           </button>
         )}
         {(status === 'draft' || status === 'voided' || status === 'declined') && (

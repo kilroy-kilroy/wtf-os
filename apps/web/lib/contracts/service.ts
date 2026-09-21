@@ -9,7 +9,7 @@ import { SIGNATURE_LAYOUT, INITIALS_LAYOUT } from '@repo/pdf';
 import {
   createSigningRequest, createSigningRequestWithFields, countPdfPages,
   sendSigningRequest, getRequestStatus, getSignedPdf, shouldApplyStatus,
-  getSigningUserIds, embeddedSigningUrl,
+  getSigningUserIds, embeddedSigningUrl, cancelSigningRequest,
   type FirmaSigner, type ContractStatus,
 } from '@/lib/firma';
 
@@ -407,4 +407,48 @@ export async function syncStatus(contractId: string): Promise<ContractStatus> {
   }
   await db.from('contracts').update(update).eq('id', contractId);
   return (update.status as ContractStatus) ?? current;
+}
+
+/** States a contract can still be pulled back from. Signed ink is not one. */
+const VOIDABLE = ['sent', 'viewed', 'sending'];
+
+/**
+ * Void a live envelope at Firma and settle our row to `voided`.
+ *
+ * Refuses once anyone has signed: a part-executed agreement is a legal artefact,
+ * and cancelling it is not a decision this route should make silently. Firma
+ * emails every signer on cancel, so the UI warns before calling this.
+ *
+ * Firma is the source of truth, so it is cancelled FIRST — settling our status
+ * before the remote call would leave a row claiming `voided` while the client
+ * still holds a signable link.
+ */
+export async function voidContract(contractId: string): Promise<{ emailsSent: number }> {
+  const db = getSupabaseServerClient();
+
+  const { data: contract } = await db
+    .from('contracts').select('id, status, firma_request_id').eq('id', contractId).single();
+  if (!contract) throw new Error('contract not found');
+  if (!contract.firma_request_id) throw new Error('contract has no Firma envelope to void');
+  if (!VOIDABLE.includes(contract.status)) {
+    throw new Error(`Cannot void a contract in '${contract.status}' state`);
+  }
+
+  // Signed-but-not-finished is exactly the case a status check can miss, so ask
+  // Firma rather than trusting our own last-synced value.
+  const live = await getRequestStatus(contract.firma_request_id);
+  if (live === 'completed' || live === 'signed') {
+    throw new Error(`Cannot void — Firma reports this contract is already '${live}'`);
+  }
+  if (live === 'voided') {
+    await db.from('contracts')
+      .update({ status: 'voided', updated_at: new Date().toISOString() }).eq('id', contractId);
+    return { emailsSent: 0 };
+  }
+
+  const { emailsSent } = await cancelSigningRequest(contract.firma_request_id);
+
+  await db.from('contracts')
+    .update({ status: 'voided', updated_at: new Date().toISOString() }).eq('id', contractId);
+  return { emailsSent };
 }

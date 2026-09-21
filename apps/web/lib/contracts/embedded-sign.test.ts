@@ -31,7 +31,11 @@ vi.mock('@repo/pdf', () => ({
   },
 }));
 
-vi.mock('@/lib/contracts/template-engine', () => ({
+// Only the merge is stubbed, to keep the NDA fixture small. The SOW-destination
+// guard runs for real — stubbing it would hide a regression in the very path it
+// protects.
+vi.mock('@/lib/contracts/template-engine', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/contracts/template-engine')>()),
   combineMergedHtml: vi.fn().mockReturnValue('<p>NDA body {{sig_client}}</p>'),
 }));
 

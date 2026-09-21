@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { hasSowSlot } from '@/lib/contracts/template-engine';
 
 type Variable = { key: string; label: string; required?: boolean };
 type Template = { id: string; name: string; variables: Variable[]; body_html: string };
@@ -49,6 +50,26 @@ export default function NewContractForm({ templates, snippets }: { templates: Te
   const template = useMemo(() => templates.find((t) => t.id === templateId), [templates, templateId]);
   const sowTemplate = useMemo(() => templates.find((t) => t.id === sowTemplateId), [templates, sowTemplateId]);
 
+  // SOW scope only reaches the client through a {{sow}} slot, and not every
+  // document has one — the MSA is an umbrella agreement, Agency Studio Plus is
+  // fixed. Without a host, everything written in step 3 merges into nothing.
+  const sowSlotHost = useMemo(
+    () => [template, sowTemplate].find((t) => hasSowSlot(t?.body_html)),
+    [template, sowTemplate],
+  );
+
+  // Two ways the scope gets silently dropped, and the one-line cure for each.
+  const sowBlocker = useMemo(() => {
+    const hasScope = particulars.trim().length > 0 || sowHtml.trim().length > 0;
+    if (!sowSlotHost && hasScope) {
+      return 'None of the selected documents has a Statement of Work section, so the scope in step 3 would not appear in the signed contract. Attach the "Statement of Work" template in step 1, or clear the scope.';
+    }
+    if (sowSlotHost && particulars.trim() && !sowHtml.trim()) {
+      return 'Particulars are the prompt for the AI draft, not contract text. Click "Draft with AI" (or paste SOW HTML below) so the scope actually lands in the contract.';
+    }
+    return null;
+  }, [sowSlotHost, particulars, sowHtml]);
+
   // Fields the form asks for = union of both documents' variables, de-duped by key.
   const allVars = useMemo(() => {
     const seen = new Set<string>();
@@ -78,6 +99,9 @@ export default function NewContractForm({ templates, snippets }: { templates: Te
   function addSnippet(s: Snippet) { setSowHtml((prev) => `${prev}\n${s.body_html}`); }
 
   async function saveAndSend(send: boolean) {
+    // Sending creates the envelope AND emails the client, so a dropped SOW
+    // cannot be taken back. Saving a draft stays available.
+    if (send && sowBlocker) { setError(sowBlocker); return; }
     setBusy(send ? 'Generating & sending…' : 'Saving…'); setError(null);
     try {
       const titleBits = [template?.name, sowTemplate?.name].filter(Boolean).join(' + ');
@@ -195,6 +219,12 @@ export default function NewContractForm({ templates, snippets }: { templates: Te
         {(template || sowTemplate) && (
           <section className="space-y-2">
             <label className="text-sm text-slate-300 font-medium">3. Statement of Work scope</label>
+            {sowBlocker && (
+              <p className="text-xs text-amber-200 bg-amber-950/50 border border-amber-800/60 rounded px-3 py-2">
+                {sowBlocker}
+              </p>
+            )}
+            <p className="text-xs text-slate-500">Prompt for the AI draft — not contract text.</p>
             <textarea placeholder="Rough particulars: deliverables, timeline, price…" value={particulars}
               onChange={(e) => setParticulars(e.target.value)} rows={4}
               className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white text-sm" />
@@ -206,6 +236,10 @@ export default function NewContractForm({ templates, snippets }: { templates: Te
                   className="px-2 py-1 rounded bg-slate-800 text-slate-300 text-xs">+ {s.label}</button>
               ))}
             </div>
+            <p className="text-xs text-slate-500 pt-1">
+              This is the SOW that goes into the contract
+              {sowSlotHost ? <> — it fills the <code>{'{{sow}}'}</code> slot in <strong>{sowSlotHost.name}</strong>.</> : '.'}
+            </p>
             <textarea value={sowHtml} onChange={(e) => setSowHtml(e.target.value)} rows={8}
               className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white text-xs font-mono"
               placeholder="Generated SOW HTML fills the {{sow}} slot of the attached Statement of Work." />
@@ -217,8 +251,9 @@ export default function NewContractForm({ templates, snippets }: { templates: Te
           <div className="flex gap-2">
             <button type="button" onClick={() => saveAndSend(false)} disabled={!!busy}
               className="px-4 py-2 rounded bg-slate-700 text-white text-sm">Save draft</button>
-            <button type="button" onClick={() => saveAndSend(true)} disabled={!!busy}
-              className="px-4 py-2 rounded bg-[#E51B23] text-white text-sm">{busy ?? 'Generate & Send'}</button>
+            <button type="button" onClick={() => saveAndSend(true)} disabled={!!busy || !!sowBlocker}
+              title={sowBlocker ?? undefined}
+              className="px-4 py-2 rounded bg-[#E51B23] text-white text-sm disabled:opacity-50">{busy ?? 'Generate & Send'}</button>
           </div>
         )}
       </div>

@@ -3,7 +3,7 @@
 // Orchestration: DB + merge engine + PDF + Firma. Server-side only.
 
 import { getSupabaseServerClient } from '@/lib/supabase-server';
-import { combineMergedHtml } from './template-engine';
+import { combineMergedHtml, assertSowHasDestination } from './template-engine';
 import { renderContractPdf } from './contract-pdf';
 import { SIGNATURE_LAYOUT } from '@repo/pdf';
 import {
@@ -110,6 +110,12 @@ export async function generateAndSend(contractId: string): Promise<void> {
       .from('contract_signers').select('*').eq('contract_id', contractId).order('sign_order');
     if (!signers?.length) throw new Error('no signers');
 
+    // Refuse to email a contract whose Statement of Work would merge into
+    // nothing. This is the last gate before an envelope is created and the
+    // client is notified, so it throws rather than warns — the catch below
+    // rolls the contract back to draft with the reason in `last_error`.
+    assertSowHasDestination(template.body_html, sowBody, claimed.sow_html);
+
     const mergedHtml = combineMergedHtml(template.body_html, sowBody, claimed.field_values, claimed.sow_html);
 
     // Both parties sign a contract, so the signature page carries two live slots.
@@ -206,11 +212,24 @@ export async function generateForEmbeddedSign(
         .from('contract_templates').select('body_html').eq('id', claimed.template_id).single();
       if (!template) throw new Error('template not found');
 
+      // Honour an attached SOW here too. The Call Vault NDA never has one, but
+      // hardcoding null meant any other caller of this path would silently ship
+      // a contract missing its schedule — the same failure generateAndSend hit.
+      let sowBody: string | null = null;
+      if (claimed.sow_template_id) {
+        const { data: sowTpl } = await db
+          .from('contract_templates').select('body_html').eq('id', claimed.sow_template_id).single();
+        if (!sowTpl) throw new Error('attached SOW template not found');
+        sowBody = sowTpl.body_html;
+      }
+
       const { data: signers } = await db
         .from('contract_signers').select('*').eq('contract_id', contractId).order('sign_order');
       if (!signers?.length) throw new Error('no signers');
 
-      const mergedHtml = combineMergedHtml(template.body_html, null, claimed.field_values, claimed.sow_html);
+      assertSowHasDestination(template.body_html, sowBody, claimed.sow_html);
+
+      const mergedHtml = combineMergedHtml(template.body_html, sowBody, claimed.field_values, claimed.sow_html);
 
       const firmaSigners: FirmaSigner[] = signers.map((s) => ({
         role: s.role as 'client' | 'counter', name: s.name, email: s.email, order: s.sign_order,

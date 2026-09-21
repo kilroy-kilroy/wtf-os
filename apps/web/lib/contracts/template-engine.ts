@@ -14,6 +14,9 @@ export const INITIAL_ANCHORS = ['init_client', 'init_counter'] as const;
 const RESERVED = new Set<string>(['sow', ...SIGNATURE_ANCHORS, ...INITIAL_ANCHORS]);
 
 const PLACEHOLDER = /\{\{\s*([a-z0-9_]+)\s*\}\}/gi;
+// Non-global twin of the {{sow}} match: `PLACEHOLDER` is /g and therefore
+// carries `lastIndex` between calls, which makes it unsafe for a bare test().
+const SOW_SLOT = /\{\{\s*sow\s*\}\}/i;
 
 function escapeHtml(value: string): string {
   return value
@@ -75,4 +78,32 @@ export function combineMergedHtml(
   if (!sowBody) return base;
   const sow = merge(sowBody, fieldValues, sowHtml);
   return `${base}<div class="page-break"></div>${sow}`;
+}
+
+/** True when a template body carries the {{sow}} slot that SOW content fills. */
+export function hasSowSlot(bodyHtml: string | null | undefined): boolean {
+  return !!bodyHtml && SOW_SLOT.test(bodyHtml);
+}
+
+/**
+ * SOW scope only reaches the client through a {{sow}} slot. Not every document
+ * has one — the MSA is an umbrella agreement and the Agency Studio Plus SOW is
+ * fixed — so scope written against them merges into nothing and the client is
+ * emailed a contract missing the very thing it was supposed to carry.
+ *
+ * `merge` already throws on a missing field value; this is the mirror case,
+ * a value with no field to land in. Callers must refuse to send.
+ */
+export function assertSowHasDestination(
+  baseBody: string | null | undefined,
+  sowBody: string | null | undefined,
+  sowHtml: string | null | undefined,
+): void {
+  if (!sowHtml?.trim()) return;
+  if (hasSowSlot(baseBody) || hasSowSlot(sowBody)) return;
+  throw new Error(
+    'Cannot render contract — a Statement of Work was written but neither selected ' +
+    'document has a {{sow}} section to put it in, so it would be dropped silently. ' +
+    'Attach a Statement of Work template, or clear the scope.',
+  );
 }

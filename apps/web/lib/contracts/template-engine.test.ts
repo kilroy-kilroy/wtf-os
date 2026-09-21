@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { merge, extractVariables, combineMergedHtml, SIGNATURE_ANCHORS } from './template-engine';
+import {
+  merge, extractVariables, combineMergedHtml, SIGNATURE_ANCHORS,
+  hasSowSlot, assertSowHasDestination,
+} from './template-engine';
 
 describe('combineMergedHtml', () => {
   it('returns the base only when there is no SOW body', () => {
@@ -46,5 +49,55 @@ describe('merge', () => {
   it('exposes the reserved signature anchor names', () => {
     expect(SIGNATURE_ANCHORS).toContain('sig_client');
     expect(SIGNATURE_ANCHORS).toContain('sig_counter');
+  });
+});
+
+// Regression: an MSA has no {{sow}} slot, so scope drafted against it merged
+// into nothing and the client was emailed an MSA with no Statement of Work —
+// no error, no warning. See the 2026-09-21 Link Helpers send.
+describe('assertSowHasDestination', () => {
+  const MSA = '<h1>Master Services Agreement</h1><p>{{client_company_name}}</p>';
+  const SOW = '<h2>Statement of Work</h2>{{sow}}';
+
+  it('throws when SOW scope was written but no document has a {{sow}} slot', () => {
+    expect(() => assertSowHasDestination(MSA, null, '<p>Build the thing</p>'))
+      .toThrowError(/statement of work.*dropped silently/is);
+  });
+
+  it('throws when the attached schedule is a fixed document with no slot', () => {
+    const fixed = '<h2>Agency Studio Plus</h2><p>$999/mo</p>';
+    expect(() => assertSowHasDestination(MSA, fixed, '<p>Scope</p>')).toThrowError(/dropped silently/i);
+  });
+
+  it('passes when an attached SOW template supplies the slot', () => {
+    expect(() => assertSowHasDestination(MSA, SOW, '<p>Scope</p>')).not.toThrow();
+  });
+
+  it('passes when the base document itself carries the slot', () => {
+    expect(() => assertSowHasDestination(SOW, null, '<p>Scope</p>')).not.toThrow();
+  });
+
+  it('stays quiet when there is no SOW content to lose', () => {
+    expect(() => assertSowHasDestination(MSA, null, '')).not.toThrow();
+    expect(() => assertSowHasDestination(MSA, null, '   ')).not.toThrow();
+    expect(() => assertSowHasDestination(MSA, null, null)).not.toThrow();
+  });
+});
+
+describe('hasSowSlot', () => {
+  it('detects the slot regardless of spacing or case', () => {
+    expect(hasSowSlot('a{{sow}}b')).toBe(true);
+    expect(hasSowSlot('a{{ SOW }}b')).toBe(true);
+  });
+
+  it('is false for a body without the slot, and for nothing at all', () => {
+    expect(hasSowSlot('<p>{{client_company_name}}</p>')).toBe(false);
+    expect(hasSowSlot(null)).toBe(false);
+  });
+
+  // A /g regex keeps `lastIndex` between calls, so a shared one would answer
+  // true, false, true, ... for the same input.
+  it('returns the same answer when asked repeatedly', () => {
+    expect([1, 2, 3].map(() => hasSowSlot('x{{sow}}y'))).toEqual([true, true, true]);
   });
 });

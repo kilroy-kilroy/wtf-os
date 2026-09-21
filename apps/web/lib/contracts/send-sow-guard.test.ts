@@ -29,6 +29,10 @@ vi.mock('@repo/pdf', () => ({
     client: { signature: { x: 10, y: 30, width: 34, height: 7 }, date: { x: 52, y: 30, width: 26, height: 7 } },
     counter: { signature: { x: 10, y: 58, width: 34, height: 7 }, date: { x: 52, y: 58, width: 26, height: 7 } },
   },
+  INITIALS_LAYOUT: {
+    client: { x: 81.5, y: 93.5, width: 8, height: 1.8 },
+    counter: { x: 81.5, y: 95.8, width: 8, height: 1.8 },
+  },
 }));
 
 // The real template-engine is deliberately NOT mocked — the guard under test

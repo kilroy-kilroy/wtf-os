@@ -145,6 +145,13 @@ Same body as Option A or B above but includes `send: true` or uses the dedicated
 **CONFIRMED — `type` enum** (partial list from docs):
 `signature`, `initial` / `initials`, `text`, `date`, `checkbox`, `radio_buttons` / `radio`, `dropdown`, `textarea` / `text_area`, `url`, `approval_signature`, `approval_checkmark`, `approval_date`
 
+**CONFIRMED 2026-09-21 — `initial` is the spelling the API takes.** A 7-page
+MSA + SOW was accepted with 12 `initial` fields (6 pages x 2 parties) alongside
+the 2 `signature` and 2 `date` fields; the signing UI then reported "1 of 8"
+required fields for the client, which is 6 initials + signature + date. Repeating
+the same `position` across different `page_number`s is fine — one field object
+per page is required, there is no "all pages" flag.
+
 **CONFIRMED — `position` fields:** all values are percentages 0–100, relative to the page dimensions.
 
 **CONFIRMED — deprecated fields** (still accepted but avoid): `x_postion` (sic), `y_position`, `width`, `heigh` (sic) — note the original schema contains these typos.
@@ -336,13 +343,44 @@ Authorization: <api-key>
 
 ---
 
+## 8.3 Cancelling (voiding) a signing request
+
+**CONFIRMED 2026-09-21 — not in the docs index, found by probing:**
+
+```
+POST /signing-requests/{id}/cancel
+```
+
+Empty body. Returns:
+
+```json
+{
+  "message": "Signing request cancelled successfully",
+  "signing_request_id": "…",
+  "cancelled_on": "2026-09-21T19:51:12.406Z",
+  "notify_signers": true,
+  "emails_sent": 1
+}
+```
+
+**It emails the signers.** There is no observed flag to suppress that, so a
+cancel is visible to the client — worth knowing before voiding something sent
+by mistake. Afterwards `GET /signing-requests/{id}` reports
+`status.cancelled = true` and a `timestamps.cancelled_on`, and the
+`signing_request.cancelled` webhook fires, which `mapFirmaStatus` already maps
+to our `voided`.
+
+---
+
 ## 9. Summary of UNCONFIRMED Items
 
 1. **API key prefix format** — The task brief assumed `firma_test_*` / `firma_live_*` prefixes. The docs only show `firma_api_*` as an example live key; the test key prefix was not documented. The distinction is entirely by which workspace field (`api_key` vs `test_api_key`) you use.
 
 2. **Atomic create-and-send endpoint** — Referenced in docs index as `create-and-send-signing-request-atomic` but the exact mechanism (body flag vs different path) was not confirmed from the fetched page content.
 
-3. **`offset_units` enum values** for anchor tags — Field exists; exact allowed values (e.g. `"percentage"` vs `"pixels"` vs `"points"`) not spelled out in fetched content.
+3. ~~**Initials field spelling**~~ — resolved 2026-09-21: `initial`. See §5.
+
+4. **`offset_units` enum values** for anchor tags — Field exists; exact allowed values (e.g. `"percentage"` vs `"pixels"` vs `"points"`) not spelled out in fetched content.
 
 4. **Mixing `anchor_tags` and `fields`** in the same request — Structurally expected to work (both are top-level arrays) but not explicitly confirmed by the docs.
 

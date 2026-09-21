@@ -43,5 +43,8 @@ export { htmlToPdf, htmlFileToPdf } from './html-to-pdf';
 export type { PdfOptions } from './html-to-pdf';
 
 // Contract PDF (react-pdf)
-export { renderContractReport, SIGNATURE_LAYOUT } from './contract-report';
+export {
+  renderContractReport, SIGNATURE_LAYOUT, INITIALS_LAYOUT,
+  normalizeInlineText, blankFirmaAnchors, listMarker,
+} from './contract-report';
 export type { SignaturePageSpec } from './contract-report';

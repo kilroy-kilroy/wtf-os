@@ -5,14 +5,29 @@
 // the Next server bundle throws "Minified React error #31" in production, so it
 // must run from the package, alongside the app's other working react-pdf reports.
 
+import { existsSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import { renderContractReport, type SignaturePageSpec } from '@repo/pdf';
 
 // Letterhead logo. Any file under apps/web/public/logos/ can be used — swap the
-// name here. Fetched from the app's own public URL so it doesn't need bundling.
-const LOGO_FILE = 'logo_transparent_background.png';
+// name here. The white mark is reversed out of the brand-red block drawn by the
+// renderer, which is how the executed KLRY contracts are headed.
+const LOGO_FILE = 'white_logo_transparent_background.png';
 
 /** Best-effort logo fetch; a failure must never block contract generation. */
 async function loadLogo(): Promise<Buffer | undefined> {
+  // Local first, on the same cwd probe the embedded fonts use, so scripts and
+  // dev render the letterhead without a network round trip.
+  for (const dir of [
+    join(process.cwd(), 'public', 'logos'),
+    join(process.cwd(), 'apps', 'web', 'public', 'logos'),
+  ]) {
+    const local = join(dir, LOGO_FILE);
+    if (existsSync(local)) {
+      try { return await readFile(local); } catch { /* fall through to fetch */ }
+    }
+  }
   try {
     // Only trust an https app URL; a dev 'localhost' value would fail in serverless.
     const envUrl = process.env.NEXT_PUBLIC_APP_URL;

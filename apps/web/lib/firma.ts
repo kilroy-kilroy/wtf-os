@@ -121,7 +121,23 @@ export interface FirmaFieldPlacement {
   page: number;
   /** Slot positions per signer role. A role with no entry gets no fields. */
   byRole: Partial<Record<'client' | 'counter', { signature: FirmaSlot; date: FirmaSlot }>>;
+  /**
+   * Optional per-page initials. `pages` is how many leading pages carry a drawn
+   * initials rule — the signature page is excluded, because it is signed rather
+   * than initialled — and `byRole` holds the same slots the renderer draws from.
+   */
+  initials?: {
+    pages: number;
+    byRole: Partial<Record<'client' | 'counter', FirmaSlot>>;
+  };
 }
+
+/**
+ * Firma's field type for initials. Its docs list `initial` / `initials` as a
+ * pair without saying which the API takes; `initial` is the one verified
+ * against the live test API (2026-09-21).
+ */
+const INITIAL_FIELD_TYPE = 'initial';
 
 /**
  * Create an ACTIVATED signing request, placing fields by COORDINATE rather than
@@ -187,6 +203,24 @@ export async function createSigningRequestWithFields(
       },
     ];
   });
+  // Per-page initials: one field per page, per party, at the drawn rule.
+  const initials = placement.initials;
+  if (initials) {
+    for (const s of signers) {
+      const slot = initials.byRole[s.role];
+      if (!slot) continue;
+      for (let page = 1; page <= initials.pages; page += 1) {
+        fields.push({
+          type: INITIAL_FIELD_TYPE,
+          page_number: page,
+          recipient_id: `temp_${s.role}`,
+          position: slot,
+          required: true,
+        } as (typeof fields)[number]);
+      }
+    }
+  }
+
   if (!fields.length) throw new Error('no signature fields to place');
 
   const createRes = await firmaFetch('/signing-requests/create-and-send', {

@@ -92,3 +92,93 @@ describe('getSigningUserIds', () => {
     expect(fetchMock.mock.calls[0][0]).toContain('/signing-requests/req-abc/users');
   });
 });
+
+// Per-page initials were lost in the 2026-09 anchor outage and restored as
+// coordinate fields. The count has to line up with the rules the renderer draws
+// — every page but the execution page — or a party is asked to initial a page
+// with no line on it.
+describe('createSigningRequestWithFields — per-page initials', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+  });
+
+  const SIGNERS = [
+    { role: 'client' as const, name: 'Dana Reed', email: 'dana@example.com', order: 1 },
+    { role: 'counter' as const, name: 'Tim Kilroy', email: 'tim@timkilroy.com', order: 2 },
+  ];
+  const SIG = { signature: { x: 10, y: 30, width: 34, height: 7 }, date: { x: 52, y: 30, width: 26, height: 7 } };
+  const INIT = { x: 81.5, y: 93.5, width: 8, height: 1.8 };
+
+  function stub() {
+    vi.stubEnv('FIRMA_ENV', 'test');
+    vi.stubEnv('FIRMA_API_KEY_TEST', 'firma_test_key');
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ id: 'req-1', recipients: [{ id: 'r1', order: 1 }, { id: 'r2', order: 2 }] }),
+      text: async () => '{}',
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    return fetchMock;
+  }
+
+  const bodyOf = (fetchMock: ReturnType<typeof vi.fn>) =>
+    JSON.parse((fetchMock.mock.calls[0][1] as { body: string }).body);
+
+  it('places one initial field per party on every page but the last', async () => {
+    const { createSigningRequestWithFields } = await import('@/lib/firma');
+    const fetchMock = stub();
+
+    await createSigningRequestWithFields(
+      Buffer.from('%PDF-1.4'),
+      SIGNERS,
+      { page: 5, byRole: { client: SIG, counter: SIG }, initials: { pages: 4, byRole: { client: INIT, counter: INIT } } },
+      'MSA + SOW',
+      { notify: true },
+    );
+
+    const fields = bodyOf(fetchMock).fields as Array<{ type: string; page_number: number; recipient_id: string }>;
+    const initials = fields.filter((f) => f.type === 'initial');
+
+    expect(initials).toHaveLength(8); // 4 pages x 2 parties
+    expect(initials.filter((f) => f.recipient_id === 'temp_client').map((f) => f.page_number)).toEqual([1, 2, 3, 4]);
+    expect(initials.every((f) => f.page_number !== 5)).toBe(true); // never the execution page
+    expect(fields.filter((f) => f.type === 'signature')).toHaveLength(2);
+    expect(fields.filter((f) => f.type === 'date')).toHaveLength(2);
+  });
+
+  it('asks for no initials when the caller does not want them (the embedded NDA)', async () => {
+    const { createSigningRequestWithFields } = await import('@/lib/firma');
+    const fetchMock = stub();
+
+    await createSigningRequestWithFields(
+      Buffer.from('%PDF-1.4'),
+      [SIGNERS[0]],
+      { page: 2, byRole: { client: SIG } },
+      'NDA',
+      { notify: false },
+    );
+
+    const fields = bodyOf(fetchMock).fields as Array<{ type: string }>;
+    expect(fields.some((f) => f.type === 'initial')).toBe(false);
+    expect(fields).toHaveLength(2);
+  });
+
+  it('puts the initials at exactly the coordinates it was given', async () => {
+    const { createSigningRequestWithFields } = await import('@/lib/firma');
+    const fetchMock = stub();
+
+    await createSigningRequestWithFields(
+      Buffer.from('%PDF-1.4'),
+      [SIGNERS[0]],
+      { page: 2, byRole: { client: SIG }, initials: { pages: 1, byRole: { client: INIT } } },
+      'MSA',
+      { notify: true },
+    );
+
+    const initial = (bodyOf(fetchMock).fields as Array<{ type: string; position: unknown }>)
+      .find((f) => f.type === 'initial');
+    expect(initial?.position).toEqual(INIT);
+  });
+});

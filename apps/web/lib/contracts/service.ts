@@ -5,7 +5,7 @@
 import { getSupabaseServerClient } from '@/lib/supabase-server';
 import { combineMergedHtml, assertSowHasDestination } from './template-engine';
 import { renderContractPdf } from './contract-pdf';
-import { SIGNATURE_LAYOUT } from '@repo/pdf';
+import { SIGNATURE_LAYOUT, INITIALS_LAYOUT } from '@repo/pdf';
 import {
   createSigningRequest, createSigningRequestWithFields, countPdfPages,
   sendSigningRequest, getRequestStatus, getSignedPdf, shouldApplyStatus,
@@ -142,18 +142,31 @@ export async function generateAndSend(contractId: string): Promise<void> {
 
     // Coordinate placement, not {{sig_*}} anchors — Firma's anchor binder cannot
     // read glyph advances from anything react-pdf emits. See
-    // docs/firma-anchor-outage-2026-09.md. NOTE: this also drops the per-page
-    // {{init_*}} initials, which were anchor-bound and therefore already broken;
-    // coordinate fields would need a slot per page to restore them.
+    // docs/firma-anchor-outage-2026-09.md.
     const byRole: NonNullable<Parameters<typeof createSigningRequestWithFields>[2]>['byRole'] = {};
     if (clientSigner) byRole.client = SIGNATURE_LAYOUT.client;
     if (counterSigner) byRole.counter = SIGNATURE_LAYOUT.counter;
+
+    // Per-page initials, restored as coordinate fields. Every page but the last
+    // carries a drawn rule — the last is the execution page, which is signed —
+    // so the field count has to match, or a party is asked to initial a page
+    // with no line on it.
+    const totalPages = countPdfPages(pdf);
+    const initialsByRole: NonNullable<
+      NonNullable<Parameters<typeof createSigningRequestWithFields>[2]>['initials']
+    >['byRole'] = {};
+    if (clientSigner) initialsByRole.client = INITIALS_LAYOUT.client;
+    if (counterSigner) initialsByRole.counter = INITIALS_LAYOUT.counter;
 
     // Creation activates AND emails the client in one call.
     const { requestId, signerIds } = await createSigningRequestWithFields(
       pdf,
       firmaSigners,
-      { page: countPdfPages(pdf), byRole },
+      {
+        page: totalPages,
+        byRole,
+        initials: { pages: Math.max(0, totalPages - 1), byRole: initialsByRole },
+      },
       claimed.title,
       { notify: true }, // a contract SHOULD reach the client by email
     );

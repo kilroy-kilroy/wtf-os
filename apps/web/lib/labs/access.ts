@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
@@ -7,6 +8,12 @@ import { getSubscriptionStatus } from '@/lib/subscription';
 
 export class LabError extends Error {
   constructor(public status: number, message: string) { super(message); }
+}
+const labIdentifier = z.string().trim().min(1).max(128);
+export function requiredLabId(params: URLSearchParams): string {
+  const result = labIdentifier.safeParse(params.get('id'));
+  if (!result.success) throw new LabError(400, 'A valid report ID is required.');
+  return result.data;
 }
 export const labFailure = (e: unknown) => e instanceof LabError
   ? NextResponse.json({ error: e.message }, { status: e.status }) : null;

@@ -26,3 +26,5 @@ it('escapes report HTML and retains all new sections and evidence links',()=>{
  expect(html).not.toContain('<script>');expect(html).toContain('&lt;script&gt;');expect(html).toContain('https://example.com/source');
  expect(exportMarkdown(JSON.stringify({snapTake:{tldr:'Review',analysis:'Details'},meta:{overallScore:null},scores:{discoveryDepth:0},nextSteps:{actions:['Ask about scope']}}))).toContain('Not observed');
 });
+
+it('handles long competitor headings and whitespace without regex backtracking',()=>{const source='##'+ 'competit'.repeat(20000)+'\n'+' '.repeat(100000)+'- **One**\n## NEXT\n- **Ignore**';expect(parseDiscoveryMetadata(source,'pro').competitorCount).toBe(1);});

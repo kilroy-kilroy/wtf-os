@@ -24,6 +24,7 @@ import { POST as importReport } from '@/app/api/call-lab/ingest/route';
 const post=(path:string,body:unknown)=>new NextRequest(`https://app.test${path}`,{method:'POST',body:JSON.stringify(body),headers:{'Content-Type':'application/json'}});
 beforeEach(()=>{m.user=null;m.pro=false;m.tables=[];m.model.mockReset();});
 describe('actual API authorization',()=>{
+ it('rejects missing and blank IDs before querying data',async()=>{for(const route of [getCall,getTranscript]) for(const suffix of ['', '?id=', '?id=%20']) expect((await route(new NextRequest('https://app.test/api'+suffix))).status).toBe(400);expect(m.tables).toEqual([]);});
  it('denies anonymous raw transcript and analysis reads',async()=>{for(const route of [getCall,getTranscript]) expect((await route(new NextRequest('https://app.test/api?id=report'))).status).toBe(404);});
  it('denies the wrong owner before related records',async()=>{m.user={id:'other'};expect((await getCall(new NextRequest('https://app.test/api?id=report'))).status).toBe(404);expect(m.tables).not.toContain('call_snippets');});
  it('allows the owner to read without a current paid plan',async()=>{m.user={id:'owner'};const res=await getCall(new NextRequest('https://app.test/api?id=report'));expect(res.status).toBe(200);expect((await res.json()).result.metadata.score).toBe(6);});

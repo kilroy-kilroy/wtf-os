@@ -1,3 +1,4 @@
+import { load } from 'cheerio';
 import { researchSignal, recordEvidence } from './research-context';
 import { fetchPublicHtml } from './public-web';
 /**
@@ -1715,10 +1716,18 @@ export interface WebsiteTechResult {
   raw_html_snippet: string;
 }
 
+export function publicWebsiteText(html: string): string {
+ const page = load(html);
+ page('script, style, noscript, template, iframe').remove();
+ page('br').replaceWith(' ');
+ page('p, div, section, article, li, h1, h2, h3, h4, td, th').append(' ');
+ return page('body').text().replace(/\s+/g, ' ').trim();
+}
+
 export async function researchPublicWebsite(websiteUrl: string): Promise<string | null> {
  try {
   const html = await fetchPublicHtml(websiteUrl, researchSignal());
-  const text = html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,' ').replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi,' ').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
+  const text = publicWebsiteText(html);
   recordEvidence({question:'Direct public website content',content:text.slice(0,6000),source_urls:[websiteUrl.startsWith('http') ? websiteUrl : `https://${websiteUrl}`],retrieved_at:new Date().toISOString(),status:text ? 'found' : 'unverified'});
   return html;
  } catch {

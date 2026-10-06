@@ -1,6 +1,6 @@
 import { indexedTranscript, validateCallAnalysis, groundMarkdownEvidence } from '@/lib/labs/call-analysis';
 import { negativePatterns } from '@/lib/labs/coaching-data';
-import { authorizeLab, grantGuest, reportLink, labUser, requirePro, readLabJson, limitLab, labFailure, LabError } from '@/lib/labs/access';
+import { requiredLabId, authorizeLab, grantGuest, reportLink, labUser, requirePro, readLabJson, limitLab, labFailure, LabError } from '@/lib/labs/access';
 export const maxDuration = 300; // 5 minutes - Pro analysis with 16K tokens + fallback
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -693,11 +693,7 @@ ${indexedTranscript(ingestionItem.raw_content)}`;
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const callScoreId = searchParams.get('id');
-
-    if (!callScoreId) {
-      return NextResponse.json({ error: 'Missing id parameter' }, { status: 400 });
-    }
+    const callScoreId = requiredLabId(searchParams);
 
     const supabase = createServerClient();
 

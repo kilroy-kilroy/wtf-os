@@ -1,4 +1,4 @@
-import { authorizeLab, grantGuest, reportLink, labUser, requirePro, readLabJson, limitLab, labFailure, LabError } from '@/lib/labs/access';
+import { requiredLabId, authorizeLab, grantGuest, reportLink, labUser, requirePro, readLabJson, limitLab, labFailure, LabError } from '@/lib/labs/access';
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@repo/db/client';
 import {
@@ -126,11 +126,7 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const itemId = searchParams.get('id');
-
-    if (!itemId) {
-      return NextResponse.json({ error: 'Missing id parameter' }, { status: 400 });
-    }
+    const itemId = requiredLabId(searchParams);
 
     const supabase = createServerClient();
 

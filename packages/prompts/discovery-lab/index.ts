@@ -396,11 +396,17 @@ export function parseDiscoveryMetadata(
     metadata.hookCount = hookMatches.length;
   }
 
-  // Count competitors - look for competitor sections
-  const competitorSection = markdown.match(/##[^\n]*COMPETIT[^\n]*\n([\s\S]*?)(?=\n##|$)/i)?.[1] || '';
-  const competitorMatches = competitorSection.match(/(?:^|\n)\s*-?\s*\*\*[^*]+\*\*/g);
-  if (competitorMatches) {
-    metadata.competitorCount = competitorMatches.length;
+  // Scan once by line: avoid overlapping unbounded regex searches on model output.
+  let inCompetitors = false;
+  for (const rawLine of markdown.split('\n')) {
+    let line = rawLine.trim();
+    if (line.startsWith('##')) {
+      inCompetitors = line.toUpperCase().includes('COMPETIT');
+      continue;
+    }
+    if (!inCompetitors) continue;
+    if (line.startsWith('-')) line = line.slice(1).trimStart();
+    if (line.startsWith('**') && line.indexOf('**', 2) > 2) metadata.competitorCount++;
   }
 
   return metadata;

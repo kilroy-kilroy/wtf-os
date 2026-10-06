@@ -1,4 +1,4 @@
-import { authorizeLab, grantGuest, reportLink, readLabJson, limitLab, sameOrigin, labFailure, LabError } from '@/lib/labs/access';
+import { requiredLabId, authorizeLab, grantGuest, reportLink, readLabJson, limitLab, sameOrigin, labFailure, LabError } from '@/lib/labs/access';
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@repo/db/client';
 import { getInstantReportById, incrementReportViews } from '@repo/db';
@@ -6,14 +6,7 @@ import { getInstantReportById, incrementReportViews } from '@repo/db';
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const reportId = searchParams.get('id');
-
-    if (!reportId) {
-      return NextResponse.json(
-        { error: 'Report ID required' },
-        { status: 400 }
-      );
-    }
+    const reportId = requiredLabId(searchParams);
 
     const supabase = createServerClient();
 

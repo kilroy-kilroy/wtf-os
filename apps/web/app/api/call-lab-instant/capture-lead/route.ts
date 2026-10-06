@@ -1,3 +1,4 @@
+import { authorizeLab, grantGuest, reportLink, readLabJson, limitLab, sameOrigin, labFailure, LabError } from '@/lib/labs/access';
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@repo/db/client';
 import {
@@ -14,7 +15,8 @@ import { trackEmailCaptured, trackReportGenerated } from '@/lib/analytics';
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    const body = await readLabJson(request, 4000);
+    await limitLab(request, 'instant-email');
     const { email, reportId, firstName } = body;
 
     // Validate email
@@ -44,6 +46,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    await authorizeLab('instant', reportId, null, undefined);
+
     // Update report with email
     await updateInstantReportEmail(supabase, reportId, email);
 
@@ -62,7 +66,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Add to Beehiiv newsletter (fire-and-forget, update DB on success)
-    addCallLabSubscriber(email, firstName)
+    if (body.newsletter_opt_in === true) addCallLabSubscriber(email, firstName)
       .then((result) => {
         if (result.success && result.id) {
           updateLeadBeehiivSync(supabase, email, result.id).catch(() => {});
@@ -72,7 +76,7 @@ export async function POST(request: NextRequest) {
 
     // Generate URLs
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.timkilroy.com';
-    const reportUrl = `${appUrl}/call-lab-instant/report/${reportId}`;
+    const reportUrl = await reportLink('instant', reportId, `${appUrl}/call-lab-instant/report/${reportId}`, true);
 
     // Copper CRM: create lead + Call Lab Pro opportunity (fire-and-forget)
     copperSyncLead({
@@ -109,12 +113,13 @@ export async function POST(request: NextRequest) {
       isNewLead: isNew,
     });
   } catch (error) {
+    const failure = labFailure(error); if (failure) return failure;
     console.error('Capture lead error:', error);
 
     return NextResponse.json(
       {
         error: 'Failed to save email',
-        details: error instanceof Error ? error.message : 'Unknown error',
+
       },
       { status: 500 }
     );

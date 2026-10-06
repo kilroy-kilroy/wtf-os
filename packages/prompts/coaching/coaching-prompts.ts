@@ -1,3 +1,4 @@
+import { CALL_ANALYSIS_RULES } from '../call-lab/analysis-rules';
 // Coaching System Prompts for Weekly/Monthly/Quarterly Reports
 // These generate personalized coaching reports based on call analysis data
 
@@ -6,16 +7,17 @@ export type ReportType = 'weekly' | 'monthly' | 'quarterly';
 export interface CallData {
   date: string;
   prospect: string;
-  duration_minutes: number;
+  duration_minutes: number | null;
+  overall?: number | null;
   outcome: 'won' | 'lost' | 'ghosted' | 'next_step' | 'unknown';
   scores: {
-    opening: number;
-    discovery: number;
-    diagnostic: number;
-    value_articulation: number;
-    objection_navigation: number;
-    commitment: number;
-    human_first: number;
+    opening: number | null;
+    discovery: number | null;
+    diagnostic: number | null;
+    value_articulation: number | null;
+    objection_navigation: number | null;
+    commitment: number | null;
+    human_first: number | null;
   };
   patterns_detected: string[];
   key_moments: string[];
@@ -94,13 +96,13 @@ This positions other frameworks as validation, not standards.
 ## CONSTRAINTS
 
 - No em dashes. Use hyphens or double hyphens.
-- No hedging. No "it seems" or "it appears." Be definitive.
+- Distinguish observation from interpretation; state uncertainty.
 - No apologies. Just state what happened.
 - Be concise but thorough for the report type.
 - Prioritize actionable insight over general praise.
 - Always include pattern names. They are branded IP.
 - Maintain the "truth-teller rooting for you" tone.
-- One harsh truth per report. Not mean. Just honest.
+- Do not invent a problem to fill a section.
 - Evidence quotes stand alone. Don't add "This shows..."
 - Small steps, not homework. Micro-actions only.
 
@@ -198,7 +200,10 @@ Do NOT invent correlations. If there aren't enough calls to see a pattern, say s
 - human_first_trendline: Full psychological profile
 - wrap_up: Future-oriented mentor voice, belief combined with challenge (4-5 sentences)
 
-BEGIN.`;
+BEGIN.
+${CALL_ANALYSIS_RULES}
+Null means unobserved, not poor performance. Only claim change for comparable measured dimensions. No causal claims about revenue from a small call sample. Prior focus is a question to check, not assumed progress. If there is insufficient evidence to judge it, say so.
+`;
 
 export const buildCoachingUserPrompt = (input: CoachingReportInput): string => {
   const periodLabel = input.review_type === 'weekly'
@@ -214,13 +219,13 @@ Call ${i + 1}:
 - Duration: ${call.duration_minutes} minutes
 - Outcome: ${call.outcome}
 - Scores:
-  - Opening: ${call.scores.opening}/10
-  - Discovery: ${call.scores.discovery}/10
-  - Diagnostic: ${call.scores.diagnostic}/10
-  - Value Articulation: ${call.scores.value_articulation}/10
-  - Objection Navigation: ${call.scores.objection_navigation}/10
-  - Commitment: ${call.scores.commitment}/10
-  - Human-First: ${call.scores.human_first}/10
+  - Opening: ${call.scores.opening === null ? "Not observed" : `${call.scores.opening}/10`}
+  - Discovery: ${call.scores.discovery === null ? "Not observed" : `${call.scores.discovery}/10`}
+  - Diagnostic: ${call.scores.diagnostic === null ? "Not observed" : `${call.scores.diagnostic}/10`}
+  - Value Articulation: ${call.scores.value_articulation === null ? "Not observed" : `${call.scores.value_articulation}/10`}
+  - Objection Navigation: ${call.scores.objection_navigation === null ? "Not observed" : `${call.scores.objection_navigation}/10`}
+  - Commitment: ${call.scores.commitment === null ? "Not observed" : `${call.scores.commitment}/10`}
+  - Human-First: ${call.scores.human_first === null ? "Not observed" : `${call.scores.human_first}/10`}
 - Patterns Detected: ${call.patterns_detected.join(', ') || 'None'}
 - Key Moments: ${call.key_moments.join('; ') || 'None recorded'}
 `).join('\n');
@@ -242,78 +247,27 @@ ${callSummaries}
 Generate the coaching report as a JSON object following the structure defined in the system prompt. Tailor the depth and tone to the ${input.review_type} cadence.`;
 };
 
-// Score aggregation helper
+// Missing measurements remain null; counts expose the denominator.
 export interface AggregatedScores {
-  overall: number;
-  opening: number;
-  discovery: number;
-  diagnostic: number;
-  value_articulation: number;
-  objection_navigation: number;
-  commitment: number;
-  human_first: number;
-  trust_velocity: number;
-  agenda_control: number;
-  pattern_density: number;
+ overall: number | null; opening: number | null; discovery: number | null;
+ diagnostic: number | null; value_articulation: number | null;
+ objection_navigation: number | null; commitment: number | null;
+ human_first: number | null; trust_velocity: null; agenda_control: null;
+ pattern_density: number | null;
+ sample_counts: Record<string, number>;
 }
-
 export function aggregateCallScores(calls: CallData[]): AggregatedScores {
-  if (calls.length === 0) {
-    return {
-      overall: 0,
-      opening: 0,
-      discovery: 0,
-      diagnostic: 0,
-      value_articulation: 0,
-      objection_navigation: 0,
-      commitment: 0,
-      human_first: 0,
-      trust_velocity: 0,
-      agenda_control: 0,
-      pattern_density: 0,
-    };
-  }
-
-  const avg = (values: number[]) => values.reduce((a, b) => a + b, 0) / values.length;
-
-  const opening = avg(calls.map(c => c.scores.opening));
-  const discovery = avg(calls.map(c => c.scores.discovery));
-  const diagnostic = avg(calls.map(c => c.scores.diagnostic));
-  const value_articulation = avg(calls.map(c => c.scores.value_articulation));
-  const objection_navigation = avg(calls.map(c => c.scores.objection_navigation));
-  const commitment = avg(calls.map(c => c.scores.commitment));
-  const human_first = avg(calls.map(c => c.scores.human_first));
-
-  const overall = (opening + discovery + diagnostic + value_articulation +
-                   objection_navigation + commitment + human_first) / 7;
-
-  // Derive dashboard metrics from scores
-  const trust_velocity = (human_first + diagnostic) * 5; // Scale to 0-100
-  const agenda_control = (opening + commitment) * 5;
-
-  // Pattern density based on risk patterns detected
-  const riskPatterns = ['Advice Avalanche', 'Soft Close Fade', 'Hourly Rate Trap',
-                        'Generosity Trap', 'Interrogation Spiral', 'Scenic Route',
-                        'Generous Professor'];
-  const totalRiskPatterns = calls.reduce((count, call) =>
-    count + call.patterns_detected.filter(p =>
-      riskPatterns.some(rp => p.toLowerCase().includes(rp.toLowerCase()))
-    ).length, 0);
-  const pattern_density = Math.min(100, (totalRiskPatterns / calls.length) * 20);
-
-  return {
-    overall: Math.round(overall * 10) / 10,
-    opening: Math.round(opening * 10) / 10,
-    discovery: Math.round(discovery * 10) / 10,
-    diagnostic: Math.round(diagnostic * 10) / 10,
-    value_articulation: Math.round(value_articulation * 10) / 10,
-    objection_navigation: Math.round(objection_navigation * 10) / 10,
-    commitment: Math.round(commitment * 10) / 10,
-    human_first: Math.round(human_first * 10) / 10,
-    trust_velocity: Math.round(trust_velocity),
-    agenda_control: Math.round(agenda_control),
-    pattern_density: Math.round(pattern_density),
-  };
+ const mean = (xs: (number | null | undefined)[]) => {
+  const ns = xs.filter((n): n is number => typeof n === 'number' && Number.isFinite(n));
+  return ns.length ? Math.round(ns.reduce((a,b)=>a+b,0)/ns.length*10)/10 : null;
+ };
+ const keys = ['opening','discovery','diagnostic','value_articulation','objection_navigation','commitment','human_first'] as const;
+ const values = Object.fromEntries(keys.map(k=>[k,mean(calls.map(c=>c.scores[k]))]));
+ return {
+  ...values, overall:mean(calls.map(c=>c.overall)), trust_velocity:null, agenda_control:null,
+  pattern_density:calls.length ? Math.round(calls.filter(c=>c.patterns_detected.length>0).length/calls.length*100) : null,
+  sample_counts:Object.fromEntries(keys.map(k=>[k,calls.filter(c=>typeof c.scores[k]==='number').length])),
+ } as AggregatedScores;
 }
 
 // Email templates

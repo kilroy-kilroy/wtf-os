@@ -12,6 +12,7 @@ import {
 } from '@/components/console';
 
 interface DiscoveryResult {
+  reportId: string;
   markdown: string;
   metadata: {
     questionCount: number;
@@ -55,6 +56,7 @@ export default function DiscoveryLabProCreatePage() {
     requestor_email: '',
     requestor_company: '',
     service_offered: '',
+    meeting_context: '',
     // Target info
     target_company: '',
     target_website: '',
@@ -215,6 +217,7 @@ export default function DiscoveryLabProCreatePage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          reportId: result.reportId,
           result: result.markdown,
           metadata: pdfMetadata,
         }),
@@ -242,7 +245,8 @@ export default function DiscoveryLabProCreatePage() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            result: result.markdown,
+            reportId: result.reportId,
+          result: result.markdown,
             metadata: pdfMetadata,
             format: 'html',
           }),
@@ -394,6 +398,9 @@ export default function DiscoveryLabProCreatePage() {
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-8">
+            <label className="block text-sm text-white mb-4">Why are you meeting, and what must you learn? (optional)
+              <textarea className="block w-full bg-[#111] border border-[#444] p-3 mt-2" value={formData.meeting_context} onChange={e=>setFormData({...formData,meeting_context:e.target.value})} maxLength={3000} placeholder="How the meeting came about, what they have said, and the next step you hope to agree." />
+            </label>
                 {/* Your Info - Editable */}
                 <div className="space-y-4">
                   <ConsoleHeading level={3} variant="yellow">

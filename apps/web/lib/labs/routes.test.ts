@@ -1,0 +1,34 @@
+import { beforeEach, describe,it,expect,vi } from 'vitest';
+import { NextRequest } from 'next/server';
+const m=vi.hoisted(()=>({user:null as any,pro:false,model:vi.fn(),tables:[] as string[],row:{id:'report',user_id:'owner',markdown_response:'**Score:** 6/10',version:'lite'}}));
+vi.mock('next/headers',()=>({cookies:async()=>({get:()=>null,set:vi.fn()})}));
+vi.mock('@/lib/supabase-auth-server',()=>({createClient:async()=>({auth:{getUser:async()=>({data:{user:m.user}})}})}));
+vi.mock('@/lib/subscription',()=>({getSubscriptionStatus:async()=>({hasCallLabPro:m.pro,hasDiscoveryLabPro:m.pro})}));
+vi.mock('@repo/db/client',()=>({createServerClient:()=>({rpc:async()=>({data:true}),from:(table:string)=>{
+ m.tables.push(table);const q:any={select:()=>q,eq:()=>q,order:()=>q,limit:()=>q,single:async()=>({data:m.row}),maybeSingle:async()=>({data:m.row})};return q;
+}})}));
+vi.mock('@repo/db',()=>({getIngestionItem:async()=>({id:'ingestion',user_id:'owner',raw_content:'Private transcript'}),claimIngestionItem:vi.fn(),updateIngestionItemStatus:vi.fn(),createCallScore:vi.fn(),createCallSnippets:vi.fn(),createFollowUpTemplates:vi.fn(),updateToolRun:vi.fn(),findOrCreateUser:vi.fn(),findOrCreateAgency:vi.fn(),assignUserToAgency:vi.fn(),createIngestionItem:vi.fn(),createToolRun:vi.fn()}));
+vi.mock('@repo/utils',()=>({runModel:m.model,parseModelJSON:vi.fn(),retryWithBackoff:vi.fn(),normalizeTranscript:vi.fn(),getTranscriptStats:vi.fn(),collectResearch:vi.fn(),researchPublicWebsite:vi.fn(),enrichContactWithInstantly:vi.fn(),fetchCompanyNews:vi.fn(),runV2DiscoveryResearch:vi.fn(),BRIGHTDATA_AUTH_FAILED_PREFIX:'test'}));
+vi.mock('@repo/utils/research',()=>({researchPublicWebsite:vi.fn(),enrichContactWithInstantly:vi.fn(),fetchCompanyNews:vi.fn(),runV2DiscoveryResearch:vi.fn(),BRIGHTDATA_AUTH_FAILED_PREFIX:'test'}));
+vi.mock('@repo/utils/research-context',()=>({collectResearch:vi.fn()}));
+vi.mock('@/lib/loops',()=>({onReportGenerated:vi.fn(),onDiscoveryReportGenerated:vi.fn()}));
+vi.mock('@/lib/beehiiv',()=>({addCallLabSubscriber:vi.fn(),addDiscoveryLabSubscriber:vi.fn()}));
+vi.mock('@/lib/growth-quadrant',()=>({getArchetypeForLoops:vi.fn()}));
+vi.mock('@/lib/copper',()=>({copperLogReport:vi.fn(),copperSyncLead:vi.fn(),PRO_ACV:1,COPPER_STAGES:{LEAD:1}}));
+vi.mock('@/lib/slack',()=>({alertReportGenerated:vi.fn(),alertBrightDataAuthExpired:vi.fn()}));
+vi.mock('@/lib/timeline/emit-assessment',()=>({emitAssessmentEvent:vi.fn()}));
+import { GET as getCall, POST as analyzeCall } from '@/app/api/analyze/call/route';
+import { GET as getTranscript } from '@/app/api/ingest/transcript/route';
+import { POST as analyzeDiscovery } from '@/app/api/analyze/discovery/route';
+import { POST as importReport } from '@/app/api/call-lab/ingest/route';
+const post=(path:string,body:unknown)=>new NextRequest(`https://app.test${path}`,{method:'POST',body:JSON.stringify(body),headers:{'Content-Type':'application/json'}});
+beforeEach(()=>{m.user=null;m.pro=false;m.tables=[];m.model.mockReset();});
+describe('actual API authorization',()=>{
+ it('rejects missing and blank IDs before querying data',async()=>{for(const route of [getCall,getTranscript]) for(const suffix of ['', '?id=', '?id=%20']) expect((await route(new NextRequest('https://app.test/api'+suffix))).status).toBe(400);expect(m.tables).toEqual([]);});
+ it('denies anonymous raw transcript and analysis reads',async()=>{for(const route of [getCall,getTranscript]) expect((await route(new NextRequest('https://app.test/api?id=report'))).status).toBe(404);});
+ it('denies the wrong owner before related records',async()=>{m.user={id:'other'};expect((await getCall(new NextRequest('https://app.test/api?id=report'))).status).toBe(404);expect(m.tables).not.toContain('call_snippets');});
+ it('allows the owner to read without a current paid plan',async()=>{m.user={id:'owner'};const res=await getCall(new NextRequest('https://app.test/api?id=report'));expect(res.status).toBe(200);expect((await res.json()).result.metadata.score).toBe(6);});
+ it('cannot analyze another owner transcript',async()=>{m.user={id:'other'};expect((await analyzeCall(post('/api/analyze/call',{ingestion_item_id:'ingestion'}))).status).toBe(404);expect(m.model).not.toHaveBeenCalled();});
+ it('rejects Pro before spending on research or models',async()=>{m.user={id:'owner',email:'owner@example.com'};expect((await analyzeCall(post('/api/analyze/call',{ingestion_item_id:'ingestion',version:'pro'}))).status).toBe(403);expect((await analyzeDiscovery(post('/api/analyze/discovery',{version:'pro',requestor_name:'Owner',requestor_email:'owner@example.com',service_offered:'Consulting',target_company:'Example'}))).status).toBe(403);expect(m.model).not.toHaveBeenCalled();});
+ it('retires arbitrary imports',async()=>expect((await importReport()).status).toBe(410));
+});

@@ -46,6 +46,7 @@ export type QuickInsights = {
 
 export type DashboardMetrics = {
   callsLast30: number;
+  hasBaseline: boolean;
   trustVelocityDelta: number;
   agendaStability: number;
   patternDensity: number;

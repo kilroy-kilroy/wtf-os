@@ -4,15 +4,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { waitUntil } from '@vercel/functions';
 import { z } from 'zod';
 import { createServerClient } from '@repo/db/client';
-import {
-  scoreBizDevAssessment,
-  researchLinkedInProfile,
-  researchLinkedInPosts,
-  scrapeCompanyWebsite,
-  runModel,
-  retryWithBackoff,
-  type AssessmentAnswers,
-} from '@repo/utils';
+import { scoreBizDevAssessment, runModel, retryWithBackoff, type AssessmentAnswers } from '@repo/utils';
+import { researchLinkedInProfile, researchLinkedInPosts, scrapeCompanyWebsite } from '@repo/utils/research';
 
 // Inlined here because BRIGHTDATA_AUTH_FAILED_PREFIX is not exported from
 // @repo/utils on this branch (it lives in unmerged WIP). Match the literal

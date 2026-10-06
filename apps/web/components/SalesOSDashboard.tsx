@@ -113,7 +113,7 @@ export function SalesOSDashboard({ userName, userEmail, data }: Props) {
           <TrendMetricCard
             label="Trust velocity"
             valueChange={metrics.trustVelocityDelta}
-            helper="Change vs previous 30 days"
+            helper={metrics.hasBaseline ? "Change vs previous 30 days" : "Baseline not established"}
             tooltip={dashboardTooltips.trustVelocity.tooltip}
           />
           <MetricCard
@@ -125,13 +125,13 @@ export function SalesOSDashboard({ userName, userEmail, data }: Props) {
           <MetricCard
             label="Red flag frequency"
             value={metrics.patternDensity.toFixed(0)}
-            helper="Lower is better"
+            helper="Calls with a supported risk pattern (%)"
             tooltip={dashboardTooltips.patternFriction.tooltip}
           />
           <MetricCard
             label="Skill improvement index"
-            value={metrics.skillImprovementIndex.toFixed(0)}
-            helper="Higher is better"
+            value={metrics.hasBaseline ? metrics.skillImprovementIndex.toFixed(0) : "—"}
+            helper={metrics.hasBaseline ? "Compared with prior calls" : "Baseline not established"}
             tooltip={dashboardTooltips.skillImprovementIndex.tooltip}
           />
         </section>

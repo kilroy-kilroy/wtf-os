@@ -67,6 +67,12 @@ export async function htmlToPdf(
 
     const page = await browser.newPage();
 
+    await page.setJavaScriptEnabled(false);
+    await page.setRequestInterception(true);
+    page.on('request', request => {
+      if (request.url().startsWith('data:') || request.url() === 'about:blank') void request.continue();
+      else void request.abort();
+    });
     // Set content
     await page.setContent(html, {
       waitUntil: 'networkidle0', // Wait for fonts and resources to load

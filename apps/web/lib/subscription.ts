@@ -57,20 +57,6 @@ export async function getSubscriptionStatus(
   const personalDiscoveryLabTier = userData?.discovery_lab_tier || null;
   const personalVisibilityLabTier = userData?.visibility_lab_tier || null;
 
-  // Check personal access first
-  if (personalCallLabTier === 'pro' || personalDiscoveryLabTier === 'pro' || personalVisibilityLabTier === 'pro') {
-    return {
-      hasCallLabPro: personalCallLabTier === 'pro',
-      hasDiscoveryLabPro: personalDiscoveryLabTier === 'pro',
-      hasVisibilityLabPro: personalVisibilityLabTier === 'pro',
-      source: 'personal',
-      callLabTier: personalCallLabTier,
-      discoveryLabTier: personalDiscoveryLabTier,
-      visibilityLabTier: personalVisibilityLabTier,
-      email,
-    };
-  }
-
   // Check agency (team) access
   const { data: assignmentData } = await supabase
     .from('user_agency_assignments')
@@ -95,26 +81,6 @@ export async function getSubscriptionStatus(
     agency = agencyData as any;
   }
 
-  if (agency) {
-    const agencyCallLabTier = agency.call_lab_tier || 'free';
-    const agencyDiscoveryLabTier = agency.discovery_lab_tier || null;
-    const agencyVisibilityLabTier = (agency as any).visibility_lab_tier || null;
-
-    if (agencyCallLabTier === 'pro' || agencyDiscoveryLabTier === 'pro' || agencyVisibilityLabTier === 'pro') {
-      return {
-        hasCallLabPro: agencyCallLabTier === 'pro',
-        hasDiscoveryLabPro: agencyDiscoveryLabTier === 'pro',
-        hasVisibilityLabPro: agencyVisibilityLabTier === 'pro',
-        source: 'team',
-        agencyName: agency.name,
-        callLabTier: agencyCallLabTier,
-        discoveryLabTier: agencyDiscoveryLabTier,
-        visibilityLabTier: agencyVisibilityLabTier,
-        email,
-      };
-    }
-  }
-
   // Check Stripe subscriptions table by email
   // A user may have multiple active subscriptions (e.g. upgraded from single to bundle)
   const { data: stripeSubscriptions } = await supabase
@@ -123,38 +89,20 @@ export async function getSubscriptionStatus(
     .eq('customer_email', email)
     .in('status', ['active', 'trialing']);
 
-  if (stripeSubscriptions && stripeSubscriptions.length > 0) {
-    // Collect all products the user has active subscriptions for
-    const products = new Set(stripeSubscriptions.map(s => s.product || 'discovery-lab-pro'));
-
-    // Map products to access flags
-    // Bundles grant access to all included products
-    const hasCallLab = products.has('call-lab-pro') || products.has('bundle') || products.has('growth-bundle');
-    const hasDiscovery = products.has('discovery-lab-pro') || products.has('bundle') || products.has('growth-bundle');
-    const hasVisibility = products.has('visibility-lab-pro') || products.has('growth-bundle');
-
-    return {
-      hasCallLabPro: hasCallLab,
-      hasDiscoveryLabPro: hasDiscovery,
-      hasVisibilityLabPro: hasVisibility,
-      source: 'stripe',
-      callLabTier: hasCallLab ? 'pro' : personalCallLabTier,
-      discoveryLabTier: hasDiscovery ? 'pro' : personalDiscoveryLabTier,
-      visibilityLabTier: hasVisibility ? 'pro' : personalVisibilityLabTier,
-      email,
-    };
-  }
-
-  // No pro access
+  const products = new Set((stripeSubscriptions || []).map(s => s.product));
+  const personal = { call: personalCallLabTier === 'pro', discovery: personalDiscoveryLabTier === 'pro', visibility: personalVisibilityLabTier === 'pro' };
+  const team = { call: agency?.call_lab_tier === 'pro', discovery: agency?.discovery_lab_tier === 'pro', visibility: (agency as any)?.visibility_lab_tier === 'pro' };
+  const bundle = products.has('bundle') || products.has('growth-bundle');
+  const hasCallLabPro = personal.call || team.call || bundle || products.has('call-lab-pro');
+  const hasDiscoveryLabPro = personal.discovery || team.discovery || bundle || products.has('discovery-lab-pro');
+  const hasVisibilityLabPro = personal.visibility || team.visibility || products.has('growth-bundle') || products.has('visibility-lab-pro');
   return {
-    hasCallLabPro: false,
-    hasDiscoveryLabPro: false,
-    hasVisibilityLabPro: false,
-    source: 'none',
-    callLabTier: personalCallLabTier,
-    discoveryLabTier: personalDiscoveryLabTier,
-    visibilityLabTier: personalVisibilityLabTier,
-    email,
+    hasCallLabPro, hasDiscoveryLabPro, hasVisibilityLabPro,
+    source: Object.values(personal).some(Boolean) ? 'personal' : Object.values(team).some(Boolean) ? 'team' : products.size ? 'stripe' : 'none',
+    agencyName: agency?.name, email,
+    callLabTier: hasCallLabPro ? 'pro' : personalCallLabTier,
+    discoveryLabTier: hasDiscoveryLabPro ? 'pro' : personalDiscoveryLabTier,
+    visibilityLabTier: hasVisibilityLabPro ? 'pro' : personalVisibilityLabTier,
   };
 }
 

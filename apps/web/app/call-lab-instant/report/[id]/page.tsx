@@ -55,7 +55,7 @@ export default function ReportPage() {
   useEffect(() => {
     async function fetchReport() {
       try {
-        const response = await fetch(`/api/call-lab-instant/report?id=${reportId}`);
+        const response = await fetch(`/api/call-lab-instant/report?id=${encodeURIComponent(reportId)}&access_token=${encodeURIComponent(new URLSearchParams(window.location.search).get("access_token") || "")}`);
         const data = await response.json();
 
         if (!response.ok) {

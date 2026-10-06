@@ -1,3 +1,4 @@
+import { negativePatterns } from './labs/coaching-data';
 import { getSupabaseServerClient } from "./supabase-server";
 import { DashboardData, RecentCall, SkillTrend, PatternRadarData, ChartDataPoint, CoachingReport } from "./dashboard-types";
 import { subDays } from "date-fns";
@@ -80,7 +81,7 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
   // Trend % change, fallback to avgNew if no prior data
   let trustVelocityDelta: number;
   if (trustOld === 0 || first30.length === 0) {
-    trustVelocityDelta = trustNew;
+    trustVelocityDelta = 0;
   } else {
     trustVelocityDelta = ((trustNew - trustOld) / trustOld) * 100;
   }
@@ -99,9 +100,7 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
   // "Recurring friction that slows deals"
   // Scale 0-100 (0 = clean calls, 100 = everything breaks)
   // ============================================
-  const patternDensity = avg(
-    calls.map((c) => (typeof c.pattern_density === "number" ? c.pattern_density : 0))
-  );
+  const patternDensity = calls.length ? calls.filter(c=>negativePatterns(c).length>0).length / calls.length * 100 : 0;
 
   // ============================================
   // METRIC 5: Skill Improvement Index ("Peloton Score")
@@ -109,9 +108,10 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
   // ============================================
   const agendaOld = avg(first30.map((c) => c.agenda_control));
   const agendaNew = avg(second30.map((c) => c.agenda_control));
-  const agendaStabilityDelta = agendaNew - agendaOld;
+  const hasBaseline = first30.some(c=>typeof c.overall_score === "number") && second30.some(c=>typeof c.overall_score === "number");
+  const agendaStabilityDelta = hasBaseline ? agendaNew - agendaOld : 0;
 
-  const skillImprovementIndex = clamp(
+  const skillImprovementIndex = !hasBaseline ? 0 : clamp(
     normalizeDelta(trustVelocityDelta) * 0.5 +
     normalizeDelta(agendaStabilityDelta) * 0.25 +
     (100 - patternDensity) * 0.25,
@@ -150,19 +150,7 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
   // Aggregate patterns across ALL calls to find most frequent friction
   const patternCounts: Record<string, number> = {};
   for (const call of calls) {
-    const report = call.full_report as Record<string, any> | null;
-    // Pro JSON: patterns array
-    if (report?.patterns && Array.isArray(report.patterns)) {
-      for (const p of report.patterns) {
-        if (p.patternName) {
-          patternCounts[p.patternName] = (patternCounts[p.patternName] || 0) + 1;
-        }
-      }
-    }
-    // Also count primary_pattern from the call record
-    if (call.primary_pattern) {
-      patternCounts[call.primary_pattern] = (patternCounts[call.primary_pattern] || 0) + 1;
-    }
+    for (const pattern of negativePatterns(call)) patternCounts[pattern] = (patternCounts[pattern] || 0) + 1;
   }
 
   // Find the most frequent pattern
@@ -296,6 +284,7 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
   return {
     metrics: {
       callsLast30,
+    hasBaseline,
       trustVelocityDelta,
       agendaStability,
       patternDensity,

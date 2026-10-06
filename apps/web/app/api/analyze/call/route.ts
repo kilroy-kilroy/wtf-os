@@ -1,3 +1,6 @@
+import { indexedTranscript, validateCallAnalysis, groundMarkdownEvidence } from '@/lib/labs/call-analysis';
+import { negativePatterns } from '@/lib/labs/coaching-data';
+import { requiredLabId, authorizeLab, grantGuest, reportLink, labUser, requirePro, readLabJson, limitLab, labFailure, LabError } from '@/lib/labs/access';
 export const maxDuration = 300; // 5 minutes - Pro analysis with 16K tokens + fallback
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -79,9 +82,7 @@ async function sendReportEmail(
 
       // Add to Beehiiv newsletter
       const fullName = [user.first_name, user.last_name].filter(Boolean).join(' ');
-      await addCallLabSubscriber(user.email, fullName || undefined).catch(err => {
-        console.error('Failed to add Beehiiv subscriber:', err);
-      });
+
 
       // Copper CRM: log report + ensure Call Lab Pro opportunity exists (fire-and-forget)
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.timkilroy.com';
@@ -99,9 +100,16 @@ async function sendReportEmail(
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
+  const runLabModel: typeof runModel = (tool,system,user,options) => {
+    const remaining = 260_000 - (Date.now() - startTime);
+    if (remaining < 5_000) throw new LabError(504, 'Analysis deadline reached. Please retry.');
+    return runModel(tool,system,user,{...options,timeoutMs:Math.min(90_000,remaining)});
+  };
 
   try {
-    const body = await request.json();
+    const body = await readLabJson(request);
+    if (!["lite", "pro"].includes(body.version || "lite")) throw new LabError(400, "Invalid version.");
+    const actor = body.version === "pro" ? await requirePro("call") : await labUser();
 
     // Validate required fields
     if (!body.ingestion_item_id) {
@@ -134,6 +142,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Ingestion item not found' }, { status: 404 });
     }
 
+    await authorizeLab('ingestion', ingestion_item_id, ingestionItem.user_id);
+    if (version === 'pro' && ingestionItem.user_id !== actor?.id) throw new LabError(403, 'Upload this transcript while signed in to use Pro.');
+    await limitLab(request, 'call-analysis', actor?.id);
+    // Resolve the run by its authorized ingestion, never by a caller-controlled ID.
+    const { data: trustedRun } = await (supabase as any).from('tool_runs').select('id,lead_email')
+      .eq('ingestion_item_id', ingestion_item_id).limit(1).maybeSingle();
+    let discoveryContext = '';
+    if (discovery_brief_id) {
+      const { data: brief } = await (supabase as any).from('discovery_briefs').select('id,user_id,markdown_response').eq('id', discovery_brief_id).maybeSingle();
+      if (!brief || !actor || brief.user_id !== actor.id) throw new LabError(404, 'Discovery brief not found.');
+      discoveryContext = brief.markdown_response.slice(0, 8000);
+    }
     if (!ingestionItem.raw_content) {
       return NextResponse.json(
         { error: 'No transcript content found' },
@@ -149,11 +169,15 @@ export async function POST(request: NextRequest) {
     // keep firing on phantom twin records.
     const claimed = await claimIngestionItem(supabase, ingestion_item_id);
     if (!claimed) {
-      return NextResponse.json({
-        success: true,
-        skipped: true,
-        reason: 'already_processing_or_completed',
-      });
+      const { data: existing } = await (supabase as any).from('call_scores').select('id,markdown_response,version').eq('ingestion_item_id', ingestion_item_id).order('created_at',{ascending:false}).limit(1).maybeSingle();
+      if (existing) {
+        if (!ingestionItem.user_id) await grantGuest('call', existing.id);
+        let result;
+        try { const json = JSON.parse(existing.markdown_response); result = json.report ? json : {report:json}; }
+        catch { result = {markdown:existing.markdown_response,metadata:parseMarkdownMetadata(existing.markdown_response)}; }
+        return NextResponse.json({success:true,call_score_id:existing.id,result});
+      }
+      return NextResponse.json({error:'This analysis is already processing. Please wait before retrying.'},{status:409,headers:{'Retry-After':'10'}});
     }
 
     // Extract metadata
@@ -161,7 +185,8 @@ export async function POST(request: NextRequest) {
 
     // Prepare prompt parameters
     const promptParams: MarkdownPromptParams = {
-      transcript: ingestionItem.raw_content,
+      transcript: indexedTranscript(ingestionItem.raw_content),
+      analysis_context: JSON.stringify({call_type, intended_outcome:body.intended_outcome, transcript_complete:body.transcript_complete ?? "unknown", known_objections, icp_context, discovery_brief:discoveryContext}),
       rep_name,
       prospect_company: metadata.prospect_company,
       prospect_role: metadata.prospect_role,
@@ -173,6 +198,7 @@ export async function POST(request: NextRequest) {
     let markdownResponse: string | null = null;
     let analysisResult: CallLabLiteResponse | null = null;
 
+    if (!use_markdown && version !== 'pro' && !actor) throw new LabError(400, 'Use the supported Lite report format.');
     // Choose which prompt system to use
     if (use_markdown) {
       // NEW: Use markdown-based prompts
@@ -187,12 +213,12 @@ export async function POST(request: NextRequest) {
             : CALLLAB_LITE_MARKDOWN_USER(promptParams);
 
         const response = await retryWithBackoff(async () => {
-          return await runModel('call-lab-' + version, systemPrompt, userPrompt);
+          return await runLabModel('call-lab-' + version, systemPrompt, userPrompt);
         }, 2); // Limit retries: Pro analysis (16K tokens) can take 60-120s per attempt
 
         usage = response.usage;
         modelUsed = 'claude-sonnet-4-6';
-        markdownResponse = response.content;
+        markdownResponse = groundMarkdownEvidence(response.content, ingestionItem.raw_content);
       } catch (error) {
         console.error('Error running Claude analysis, trying GPT-4o fallback:', error);
 
@@ -208,7 +234,7 @@ export async function POST(request: NextRequest) {
               : CALLLAB_LITE_MARKDOWN_USER(promptParams);
 
           const response = await retryWithBackoff(async () => {
-            return await runModel('call-lab-' + version, systemPrompt, userPrompt, {
+            return await runLabModel('call-lab-' + version, systemPrompt, userPrompt, {
               provider: 'openai',
               model: 'gpt-4o',
             });
@@ -216,7 +242,7 @@ export async function POST(request: NextRequest) {
 
           usage = response.usage;
           modelUsed = 'gpt-4o';
-          markdownResponse = response.content;
+          markdownResponse = groundMarkdownEvidence(response.content, ingestionItem.raw_content);
         } catch (fallbackError) {
           console.error('Error running GPT-4o fallback:', fallbackError);
 
@@ -259,7 +285,7 @@ export async function POST(request: NextRequest) {
 
         // Update tool run
         const duration = Date.now() - startTime;
-        await updateToolRun(supabase, body.tool_run_id || '', {
+        await updateToolRun(supabase, trustedRun?.id || '', {
           status: 'completed',
           completed_at: new Date().toISOString(),
           duration_ms: duration,
@@ -283,11 +309,16 @@ export async function POST(request: NextRequest) {
           )
         );
 
+        const reportUrl = await reportLink('call', callScore.id, `${process.env.NEXT_PUBLIC_APP_URL || 'https://app.timkilroy.com'}/call-lab/report/${callScore.id}`, !ingestionItem.user_id);
+        if (!ingestionItem.user_id && body.send_email === true && trustedRun?.lead_email) {
+          waitUntil(onReportGenerated(trustedRun.lead_email, callScore.id, 'lite', undefined, metadata.prospect_company, undefined, undefined, undefined, reportUrl));
+        }
         // Return markdown response
         return NextResponse.json(
           {
             success: true,
             call_score_id: callScore.id,
+            reportUrl,
             result: {
               markdown: markdownResponse,
               metadata: markdownMetadata,
@@ -301,7 +332,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(
           {
             error: 'Failed to store analysis results',
-            details: error instanceof Error ? error.message : 'Unknown error',
+
           },
           { status: 500 }
         );
@@ -319,12 +350,15 @@ ${prospect_company || metadata.prospect_company ? `Prospect Company: ${prospect_
 ${metadata.prospect_role ? `Prospect Role: ${metadata.prospect_role}` : ''}
 ${call_type || metadata.call_stage ? `Call Type: ${call_type || metadata.call_stage}` : ''}
 
+MEETING CONTEXT (not transcript evidence):
+${JSON.stringify({ intended_outcome:body.intended_outcome, transcript_complete:body.transcript_complete ?? 'unknown', known_objections, icp_context, discovery_brief:discoveryContext })}
+Compare intended questions and unresolved hypotheses to actual evidence. Do not treat the research as facts about what happened on this call.
 TRANSCRIPT:
-${ingestionItem.raw_content}`;
+${indexedTranscript(ingestionItem.raw_content)}`;
 
         try {
           const response = await retryWithBackoff(async () => {
-            return await runModel(
+            return await runLabModel(
               'call-lab-pro',
               CALL_LAB_PRO_SYSTEM_PROMPT,
               proUserPrompt
@@ -357,8 +391,9 @@ ${ingestionItem.raw_content}`;
           }
 
           // Store Pro results in database
-          const report = proResult.report || proResult;
-          const overallScore = report.meta?.overallScore || 0;
+          const report = validateCallAnalysis(proResult.report || proResult, ingestionItem.raw_content);
+          proResult = { ...proResult, report };
+          const overallScore = report.meta.overallScore;
           const snapTldr = report.snapTake?.tldr || '';
 
           const callScore = await createCallScore(supabase, {
@@ -366,42 +401,44 @@ ${ingestionItem.raw_content}`;
             agency_id: ingestionItem.agency_id,
             user_id: ingestionItem.user_id || undefined,
             version: 'full', // Pro uses 'full' version type in database
-            overall_score: Math.round(overallScore / 10), // Convert 0-100 to 0-10
-            overall_grade: overallScore >= 80 ? 'A' : overallScore >= 60 ? 'B' : overallScore >= 40 ? 'C' : 'D',
+            overall_score: overallScore === null ? null : Math.round(overallScore / 10), // Convert 0-100 to 0-10
+            overall_grade: overallScore === null ? 'Not observed' : overallScore >= 80 ? 'A' : overallScore >= 60 ? 'B' : overallScore >= 40 ? 'C' : 'D',
             diagnosis_summary: snapTldr,
             markdown_response: JSON.stringify(proResult, null, 2), // Store full JSON
           });
 
           // Also save to call_lab_reports for dashboard
-          const trustVelocity = report.meta?.trustVelocity || 0;
+          const trustVelocity = report.meta.trustVelocity;
           const primaryPattern = report.patterns?.[0]?.patternName || '';
           const nextAction = report.nextSteps?.actions?.[0] || '';
 
-          await (supabase as any).from('call_lab_reports').insert({
+          const { error: dashboardSaveError } = await (supabase as any).from('call_lab_reports').insert({
             user_id: ingestionItem.user_id || null,
             buyer_name: prospect_name || metadata.prospect_name || '',
             company_name: prospect_company || metadata.prospect_company || '',
             overall_score: overallScore, // Store as 0-100
             trust_velocity: trustVelocity,
-            agenda_control: report.scores?.narrativeControl || null,
-            pattern_density: report.patterns?.length ? report.patterns.length * 10 : 0,
+            agenda_control: null, // Narrative control is not a measured agenda-control score.
+            pattern_density: negativePatterns({full_report:report}).length ? 100 : 0,
             primary_pattern: primaryPattern,
             improvement_highlight: nextAction,
             full_report: report,
             created_at: new Date().toISOString(),
             agent: 'pro',
-            version: '1.0',
+            version: '2.0',
             call_id: callScore.id,
             transcript: ingestionItem.raw_content || '',
             discovery_brief_id: discovery_brief_id || null,
           });
+
+          if (dashboardSaveError) console.error('Dashboard copy could not be saved; canonical call score is retained:', dashboardSaveError.code);
 
           // Update ingestion item status
           await updateIngestionItemStatus(supabase, ingestion_item_id, 'completed');
 
           // Update tool run
           const duration = Date.now() - startTime;
-          await updateToolRun(supabase, body.tool_run_id || '', {
+          await updateToolRun(supabase, trustedRun?.id || '', {
             status: 'completed',
             completed_at: new Date().toISOString(),
             duration_ms: duration,
@@ -445,7 +482,7 @@ ${ingestionItem.raw_content}`;
           return NextResponse.json(
             {
               error: 'Failed to analyze call with Pro JSON mode',
-              details: error instanceof Error ? error.message : 'Unknown error',
+
             },
             { status: 500 }
           );
@@ -464,7 +501,7 @@ ${ingestionItem.raw_content}`;
 
       try {
         const response = await retryWithBackoff(async () => {
-          return await runModel(
+          return await runLabModel(
             'call-lab-lite',
             CALL_LAB_LITE_SYSTEM,
             CALL_LAB_LITE_USER(jsonPromptParams)
@@ -482,7 +519,7 @@ ${ingestionItem.raw_content}`;
         // Try GPT-4o as fallback
         try {
           const response = await retryWithBackoff(async () => {
-            return await runModel(
+            return await runLabModel(
               'call-lab-lite',
               CALL_LAB_LITE_SYSTEM,
               CALL_LAB_LITE_USER(jsonPromptParams),
@@ -585,7 +622,7 @@ ${ingestionItem.raw_content}`;
 
         // Update tool run
         const duration = Date.now() - startTime;
-        await updateToolRun(supabase, body.tool_run_id || '', {
+        await updateToolRun(supabase, trustedRun?.id || '', {
           status: 'completed',
           completed_at: new Date().toISOString(),
           duration_ms: duration,
@@ -632,19 +669,20 @@ ${ingestionItem.raw_content}`;
         return NextResponse.json(
           {
             error: 'Failed to store analysis results',
-            details: error instanceof Error ? error.message : 'Unknown error',
+
           },
           { status: 500 }
         );
       }
     }
   } catch (error) {
+    const failure = labFailure(error); if (failure) return failure;
     console.error('Error analyzing call:', error);
 
     return NextResponse.json(
       {
         error: 'Failed to analyze call',
-        details: error instanceof Error ? error.message : 'Unknown error',
+
       },
       { status: 500 }
     );
@@ -655,11 +693,7 @@ ${ingestionItem.raw_content}`;
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const callScoreId = searchParams.get('id');
-
-    if (!callScoreId) {
-      return NextResponse.json({ error: 'Missing id parameter' }, { status: 400 });
-    }
+    const callScoreId = requiredLabId(searchParams);
 
     const supabase = createServerClient();
 
@@ -669,7 +703,8 @@ export async function GET(request: NextRequest) {
       .eq('id', callScoreId)
       .single();
 
-    if (scoreError) throw scoreError;
+    if (scoreError || !callScore) throw new LabError(404, 'Report not found.');
+    await authorizeLab('call', callScoreId, (callScore as any).user_id, searchParams.get('access_token'));
 
     // If markdown response exists, return it
     if ((callScore as any)?.markdown_response) {
@@ -725,12 +760,13 @@ export async function GET(request: NextRequest) {
       { status: 200 }
     );
   } catch (error) {
+    const failure = labFailure(error); if (failure) return failure;
     console.error('Error fetching call score:', error);
 
     return NextResponse.json(
       {
         error: 'Failed to fetch call score',
-        details: error instanceof Error ? error.message : 'Unknown error',
+
       },
       { status: 500 }
     );

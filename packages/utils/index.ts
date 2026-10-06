@@ -3,4 +3,4 @@ export * from './ai';
 export * from './src/assessment';
 export * from './transcript';
 export * from './upgrade-personalizer';
-export * from './research';
+// Server-only research is imported from @repo/utils/research.

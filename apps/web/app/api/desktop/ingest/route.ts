@@ -1,3 +1,4 @@
+import { readLabJson, limitLab, labFailure, LabError } from '@/lib/labs/access';
 export const maxDuration = 300; // 5 minutes — analysis can take a while
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -79,7 +80,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Parse body
-    const body = await request.json();
+    const body = await readLabJson(request);
+    await limitLab(request, "call-analysis", user.id);
+    if (typeof body.transcript !== "string" || body.transcript.length > 200000) throw new LabError(413, "Invalid or oversized transcript.");
     if (!body.transcript) {
       return NextResponse.json(
         { error: 'Missing required field: transcript' },
@@ -180,6 +183,7 @@ export async function POST(request: NextRequest) {
       modelUsed = 'claude-sonnet-4-6';
       usage = response.usage;
     } catch (error) {
+    const failure = labFailure(error); if (failure) return failure;
       console.error('Claude analysis failed, trying GPT-4o:', error);
 
       try {
@@ -248,6 +252,7 @@ export async function POST(request: NextRequest) {
       callScoreId: callScore.id,
     });
   } catch (error) {
+    const failure = labFailure(error); if (failure) return failure;
     console.error('Desktop ingest error:', error);
     return NextResponse.json(
       {

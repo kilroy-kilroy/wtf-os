@@ -16,12 +16,12 @@ import { ZoomRecordingSelector } from '@/components/ZoomRecordingSelector';
 import Image from 'next/image';
 
 // Helper to safely extract score value (handles both number and {score, reason} format)
-function getScoreValue(value: unknown): number {
+function getScoreValue(value: unknown): number | string {
   if (typeof value === 'number') return value;
   if (typeof value === 'object' && value !== null && 'score' in value) {
     return (value as { score: number }).score;
   }
-  return 0;
+  return 'Not observed';
 }
 
 // Helper to safely render text (prevents rendering objects)
@@ -57,7 +57,7 @@ type ProReport = {
   modelScores: Record<string, { score: number; tldr: string; analysis: string; whatWorked: string[]; whatMissed: string[]; upgradeMove: string }>;
   patterns: Array<{ patternName: string; severity: string; tldr: string; timestamps: string[]; symptoms: string[]; whyItMatters: string; recommendedFixes: string[]; exampleRewrite: string }>;
   trustMap: { tldr: string; timeline: Array<{ timestamp: string; event: string; trustDelta: string; analysis: string }> };
-  tacticalRewrites: { tldr: string; items: Array<{ context: string; whatYouSaid: string; whyItMissed: string; strongerAlternative: string }> };
+  tacticalRewrites: { tldr: string; items: Array<{ context: string; whatYouSaid: string; evidenceType?: string; sourceLine?: number; whyItMissed: string; strongerAlternative: string }> };
   nextSteps: { tldr: string; actions: string[] };
   followUpEmail: { subject: string; body: string };
 };
@@ -144,6 +144,8 @@ export default function CallLabProPage() {
     phone: '',
     role: '',
     transcript: '',
+    intended_outcome: '',
+    transcript_complete: true,
     prospect_name: '',
     prospect_company: '',
     prospect_url: '',
@@ -159,6 +161,7 @@ export default function CallLabProPage() {
   const [loadingStep, setLoadingStep] = useState<'uploading' | 'analyzing' | 'saving' | null>(null);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [savedReportId, setSavedReportId] = useState<string | null>(null);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [discoveryBriefs, setDiscoveryBriefs] = useState<Array<{
@@ -260,6 +263,8 @@ export default function CallLabProPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          intended_outcome: formData.intended_outcome,
+          transcript_complete: formData.transcript_complete,
           ingestion_item_id: ingestData.ingestion_item_id,
           tool_run_id: ingestData.tool_run_id,
           rep_name: formData.first_name || 'Sales Rep',
@@ -278,6 +283,7 @@ export default function CallLabProPage() {
       }
 
       const analyzeData = await analyzeResponse.json();
+      setSavedReportId(analyzeData.call_score_id);
       const callId = crypto.randomUUID();
       const createdAt = new Date().toISOString();
 
@@ -328,6 +334,7 @@ export default function CallLabProPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          reportId: savedReportId,
           report: result.type === 'json' ? result.report : null,
           markdown: result.type === 'markdown' ? result.markdown : null,
           metadata: {
@@ -542,8 +549,8 @@ export default function CallLabProPage() {
                   <p className="text-[#666] text-xs mb-2">{safeText(item.context)}</p>
                   <div className="grid md:grid-cols-2 gap-4">
                     <div>
-                      <p className="text-[#E51B23] text-xs mb-1">WHAT YOU SAID:</p>
-                      <p className="text-[#999] text-sm italic">&quot;{safeText(item.whatYouSaid)}&quot;</p>
+                      <p className="text-[#E51B23] text-xs mb-1">{item.evidenceType === "verbatim" ? `VERBATIM · LINE ${item.sourceLine}` : "PARAPHRASE / UNVERIFIED WORDING"}:</p>
+                      <p className="text-[#999] text-sm italic">{safeText(item.whatYouSaid)}</p>
                     </div>
                     <div>
                       <p className="text-[#00FF00] text-xs mb-1">STRONGER ALTERNATIVE:</p>
@@ -646,6 +653,11 @@ export default function CallLabProPage() {
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-8">
+            <label className="block text-sm text-white mb-4">What was this call meant to achieve? (optional)
+              <input className="block w-full bg-[#111] border border-[#444] p-3 mt-2" value={formData.intended_outcome} onChange={e=>setFormData({...formData,intended_outcome:e.target.value})} maxLength={1000} />
+            </label>
+            <label className="block text-sm text-white mb-4"><input type="checkbox" checked={formData.transcript_complete} onChange={e=>setFormData({...formData,transcript_complete:e.target.checked})} /> This is the complete transcript</label>
+
                 <div className="space-y-4">
                   <ConsoleHeading level={3} variant="yellow">CALL CONTEXT</ConsoleHeading>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

@@ -1,3 +1,6 @@
+import { getSubscriptionStatus } from '@/lib/subscription';
+import { coachingCalls } from '@/lib/labs/coaching-data';
+import { serviceAuthorized, requirePro, readLabJson, limitLab, labFailure, LabError } from '@/lib/labs/access';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { runModel } from '@repo/utils';
@@ -24,7 +27,13 @@ interface GenerateCoachingRequest {
 
 export async function POST(request: NextRequest) {
   try {
-    const body: GenerateCoachingRequest = await request.json();
+    const body: GenerateCoachingRequest = await readLabJson(request, 4000);
+    if (!serviceAuthorized(request)) {
+      const actor = await requirePro('call');
+      if (body.user_id !== actor.id) throw new LabError(403, 'You can only generate your own coaching.');
+      await limitLab(request, 'coaching', actor.id);
+    }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(body.period_start) || !/^\d{4}-\d{2}-\d{2}$/.test(body.period_end) || Date.parse(body.period_end) < Date.parse(body.period_start) || Date.parse(body.period_end) - Date.parse(body.period_start) > 100 * 86400000) throw new LabError(400, 'Invalid coaching period.');
     const { user_id, report_type, period_start, period_end } = body;
 
     // Validate inputs
@@ -55,6 +64,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
+    const subscription = await getSubscriptionStatus(supabase, user.id, user.email);
+    if (!subscription.hasCallLabPro) throw new LabError(403, 'Call Lab Pro is required for coaching.');
+
     // Fetch calls from both tables (call_scores has the actual data, call_lab_reports has richer Pro data)
     const [callScoresResult, callLabResult] = await Promise.all([
       supabase
@@ -83,71 +95,7 @@ export async function POST(request: NextRequest) {
     const callScores = callScoresResult.data || [];
     const callLabReports = callLabResult.data || [];
 
-    // Merge: prefer call_lab_reports (richer data), fill in from call_scores
-    const seenIds = new Set<string>();
-    const callData: CallData[] = [];
-
-    // First, add call_lab_reports (have detailed dimension scores)
-    for (const call of callLabReports) {
-      seenIds.add(call.id);
-      callData.push({
-        date: call.call_date || call.created_at,
-        prospect: call.company_name || call.buyer_name || 'Unknown',
-        duration_minutes: call.duration_minutes || 30,
-        outcome: call.outcome || 'unknown',
-        scores: {
-          opening: call.opening_score || 5,
-          discovery: call.discovery_score || 5,
-          diagnostic: call.diagnostic_score || 5,
-          value_articulation: call.value_score || 5,
-          objection_navigation: call.objection_score || 5,
-          commitment: call.commitment_score || 5,
-          human_first: call.human_first_score || 5,
-        },
-        patterns_detected: call.patterns_detected || [],
-        key_moments: call.key_moments?.map((m: { description: string }) => m.description) || [],
-      });
-    }
-
-    // Then, add call_scores not already covered
-    for (const cs of callScores) {
-      if (seenIds.has(cs.id)) continue;
-
-      // Extract scores from full_scores JSONB (Pro) or lite_scores JSONB (Lite)
-      const fullScores = cs.full_scores as any || {};
-      const liteScores = cs.lite_scores as any || {};
-      const coreScores = fullScores.core || {};
-      const overallFallback = cs.overall_score || 5;
-
-      // Map call_scores dimensions to CallData scores
-      // full_scores.core has: control_authority, discovery_depth, diagnostic_depth, value_articulation, objection_handling, commitment_close, human_first
-      // lite_scores has: control_confidence, discovery_depth, relevance_narrative, objection_handling, next_steps_clarity
-      const scores = {
-        opening: coreScores.control_authority || liteScores.control_confidence || overallFallback,
-        discovery: coreScores.discovery_depth || liteScores.discovery_depth || overallFallback,
-        diagnostic: coreScores.diagnostic_depth || overallFallback,
-        value_articulation: coreScores.value_articulation || liteScores.relevance_narrative || overallFallback,
-        objection_navigation: coreScores.objection_handling || liteScores.objection_handling || overallFallback,
-        commitment: coreScores.commitment_close || liteScores.next_steps_clarity || overallFallback,
-        human_first: coreScores.human_first || overallFallback,
-      };
-
-      // Try to extract prospect name from markdown_response or diagnosis_summary
-      let prospect = 'Unknown';
-      if (cs.diagnosis_summary) {
-        prospect = cs.diagnosis_summary.substring(0, 50);
-      }
-
-      callData.push({
-        date: cs.created_at,
-        prospect,
-        duration_minutes: 30,
-        outcome: 'unknown',
-        scores,
-        patterns_detected: [],
-        key_moments: [],
-      });
-    }
+    const callData = coachingCalls(callLabReports, callScores);
 
     // Check if we have enough data
     if (callData.length === 0) {
@@ -266,8 +214,9 @@ export async function POST(request: NextRequest) {
 
     // Calculate trends (compare to previous period if available)
     const trends = {
-      overall_delta: 0,
-      trust_velocity_delta: 0,
+      overall_delta: null,
+      trust_velocity_delta: null,
+      baseline_status: "No comparable baseline calculated",
       patterns_trending_up: [] as string[],
       patterns_trending_down: [] as string[],
     };
@@ -309,6 +258,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
+    const failure = labFailure(error); if (failure) return failure;
     console.error('Coaching generation error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },

@@ -1,3 +1,4 @@
+import { requiredLabId, authorizeLab, grantGuest, reportLink, labUser, requirePro, readLabJson, limitLab, labFailure, LabError } from '@/lib/labs/access';
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@repo/db/client';
 import {
@@ -11,7 +12,11 @@ import { normalizeTranscript, getTranscriptStats } from '@repo/utils';
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    const body = await readLabJson(request);
+    const actor = await labUser();
+    await limitLab(request, "ingest", actor?.id);
+    if (typeof body.transcript !== "string" || body.transcript.length < 20 || body.transcript.length > 200_000 || typeof body.email !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.email)) throw new LabError(400, "Provide a valid email and a transcript between 20 and 200,000 characters.");
+    if (actor?.email) body.email = actor.email;
 
     // Validate required fields
     if (!body.transcript || !body.email) {
@@ -38,19 +43,14 @@ export async function POST(request: NextRequest) {
     // Initialize Supabase client
     const supabase = createServerClient();
 
-    // Find or create user
-    const user = await findOrCreateUser(supabase, email, first_name, last_name);
-
-    // Find or create agency
-    let agency = null;
-    if (agency_name) {
-      agency = await findOrCreateAgency(supabase, agency_name, agency_url);
-      // Assign user to agency
-      await assignUserToAgency(supabase, user.id, agency.id, 'member');
-    } else {
-      // Create a default agency for the user
-      agency = await findOrCreateAgency(supabase, `${first_name || email}'s Agency`);
-      await assignUserToAgency(supabase, user.id, agency.id, 'owner');
+    // Identity comes only from the verified session. Never attach a guest to
+    // an existing user/team based on a submitted email or agency name.
+    const user = actor ? { id: actor.id } : null;
+    let agencyId: string | undefined;
+    if (user) {
+      const { data } = await (supabase as any).from('user_agency_assignments')
+        .select('agency_id').eq('user_id', user.id).limit(1).maybeSingle();
+      agencyId = data?.agency_id;
     }
 
     // Normalize and process transcript
@@ -59,8 +59,8 @@ export async function POST(request: NextRequest) {
 
     // Create ingestion item
     const ingestionItem = await createIngestionItem(supabase, {
-      agency_id: agency.id,
-      user_id: user.id,
+      agency_id: agencyId,
+      user_id: user?.id,
       source_type: 'transcript',
       source_channel: 'manual',
       raw_content: normalizedTranscript,
@@ -77,10 +77,12 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    if (!actor) await grantGuest("ingestion", ingestionItem.id);
+
     // Create tool run record
     const toolRun = await createToolRun(supabase, {
-      user_id: user.id,
-      agency_id: agency.id,
+      user_id: user?.id,
+      agency_id: agencyId,
       lead_email: email,
       lead_name: first_name ? `${first_name} ${last_name || ''}`.trim() : undefined,
       tool_name: 'call_lab_lite',
@@ -99,20 +101,21 @@ export async function POST(request: NextRequest) {
         success: true,
         ingestion_item_id: ingestionItem.id,
         tool_run_id: toolRun.id,
-        user_id: user.id,
-        agency_id: agency.id,
+        user_id: user?.id,
+        agency_id: agencyId,
         status: 'pending',
         message: 'Transcript received successfully. Ready for analysis.',
       },
       { status: 200 }
     );
   } catch (error) {
+    const failure = labFailure(error); if (failure) return failure;
     console.error('Error ingesting transcript:', error);
 
     return NextResponse.json(
       {
         error: 'Failed to ingest transcript',
-        details: error instanceof Error ? error.message : 'Unknown error',
+
       },
       { status: 500 }
     );
@@ -123,11 +126,7 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const itemId = searchParams.get('id');
-
-    if (!itemId) {
-      return NextResponse.json({ error: 'Missing id parameter' }, { status: 400 });
-    }
+    const itemId = requiredLabId(searchParams);
 
     const supabase = createServerClient();
 
@@ -137,16 +136,18 @@ export async function GET(request: NextRequest) {
       .eq('id', itemId)
       .single();
 
-    if (error) throw error;
+    if (error || !item) throw new LabError(404, "Transcript not found.");
+    await authorizeLab("ingestion", itemId, (item as any).user_id, searchParams.get("access_token"));
 
     return NextResponse.json({ success: true, item }, { status: 200 });
   } catch (error) {
+    const failure = labFailure(error); if (failure) return failure;
     console.error('Error fetching ingestion item:', error);
 
     return NextResponse.json(
       {
         error: 'Failed to fetch ingestion item',
-        details: error instanceof Error ? error.message : 'Unknown error',
+
       },
       { status: 500 }
     );

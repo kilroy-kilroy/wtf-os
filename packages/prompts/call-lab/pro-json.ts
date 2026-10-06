@@ -1,3 +1,4 @@
+import { CALL_ANALYSIS_RULES } from './analysis-rules';
 // Call Lab Pro JSON prompts
 // These prompts return structured JSON for the Pro analysis
 // IMPORTANT: Uses canonical pattern list from patternGlossary.ts
@@ -41,10 +42,9 @@ Your job is to diagnose the call through multiple expert lenses, including:
 - next-step guidance
 
 Your output MUST adhere EXACTLY to the JSON schema at the bottom.
-No extra fields.
+No extra fields except evidenceType and sourceLine for tactical rewrites.
 No missing fields.
-If a field has no content, return an empty string, empty array, or zero.
-Never return null.
+If a narrative field has no content, return an empty string or array. Use null for scores without sufficient evidence.
 Never break the JSON structure.
 Output ONLY the JSON object.
 No Markdown.
@@ -408,6 +408,9 @@ JSON SCHEMA (MANDATORY, EXACT)
     "created_at": ""
   }
 }
+
+${CALL_ANALYSIS_RULES}
+Keep the entire report to 700-1000 words. Use the WTF Method as the primary lens; return an empty modelScores object unless another framework was explicitly requested. At most three supported patterns, two rewrites, and three next actions. Each score needs support in the narrative. meta.trustVelocity must be null. Do not estimate it from warmth or other scores. These instructions take precedence over examples above.
 `;
 
 export const CALL_LAB_PRO_JSON_SCHEMA = {

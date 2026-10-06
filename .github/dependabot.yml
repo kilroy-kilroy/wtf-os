@@ -1,38 +1,50 @@
 version: 2
 updates:
-  # npm dependencies for web app
-  - package-ecosystem: "npm"
-    directory: "/apps/web"
+  # One npm workspace and one lockfile: update manifests together from the root.
+  - package-ecosystem: npm
+    directory: /
     schedule:
-      interval: "weekly"
-      day: "monday"
-    open-pull-requests-limit: 10
-    labels:
-      - "dependencies"
-    groups:
-      # Group minor/patch updates to reduce PR noise
-      production-dependencies:
-        patterns:
-          - "*"
-        update-types:
-          - "minor"
-          - "patch"
-
-  # npm dependencies for root/packages
-  - package-ecosystem: "npm"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-      day: "monday"
+      interval: weekly
+      day: monday
     open-pull-requests-limit: 5
-    labels:
-      - "dependencies"
-
-  # GitHub Actions
-  - package-ecosystem: "github-actions"
-    directory: "/"
+    labels: [dependencies]
+    groups:
+      react-types:
+        patterns: ['@types/react', '@types/react-dom']
+      routine-maintenance:
+        patterns: ['*']
+        exclude-patterns:
+          - '@anthropic-ai/*'
+          - '@supabase/*'
+          - openai
+          - stripe
+          - next
+          - sharp
+          - puppeteer-core
+          - '@sparticuz/chromium'
+        update-types: [minor, patch]
+      security-patches:
+        applies-to: security-updates
+        patterns: ['*']
+        update-types: [patch]
+    # Deliberate migrations tracked in docs/dependency-maintenance.md.
+    # Restrict only these deferred major lines, never all updates to a package.
+    ignore:
+      - dependency-name: tailwindcss
+        versions: ['4.x']
+      - dependency-name: typescript
+        versions: ['7.x']
+      - dependency-name: eslint
+        versions: ['10.x']
+      - dependency-name: '@types/node'
+        versions: ['26.x']
+      - dependency-name: nanoid
+        versions: ['6.x']
+  - package-ecosystem: github-actions
+    directory: /
     schedule:
-      interval: "weekly"
-    labels:
-      - "dependencies"
-      - "ci"
+      interval: weekly
+    groups:
+      actions:
+        patterns: ['*']
+    labels: [dependencies, ci]

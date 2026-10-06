@@ -34,7 +34,7 @@ export function ConsoleHeading({
     mixed: 'text-white'
   };
 
-  const Tag = (as ?? `h${level}`) as keyof JSX.IntrinsicElements;
+  const Tag = (as ?? `h${level}`) as keyof React.JSX.IntrinsicElements;
 
   return (
     <Tag className={`${baseStyles} ${sizeStyles[level]} ${colorStyles[variant]} ${className}`}>

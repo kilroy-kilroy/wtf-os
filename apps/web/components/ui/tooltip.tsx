@@ -7,10 +7,7 @@ import { cn } from '@/lib/utils';
 const TooltipProvider = TooltipPrimitive.Provider;
 
 // Touch-friendly tooltip that works on mobile
-const Tooltip = React.forwardRef<
-  React.ElementRef<typeof TooltipPrimitive.Root>,
-  React.ComponentPropsWithoutRef<typeof TooltipPrimitive.Root>
->(({ children, ...props }, _ref) => {
+const Tooltip = ({ children, ...props }: React.ComponentPropsWithoutRef<typeof TooltipPrimitive.Root>) => {
   const [open, setOpen] = React.useState(false);
 
   return (
@@ -41,7 +38,7 @@ const Tooltip = React.forwardRef<
       })}
     </TooltipPrimitive.Root>
   );
-});
+};
 Tooltip.displayName = 'Tooltip';
 
 const TooltipTrigger = TooltipPrimitive.Trigger;

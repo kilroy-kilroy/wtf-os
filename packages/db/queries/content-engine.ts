@@ -106,7 +106,9 @@ export async function getUserOrgs(
     .not('accepted_at', 'is', null)
 
   if (error) throw new Error(`Failed to get user orgs: ${error.message}`)
-  return (data || []).map((m: any) => ({ ...m.org, role: m.role }))
+  // This joined relation is not represented in the generated database types.
+  const memberships = (data || []) as unknown as { org: ContentOrg; role: OrgRole }[]
+  return memberships.map(m => ({ ...m.org, role: m.role }))
 }
 
 // ============================================================================

@@ -39,3 +39,9 @@ Status: implemented in this branch, not deployed. No production data or schema w
 Historical guest URLs without a capability no longer grant access. Owner accounts retain authenticated access. Guest report links are bearer links and can be forwarded until expiry or revocation. No self-service link revocation UI is included.
 
 There is no production rollout, historical coaching regeneration, full research-provider integration test, or browser end-to-end validation in this change. Prior-period coaching comparisons remain unavailable when no comparable baseline is present. Broader marketing/MCP/open-source work remains a separate project.
+
+## Dependency security follow-through
+
+The clean lockfile update includes Next.js 16.3.8, sharp 0.35.5, and patched compatible transitive dependencies. The registry audit fell from 28 affected packages (one critical) to 17 (zero critical, 14 high, three moderate). GitHub counts individual advisories differently from npm's affected-package count.
+
+Remaining alerts are concentrated in Tailwind/ESLint glob and CSS parser tooling, and Puppeteer's browser-download/proxy/archive dependency chain. The Labs PDF path launches the bundled Chromium binary and does not accept archives or invoke browser downloads; it also blocks page network access. This is a reachability mitigation, not a claim that the vulnerable packages are patched. Removing these alerts requires a separately tested Tailwind/tooling and Puppeteer/Chromium upgrade. Do not describe this branch as a clean dependency audit.

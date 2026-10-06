@@ -96,7 +96,7 @@ export const MarkdownReport: React.FC<MarkdownReportProps> = ({ markdown, metada
   // Simple markdown parser - converts markdown to PDF components
   const parseMarkdown = (text: string) => {
     const lines = text.split('\n');
-    const elements: JSX.Element[] = [];
+    const elements: React.JSX.Element[] = [];
     let currentParagraph: string[] = [];
     let key = 0;
 

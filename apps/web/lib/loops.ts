@@ -314,10 +314,11 @@ export async function onReportGenerated(
   companyName?: string,
   archetype?: string,
   executionScore?: number,
-  positioningScore?: number
+  positioningScore?: number,
+  authorizedReportUrl?: string
 ): Promise<{ success: boolean; error?: string }> {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.timkilroy.com';
-  const reportUrl = `${appUrl}/call-lab/report/${reportId}`;
+  const reportUrl = authorizedReportUrl || `${appUrl}/call-lab/report/${reportId}`;
 
   const eventName = reportType === 'pro'
     ? 'report_generated_pro'

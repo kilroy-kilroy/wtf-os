@@ -1,3 +1,4 @@
+import { authorizeLab, grantGuest, reportLink, readLabJson, readLabBytes, limitLab, sameOrigin, labFailure, LabError } from '@/lib/labs/access';
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { nanoid } from 'nanoid';
@@ -19,14 +20,18 @@ export async function POST(request: NextRequest) {
   const startTime = Date.now();
 
   try {
+    sameOrigin(request);
+    await limitLab(request, 'instant-analysis');
+    if (Number(request.headers.get('content-length') || 0) > 6 * 1024 * 1024) throw new LabError(413, 'Audio upload too large.');
     // Parse multipart form data
-    const formData = await request.formData();
+    const bytes = await readLabBytes(request, 6 * 1024 * 1024);
+    const formData = await new Response(new Uint8Array(bytes), {headers:{'Content-Type':request.headers.get('content-type') || ''}}).formData();
     const audioFile = formData.get('audio') as File | null;
     const scenario = formData.get('scenario') as InstantScenario | null;
     const durationStr = formData.get('duration') as string | null;
     const duration = durationStr ? parseInt(durationStr, 10) : 30;
 
-    if (!audioFile) {
+    if (!(audioFile instanceof File)) {
       return NextResponse.json(
         { error: 'No audio file provided' },
         { status: 400 }
@@ -40,6 +45,9 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    if (!Number.isFinite(duration) || duration < 1 || duration > 120) throw new LabError(400, 'Duration must be between 1 and 120 seconds.');
+    if (!audioFile.type.startsWith('audio/') && audioFile.type !== 'video/webm') throw new LabError(400, 'Unsupported audio format.');
 
     // Initialize OpenAI for Whisper
     const openaiKey = process.env.OPENAI_API_KEY;
@@ -75,7 +83,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           error: 'Failed to transcribe audio',
-          details: whisperError instanceof Error ? whisperError.message : 'Unknown error',
+
         },
         { status: 500 }
       );
@@ -124,7 +132,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(
           {
             error: 'Failed to analyze pitch',
-            details: gptError instanceof Error ? gptError.message : 'Unknown error',
+
           },
           { status: 500 }
         );
@@ -178,9 +186,10 @@ export async function POST(request: NextRequest) {
       });
     } catch (dbError) {
       console.error('Database save error:', dbError);
-      // Continue anyway - return results even if save fails
+      throw new LabError(503, 'Unable to save the report. Please retry.');
     }
 
+    await grantGuest('instant', reportId);
     const processingTime = Date.now() - startTime;
 
     // Return results
@@ -208,12 +217,13 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
+    const failure = labFailure(error); if (failure) return failure;
     console.error('Call Lab Instant analyze error:', error);
 
     return NextResponse.json(
       {
         error: 'Failed to process recording',
-        details: error instanceof Error ? error.message : 'Unknown error',
+
       },
       { status: 500 }
     );

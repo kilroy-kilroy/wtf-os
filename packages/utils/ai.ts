@@ -22,7 +22,7 @@ const MODEL_CONFIGS: Record<string, ModelConfig> = {
   'call-lab-lite': {
     provider: 'anthropic',
     model: 'claude-sonnet-4-6',
-    maxTokens: 4096,
+    maxTokens: 2200,
     temperature: 0.3,
   },
   'call-lab-full': {
@@ -34,13 +34,13 @@ const MODEL_CONFIGS: Record<string, ModelConfig> = {
   'call-lab-pro': {
     provider: 'anthropic',
     model: 'claude-sonnet-4-6',
-    maxTokens: 16384,
+    maxTokens: 4500,
     temperature: 0.3,
   },
   'discovery-lab-lite': {
     provider: 'anthropic',
     model: 'claude-sonnet-4-6',
-    maxTokens: 4096,
+    maxTokens: 2200,
     // Low temperature: this is a factual briefing, not creative writing.
     // Higher temps increase the model's willingness to fill gaps with invention.
     temperature: 0.1,
@@ -48,7 +48,7 @@ const MODEL_CONFIGS: Record<string, ModelConfig> = {
   'discovery-lab-pro': {
     provider: 'anthropic',
     model: 'claude-sonnet-4-6',
-    maxTokens: 8192,
+    maxTokens: 3500,
     // Low temperature: this is a factual briefing, not creative writing.
     // Higher temps increase the model's willingness to fill gaps with invention.
     temperature: 0.1,
@@ -87,7 +87,7 @@ const MODEL_CONFIGS: Record<string, ModelConfig> = {
   'discovery-agent': {
     provider: 'anthropic',
     model: 'claude-sonnet-4-6',
-    maxTokens: 8192,
+    maxTokens: 3500,
     temperature: 0.4,
   },
   'discovery-agent-summary': {
@@ -259,6 +259,7 @@ async function runAnthropic(
     ],
   }, requestOptions);
 
+  if (message.stop_reason === 'max_tokens') throw new Error('Model output reached its limit; report was not saved.');
   const content = message.content[0];
   if (content.type !== 'text') {
     throw new Error('Unexpected response type from Anthropic');
@@ -311,6 +312,7 @@ async function runOpenAI(
   }, requestOptions);
 
   const choice = completion.choices[0];
+  if (choice.finish_reason === 'length') throw new Error('Model output reached its limit; report was not saved.');
   if (!choice.message.content) {
     throw new Error('No content in OpenAI response');
   }

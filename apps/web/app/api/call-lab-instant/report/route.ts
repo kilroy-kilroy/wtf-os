@@ -1,3 +1,4 @@
+import { authorizeLab, grantGuest, reportLink, readLabJson, limitLab, sameOrigin, labFailure, LabError } from '@/lib/labs/access';
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@repo/db/client';
 import { getInstantReportById, incrementReportViews } from '@repo/db';
@@ -26,6 +27,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    await authorizeLab('instant', reportId, null, searchParams.get('access_token'));
+
     // Increment view count (fire and forget)
     incrementReportViews(supabase, reportId).catch(console.error);
 
@@ -40,16 +43,17 @@ export async function GET(request: NextRequest) {
         scenario_type: report.scenario_type,
         created_at: report.created_at,
         view_count: report.view_count,
-        email: (report as { email?: string | null }).email ?? null,
+
       },
     });
   } catch (error) {
+    const failure = labFailure(error); if (failure) return failure;
     console.error('Get report error:', error);
 
     return NextResponse.json(
       {
         error: 'Failed to fetch report',
-        details: error instanceof Error ? error.message : 'Unknown error',
+
       },
       { status: 500 }
     );

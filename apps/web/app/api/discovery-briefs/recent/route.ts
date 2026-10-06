@@ -14,14 +14,14 @@ export async function GET(request: NextRequest) {
 
     // Get limit from query params (default 20)
     const { searchParams } = new URL(request.url);
-    const limit = Math.min(parseInt(searchParams.get('limit') || '20'), 50);
-    const search = searchParams.get('search') || '';
+    const limit = Math.max(1, Math.min(Number(searchParams.get('limit')) || 20, 50));
+    const search = (searchParams.get('search') || '').replace(/[^a-zA-Z0-9 .-]/g, '').slice(0, 100);
 
     // Fetch recent discovery briefs for this user
     let query = supabase
       .from('discovery_briefs')
       .select('id, target_company, target_contact_name, target_contact_title, created_at, version')
-      .or(`user_id.eq.${user.id},lead_email.eq.${user.email}`)
+      .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .limit(limit);
 

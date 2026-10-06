@@ -1,3 +1,4 @@
+import { authorizeLab } from '@/lib/labs/access';
 import { redirect, notFound } from "next/navigation";
 import { requireAdmin } from "@/lib/contracts/require-admin";
 import { createClient } from '@/lib/supabase-auth-server';
@@ -65,18 +66,18 @@ type ProReport = {
   modelScores?: Record<string, { score?: number; tldr?: string; analysis?: string; whatWorked?: string[]; whatMissed?: string[]; upgradeMove?: string }>;
   patterns?: Array<{ patternName?: string; severity?: string; tldr?: string; timestamps?: string[]; symptoms?: string[]; whyItMatters?: string; recommendedFixes?: string[]; exampleRewrite?: string }>;
   trustMap?: { tldr?: string; timeline?: Array<{ timestamp?: string; event?: string; trustDelta?: string; analysis?: string }> };
-  tacticalRewrites?: { tldr?: string; items?: Array<{ context?: string; whatYouSaid?: string; whyItMissed?: string; strongerAlternative?: string }> };
+  tacticalRewrites?: { tldr?: string; items?: Array<{ context?: string; whatYouSaid?: string; evidenceType?: string; sourceLine?: number; whyItMissed?: string; strongerAlternative?: string }> };
   nextSteps?: { tldr?: string; actions?: string[] };
   followUpEmail?: { subject?: string; body?: string };
 };
 
 // Helper to safely extract score value
-function getScoreValue(value: unknown): number {
+function getScoreValue(value: unknown): number | string {
   if (typeof value === 'number') return value;
   if (typeof value === 'object' && value !== null && 'score' in value) {
     return (value as { score: number }).score;
   }
-  return 0;
+  return 'Not observed';
 }
 
 // Helper to safely render text
@@ -276,8 +277,8 @@ function ProJsonReportView({ report }: { report: ProReport }) {
                 <p className="text-[#666] text-xs mb-2">{safeText(item.context)}</p>
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
-                    <p className="text-[#E51B23] text-xs mb-1">WHAT YOU SAID:</p>
-                    <p className="text-[#999] text-sm italic">&quot;{safeText(item.whatYouSaid)}&quot;</p>
+                    <p className="text-[#E51B23] text-xs mb-1">{item.evidenceType === "verbatim" ? `VERBATIM · LINE ${item.sourceLine}` : "PARAPHRASE / UNVERIFIED WORDING"}:</p>
+                    <p className="text-[#999] text-sm italic">{safeText(item.whatYouSaid)}</p>
                   </div>
                   <div>
                     <p className="text-[#00FF00] text-xs mb-1">STRONGER ALTERNATIVE:</p>
@@ -376,10 +377,10 @@ export default async function CallReportPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ admin?: string }>;
+  searchParams: Promise<{ admin?: string; access_token?: string }>;
 }) {
   const { id } = await params;
-  const { admin } = await searchParams;
+  const { admin, access_token } = await searchParams;
 
   const supabase = await createClient();
   const {
@@ -415,6 +416,13 @@ export default async function CallReportPage({
           finalReport = buildReportFromCallScore(callScore);
         }
       }
+    }
+  }
+
+  if (!finalReport && (!user || access_token)) {
+    const { data: score } = await (getSupabaseServerClient() as any).from('call_scores').select('*').eq('id', id).maybeSingle();
+    if (score) {
+      try { await authorizeLab('call', id, score.user_id, access_token); finalReport = buildReportFromCallScore(score); } catch { notFound(); }
     }
   }
 
@@ -455,6 +463,7 @@ export default async function CallReportPage({
         .from("call_scores")
         .select("id, user_id, overall_score, markdown_response, version, created_at, diagnosis_summary")
         .eq("id", id)
+        .eq("user_id", user.id)
         .single();
 
       if (callScore) {

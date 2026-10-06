@@ -42,6 +42,8 @@ export default function CallLabPage() {
     phone: '',
     role: '',
     transcript: '',
+    intended_outcome: '',
+    transcript_complete: true,
     prospect_company: '',
     prospect_role: '',
     call_stage: 'discovery',
@@ -52,6 +54,7 @@ export default function CallLabPage() {
   const [loadingStep, setLoadingStep] = useState<'uploading' | 'analyzing' | null>(null);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [savedReportId, setSavedReportId] = useState<string | null>(null);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -82,10 +85,13 @@ export default function CallLabPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          intended_outcome: formData.intended_outcome,
+          transcript_complete: formData.transcript_complete,
           ingestion_item_id: ingestData.ingestion_item_id,
           tool_run_id: ingestData.tool_run_id,
           rep_name: formData.first_name || 'Sales Rep',
           version: formData.tier,
+          send_email: true,
           use_markdown: true, // Use new markdown prompts
         }),
       });
@@ -96,6 +102,7 @@ export default function CallLabPage() {
       }
 
       const analyzeData = await analyzeResponse.json();
+      setSavedReportId(analyzeData.call_score_id);
 
       // Check if response is markdown or JSON format
       if (analyzeData.result.markdown) {
@@ -128,6 +135,7 @@ export default function CallLabPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          reportId: savedReportId,
           result: result.type === 'markdown' ? result.markdown : result,
           metadata: {
             date: new Date().toLocaleDateString(),
@@ -239,6 +247,11 @@ export default function CallLabPage() {
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-8">
+            <label className="block text-sm text-white mb-4">What was this call meant to achieve? (optional)
+              <input className="block w-full bg-[#111] border border-[#444] p-3 mt-2" value={formData.intended_outcome} onChange={e=>setFormData({...formData,intended_outcome:e.target.value})} maxLength={1000} />
+            </label>
+            <label className="block text-sm text-white mb-4"><input type="checkbox" checked={formData.transcript_complete} onChange={e=>setFormData({...formData,transcript_complete:e.target.checked})} /> This is the complete transcript</label>
+
                 {/* Operator Identity */}
                 <div className="space-y-4">
                   <ConsoleHeading level={3} variant="yellow">

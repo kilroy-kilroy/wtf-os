@@ -1,3 +1,4 @@
+import { readReport } from '@/lib/labs/coaching-data';
 import { createClient } from '@/lib/supabase-auth-server';
 import { redirect } from "next/navigation";
 import Link from "next/link";
@@ -58,6 +59,10 @@ interface FollowUpRow {
 
 // Extract patterns mentioned in markdown response
 function extractPatternsFromMarkdown(markdown: string): string[] {
+  try {
+    const parsed = JSON.parse(markdown);
+    return [...new Set<string>((parsed.report?.patterns || parsed.patterns || []).map((p:any)=>p.patternName).filter(Boolean))];
+  } catch { /* Legacy markdown below. */ }
   const patterns: string[] = [];
   const lowerMarkdown = markdown.toLowerCase();
 
@@ -66,7 +71,9 @@ function extractPatternsFromMarkdown(markdown: string): string[] {
   MACRO_PATTERNS.forEach((pattern) => {
     const patternNameLower = pattern.name.toLowerCase();
     // Check if pattern name appears in markdown
-    if (lowerMarkdown.includes(patternNameLower)) {
+    // Only the observed strength/risk sections; counter-move mentions are not detections.
+    const observed = lowerMarkdown.split(/(?:what to do|next steps|try this|counter-pattern)/)[0];
+    if (observed.includes(patternNameLower)) {
       patterns.push(pattern.name);
     }
   });
@@ -368,7 +375,7 @@ async function getDashboardData(
   const { data: toolRuns } = await supabase
     .from("tool_runs")
     .select("ingestion_item_id")
-    .eq("lead_email", userEmail)
+    .eq("user_id", userId)
     .not("ingestion_item_id", "is", null)
     .gte("created_at", thirtyDaysAgo.toISOString());
 
@@ -466,7 +473,7 @@ async function getDashboardData(
   const allPatternCounts = new Map<string, number>();
   MACRO_PATTERNS.forEach((p) => allPatternCounts.set(p.id, 0));
 
-  scores.forEach((score) => {
+  scores.slice(0, 8).forEach((score) => {
     if (score.markdown_response) {
       const patterns = extractPatternsFromMarkdown(score.markdown_response);
       const counts = mapToCanonicalPatterns(patterns);
@@ -731,7 +738,7 @@ async function getDashboardData(
   // ============================================
   // PRO INSIGHTS (from Pro-version call reports)
   // ============================================
-  const proScores = scores.filter((s) => s.version === "pro");
+  const proScores = scores.filter((s) => s.version === "pro" || s.version === "full");
 
   // Extract "The One Thing" from Pro markdown responses
   const oneThingTracker: Array<{
@@ -744,6 +751,17 @@ async function getDashboardData(
 
   for (const proReport of proScores.slice(0, 5)) {
     const md = proReport.markdown_response || "";
+    const report = readReport(proReport);
+    if (report.scores) {
+      for (const [key,value] of Object.entries(report.scores)) {
+        if (typeof value === 'number' && value >= 0 && value <= 100) {
+          const label = key.replace(/([A-Z])/g,' $1');
+          (performanceScoreAccumulator[label] ||= []).push(value/10);
+        }
+      }
+      if (report.nextSteps?.actions?.[0]) oneThingTracker.push({callId:proReport.id,behavior:report.nextSteps.actions[0],callDate:new Date(proReport.created_at).toLocaleDateString('en-US')});
+      continue;
+    }
 
     // Extract THE ONE THING behavior
     const oneThingMatch = md.match(
@@ -842,7 +860,7 @@ async function getActivityHistory(
   const { data: emailToolRuns } = await supabase
     .from("tool_runs")
     .select("ingestion_item_id, tool_name, created_at")
-    .eq("lead_email", userEmail)
+    .eq("user_id", userId)
     .not("ingestion_item_id", "is", null)
     .order("created_at", { ascending: false })
     .limit(50);

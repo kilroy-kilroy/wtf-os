@@ -1,17 +1,13 @@
+import { researchPublicWebsite } from '@repo/utils/research';
+import { collectResearch, type ResearchEvidence } from '@repo/utils/research-context';
+import { authorizeLab, grantGuest, reportLink, labUser, requirePro, readLabJson, limitLab, labFailure, LabError } from '@/lib/labs/access';
 export const maxDuration = 300; // 5 minutes - research chain (240s) + Claude analysis
 
 import { NextRequest, NextResponse } from 'next/server';
 import { waitUntil } from '@vercel/functions';
 import { createServerClient } from '@repo/db/client';
-import {
-  runModel,
-  retryWithBackoff,
-  enrichContactWithInstantly,
-  fetchCompanyNews,
-  runV2DiscoveryResearch,
-  BRIGHTDATA_AUTH_FAILED_PREFIX,
-  type V2ResearchResult,
-} from '@repo/utils';
+import { runModel, retryWithBackoff } from '@repo/utils';
+import { enrichContactWithInstantly, fetchCompanyNews, runV2DiscoveryResearch, BRIGHTDATA_AUTH_FAILED_PREFIX, type V2ResearchResult } from '@repo/utils/research';
 import {
   DISCOVERY_LAB_LITE_SYSTEM,
   DISCOVERY_LAB_LITE_USER,
@@ -29,9 +25,22 @@ import { emitAssessmentEvent } from '@/lib/timeline/emit-assessment';
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
+  const runLabModel: typeof runModel = (tool,system,user,options) => {
+    const remaining = 260_000 - (Date.now() - startTime);
+    if (remaining < 5_000) throw new LabError(504, 'Analysis deadline reached. Please retry.');
+    return runModel(tool,system,user,{...options,timeoutMs:Math.min(90_000,remaining)});
+  };
 
   try {
-    const body = await request.json();
+    const body = await readLabJson(request, 30_000);
+    if (!['lite','pro'].includes(body.version || 'lite')) throw new LabError(400, 'Invalid version.');
+    for (const key of ['requestor_name','requestor_email','service_offered','target_company']) {
+      if (typeof body[key] !== 'string' || !body[key].trim() || body[key].length > 5000) throw new LabError(400, `Invalid ${key}.`);
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.requestor_email)) throw new LabError(400, 'Invalid email.');
+    const actor = body.version === 'pro' ? await requirePro('discovery') : await labUser();
+    if (actor?.email) body.requestor_email = actor.email;
+    await limitLab(request, 'discovery-analysis', actor?.id);
 
     // Validate required fields
     if (!body.requestor_name || !body.requestor_email || !body.service_offered || !body.target_company) {
@@ -78,13 +87,14 @@ export async function POST(request: NextRequest) {
     let apolloContact: V2ResearchResult['apollo_contact'] = null;
     let newsData: Awaited<ReturnType<typeof fetchCompanyNews>> = { recent_news: [], funding_info: null, raw_response: '' };
 
+    let evidence: ResearchEvidence[] = [];
     if (version === 'pro') {
       // V2: Run full 5-source research chain (parallel)
       if (!process.env.BRIGHT_DATA_API) {
         console.error('[Discovery:Pro] BRIGHT_DATA_API env var is NOT set - LinkedIn and SERP sources will be unavailable. Add BRIGHT_DATA_API to your environment variables.');
       }
       console.log('Running v2 research chain for:', { target_company, domain, target_contact_name, target_linkedin, hasBrightDataKey: !!process.env.BRIGHT_DATA_API });
-      v2Research = await runV2DiscoveryResearch({
+      const collected = await collectResearch(() => runV2DiscoveryResearch({
         requestor_name,
         requestor_company,
         requestor_website,
@@ -96,7 +106,8 @@ export async function POST(request: NextRequest) {
         target_linkedin,
         target_icp,
         competitors,
-      });
+      }));
+      v2Research = collected.value; evidence = collected.evidence;
 
       // Use Apollo/Perplexity results from v2 chain
       apolloCompany = v2Research.apollo_company;
@@ -129,7 +140,7 @@ export async function POST(request: NextRequest) {
     } else {
       // Lite: lightweight enrichment
       console.log('Fetching enriched data for:', { target_company, domain, target_contact_name });
-      const results = await Promise.all([
+      const collected = await collectResearch(() => Promise.all([
         domain && target_contact_name
           ? enrichContactWithInstantly(target_contact_name, domain).catch((e) => {
               console.warn('Instantly contact enrichment failed:', e.message);
@@ -140,7 +151,9 @@ export async function POST(request: NextRequest) {
           console.warn('Perplexity news fetch failed:', e.message);
           return { recent_news: [] as any[], funding_info: null, raw_response: '' };
         }),
-      ]);
+        target_website ? researchPublicWebsite(target_website) : Promise.resolve(null),
+      ]));
+      const results = collected.value; evidence = collected.evidence;
       apolloContact = results[0];
       newsData = results[1];
 
@@ -153,6 +166,8 @@ export async function POST(request: NextRequest) {
 
     // Prepare prompt parameters with enriched data
     const promptParams: DiscoveryLabPromptParams = {
+      meeting_context: body.meeting_context,
+      evidence_context: JSON.stringify({records:evidence.map(e=>({...e,content:e.content.slice(0,3500)})), errors:v2Research?.errors || [], generated_at:new Date().toISOString()}),
       requestor_name,
       requestor_email,
       requestor_company,
@@ -252,6 +267,7 @@ export async function POST(request: NextRequest) {
             serp_results: v2Research.google_serp?.results.map(r => ({
               keyword: r.keyword,
               target_rank: r.target_rank,
+              status: r.status,
               top_results: r.top_results.map(tr => ({
                 position: tr.position,
                 title: tr.title,
@@ -285,7 +301,7 @@ export async function POST(request: NextRequest) {
 
     try {
       const response = await retryWithBackoff(async () => {
-        return await runModel('discovery-lab-' + version, systemPrompt, userPrompt);
+        return await runLabModel('discovery-lab-' + version, systemPrompt, userPrompt);
       });
 
       usage = response.usage;
@@ -297,7 +313,7 @@ export async function POST(request: NextRequest) {
       // Try GPT-4o as fallback
       try {
         const response = await retryWithBackoff(async () => {
-          return await runModel('discovery-lab-' + version, systemPrompt, userPrompt, {
+          return await runLabModel('discovery-lab-' + version, systemPrompt, userPrompt, {
             provider: 'openai',
             model: 'gpt-4o',
           });
@@ -312,7 +328,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(
           {
             error: 'Failed to generate discovery brief with both Claude and GPT',
-            details: fallbackError instanceof Error ? fallbackError.message : 'Unknown error',
+
           },
           { status: 500 }
         );
@@ -336,18 +352,7 @@ export async function POST(request: NextRequest) {
     // Store report in database (cast to any since discovery_briefs not in generated types)
     const supabase = createServerClient();
 
-    // Look up user by email to attach report to profile
-    let userId: string | null = null;
-    try {
-      const { data: userRecord } = await (supabase as any)
-        .from('users')
-        .select('id')
-        .eq('email', requestor_email)
-        .single();
-      userId = userRecord?.id || null;
-    } catch {
-      // User may not exist — that's fine for lead magnet flows
-    }
+    const userId = actor?.id || null;
 
     const { data: insertedReport, error: insertError } = await (supabase as any)
       .from('discovery_briefs')
@@ -365,6 +370,8 @@ export async function POST(request: NextRequest) {
         markdown_response: markdownResponse,
         metadata: {
           ...metadata,
+          analysis_version: "2.0",
+          research_evidence: evidence,
           model: modelUsed,
           tokens: usage,
           duration_ms: duration,
@@ -391,7 +398,7 @@ export async function POST(request: NextRequest) {
 
     if (insertError) {
       console.error('Failed to save discovery brief:', insertError);
-      // Continue anyway - don't fail the request just because we couldn't save
+      throw new LabError(503, 'The report could not be saved. Please retry.');
     }
 
     const reportId = insertedReport?.id;
@@ -417,7 +424,7 @@ export async function POST(request: NextRequest) {
     }
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.timkilroy.com';
-    const reportUrl = reportId ? `${appUrl}/discovery-lab/report/${reportId}` : undefined;
+    const reportUrl = reportId ? await reportLink('discovery', reportId, `${appUrl}/discovery-lab/report/${reportId}`, !actor) : undefined;
 
     // Compute archetype if user exists
     let quadrant = { archetype: '', executionScore: 0, positioningScore: 0 };
@@ -438,7 +445,7 @@ export async function POST(request: NextRequest) {
     // Fire Loops event for email delivery and analytics
     // For Pro reports, this triggers the email with report link
     let emailSent = false;
-    if (version === 'pro') {
+    if (send_email && version === 'pro') {
       const loopsResult = await onDiscoveryReportGenerated(
         requestor_email,
         version as 'lite' | 'pro',
@@ -455,7 +462,7 @@ export async function POST(request: NextRequest) {
       if (!loopsResult.success) {
         console.error('Loops event failed:', loopsResult.error);
       }
-    } else {
+    } else if (send_email) {
       // Post-response work for lite — waitUntil keeps the function alive on
       // Vercel so the Loops delivery completes after the response is sent.
       waitUntil(
@@ -474,7 +481,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    waitUntil(
+    if (body.newsletter_opt_in === true) waitUntil(
       addDiscoveryLabSubscriber(
         requestor_email,
         requestor_name,
@@ -488,8 +495,8 @@ export async function POST(request: NextRequest) {
           email: requestor_email,
           name: requestor_name || undefined,
           companyName: requestor_company || undefined,
-          productName: 'Discovery Lab Pro',
-          opportunityValue: PRO_ACV,
+          productName: version === 'pro' ? 'Discovery Lab Pro' : 'Discovery Lab',
+          opportunityValue: version === 'pro' ? PRO_ACV : 0,
           stageId: COPPER_STAGES.LEAD,
           note: `Ran Discovery Lab ${version} — Target: ${target_company}. View: ${appUrl}/discovery-lab/report/${reportId}`,
         }).catch(err => console.error('[Copper] discovery sync failed:', err))
@@ -516,12 +523,13 @@ export async function POST(request: NextRequest) {
       { status: 200 }
     );
   } catch (error) {
+    const failure = labFailure(error); if (failure) return failure;
     console.error('Error generating discovery brief:', error);
 
     return NextResponse.json(
       {
         error: 'Failed to generate discovery brief',
-        details: error instanceof Error ? error.message : 'Unknown error',
+
       },
       { status: 500 }
     );

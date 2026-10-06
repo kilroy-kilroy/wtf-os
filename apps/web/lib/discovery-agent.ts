@@ -1,3 +1,4 @@
+import { collectResearch } from '@repo/utils/research-context';
 /**
  * Discovery Agent Orchestrator
  *
@@ -5,11 +6,8 @@
  * returns both a condensed summary (for CRM fields) and full report (for DB).
  */
 
-import {
-  runModel,
-  retryWithBackoff,
-  fetchCompanyNews,
-} from '@repo/utils';
+import { runModel, retryWithBackoff } from '@repo/utils';
+import { fetchCompanyNews } from '@repo/utils/research';
 import {
   DISCOVERY_LAB_PRO_SYSTEM,
   DISCOVERY_LAB_PRO_USER,
@@ -48,6 +46,7 @@ export async function runDiscoveryAgent(input: DiscoveryAgentInput): Promise<Dis
   const contactEmail = contact?.emails?.[0]?.email || null;
 
   // Fetch company news (non-blocking if it fails)
+  let evidence: unknown[] = [];
   let newsData: { recent_news: any[]; funding_info: any; raw_response: string } = {
     recent_news: [],
     funding_info: null,
@@ -64,7 +63,8 @@ export async function runDiscoveryAgent(input: DiscoveryAgentInput): Promise<Dis
           domain = companyWebsite.replace('www.', '').split('/')[0];
         }
       }
-      newsData = await fetchCompanyNews(companyName, domain);
+      const research = await collectResearch(() => fetchCompanyNews(companyName, domain));
+      newsData = research.value; evidence = research.evidence;
     } catch (err) {
       console.warn('[DiscoveryAgent] News fetch failed:', err);
     }
@@ -72,6 +72,7 @@ export async function runDiscoveryAgent(input: DiscoveryAgentInput): Promise<Dis
 
   // Build Discovery Lab prompt
   const promptParams: DiscoveryLabPromptParams = {
+    evidence_context: JSON.stringify({records:evidence,mode:'Company-news-only research. Other sources were not checked.'}),
     requestor_name: 'Tim Kilroy',
     requestor_email: process.env.COPPER_API_EMAIL || '',
     requestor_company: 'TimKilroy.com',
@@ -161,7 +162,7 @@ CONVERSATION STARTERS:
 
 ---
 RESEARCH REPORT:
-${fullReport.substring(0, 6000)}`;
+${fullReport.substring(0, 18000)}`;
 
   try {
     const response = await runModel('discovery-agent-summary', summaryPrompt, '', {

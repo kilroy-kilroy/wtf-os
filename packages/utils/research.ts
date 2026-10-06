@@ -1,8 +1,15 @@
+import { researchSignal, recordEvidence } from './research-context';
+import { fetchPublicHtml } from './public-web';
 /**
  * Research utilities for Discovery Lab Pro
  * Integrates Perplexity (market + person research) and Apify (website + LinkedIn scraping)
  */
 
+
+async function providerFetch(input: string, init: RequestInit = {}) {
+ const signals = [AbortSignal.timeout(45_000), init.signal, researchSignal()].filter((s): s is AbortSignal => !!s);
+ return fetch(input, {...init, signal:AbortSignal.any(signals)});
+}
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -49,6 +56,8 @@ interface PerplexityMessage {
 }
 
 interface PerplexityResponse {
+  citations?: string[];
+  search_results?: Array<{url:string}>;
   id: string;
   choices: {
     message: {
@@ -63,7 +72,7 @@ interface PerplexityResponse {
   };
 }
 
-async function queryPerplexity(
+async function queryPerplexityRaw(
   systemPrompt: string,
   userQuery: string,
   options: { temperature?: number; maxTokens?: number } = {}
@@ -80,7 +89,8 @@ async function queryPerplexity(
     { role: 'user', content: userQuery },
   ];
 
-  const response = await fetch('https://api.perplexity.ai/chat/completions', {
+  const response = await providerFetch('https://api.perplexity.ai/chat/completions', {
+    signal: AbortSignal.any([AbortSignal.timeout(45_000), ...(researchSignal() ? [researchSignal()!] : [])]),
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -100,7 +110,18 @@ async function queryPerplexity(
   }
 
   const data: PerplexityResponse = await response.json();
-  return data.choices[0]?.message?.content || '';
+  const content = data.choices[0]?.message?.content || '';
+  const urls = [...new Set([...(data.citations || []), ...(data.search_results || []).map(r=>r.url)])].filter(url => /^https?:\/\//i.test(url));
+  recordEvidence({question:userQuery, content, source_urls:urls, retrieved_at:new Date().toISOString(), status:urls.length ? 'found' : 'unverified', usage:data.usage});
+  return content;
+}
+
+async function queryPerplexity(systemPrompt: string, userQuery: string, options: {temperature?:number; maxTokens?:number} = {}) {
+ try { return await queryPerplexityRaw(systemPrompt,userQuery,options); }
+ catch (error) {
+  recordEvidence({question:userQuery,content:'Research request failed. This is not evidence of absence.',source_urls:[],retrieved_at:new Date().toISOString(),status:'failed'});
+  throw error;
+ }
 }
 
 /**
@@ -243,7 +264,7 @@ export async function runApifyActor(
   } = options;
 
   // Start the actor run
-  const runResponse = await fetch(
+  const runResponse = await providerFetch(
     `https://api.apify.com/v2/acts/${actorId}/runs?token=${apiKey}`,
     {
       method: 'POST',
@@ -277,7 +298,7 @@ export async function runApifyActor(
   while (status === 'RUNNING' || status === 'READY') {
     await new Promise((resolve) => setTimeout(resolve, 2000));
 
-    const statusResponse = await fetch(
+    const statusResponse = await providerFetch(
       `https://api.apify.com/v2/actor-runs/${runId}?token=${apiKey}`
     );
     const statusData = await statusResponse.json();
@@ -307,7 +328,7 @@ export async function runApifyActor(
 }
 
 async function fetchDataset(datasetId: string, apiKey: string): Promise<unknown[]> {
-  const res = await fetch(`https://api.apify.com/v2/datasets/${datasetId}/items?token=${apiKey}`);
+  const res = await providerFetch(`https://api.apify.com/v2/datasets/${datasetId}/items?token=${apiKey}`);
   const data: ApifyDatasetResponse = await res.json();
   return unwrapApifyDataset(data);
 }
@@ -607,7 +628,7 @@ export async function enrichCompanyWithApollo(
   }
 
   try {
-    const response = await fetch('https://api.apollo.io/api/v1/organizations/enrich', {
+    const response = await providerFetch('https://api.apollo.io/api/v1/organizations/enrich', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -681,7 +702,7 @@ export async function enrichContactWithApollo(
     const firstName = nameParts[0] || '';
     const lastName = nameParts.slice(1).join(' ') || '';
 
-    const searchResponse = await fetch('https://api.apollo.io/api/v1/people/match', {
+    const searchResponse = await providerFetch('https://api.apollo.io/api/v1/people/match', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -773,7 +794,7 @@ export async function enrichContactWithInstantly(
     const listName = `discovery-enrichment-${Date.now()}`;
     console.log(`[Instantly] Searching for: ${searchName} at ${companyDomain}`);
 
-    const searchResponse = await fetch(
+    const searchResponse = await providerFetch(
       'https://api.instantly.ai/api/v2/supersearch-enrichment/enrich-leads-from-supersearch',
       {
         method: 'POST',
@@ -818,7 +839,7 @@ export async function enrichContactWithInstantly(
     let leadData: any = null;
 
     if (resourceId) {
-      const leadsResponse = await fetch(
+      const leadsResponse = await providerFetch(
         `https://api.instantly.ai/api/v2/leads?list_id=${resourceId}&limit=1`,
         {
           method: 'GET',
@@ -1223,7 +1244,7 @@ async function bdDiscoveryTrigger(
   const triggerUrl = `${BRIGHT_DATA_BASE}/trigger?${qs}`;
 
   try {
-    const response = await fetch(triggerUrl, {
+    const response = await providerFetch(triggerUrl, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${BRIGHT_DATA_API}`,
@@ -1239,7 +1260,7 @@ async function bdDiscoveryTrigger(
       const body = await response.text().catch(() => '');
       console.warn(`[BrightData:Discovery] Trigger ${datasetId} → ${response.status}: ${body.slice(0, 300)} — retrying with wrapped input`);
       // Retry with wrapped format
-      const response2 = await fetch(triggerUrl, {
+      const response2 = await providerFetch(triggerUrl, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${BRIGHT_DATA_API}`,
@@ -1281,7 +1302,7 @@ async function bdDiscoveryPoll(snapshotId: string, maxWaitMs: number = 60000, ab
     }
 
     try {
-      const response = await fetch(`${BRIGHT_DATA_BASE}/snapshot/${snapshotId}?format=json`, {
+      const response = await providerFetch(`${BRIGHT_DATA_BASE}/snapshot/${snapshotId}?format=json`, {
         headers: { 'Authorization': `Bearer ${BRIGHT_DATA_API}` },
         signal: composedSignal(15000, abortSignal),
       });
@@ -1331,7 +1352,7 @@ export async function researchLinkedInProfile(linkedinUrl: string, abortSignal?:
 
     // Try synchronous /scrape endpoint first
     const fetchSignal = composedSignal(120000, abortSignal);
-    const response = await fetch(`${BRIGHT_DATA_BASE}/scrape?dataset_id=${BD_DISCOVERY_DATASETS.linkedinProfile}&format=json&include_errors=true`, {
+    const response = await providerFetch(`${BRIGHT_DATA_BASE}/scrape?dataset_id=${BD_DISCOVERY_DATASETS.linkedinProfile}&format=json&include_errors=true`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${BRIGHT_DATA_API}`,
@@ -1544,7 +1565,8 @@ export async function researchLinkedInPosts(linkedinUrl: string, abortSignal?: A
 
 export interface SerpResult {
   keyword: string;
-  target_rank: number | null; // null = not found on page 1
+  target_rank: number | null;
+  status?: 'found' | 'not_found' | 'failed'; // null = not found on page 1
   top_results: Array<{ position: number; title: string; url: string; domain: string }>;
 }
 
@@ -1574,7 +1596,7 @@ export async function researchGoogleSerp(
       keywords.map(async (keyword) => {
         try {
           const googleUrl = `https://www.google.com/search?q=${encodeURIComponent(keyword)}&brd_json=1`;
-          const response = await fetch('https://api.brightdata.com/request', {
+          const response = await providerFetch('https://api.brightdata.com/request', {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${BRIGHT_DATA_API}`,
@@ -1615,7 +1637,7 @@ export async function researchGoogleSerp(
 
     // Index-align with `keywords` so parseSerpResults can match by position.
     const normalized = perKeyword.map(p =>
-      p.parsed ? { keyword: p.keyword, ...p.parsed } : { keyword: p.keyword }
+      p.parsed ? { ...p.parsed, keyword: p.keyword } : { keyword: p.keyword, failed: true }
     );
     return parseSerpResults(normalized, keywords, targetDomain);
   } catch (error: any) {
@@ -1625,19 +1647,20 @@ export async function researchGoogleSerp(
   }
 }
 
-function parseSerpResults(results: any[], keywords: string[], targetDomain: string): GoogleSerpResult {
+export function parseSerpResults(results: any[], keywords: string[], targetDomain: string): GoogleSerpResult {
   const cleanDomain = targetDomain.replace('www.', '').toLowerCase();
   const serpResults: SerpResult[] = [];
 
   for (let i = 0; i < keywords.length; i++) {
-    const result = results[i] || results.find((r: any) =>
+    const result = results.find((r: any) =>
       (r.keyword || r.query || '').toLowerCase() === keywords[i].toLowerCase()
     );
 
-    if (!result) {
+    if (!result || result.failed) {
       serpResults.push({
         keyword: keywords[i],
         target_rank: null,
+        status: 'failed',
         top_results: [],
       });
       continue;
@@ -1655,12 +1678,13 @@ function parseSerpResults(results: any[], keywords: string[], targetDomain: stri
 
     // Find target rank
     const targetResult = organicResults.find((r: any) =>
-      r.domain.includes(cleanDomain) || cleanDomain.includes(r.domain)
+      r.domain && (r.domain === cleanDomain || r.domain.endsWith('.' + cleanDomain))
     );
 
     serpResults.push({
       keyword: keywords[i],
-      target_rank: targetResult?.position || null,
+      target_rank: targetResult?.position ?? null,
+      status: targetResult ? 'found' : 'not_found',
       top_results: organicResults.slice(0, 3),
     });
   }
@@ -1691,6 +1715,18 @@ export interface WebsiteTechResult {
   raw_html_snippet: string;
 }
 
+export async function researchPublicWebsite(websiteUrl: string): Promise<string | null> {
+ try {
+  const html = await fetchPublicHtml(websiteUrl, researchSignal());
+  const text = html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,' ').replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi,' ').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
+  recordEvidence({question:'Direct public website content',content:text.slice(0,6000),source_urls:[websiteUrl.startsWith('http') ? websiteUrl : `https://${websiteUrl}`],retrieved_at:new Date().toISOString(),status:text ? 'found' : 'unverified'});
+  return html;
+ } catch {
+  recordEvidence({question:'Direct public website content',content:'Website could not be read; no inference about business activity is supported.',source_urls:[],retrieved_at:new Date().toISOString(),status:'failed'});
+  return null;
+ }
+}
+
 export async function researchWebsiteTech(websiteUrl: string): Promise<WebsiteTechResult | null> {
   if (!websiteUrl) return null;
 
@@ -1698,17 +1734,8 @@ export async function researchWebsiteTech(websiteUrl: string): Promise<WebsiteTe
     const url = websiteUrl.startsWith('http') ? websiteUrl : `https://${websiteUrl}`;
     console.log(`[Discovery:v2] Scraping website tech: ${url}`);
 
-    const response = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      },
-      signal: AbortSignal.timeout(15000),
-      redirect: 'follow',
-    });
-
-    if (!response.ok) return null;
-
-    const html = await response.text();
+    const html = await researchPublicWebsite(url);
+    if (!html) return null;
     const lowerHtml = html.toLowerCase();
 
     // Detect platform
@@ -1751,7 +1778,7 @@ export async function researchWebsiteTech(websiteUrl: string): Promise<WebsiteTe
 
     // Detect analytics
     let analytics: string | null = null;
-    if (lowerHtml.includes('gtag') || lowerHtml.includes('google-analytics') || lowerHtml.includes('googletagmanager')) analytics = 'GA4';
+    if (lowerHtml.includes('gtag') || lowerHtml.includes('google-analytics') || lowerHtml.includes('gtag/js?id=g-')) analytics = 'GA4';
     if (lowerHtml.includes('segment')) analytics = analytics ? `${analytics}, Segment` : 'Segment';
     if (lowerHtml.includes('mixpanel')) analytics = analytics ? `${analytics}, Mixpanel` : 'Mixpanel';
     if (lowerHtml.includes('hotjar')) analytics = analytics ? `${analytics}, Hotjar` : 'Hotjar';
@@ -2049,15 +2076,6 @@ export function generateSerpKeywords(
     keywords.push(`${targetCompany} ${targetIcp}`);
   }
 
-  // Service-category keyword to probe their capabilities beyond primary offering
-  // e.g. "InteractOne marketing services" or "InteractOne email marketing"
-  if (serviceOffered) {
-    const serviceKeyword = serviceOffered.split(',')[0]?.trim();
-    if (serviceKeyword) {
-      keywords.push(`${targetCompany} ${serviceKeyword}`);
-    }
-  }
-
   if (targetWebsite) {
     const domain = extractDomainFromUrl(
       targetWebsite.startsWith('http') ? targetWebsite : `https://${targetWebsite}`
@@ -2314,8 +2332,7 @@ export async function runV2DiscoveryResearch(input: V2ResearchInput): Promise<V2
             // mismatch means wrong human; discard the bio rather than feed a
             // stranger's career into the report.
             if (profile) {
-              const employers = [profile.current_company, ...profile.previous_roles.map(r => r.company)];
-              const matchesTarget = employers.some(c => companyNameMatches(c, input.target_company));
+              const matchesTarget = !!profile.current_company && companyNameMatches(profile.current_company, input.target_company);
               if (!matchesTarget) {
                 console.warn(
                   `[Discovery:v2] Discovered LinkedIn profile rejected — employer "${profile.current_company}" does not match target company "${input.target_company}" (likely wrong person)`
@@ -2332,8 +2349,9 @@ export async function runV2DiscoveryResearch(input: V2ResearchInput): Promise<V2
                 result.linkedin_posts = posts;
               }
             } else {
-              result.linkedin_profile = profile;
-              result.linkedin_posts = posts;
+              result.linkedin_profile = null;
+              result.linkedin_posts = null;
+              errors.push('LinkedIn identity could not be verified; profile and posts omitted.');
             }
           } else {
             console.warn('[Discovery:v2] Could not discover LinkedIn URL for:', input.target_contact);
@@ -2386,14 +2404,13 @@ export async function runV2DiscoveryResearch(input: V2ResearchInput): Promise<V2
 
   // Wait for all with timeout - abort in-flight BrightData polls on timeout
   // 240s gives BrightData sources enough time to complete even with slow scrapes
-  const timeout = new Promise<void>(resolve => setTimeout(() => {
-    chainAbort.abort();
-    errors.push('Research chain timed out after 240s');
-    resolve();
-  }, 240000));
+  let timer: ReturnType<typeof setTimeout>;
+  const timeout = new Promise<void>(resolve => { timer = setTimeout(() => {
+    chainAbort.abort(); errors.push('Research deadline reached; incomplete sources omitted.'); resolve();
+  }, 90_000); });
+  try { await Promise.race([Promise.allSettled(promises), timeout]); }
+  finally { clearTimeout(timer!); }
 
-  await Promise.race([Promise.allSettled(promises), timeout]);
-
-  result.errors = errors;
-  return result;
+  result.errors = [...errors];
+  return structuredClone(result);
 }

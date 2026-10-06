@@ -4,7 +4,7 @@ import type { Database } from '../types';
 export async function createIngestionItem(
   supabase: SupabaseClient,
   data: {
-    agency_id: string;
+    agency_id?: string;
     user_id?: string;
     deal_id?: string;
     source_type: string;

@@ -5,11 +5,11 @@ export async function createCallScore(
   supabase: SupabaseClient,
   data: {
     ingestion_item_id: string;
-    agency_id: string;
+    agency_id?: string;
     user_id?: string;
     deal_id?: string;
     version: 'lite' | 'full' | 'pro';
-    overall_score: number;
+    overall_score: number | null;
     overall_grade: string;
     lite_scores?: Record<string, any>;
     full_scores?: Record<string, any>;

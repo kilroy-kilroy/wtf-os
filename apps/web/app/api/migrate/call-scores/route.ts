@@ -1,3 +1,4 @@
+import { requireAdmin } from '@/lib/contracts/require-admin';
 import { NextResponse } from 'next/server';
 import { createServerClient } from '@repo/db/client';
 
@@ -5,13 +6,7 @@ import { createServerClient } from '@repo/db/client';
 // This backfills reports that were created before we started saving to call_lab_reports
 export async function POST(request: Request) {
   try {
-    // Verify admin token for security
-    const { searchParams } = new URL(request.url);
-    const token = searchParams.get('token');
-
-    if (token !== process.env.MIGRATION_SECRET && token !== 'run-migration') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    if (!(await requireAdmin())) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const supabase = createServerClient();
 

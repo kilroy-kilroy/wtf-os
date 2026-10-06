@@ -1,3 +1,4 @@
+import { authorizeLab } from '@/lib/labs/access';
 import { redirect, notFound } from 'next/navigation';
 import { requireAdmin } from '@/lib/contracts/require-admin';
 import { getSupabaseServerClient } from '@/lib/supabase-server';
@@ -26,10 +27,10 @@ export default async function DiscoveryReportPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ admin?: string }>;
+  searchParams: Promise<{ admin?: string; access_token?: string }>;
 }) {
   const { id } = await params;
-  const { admin } = await searchParams;
+  const { admin, access_token } = await searchParams;
 
   let report: DiscoveryBrief | null = null;
 
@@ -46,7 +47,7 @@ export default async function DiscoveryReportPage({
     }
   }
 
-  // Normal flow: read by link=key (UUID = access token); public lead magnet.
+  // IDs locate reports; only ownership or an expiring capability grants access.
   if (!report) {
     const supabase = getSupabaseServerClient();
     const { data } = await (supabase as any)
@@ -54,7 +55,9 @@ export default async function DiscoveryReportPage({
       .select('*')
       .eq('id', id)
       .single();
-    if (data) report = data as DiscoveryBrief;
+    if (data) {
+      try { await authorizeLab('discovery', id, (data as any).user_id, access_token); report = data as DiscoveryBrief; } catch { notFound(); }
+    }
   }
 
   if (!report) {
@@ -189,7 +192,7 @@ export default async function DiscoveryReportPage({
 
         <ReportEngagementFooter
           currentTool="discovery"
-          email={(report as any).lead_email ?? null}
+          email={null}
           reportId={id}
           reportUrl={`/discovery-lab/report/${id}`}
         />

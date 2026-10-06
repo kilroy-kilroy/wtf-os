@@ -1,6 +1,6 @@
 # Labs security and analysis changes — 2026-10-06
 
-Status: implemented in this branch, not deployed. No production data or schema was changed.
+Status: Labs application and database changes are not deployed. Dependency fixes were extracted and merged separately in PR #214; this branch includes that release. No production Lab data or schema was changed.
 
 ## Security and access
 

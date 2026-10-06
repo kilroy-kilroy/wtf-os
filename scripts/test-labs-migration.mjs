@@ -21,7 +21,7 @@ for (const table of ['ingestion_items','call_scores','call_lab_reports','discove
  CREATE POLICY old_public_access ON ${table} FOR ALL USING(true) WITH CHECK(true);
  GRANT ALL ON ${table} TO anon,authenticated,service_role;`);
 }
-await db.exec(await readFile(new URL('../supabase/migrations/20261006_labs_access.sql',import.meta.url),'utf8'));
+await db.exec(await readFile(new URL('../supabase/migrations/20261006192925_labs_access.sql',import.meta.url),'utf8'));
 const owner='11111111-1111-4111-8111-111111111111', other='22222222-2222-4222-8222-222222222222';
 await db.exec(`INSERT INTO call_scores(id,user_id) VALUES('${owner}','${owner}'); INSERT INTO call_lab_reports(id,user_id) VALUES('${owner}','${owner}'); INSERT INTO users(id,email) VALUES('${owner}','owner@example.com'); INSERT INTO call_snippets VALUES('${owner}','${owner}');`);
 async function as(role, user, sql) {

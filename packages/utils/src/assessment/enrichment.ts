@@ -860,7 +860,8 @@ The person taking this assessment runs a business:
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
+        model: 'claude-sonnet-5-5',
+        thinking: { type: 'between_tools' },
         max_tokens: 500,
         messages: [{
           role: 'user',
@@ -1057,7 +1058,8 @@ async function callClaude(prompt: string): Promise<string> {
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-6',
+      model: 'claude-sonnet-5-5',
+      thinking: { type: 'between_tools' },
       max_tokens: 1000,
       messages: [{ role: 'user', content: prompt }]
     }),
@@ -1313,7 +1315,8 @@ async function callClaudeAnalysis(apiKey: string, prompt: string): Promise<strin
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-6',
+      model: 'claude-sonnet-5-5',
+      thinking: { type: 'between_tools' },
       max_tokens: 2000,
       messages: [{ role: 'user', content: prompt }]
     }),

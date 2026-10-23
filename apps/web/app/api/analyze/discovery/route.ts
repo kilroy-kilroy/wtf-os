@@ -305,7 +305,7 @@ export async function POST(request: NextRequest) {
       });
 
       usage = response.usage;
-      modelUsed = 'claude-sonnet-4-6';
+      modelUsed = 'claude-sonnet-5-5';
       markdownResponse = response.content;
     } catch (error) {
       console.error('Error running Claude analysis, trying GPT-4o fallback:', error);

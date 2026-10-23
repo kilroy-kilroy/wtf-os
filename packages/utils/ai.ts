@@ -3,7 +3,7 @@ import OpenAI from 'openai';
 
 export type ModelProvider = 'anthropic' | 'openai';
 export type ModelId =
-  | 'claude-sonnet-4-6'
+  | 'claude-sonnet-5-5'
   | 'claude-3-5-sonnet-20241022'
   | 'claude-3-5-sonnet-20240620'
   | 'claude-3-opus-20240229'
@@ -21,25 +21,25 @@ export interface ModelConfig {
 const MODEL_CONFIGS: Record<string, ModelConfig> = {
   'call-lab-lite': {
     provider: 'anthropic',
-    model: 'claude-sonnet-4-6',
+    model: 'claude-sonnet-5-5',
     maxTokens: 2200,
     temperature: 0.3,
   },
   'call-lab-full': {
     provider: 'anthropic',
-    model: 'claude-sonnet-4-6',
+    model: 'claude-sonnet-5-5',
     maxTokens: 8192,
     temperature: 0.3,
   },
   'call-lab-pro': {
     provider: 'anthropic',
-    model: 'claude-sonnet-4-6',
+    model: 'claude-sonnet-5-5',
     maxTokens: 4500,
     temperature: 0.3,
   },
   'discovery-lab-lite': {
     provider: 'anthropic',
-    model: 'claude-sonnet-4-6',
+    model: 'claude-sonnet-5-5',
     maxTokens: 2200,
     // Low temperature: this is a factual briefing, not creative writing.
     // Higher temps increase the model's willingness to fill gaps with invention.
@@ -47,7 +47,7 @@ const MODEL_CONFIGS: Record<string, ModelConfig> = {
   },
   'discovery-lab-pro': {
     provider: 'anthropic',
-    model: 'claude-sonnet-4-6',
+    model: 'claude-sonnet-5-5',
     maxTokens: 3500,
     // Low temperature: this is a factual briefing, not creative writing.
     // Higher temps increase the model's willingness to fill gaps with invention.
@@ -56,37 +56,37 @@ const MODEL_CONFIGS: Record<string, ModelConfig> = {
   // Content Engine tools
   'content-engine-calibrate': {
     provider: 'anthropic',
-    model: 'claude-sonnet-4-6',
+    model: 'claude-sonnet-5-5',
     maxTokens: 4096,
     temperature: 0.4,
   },
   'content-engine-categorize': {
     provider: 'anthropic',
-    model: 'claude-sonnet-4-6',
+    model: 'claude-sonnet-5-5',
     maxTokens: 2048,
     temperature: 0.2,
   },
   'content-engine-repurpose': {
     provider: 'anthropic',
-    model: 'claude-sonnet-4-6',
+    model: 'claude-sonnet-5-5',
     maxTokens: 4096,
     temperature: 0.6,
   },
   'content-engine-moment-detection': {
     provider: 'anthropic',
-    model: 'claude-sonnet-4-6',
+    model: 'claude-sonnet-5-5',
     maxTokens: 8192,
     temperature: 0.3,
   },
   'one-shot': {
     provider: 'anthropic',
-    model: 'claude-sonnet-4-6',
+    model: 'claude-sonnet-5-5',
     maxTokens: 8192,
     temperature: 0.4,
   },
   'discovery-agent': {
     provider: 'anthropic',
-    model: 'claude-sonnet-4-6',
+    model: 'claude-sonnet-5-5',
     maxTokens: 3500,
     temperature: 0.4,
   },
@@ -98,48 +98,48 @@ const MODEL_CONFIGS: Record<string, ModelConfig> = {
   },
   'biz-dev-assessment-v1': {
     provider: 'anthropic',
-    model: 'claude-sonnet-4-6',
+    model: 'claude-sonnet-5-5',
     maxTokens: 8192,
     temperature: 0.4,
   },
   'contract-sow': {
     provider: 'anthropic',
-    model: 'claude-sonnet-4-6',
+    model: 'claude-sonnet-5-5',
     maxTokens: 4096,
     temperature: 0.3,
   },
   // Client portal: office-hours / 1:1 session synopsis + teaching (JSON)
   'session-content': {
     provider: 'anthropic',
-    model: 'claude-sonnet-4-6',
+    model: 'claude-sonnet-5-5',
     maxTokens: 2000,
     temperature: 0.4,
   },
   // Admin: assessment marketing-content generation
   'assessment-content': {
     provider: 'anthropic',
-    model: 'claude-sonnet-4-6',
+    model: 'claude-sonnet-5-5',
     maxTokens: 4096,
     temperature: 0.4,
   },
   // Coaching report generation
   'coaching-report': {
     provider: 'anthropic',
-    model: 'claude-sonnet-4-6',
+    model: 'claude-sonnet-5-5',
     maxTokens: 4096,
     temperature: 0.4,
   },
   // Assessment diagnosis revelations (run in parallel; degrade to null on error/timeout)
   'assessment-diagnosis': {
     provider: 'anthropic',
-    model: 'claude-sonnet-4-6',
+    model: 'claude-sonnet-5-5',
     maxTokens: 1500,
     temperature: 0.3,
   },
   // Unified person timeline: cached "where we are / next step" contact summary
   'contact-summary': {
     provider: 'anthropic',
-    model: 'claude-sonnet-4-6',
+    model: 'claude-sonnet-5-5',
     maxTokens: 600,
     // Low temperature: this restates known activity, not creative writing.
     temperature: 0.2,
@@ -246,10 +246,14 @@ async function runAnthropic(
   // implies fail-fast: cap the request and skip the SDK's default retries.
   const requestOptions = timeoutMs ? { timeout: timeoutMs, maxRetries: 0 } : undefined;
 
+  // Claude Sonnet 5.5 rejects non-default `temperature` (400), so it is only
+  // forwarded to OpenAI. `between_tools` is Sonnet 5.5's thinking-off setting:
+  // it keeps these single-shot calls fast and stops thinking from eating
+  // max_tokens. (SDK 0.91 doesn't type it yet, hence the cast.)
   const message = await anthropic.messages.create({
     model: config.model,
     max_tokens: config.maxTokens,
-    temperature: config.temperature,
+    thinking: { type: 'between_tools' } as unknown as Anthropic.MessageCreateParams['thinking'],
     system: systemPrompt,
     messages: [
       {
@@ -260,8 +264,9 @@ async function runAnthropic(
   }, requestOptions);
 
   if (message.stop_reason === 'max_tokens') throw new Error('Model output reached its limit; report was not saved.');
-  const content = message.content[0];
-  if (content.type !== 'text') {
+  // Read by block type: newer models can return thinking blocks ahead of the text.
+  const content = message.content.find((block) => block.type === 'text');
+  if (!content || content.type !== 'text') {
     throw new Error('Unexpected response type from Anthropic');
   }
 

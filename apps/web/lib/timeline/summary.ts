@@ -9,7 +9,7 @@
 // `retryWithBackoff` / `parseModelJSON` from @repo/utils) — the same pattern
 // apps/web/app/api/analyze/biz-dev/route.ts uses for its AI synthesis step —
 // rather than importing @anthropic-ai/sdk directly. See packages/utils/ai.ts
-// MODEL_CONFIGS['contact-summary'] for the model id (claude-sonnet-4-6,
+// MODEL_CONFIGS['contact-summary'] for the model id (claude-sonnet-5-5,
 // matching every other Anthropic-backed tool in that table).
 import type { SupabaseClient } from '@repo/db';
 import { runModel, retryWithBackoff, parseModelJSON } from '@repo/utils';

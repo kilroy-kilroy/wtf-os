@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
 
     // Step 2: Analyze with AI
     let analysisResult: CallLabInstantResponse;
-    let modelUsed = 'claude-sonnet-4-6';
+    let modelUsed = 'claude-sonnet-5-5';
 
     try {
       const response = await retryWithBackoff(async () => {

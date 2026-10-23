@@ -180,7 +180,7 @@ export async function POST(request: NextRequest) {
       }, 2);
 
       markdownResponse = response.content;
-      modelUsed = 'claude-sonnet-4-6';
+      modelUsed = 'claude-sonnet-5-5';
       usage = response.usage;
     } catch (error) {
     const failure = labFailure(error); if (failure) return failure;

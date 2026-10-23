@@ -217,7 +217,7 @@ export async function POST(request: NextRequest) {
         }, 2); // Limit retries: Pro analysis (16K tokens) can take 60-120s per attempt
 
         usage = response.usage;
-        modelUsed = 'claude-sonnet-4-6';
+        modelUsed = 'claude-sonnet-5-5';
         markdownResponse = groundMarkdownEvidence(response.content, ingestionItem.raw_content);
       } catch (error) {
         console.error('Error running Claude analysis, trying GPT-4o fallback:', error);
@@ -366,7 +366,7 @@ ${indexedTranscript(ingestionItem.raw_content)}`;
           }, 2); // Limit retries: Pro JSON analysis can take 60-120s per attempt
 
           usage = response.usage;
-          modelUsed = 'claude-sonnet-4-6';
+          modelUsed = 'claude-sonnet-5-5';
 
           // Parse JSON response - try to extract JSON from response
           let proResult;
@@ -509,7 +509,7 @@ ${indexedTranscript(ingestionItem.raw_content)}`;
         });
 
         usage = response.usage;
-        modelUsed = 'claude-sonnet-4-6';
+        modelUsed = 'claude-sonnet-5-5';
 
         // Parse JSON response
         analysisResult = parseModelJSON<CallLabLiteResponse>(response.content);

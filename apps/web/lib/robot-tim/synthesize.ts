@@ -25,7 +25,7 @@ async function run(system: string, user: string): Promise<string> {
     system,
     messages: [{ role: "user", content: user }],
   });
-  return res.content[0]?.type === "text" ? res.content[0].text : "";
+  return res.content.flatMap((b) => (b.type === "text" ? [b.text] : [])).join("");
 }
 
 export async function generateSpine(answers: Answer[]): Promise<Spine> {

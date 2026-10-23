@@ -4,7 +4,7 @@
 // calls live in apps/web/lib/robot-tim/. Node tree transcribed verbatim from
 // docs/positioning/robot-tim-question-tree (1).md.
 
-export const ROBOT_TIM_MODEL = "claude-opus-4-8";
+export const ROBOT_TIM_MODEL = "claude-opus-5-5";
 
 export interface RobotTimNode {
   id: number;

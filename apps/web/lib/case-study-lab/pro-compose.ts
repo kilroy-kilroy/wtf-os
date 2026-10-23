@@ -64,7 +64,7 @@ export async function composeTransformation(input: {
   const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
   const response = await anthropic.messages.create({
     model: CASE_STUDY_MODEL,
-    max_tokens: 4000,
+    max_tokens: 16000,
     system: composerPromptFor("transformation"),
     messages: [
       {
@@ -77,7 +77,7 @@ export async function composeTransformation(input: {
       },
     ],
   });
-  const text = response.content[0]?.type === "text" ? response.content[0].text : "";
+  const text = response.content.flatMap((b) => (b.type === "text" ? [b.text] : [])).join("");
   try {
     return parseTransformationCaseStudy(text);
   } catch (e) {
@@ -125,7 +125,7 @@ export async function composeBigIdea(input: {
   const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
   const response = await anthropic.messages.create({
     model: CASE_STUDY_MODEL,
-    max_tokens: 4000,
+    max_tokens: 16000,
     system: composerPromptFor("big_idea"),
     messages: [
       {
@@ -138,7 +138,7 @@ export async function composeBigIdea(input: {
       },
     ],
   });
-  const text = response.content[0]?.type === "text" ? response.content[0].text : "";
+  const text = response.content.flatMap((b) => (b.type === "text" ? [b.text] : [])).join("");
   try {
     return parseBigIdeaCaseStudy(text);
   } catch (e) {
@@ -188,7 +188,7 @@ export async function composeMethod(input: {
   const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
   const response = await anthropic.messages.create({
     model: CASE_STUDY_MODEL,
-    max_tokens: 4000,
+    max_tokens: 16000,
     system: composerPromptFor("method"),
     messages: [
       {
@@ -201,7 +201,7 @@ export async function composeMethod(input: {
       },
     ],
   });
-  const text = response.content[0]?.type === "text" ? response.content[0].text : "";
+  const text = response.content.flatMap((b) => (b.type === "text" ? [b.text] : [])).join("");
   try {
     return parseMethodCaseStudy(text);
   } catch (e) {
@@ -274,7 +274,7 @@ export async function composeCraft(input: {
   const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
   const response = await anthropic.messages.create({
     model: CASE_STUDY_MODEL,
-    max_tokens: 4000,
+    max_tokens: 16000,
     system: composerPromptFor("craft"),
     messages: [
       {
@@ -287,7 +287,7 @@ export async function composeCraft(input: {
       },
     ],
   });
-  const text = response.content[0]?.type === "text" ? response.content[0].text : "";
+  const text = response.content.flatMap((b) => (b.type === "text" ? [b.text] : [])).join("");
   let parsed: CraftCaseStudy;
   try {
     parsed = parseCraftCaseStudy(text);

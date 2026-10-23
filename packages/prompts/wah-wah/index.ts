@@ -6,7 +6,7 @@
 // Voice tuned from Tim's live positioning-teardown transcript and the
 // robot-tim question-tree guardrails (docs/positioning/).
 
-export const WAH_WAH_MODEL = "claude-opus-4-8";
+export const WAH_WAH_MODEL = "claude-opus-5-5";
 
 // Structural inputs for buildWahWahUserPrompt — declared here so this module
 // does not depend on the extractor/lexicon types in apps/web.

@@ -47,7 +47,7 @@ export async function composeCaseStudy(input: {
   const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
   const response = await anthropic.messages.create({
     model: CASE_STUDY_MODEL,
-    max_tokens: 4000,
+    max_tokens: 16000,
     system: CASE_STUDY_COMPOSER_PROMPT,
     messages: [
       {
@@ -60,7 +60,7 @@ export async function composeCaseStudy(input: {
       },
     ],
   });
-  const text = response.content[0]?.type === "text" ? response.content[0].text : "";
+  const text = response.content.flatMap((b) => (b.type === "text" ? [b.text] : [])).join("");
   try {
     return parseCaseStudy(text);
   } catch (e) {

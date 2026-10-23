@@ -3,7 +3,7 @@
 // Zod schemas + the Anthropic calls live in apps/web/lib/case-study-lab/*
 // so this package stays dependency-free.
 
-export const CASE_STUDY_MODEL = "claude-opus-4-8";
+export const CASE_STUDY_MODEL = "claude-opus-5-5";
 
 export interface AgencyBrand {
   colors: string[];

@@ -56,7 +56,8 @@ export async function scoreDraft(input: {
   const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
   const response = await anthropic.messages.create({
     model: CASE_STUDY_MODEL,
-    max_tokens: 1200,
+    max_tokens: 4000,
+    output_config: { effort: "low" },
     system: ARCHETYPE_SCORER_PROMPT,
     messages: [
       {
@@ -65,7 +66,7 @@ export async function scoreDraft(input: {
       },
     ],
   });
-  const text = response.content[0]?.type === "text" ? response.content[0].text : "";
+  const text = response.content.flatMap((b) => (b.type === "text" ? [b.text] : [])).join("");
   try {
     return parseScoreResult(text);
   } catch (e) {

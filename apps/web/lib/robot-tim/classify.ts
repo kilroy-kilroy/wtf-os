@@ -18,11 +18,12 @@ export async function classifyAnswer(
   const anthropic = getAnthropic();
   const response = await anthropic.messages.create({
     model: ROBOT_TIM_MODEL,
-    max_tokens: 1024,
+    max_tokens: 4000,
+    output_config: { effort: "low" },
     system: INTERVIEW_SYSTEM_PROMPT,
     messages: [{ role: "user", content: buildClassifyPrompt(node, answer, alreadyPushed) }],
   });
-  const raw = response.content[0]?.type === "text" ? response.content[0].text : "";
+  const raw = response.content.flatMap((b) => (b.type === "text" ? [b.text] : [])).join("");
   try {
     return ClassifyResultSchema.parse(JSON.parse(stripFences(raw)));
   } catch {

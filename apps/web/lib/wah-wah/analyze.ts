@@ -42,7 +42,7 @@ export async function analyzeCopy(
     ],
   });
 
-  let text = response.content[0]?.type === "text" ? response.content[0].text : "";
+  let text = response.content.flatMap((b) => (b.type === "text" ? [b.text] : [])).join("");
   // Strip markdown code fences if the model wraps the JSON (repo convention).
   text = text.replace(/^```(?:json)?\s*\n?/i, "").replace(/\n?```\s*$/i, "").trim();
 

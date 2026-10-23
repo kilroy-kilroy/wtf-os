@@ -249,11 +249,15 @@ async function runAnthropic(
   // Claude Sonnet 5.5 rejects non-default `temperature` (400), so it is only
   // forwarded to OpenAI. `between_tools` is Sonnet 5.5's thinking-off setting:
   // it keeps these single-shot calls fast and stops thinking from eating
-  // max_tokens. (SDK 0.91 doesn't type it yet, hence the cast.)
-  const message = await anthropic.messages.create({
+  // max_tokens. (The SDK doesn't type it yet, hence the cast.) On a safety
+  // decline, `fallbacks: 'default'` re-runs the request on Anthropic's
+  // recommended fallback model.
+  const message = await anthropic.beta.messages.create({
+    betas: ['server-side-fallback-2026-07-01'],
+    fallbacks: 'default',
     model: config.model,
     max_tokens: config.maxTokens,
-    thinking: { type: 'between_tools' } as unknown as Anthropic.MessageCreateParams['thinking'],
+    thinking: { type: 'between_tools' } as unknown as Anthropic.Beta.MessageCreateParams['thinking'],
     system: systemPrompt,
     messages: [
       {
@@ -263,6 +267,7 @@ async function runAnthropic(
     ],
   }, requestOptions);
 
+  if (message.stop_reason === 'refusal') throw new Error('Model declined this request; report was not saved.');
   if (message.stop_reason === 'max_tokens') throw new Error('Model output reached its limit; report was not saved.');
   // Read by block type: newer models can return thinking blocks ahead of the text.
   const content = message.content.find((block) => block.type === 'text');

@@ -19,7 +19,10 @@ function stripFences(text: string): string {
 }
 async function run(system: string, user: string): Promise<string> {
   const anthropic = getAnthropic();
-  const res = await anthropic.messages.create({
+  const res = await anthropic.beta.messages.create({
+    // On a safety decline, the API re-runs the request on Anthropic's recommended fallback model.
+    betas: ["server-side-fallback-2026-07-01"],
+    fallbacks: "default",
     model: ROBOT_TIM_MODEL,
     max_tokens: 16000,
     system,

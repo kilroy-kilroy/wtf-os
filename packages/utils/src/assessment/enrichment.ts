@@ -857,11 +857,13 @@ The person taking this assessment runs a business:
       headers: {
         'x-api-key': apiKey,
         'anthropic-version': '2023-06-01',
+        'anthropic-beta': 'server-side-fallback-2026-07-01',
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
         model: 'claude-sonnet-5-5',
         thinking: { type: 'between_tools' },
+        fallbacks: 'default',
         max_tokens: 500,
         messages: [{
           role: 'user',
@@ -1055,11 +1057,13 @@ async function callClaude(prompt: string): Promise<string> {
     headers: {
       'x-api-key': apiKey,
       'anthropic-version': '2023-06-01',
+      'anthropic-beta': 'server-side-fallback-2026-07-01',
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({
       model: 'claude-sonnet-5-5',
       thinking: { type: 'between_tools' },
+      fallbacks: 'default',
       max_tokens: 1000,
       messages: [{ role: 'user', content: prompt }]
     }),
@@ -1312,11 +1316,13 @@ async function callClaudeAnalysis(apiKey: string, prompt: string): Promise<strin
     headers: {
       'x-api-key': apiKey,
       'anthropic-version': '2023-06-01',
+      'anthropic-beta': 'server-side-fallback-2026-07-01',
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({
       model: 'claude-sonnet-5-5',
       thinking: { type: 'between_tools' },
+      fallbacks: 'default',
       max_tokens: 2000,
       messages: [{ role: 'user', content: prompt }]
     }),

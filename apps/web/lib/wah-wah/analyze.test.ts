@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 const mockCreate = vi.fn();
 vi.mock("@anthropic-ai/sdk", () => ({
   default: class MockAnthropic {
-    messages = { create: mockCreate };
+    beta = { messages: { create: mockCreate } };
   },
 }));
 
@@ -54,6 +54,10 @@ describe("analyzeCopy", () => {
     expect(result.score).toBe(81);
     expect(result.flags).toHaveLength(1);
     expect(mockCreate).toHaveBeenCalledOnce();
+    expect(mockCreate.mock.calls[0][0]).toMatchObject({
+      fallbacks: "default",
+      betas: ["server-side-fallback-2026-07-01"],
+    });
   });
 
   it("strips markdown code fences before parsing", async () => {

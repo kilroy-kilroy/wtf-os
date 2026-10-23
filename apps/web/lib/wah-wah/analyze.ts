@@ -33,7 +33,10 @@ export async function analyzeCopy(
 ): Promise<WahWahAnalysis> {
   const anthropic = getAnthropic();
 
-  const response = await anthropic.messages.create({
+  const response = await anthropic.beta.messages.create({
+    // On a safety decline, the API re-runs the request on Anthropic's recommended fallback model.
+    betas: ["server-side-fallback-2026-07-01"],
+    fallbacks: "default",
     model: WAH_WAH_MODEL,
     max_tokens: 16000,
     system: WAH_WAH_SYSTEM_PROMPT,

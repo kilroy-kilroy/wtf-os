@@ -16,7 +16,10 @@ export async function classifyAnswer(
   alreadyPushed: boolean
 ): Promise<ClassifyResult> {
   const anthropic = getAnthropic();
-  const response = await anthropic.messages.create({
+  const response = await anthropic.beta.messages.create({
+    // On a safety decline, the API re-runs the request on Anthropic's recommended fallback model.
+    betas: ["server-side-fallback-2026-07-01"],
+    fallbacks: "default",
     model: ROBOT_TIM_MODEL,
     max_tokens: 4000,
     output_config: { effort: "low" },

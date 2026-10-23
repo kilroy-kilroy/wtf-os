@@ -45,7 +45,10 @@ export async function composeCaseStudy(input: {
   clientAnonymized: boolean;
 }): Promise<CaseStudy> {
   const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
-  const response = await anthropic.messages.create({
+  const response = await anthropic.beta.messages.create({
+    // On a safety decline, the API re-runs the request on Anthropic's recommended fallback model.
+    betas: ["server-side-fallback-2026-07-01"],
+    fallbacks: "default",
     model: CASE_STUDY_MODEL,
     max_tokens: 16000,
     system: CASE_STUDY_COMPOSER_PROMPT,

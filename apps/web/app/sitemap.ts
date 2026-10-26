@@ -30,12 +30,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: 'weekly',
       priority: 0.8,
     },
-    {
-      url: `${baseUrl}/growthos/assessment`,
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.7,
-    },
+    // Note: /growthos/assessment is intentionally omitted — it 307s logged-out
+    // visitors (and crawlers) to /growthos, and robots.ts disallows it.
 
     // Pro / upgrade pages
     // Note: /call-lab-pro (redirects to the marketing page) and /discovery-lab-pro

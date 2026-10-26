@@ -8,6 +8,8 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: '*',
         allow: '/',
+        // Redirects logged-out visitors to /growthos, so crawling it only yields redirects.
+        disallow: '/growthos/assessment',
       },
     ],
     sitemap: `${baseUrl}/sitemap.xml`,

@@ -405,8 +405,8 @@ export async function scrapeCompanyWebsite(
 export async function scrapeLinkedInProfile(
   linkedinUrl: string
 ): Promise<Partial<ContactResearchResult>> {
-  // Use Apify's LinkedIn Profile Scraper
-  const actorId = 'anchor~linkedin-profile-scraper';
+  // LinkedIn profile Actor (anchor~linkedin-profile-scraper now returns 404)
+  const actorId = 'johnvc~linkedin-profile-api';
 
   try {
     const results = await runApifyActor(
@@ -421,12 +421,16 @@ export async function scrapeLinkedInProfile(
       throw new Error('No LinkedIn data returned');
     }
 
-    const profile: any = results[0];
+    // Private or missing profiles come back as rows with error_message set
+    const profile: any = results.find((r: any) => !r?.error_message);
+    if (!profile) {
+      throw new Error(`LinkedIn profile lookup failed: ${(results[0] as any).error_message}`);
+    }
 
     return {
-      linkedin_summary: `${profile.firstName} ${profile.lastName} - ${profile.headline || profile.title}. ${profile.summary || ''}`,
-      tenure_experience: formatExperience(profile.experience),
-      role_context: profile.headline || profile.title,
+      linkedin_summary: `${profile.firstName} ${profile.lastName} - ${profile.headline || profile.currentTitle}. ${profile.about || profile.summary || ''}`,
+      tenure_experience: formatExperience(profile.experience || profile.positions),
+      role_context: profile.headline || profile.currentTitle,
       raw_data: JSON.stringify(profile, null, 2),
     };
   } catch (error) {
